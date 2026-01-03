@@ -249,7 +249,7 @@ Verification script that checks:
 ## 10. File Structure
 
 ```
-/Users/erik/Documents/Dev/Diet/
+nutrivaul/
 ├── config/
 │   └── database.js              (Database configuration)
 ├── models/

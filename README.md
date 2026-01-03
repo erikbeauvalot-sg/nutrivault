@@ -43,8 +43,8 @@ A secure, full-stack web application for dietitians to manage patient data, appo
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd Diet
+   git clone https://github.com/erikbeauvalot/nutrivault.git
+   cd nutrivaul
    ```
 
 2. **Backend Setup**
@@ -113,7 +113,7 @@ After seeding the database:
 ## Project Structure
 
 ```
-Diet/
+nutrivaul/
 ├── backend/                # Backend application
 │   ├── data/              # SQLite database files (gitignored)
 │   ├── logs/              # Application logs (gitignored)
