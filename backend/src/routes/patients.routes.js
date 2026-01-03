@@ -1,0 +1,89 @@
+/**
+ * Patient Management Routes
+ *
+ * Routes for patient management endpoints
+ */
+
+const express = require('express');
+const router = express.Router();
+const patientController = require('../controllers/patient.controller');
+const { authenticate } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/rbac');
+
+/**
+ * All routes require authentication
+ */
+router.use(authenticate);
+
+/**
+ * Get patient statistics
+ * Must come before /:id routes to avoid conflicts
+ */
+router.get('/stats',
+  requirePermission('patients.read'),
+  patientController.getPatientStatsHandler
+);
+
+/**
+ * Get all patients
+ * Dietitians automatically see only their assigned patients
+ */
+router.get('/',
+  requirePermission('patients.list'),
+  patientController.getPatientsHandler
+);
+
+/**
+ * Create new patient
+ */
+router.post('/',
+  requirePermission('patients.create'),
+  patientController.createPatientHandler
+);
+
+/**
+ * Get patient by ID
+ * Service layer checks if dietitian is assigned to this patient
+ */
+router.get('/:id',
+  requirePermission('patients.read'),
+  patientController.getPatientByIdHandler
+);
+
+/**
+ * Update patient
+ * Service layer checks if dietitian is assigned to this patient
+ */
+router.put('/:id',
+  requirePermission('patients.update'),
+  patientController.updatePatientHandler
+);
+
+/**
+ * Activate patient
+ * Service layer checks if dietitian is assigned to this patient
+ */
+router.put('/:id/activate',
+  requirePermission('patients.update'),
+  patientController.activatePatientHandler
+);
+
+/**
+ * Deactivate patient
+ * Service layer checks if dietitian is assigned to this patient
+ */
+router.put('/:id/deactivate',
+  requirePermission('patients.delete'),
+  patientController.deactivatePatientHandler
+);
+
+/**
+ * Delete patient (soft delete via deactivation)
+ * Service layer checks if dietitian is assigned to this patient
+ */
+router.delete('/:id',
+  requirePermission('patients.delete'),
+  patientController.deletePatientHandler
+);
+
+module.exports = router;

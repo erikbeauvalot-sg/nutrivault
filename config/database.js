@@ -1,7 +1,7 @@
 module.exports = {
   development: {
     dialect: 'sqlite',
-    storage: './data/nutrivault_dev.db',
+    storage: require('path').resolve(__dirname, '../data/nutrivault_dev.db'),
     logging: console.log,
     define: {
       timestamps: true,
