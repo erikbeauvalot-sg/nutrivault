@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DB_DIALECT=sqlite
+      - DB_STORAGE=./data/nutrivault_dev.db
+      - JWT_SECRET=dev-secret-change-in-production-min-32-chars
+      - REFRESH_TOKEN_SECRET=dev-refresh-secret-change-in-production
+      - LOG_LEVEL=debug
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./backend/data:/app/data
+      - ./backend/logs:/app/logs
+    command: npm run dev
+    networks:
+      - nutrivault-network
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:3001/api
+      - VITE_ENV=development
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev
+    depends_on:
+      - backend
+    networks:
+      - nutrivault-network
+
+  # PostgreSQL (optional - for production-like testing)
+  # Uncomment to use PostgreSQL instead of SQLite
+  # postgres:
+  #   image: postgres:14-alpine
+  #   environment:
+  #     POSTGRES_DB: nutrivault
+  #     POSTGRES_USER: dbuser
+  #     POSTGRES_PASSWORD: dbpassword
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - nutrivault-network
+
+networks:
+  nutrivault-network:
+    driver: bridge
+
+# volumes:
+#   postgres_data:
