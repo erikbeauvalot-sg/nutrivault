@@ -19,18 +19,8 @@ const { asyncHandler } = require('../middleware/errorHandler');
  * GET /api/visits
  */
 const getVisitsHandler = asyncHandler(async (req, res) => {
-  const filters = {
-    patient_id: req.query.patient_id,
-    dietitian_id: req.query.dietitian_id,
-    status: req.query.status,
-    visit_type: req.query.visit_type,
-    from_date: req.query.from_date,
-    to_date: req.query.to_date,
-    limit: req.query.limit || 50,
-    offset: req.query.offset || 0,
-    sort_by: req.query.sort_by || 'visit_date',
-    sort_order: req.query.sort_order || 'DESC'
-  };
+  // Pass all query parameters to service for QueryBuilder processing
+  const filters = req.query;
 
   const result = await getVisits(filters, req.user);
 

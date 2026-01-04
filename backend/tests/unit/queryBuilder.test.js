@@ -259,7 +259,9 @@ describe('QueryBuilder', () => {
       it('should handle _ilike operator', () => {
         const queryParams = { city_ilike: 'TOR' };
         const result = queryBuilder.build(queryParams);
-        expect(result.where.city).toEqual({ [Op.iLike]: '%TOR%' });
+        // SQLite uses Op.like for ilike (case-insensitive by default)
+        // PostgreSQL would use Op.iLike
+        expect(result.where.city).toEqual({ [Op.like]: '%TOR%' });
       });
     });
   });

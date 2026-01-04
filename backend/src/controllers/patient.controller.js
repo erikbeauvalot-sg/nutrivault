@@ -21,17 +21,9 @@ const { asyncHandler } = require('../middleware/errorHandler');
  * GET /api/patients
  */
 const getPatientsHandler = asyncHandler(async (req, res) => {
-  const filters = {
-    assigned_dietitian_id: req.query.assigned_dietitian_id,
-    is_active: req.query.is_active,
-    search: req.query.search,
-    age_min: req.query.age_min,
-    age_max: req.query.age_max,
-    limit: req.query.limit || 50,
-    offset: req.query.offset || 0,
-    sort_by: req.query.sort_by || 'created_at',
-    sort_order: req.query.sort_order || 'DESC'
-  };
+  // Pass all query parameters to service for QueryBuilder processing
+  // Legacy fields (age_min, age_max) are handled by the service
+  const filters = req.query;
 
   const result = await getPatients(filters, req.user);
 

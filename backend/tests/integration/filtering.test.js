@@ -36,8 +36,7 @@ describe('Advanced Filtering & Search - Integration Tests', () => {
       { name: 'visits.read', resource: 'visits', action: 'read' },
       { name: 'billing.list', resource: 'billing', action: 'list' },
       { name: 'billing.read', resource: 'billing', action: 'read' },
-      { name: 'audit.list', resource: 'audit', action: 'list' },
-      { name: 'audit.read', resource: 'audit', action: 'read' }
+      { name: 'audit_logs.read', resource: 'audit_logs', action: 'read' }
     ];
 
     for (const permData of permissions) {

@@ -108,8 +108,9 @@ function createFieldValidator(fieldName, fieldConfig, operator) {
     return [
       query(paramName)
         .optional()
-        .isBoolean()
-        .withMessage(`${paramName} must be a boolean`)
+        .isString()
+        .isIn(['true', 'false', '1', '0', 'TRUE', 'FALSE'])
+        .withMessage(`${paramName} must be a boolean (true, false, 1, or 0)`)
     ];
   }
 
@@ -236,8 +237,9 @@ function createBooleanValidator(paramName, operator) {
   return [
     query(paramName)
       .optional()
-      .isBoolean()
-      .withMessage(`${paramName} must be a boolean`)
+      .isString()
+      .isIn(['true', 'false', '1', '0', 'TRUE', 'FALSE'])
+      .withMessage(`${paramName} must be a boolean (true, false, 1, or 0)`)
   ];
 }
 

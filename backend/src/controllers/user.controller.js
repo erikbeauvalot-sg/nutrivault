@@ -21,15 +21,8 @@ const { asyncHandler } = require('../middleware/errorHandler');
  * GET /api/users
  */
 const getUsersHandler = asyncHandler(async (req, res) => {
-  const filters = {
-    role_id: req.query.role_id,
-    is_active: req.query.is_active,
-    search: req.query.search,
-    limit: req.query.limit || 50,
-    offset: req.query.offset || 0,
-    sort_by: req.query.sort_by || 'created_at',
-    sort_order: req.query.sort_order || 'DESC'
-  };
+  // Pass all query parameters to service for QueryBuilder processing
+  const filters = req.query;
 
   const result = await getUsers(filters);
 

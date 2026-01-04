@@ -16,6 +16,7 @@
 
 const { Op } = require('sequelize');
 const { AppError } = require('../middleware/errorHandler');
+const db = require('../../models');
 
 /**
  * QueryBuilder class for building complex database queries
@@ -174,7 +175,16 @@ class QueryBuilder {
         filterValue = { [Op.like]: `%${convertedValue}%` };
         break;
       case 'ilike':
-        filterValue = { [Op.iLike]: `%${convertedValue}%` };
+        // SQLite doesn't support Op.iLike, but LIKE is case-insensitive by default
+        // PostgreSQL needs Op.iLike for case-insensitive matching
+        const dialect = db.sequelize.getDialect();
+        if (dialect === 'sqlite') {
+          // SQLite's LIKE is case-insensitive by default
+          filterValue = { [Op.like]: `%${convertedValue}%` };
+        } else {
+          // Use iLike for PostgreSQL and other databases
+          filterValue = { [Op.iLike]: `%${convertedValue}%` };
+        }
         break;
       default:
         throw new AppError(`Unsupported operator: ${operator}`, 400, 'INVALID_OPERATOR');

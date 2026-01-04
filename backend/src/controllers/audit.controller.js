@@ -12,18 +12,8 @@ const { asyncHandler } = require('../middleware/errorHandler');
  * GET /api/audit-logs
  */
 const getAuditLogsHandler = asyncHandler(async (req, res) => {
-  const filters = {
-    user_id: req.query.user_id,
-    action: req.query.action,
-    resource_type: req.query.resource_type,
-    resource_id: req.query.resource_id,
-    status: req.query.status,
-    severity: req.query.severity,
-    from_date: req.query.from_date,
-    to_date: req.query.to_date,
-    limit: req.query.limit || 100,
-    offset: req.query.offset || 0
-  };
+  // Pass all query parameters to service for QueryBuilder processing
+  const filters = req.query;
 
   const result = await getAuditLogs(filters);
 
