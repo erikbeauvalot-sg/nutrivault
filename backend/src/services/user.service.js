@@ -9,40 +9,16 @@ const { hashPassword, validatePasswordStrength } = require('../auth/password');
 const { AppError } = require('../middleware/errorHandler');
 const { logCrudEvent } = require('./audit.service');
 const { Op } = require('sequelize');
+const QueryBuilder = require('../utils/queryBuilder');
+const { USERS_CONFIG } = require('../config/queryConfigs');
 
 /**
  * Get all users with filtering and pagination
  */
 async function getUsers(filters = {}) {
-  const {
-    role_id,
-    is_active,
-    search,
-    limit = 50,
-    offset = 0,
-    sort_by = 'created_at',
-    sort_order = 'DESC'
-  } = filters;
-
-  // Build where clause
-  const where = {};
-
-  if (role_id) {
-    where.role_id = role_id;
-  }
-
-  if (is_active !== undefined) {
-    where.is_active = is_active === 'true' || is_active === true;
-  }
-
-  if (search) {
-    where[Op.or] = [
-      { username: { [Op.like]: `%${search}%` } },
-      { email: { [Op.like]: `%${search}%` } },
-      { first_name: { [Op.like]: `%${search}%` } },
-      { last_name: { [Op.like]: `%${search}%` } }
-    ];
-  }
+  // Use QueryBuilder for advanced filtering
+  const queryBuilder = new QueryBuilder(USERS_CONFIG);
+  const { where, pagination, sort } = queryBuilder.build(filters);
 
   const { count, rows } = await db.User.findAndCountAll({
     where,
@@ -52,16 +28,16 @@ async function getUsers(filters = {}) {
       attributes: ['id', 'name', 'description']
     }],
     attributes: { exclude: ['password_hash'] },
-    limit: parseInt(limit),
-    offset: parseInt(offset),
-    order: [[sort_by, sort_order.toUpperCase()]]
+    limit: pagination.limit,
+    offset: pagination.offset,
+    order: sort
   });
 
   return {
     users: rows,
     total: count,
-    limit: parseInt(limit),
-    offset: parseInt(offset)
+    limit: pagination.limit,
+    offset: pagination.offset
   };
 }
 

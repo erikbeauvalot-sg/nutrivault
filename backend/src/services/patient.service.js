@@ -8,58 +8,48 @@ const db = require('../../../models');
 const { AppError } = require('../middleware/errorHandler');
 const { logCrudEvent } = require('./audit.service');
 const { Op } = require('sequelize');
+const QueryBuilder = require('../utils/queryBuilder');
+const { PATIENTS_CONFIG } = require('../config/queryConfigs');
 
 /**
  * Get all patients with filtering and pagination
  * Dietitians can only see their assigned patients
  */
 async function getPatients(filters = {}, requestingUser) {
-  const {
-    assigned_dietitian_id,
-    is_active,
-    search,
-    age_min,
-    age_max,
-    limit = 50,
-    offset = 0,
-    sort_by = 'created_at',
-    sort_order = 'DESC'
-  } = filters;
+  // Use QueryBuilder for advanced filtering
+  const queryBuilder = new QueryBuilder(PATIENTS_CONFIG);
+  const { where, pagination, sort } = queryBuilder.build(filters);
 
-  // Build where clause
-  const where = {};
-
-  // If user is a dietitian (not admin), only show their assigned patients
+  // Apply RBAC: Dietitians can only see their assigned patients
   if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
     where.assigned_dietitian_id = requestingUser.id;
-  } else if (assigned_dietitian_id) {
-    // Admins can filter by specific dietitian
-    where.assigned_dietitian_id = assigned_dietitian_id;
+  } else if (filters.assigned_dietitian_id && !where.assigned_dietitian_id) {
+    // Admins can filter by specific dietitian (if not already filtered by QueryBuilder)
+    where.assigned_dietitian_id = filters.assigned_dietitian_id;
   }
 
-  if (is_active !== undefined) {
-    where.is_active = is_active === 'true' || is_active === true;
-  }
-
-  if (search) {
-    where[Op.or] = [
-      { first_name: { [Op.like]: `%${search}%` } },
-      { last_name: { [Op.like]: `%${search}%` } },
-      { email: { [Op.like]: `%${search}%` } },
-      { phone: { [Op.like]: `%${search}%` } }
-    ];
-  }
-
-  // Age filtering (requires date calculation)
+  // Handle legacy age filtering (age_min/age_max) with date calculations
+  // This is backward compatible with existing API
+  const { age_min, age_max } = filters;
   if (age_min || age_max) {
     const today = new Date();
     if (age_max) {
       const minBirthDate = new Date(today.getFullYear() - age_max - 1, today.getMonth(), today.getDate());
-      where.date_of_birth = { [Op.gte]: minBirthDate };
+      if (!where.date_of_birth) {
+        where.date_of_birth = {};
+      }
+      if (typeof where.date_of_birth === 'object') {
+        where.date_of_birth[Op.gte] = minBirthDate;
+      }
     }
     if (age_min) {
       const maxBirthDate = new Date(today.getFullYear() - age_min, today.getMonth(), today.getDate());
-      where.date_of_birth = { ...where.date_of_birth, [Op.lte]: maxBirthDate };
+      if (!where.date_of_birth) {
+        where.date_of_birth = {};
+      }
+      if (typeof where.date_of_birth === 'object') {
+        where.date_of_birth[Op.lte] = maxBirthDate;
+      }
     }
   }
 
@@ -72,16 +62,16 @@ async function getPatients(filters = {}, requestingUser) {
         attributes: ['id', 'username', 'first_name', 'last_name', 'email']
       }
     ],
-    limit: parseInt(limit),
-    offset: parseInt(offset),
-    order: [[sort_by, sort_order.toUpperCase()]]
+    limit: pagination.limit,
+    offset: pagination.offset,
+    order: sort
   });
 
   return {
     patients: rows,
     total: count,
-    limit: parseInt(limit),
-    offset: parseInt(offset)
+    limit: pagination.limit,
+    offset: pagination.offset
   };
 }
 
