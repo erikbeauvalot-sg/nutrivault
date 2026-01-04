@@ -9,6 +9,13 @@ const router = express.Router();
 const billingController = require('../controllers/billing.controller');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
+const {
+  validateBillingCreation,
+  validateBillingUpdate,
+  validateMarkAsPaid,
+  validateBillingId,
+  validateBillingQuery
+} = require('../validators/billing.validator');
 
 /**
  * All routes require authentication
@@ -30,6 +37,7 @@ router.get('/stats',
  */
 router.get('/',
   requirePermission('billing.list'),
+  validateBillingQuery,
   billingController.getBillingRecordsHandler
 );
 
@@ -38,6 +46,7 @@ router.get('/',
  */
 router.post('/',
   requirePermission('billing.create'),
+  validateBillingCreation,
   billingController.createBillingHandler
 );
 
@@ -47,6 +56,7 @@ router.post('/',
  */
 router.get('/:id',
   requirePermission('billing.read'),
+  validateBillingId,
   billingController.getBillingByIdHandler
 );
 
@@ -56,6 +66,7 @@ router.get('/:id',
  */
 router.put('/:id',
   requirePermission('billing.update'),
+  validateBillingUpdate,
   billingController.updateBillingHandler
 );
 
@@ -65,6 +76,7 @@ router.put('/:id',
  */
 router.post('/:id/pay',
   requirePermission('billing.update'),
+  validateMarkAsPaid,
   billingController.markAsPaidHandler
 );
 
@@ -75,6 +87,7 @@ router.post('/:id/pay',
  */
 router.delete('/:id',
   requirePermission('billing.delete'),
+  validateBillingId,
   billingController.deleteBillingHandler
 );
 

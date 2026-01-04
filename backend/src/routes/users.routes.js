@@ -9,6 +9,12 @@ const router = express.Router();
 const userController = require('../controllers/user.controller');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission, requireOwnerOrPermission } = require('../middleware/rbac');
+const {
+  validateUserUpdate,
+  validateUserId,
+  validateUserQuery
+} = require('../validators/user.validator');
+const { validatePasswordChange } = require('../validators/auth.validator');
 
 /**
  * All routes require authentication
@@ -29,6 +35,7 @@ router.get('/stats',
  */
 router.get('/',
   requirePermission('users.read'),
+  validateUserQuery,
   userController.getUsersHandler
 );
 
@@ -38,6 +45,7 @@ router.get('/',
  */
 router.get('/:id',
   requireOwnerOrPermission('id', 'users.read'),
+  validateUserId,
   userController.getUserByIdHandler
 );
 
@@ -48,6 +56,7 @@ router.get('/:id',
  */
 router.put('/:id',
   requireOwnerOrPermission('id', 'users.update'),
+  validateUserUpdate,
   userController.updateUserHandler
 );
 
@@ -57,6 +66,8 @@ router.put('/:id',
  */
 router.put('/:id/password',
   requireOwnerOrPermission('id', 'users.update'),
+  validateUserId,
+  validatePasswordChange,
   userController.changePasswordHandler
 );
 
@@ -66,6 +77,7 @@ router.put('/:id/password',
  */
 router.put('/:id/activate',
   requirePermission('users.update'),
+  validateUserId,
   userController.activateUserHandler
 );
 
@@ -75,6 +87,7 @@ router.put('/:id/activate',
  */
 router.put('/:id/deactivate',
   requirePermission('users.delete'),
+  validateUserId,
   userController.deactivateUserHandler
 );
 
@@ -84,6 +97,7 @@ router.put('/:id/deactivate',
  */
 router.delete('/:id',
   requirePermission('users.delete'),
+  validateUserId,
   userController.deleteUserHandler
 );
 

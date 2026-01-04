@@ -9,6 +9,12 @@ const router = express.Router();
 const patientController = require('../controllers/patient.controller');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
+const {
+  validatePatientCreation,
+  validatePatientUpdate,
+  validatePatientId,
+  validatePatientQuery
+} = require('../validators/patient.validator');
 
 /**
  * All routes require authentication
@@ -30,6 +36,7 @@ router.get('/stats',
  */
 router.get('/',
   requirePermission('patients.list'),
+  validatePatientQuery,
   patientController.getPatientsHandler
 );
 
@@ -38,6 +45,7 @@ router.get('/',
  */
 router.post('/',
   requirePermission('patients.create'),
+  validatePatientCreation,
   patientController.createPatientHandler
 );
 
@@ -47,6 +55,7 @@ router.post('/',
  */
 router.get('/:id',
   requirePermission('patients.read'),
+  validatePatientId,
   patientController.getPatientByIdHandler
 );
 
@@ -56,6 +65,7 @@ router.get('/:id',
  */
 router.put('/:id',
   requirePermission('patients.update'),
+  validatePatientUpdate,
   patientController.updatePatientHandler
 );
 
@@ -65,6 +75,7 @@ router.put('/:id',
  */
 router.put('/:id/activate',
   requirePermission('patients.update'),
+  validatePatientId,
   patientController.activatePatientHandler
 );
 
@@ -74,6 +85,7 @@ router.put('/:id/activate',
  */
 router.put('/:id/deactivate',
   requirePermission('patients.delete'),
+  validatePatientId,
   patientController.deactivatePatientHandler
 );
 
@@ -83,6 +95,7 @@ router.put('/:id/deactivate',
  */
 router.delete('/:id',
   requirePermission('patients.delete'),
+  validatePatientId,
   patientController.deletePatientHandler
 );
 

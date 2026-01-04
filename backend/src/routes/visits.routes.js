@@ -9,6 +9,12 @@ const router = express.Router();
 const visitController = require('../controllers/visit.controller');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
+const {
+  validateVisitCreation,
+  validateVisitUpdate,
+  validateVisitId,
+  validateVisitQuery
+} = require('../validators/visit.validator');
 
 /**
  * All routes require authentication
@@ -30,6 +36,7 @@ router.get('/stats',
  */
 router.get('/',
   requirePermission('visits.list'),
+  validateVisitQuery,
   visitController.getVisitsHandler
 );
 
@@ -38,6 +45,7 @@ router.get('/',
  */
 router.post('/',
   requirePermission('visits.create'),
+  validateVisitCreation,
   visitController.createVisitHandler
 );
 
@@ -47,6 +55,7 @@ router.post('/',
  */
 router.get('/:id',
   requirePermission('visits.read'),
+  validateVisitId,
   visitController.getVisitByIdHandler
 );
 
@@ -56,6 +65,7 @@ router.get('/:id',
  */
 router.put('/:id',
   requirePermission('visits.update'),
+  validateVisitUpdate,
   visitController.updateVisitHandler
 );
 
@@ -65,6 +75,7 @@ router.put('/:id',
  */
 router.delete('/:id',
   requirePermission('visits.delete'),
+  validateVisitId,
   visitController.deleteVisitHandler
 );
 
