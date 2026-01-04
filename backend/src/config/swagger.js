@@ -47,6 +47,49 @@ const options = {
           description: 'API key for programmatic access'
         }
       },
+      parameters: {
+        // Standard pagination and sorting
+        LimitParam: {
+          in: 'query',
+          name: 'limit',
+          schema: {
+            type: 'integer',
+            minimum: 1,
+            maximum: 500,
+            default: 10
+          },
+          description: 'Number of records to return per page'
+        },
+        OffsetParam: {
+          in: 'query',
+          name: 'offset',
+          schema: {
+            type: 'integer',
+            minimum: 0,
+            default: 0
+          },
+          description: 'Number of records to skip for pagination'
+        },
+        SortOrderParam: {
+          in: 'query',
+          name: 'sort_order',
+          schema: {
+            type: 'string',
+            enum: ['ASC', 'DESC', 'asc', 'desc'],
+            default: 'DESC'
+          },
+          description: 'Sort direction (ascending or descending)'
+        },
+        SearchParam: {
+          in: 'query',
+          name: 'search',
+          schema: {
+            type: 'string',
+            maxLength: 500
+          },
+          description: 'Search term for multi-field text search'
+        }
+      },
       schemas: {
         Error: {
           type: 'object',
