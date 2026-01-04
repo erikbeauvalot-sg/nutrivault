@@ -1,7 +1,7 @@
 ---
 agent: agent
 description: 'Transforms lessons learned into domain-organized memory instructions (global or workspace). Syntax: `/remember [>domain [scope]] lesson clue` where scope is `global` (default), `user`, `workspace`, or `ws`.'
-model: G
+model: GPT-4.1
 ---
 
 # Memory Keeper

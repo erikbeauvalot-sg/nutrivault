@@ -4,11 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NutriVault is a secure nutrition practice management system for dietitians to manage patients, visits, billing, and audit logging with role-based access control. Built with Node.js/Express backend, React frontend, and Sequelize ORM supporting both SQLite (development) and PostgreSQL (production).
+NutriVault is a secure nutrition practice management system for dietitians to manage patients, visits, billing, and audit logging with role-based access control. Built with Node.js/Express backend, React frontend (scaffold only), and Sequelize ORM supporting both SQLite (development) and PostgreSQL (production).
+
+**Current Status**: Phase 2 in progress (13% complete)
+- **Phase 1 Complete**: Database schema, migrations, seeders, authentication (JWT + API keys), RBAC system, audit logging, error handling
+- **Phase 2 In Progress**: API endpoints for users, patients, visits (partial), billing (planned)
+- **Frontend**: Directory structure exists but not yet implemented
 
 ## Common Commands
 
-### Database Management
+### Database Management (Run from ROOT directory)
 
 ```bash
 # Run migrations (creates/updates database schema)
@@ -25,9 +30,12 @@ npm run db:migrate:undo
 
 # Undo all seeders
 npm run db:seed:undo
+
+# Update project TODO tracker
+npm run update-todo
 ```
 
-### Backend Development
+### Backend Development (Run from backend/ directory)
 
 ```bash
 cd backend
@@ -35,7 +43,7 @@ cd backend
 # Install dependencies
 npm install
 
-# Start development server (auto-reload)
+# Start development server (auto-reload with nodemon)
 npm run dev
 
 # Start production server
@@ -49,27 +57,6 @@ npm run test:coverage
 # Linting
 npm run lint
 npm run lint:fix
-```
-
-### Frontend Development
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Run tests
-npm test
-
-# Linting
-npm run lint
 ```
 
 ### Database Verification
@@ -86,169 +73,393 @@ sqlite3 backend/data/nutrivault_dev.db
 
 ```bash
 # Start all services
-docker-compose up
-
-# Start in detached mode
 docker-compose up -d
 
 # Stop all services
 docker-compose down
 ```
 
-## Architecture Overview
+## Critical Architecture Patterns
 
-### Database Layer
+### Database Layer Location (IMPORTANT)
 
-**Location**: Root-level `/models/`, `/migrations/`, `/seeders/`
+**Models are at ROOT level**, not inside `/backend/`. This is the most common source of confusion.
 
-**Important**: The Sequelize configuration uses **root-level paths** defined in `.sequelizerc`:
-- Models: `/models/` (NOT `/backend/models/` or `/backend/src/models/`)
+```javascript
+// From backend/src/ files:
+const db = require('../../models');
+
+// From root directory:
+const db = require('./models');
+
+// Models available: db.User, db.Role, db.Permission, db.Patient,
+// db.Visit, db.VisitMeasurement, db.Billing, db.AuditLog,
+// db.RefreshToken, db.ApiKey, db.RolePermission
+```
+
+**Sequelize paths** (defined in `.sequelizerc`):
+- Models: `/models/`
 - Migrations: `/migrations/`
 - Seeders: `/seeders/`
 - Config: `/config/database.js`
 
-**Database Models (11 total)**:
-1. **Role** - User roles (ADMIN, DIETITIAN, ASSISTANT, VIEWER)
-2. **Permission** - Granular permissions (29 total: patients.create, patients.read, etc.)
-3. **RolePermission** - Many-to-many junction table
-4. **User** - System users with authentication
-5. **Patient** - Patient demographics and medical info
-6. **Visit** - Patient appointments and consultations
-7. **VisitMeasurement** - Vitals, BMI, blood pressure per visit
-8. **Billing** - Invoices and payments
-9. **AuditLog** - Comprehensive audit trail for all operations
-10. **RefreshToken** - JWT refresh token management
-11. **ApiKey** - API key authentication
-
-**Model Relationships**:
-- User → Role (many-to-one)
-- Role ↔ Permission (many-to-many via RolePermission)
-- Patient → User (assigned dietitian)
-- Visit → Patient, Visit → User (dietitian)
-- Visit → VisitMeasurement (one-to-many)
-- Billing → Patient, Billing → Visit
-- All models track created_by/updated_by → User
-
-**Using Models in Code**:
-```javascript
-const db = require('./models');  // From root directory
-const db = require('../models'); // From backend/src/
-
-// Models available: db.User, db.Role, db.Permission, db.Patient, etc.
-```
+**Database commands MUST run from root directory**, not from `/backend/`.
 
 ### Backend Structure
 
-**Location**: `/backend/src/`
+```
+backend/src/
+├── auth/              # JWT utilities, token management
+├── config/            # Application configuration
+├── controllers/       # Request handlers (HTTP layer)
+├── middleware/        # Auth, RBAC, logging, error handling
+├── routes/            # API route definitions
+├── services/          # Business logic (core layer)
+└── server.js          # Express app entry point
+```
 
-**Planned directories** (Phase 2+):
-- `auth/` - Authentication logic (JWT, API keys)
-- `config/` - Application configuration
-- `controllers/` - Request handlers
-- `middleware/` - Custom middleware (auth, RBAC, logging, validation)
-- `routes/` - API route definitions
-- `services/` - Business logic layer
-- `utils/` - Utility functions
+### Request Flow
 
-**Important**: Backend code goes in `/backend/src/`, but database models are at root `/models/`.
+```
+HTTP Request
+  ↓
+Morgan logging (console)
+  ↓
+Request logger middleware (audit trail)
+  ↓
+CORS & Security (helmet)
+  ↓
+Body parsing
+  ↓
+Route matching
+  ↓
+authenticate middleware (JWT or API key)
+  ↓
+RBAC middleware (requirePermission/requireRole)
+  ↓
+Controller (HTTP handling)
+  ↓
+Service (business logic + audit logging)
+  ↓
+Response or Error
+  ↓
+Error handler middleware (centralized)
+```
 
-### Authentication & Authorization
+### Authentication System
 
-**Role-Based Access Control (RBAC)**:
-- **ADMIN**: Full system access (29 permissions)
-- **DIETITIAN**: Manage assigned patients, visits, billing (16 permissions)
-- **ASSISTANT**: Limited access - read patients/visits/billing, create visits/billing (9 permissions)
-- **VIEWER**: Read-only access (6 permissions)
+**Dual Authentication Support:**
+1. **JWT Tokens**: Bearer token in Authorization header
+2. **API Keys**: `x-api-key` or `api-key` header
 
-**Permission Format**: `resource.action` (e.g., `patients.create`, `billing.read`)
+**Authentication Flow:**
+```javascript
+// Middleware checks in order:
+1. Extract Bearer token from Authorization header
+2. If token exists, verify JWT and load user with role/permissions
+3. If no token, check for API key header
+4. If API key exists, validate and load associated user
+5. If neither exists, return 401 Unauthorized
+```
 
-**Default Admin User** (created by seeders):
-- Username: `admin`
-- Password: `Admin123!`
-- Email: `admin@nutrivault.local`
-- Role: ADMIN
+**Account Security:**
+- Failed login attempts tracked (account lockout after threshold)
+- `locked_until` timestamp prevents access during lockout period
+- `is_active` flag for account activation/deactivation
+- Password hashing with bcrypt (12+ rounds)
+
+**Token Management:**
+- Access tokens: Short-lived (15-30 min)
+- Refresh tokens: Stored in RefreshToken model (7-30 days)
+- API keys: Hashed in database, optional expiration
+
+### RBAC Middleware Patterns
+
+**Common middleware combinations:**
+
+```javascript
+// Permission-based
+router.get('/patients',
+  authenticate,
+  requirePermission('patients.read'),
+  controller
+);
+
+// Role-based
+router.delete('/users/:id',
+  authenticate,
+  requireRole('ADMIN'),
+  controller
+);
+
+// Multiple permissions (OR logic)
+router.get('/resource',
+  authenticate,
+  requireAnyPermission(['resource.read', 'resource.admin']),
+  controller
+);
+
+// Multiple permissions (AND logic)
+router.post('/sensitive',
+  authenticate,
+  requireAllPermissions(['resource.create', 'resource.sensitive']),
+  controller
+);
+
+// Ownership or permission
+router.put('/users/:id',
+  authenticate,
+  requireOwnerOrPermission('userId', 'users.update'),
+  controller
+);
+
+// Assigned dietitian check (for patient data)
+router.get('/patients/:id',
+  authenticate,
+  requireAssignedDietitian(),
+  controller
+);
+```
+
+**Available RBAC functions:**
+- `requirePermission(permission)` - Single permission
+- `requireAnyPermission([...])` - At least one permission (OR)
+- `requireAllPermissions([...])` - All permissions required (AND)
+- `requireRole(roleName)` - Specific role required
+- `requireAnyRole([...])` - At least one role
+- `requireOwnerOrPermission(field, permission)` - Owner or has permission
+- `requireAssignedDietitian()` - For patient data access control
+- `hasPermission(user, permission)` - Helper function
+- `hasRole(user, roleName)` - Helper function
+- `isAdmin(user)` - Helper function
+
+### Service Layer Pattern
+
+**Controllers handle HTTP, Services handle business logic:**
+
+```javascript
+// Controller (backend/src/controllers/):
+async function getPatients(req, res, next) {
+  try {
+    const patients = await patientService.getPatients(req.user, req.query);
+    res.json({ success: true, data: patients });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Service (backend/src/services/):
+async function getPatients(user, filters) {
+  // Business logic
+  // Audit logging
+  // Data access
+  return patients;
+}
+```
+
+**Services are responsible for:**
+- Business logic validation
+- Audit logging via `audit.service.js`
+- Database transactions
+- Complex queries and data transformations
+- Authorization checks beyond basic RBAC (e.g., assigned dietitian validation)
+
+### Error Handling
+
+**Custom AppError class:**
+```javascript
+const { AppError } = require('./middleware/errorHandler');
+
+// Throw structured errors
+throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+throw new AppError('Permission denied', 403, 'PERMISSION_DENIED');
+```
+
+**Centralized error handler** (`middleware/errorHandler.js`):
+- Catches all errors
+- Formats consistent error responses
+- Logs errors appropriately
+- Returns JSON with `success: false, error: { code, message, ... }`
+
+**Authorization failures** automatically logged to `audit_logs` table with:
+- User ID and username
+- Action type (PERMISSION_CHECK, ROLE_CHECK, etc.)
+- Resource information
+- Request metadata (IP, user agent, method, path)
+- Failure reason
+
+### Database Models & Relationships
+
+**11 Models Total:**
+
+1. **Role** - 4 roles: ADMIN, DIETITIAN, ASSISTANT, VIEWER
+2. **Permission** - 29 granular permissions (format: `resource.action`)
+3. **RolePermission** - Many-to-many junction table
+4. **User** - System users with authentication
+5. **Patient** - Patient demographics and medical info
+6. **Visit** - Patient appointments/consultations
+7. **VisitMeasurement** - Vitals, BMI, blood pressure per visit
+8. **Billing** - Invoices and payments
+9. **AuditLog** - Comprehensive audit trail
+10. **RefreshToken** - JWT refresh token management
+11. **ApiKey** - API key authentication
+
+**Key Relationships:**
+- User → Role (many-to-one)
+- Role ↔ Permission (many-to-many via RolePermission)
+- Patient → User as assigned_dietitian_id
+- Visit → Patient, Visit → User (dietitian)
+- Visit → VisitMeasurement (one-to-many)
+- Billing → Patient, Billing → Visit
+- All models track `created_by`/`updated_by` → User
+
+**Permission Format Examples:**
+- `patients.create`, `patients.read`, `patients.update`, `patients.delete`
+- `visits.create`, `visits.read`, `visits.update`, `visits.delete`
+- `billing.create`, `billing.read`, `billing.update`, `billing.delete`
+- `users.create`, `users.read`, `users.update`, `users.delete`
+- `audit.read`, `reports.generate`, etc.
 
 ### Audit Logging
 
-All CRUD operations, authentication events, and authorization failures are logged to the `audit_logs` table with:
+All sensitive operations logged to `audit_logs` table:
+
+**What gets logged:**
+- All CRUD operations on patients, visits, billing, users
+- Authentication events (LOGIN, LOGOUT, TOKEN_REFRESH)
+- Authorization failures
+- Password changes
+- Account status changes
+
+**Audit record includes:**
 - User identification (user_id, username)
 - Action type (CREATE, READ, UPDATE, DELETE, LOGIN, etc.)
 - Resource identification (resource_type, resource_id)
 - Request metadata (ip_address, user_agent, request_method, request_path)
-- Changes tracking (before/after values in JSON format)
-- Status and severity levels
+- Changes (before/after values in JSON format)
+- Status (SUCCESS, FAILURE) and severity (INFO, WARNING, ERROR, CRITICAL)
+
+**Usage in services:**
+```javascript
+const auditService = require('./audit.service');
+
+await auditService.log({
+  user_id: user.id,
+  username: user.username,
+  action: 'CREATE',
+  resource_type: 'patients',
+  resource_id: patient.id,
+  status: 'SUCCESS',
+  changes: { after: patient.toJSON() },
+  // ... request metadata
+});
+```
 
 ### SQLite vs PostgreSQL
 
-**Development**: SQLite database at `backend/data/nutrivault_dev.db` (auto-created on first migration)
+**Development**: SQLite at `backend/data/nutrivault_dev.db`
+- Zero configuration
+- Auto-created on first migration
+- File-based, single-user
 
-**Production**: PostgreSQL (set `NODE_ENV=production` and configure DB_HOST, DB_NAME, etc.)
+**Production**: PostgreSQL
+- Set `NODE_ENV=production` and configure `DB_HOST`, `DB_NAME`, etc.
+- Supports concurrent connections
+- Advanced features (JSONB, UUID type, etc.)
 
-**Migration Compatibility**: All migrations are designed to work with both SQLite and PostgreSQL:
-- UUIDs: Stored as TEXT in SQLite, UUID type in PostgreSQL
-- JSON fields: TEXT in SQLite, JSONB in PostgreSQL
-- Booleans: TINYINT(1) in SQLite, BOOLEAN in PostgreSQL
+**Migration Compatibility**:
+All migrations must work with both databases:
+- Use Sequelize abstractions, not raw SQL
+- UUIDs: TEXT (SQLite) vs UUID type (PostgreSQL)
+- JSON: TEXT (SQLite) vs JSONB (PostgreSQL)
+- Booleans: TINYINT(1) (SQLite) vs BOOLEAN (PostgreSQL)
 
-## Key Configuration Files
+## Configuration Files
 
 ### Environment Variables
 
 **Backend** (`/backend/.env`):
-- `NODE_ENV` - development/production
-- `PORT` - Server port (default: 3001)
-- `DB_DIALECT` - sqlite or postgres
-- `DB_STORAGE` - SQLite file path (development only)
-- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` - PostgreSQL (production)
-- `JWT_SECRET`, `REFRESH_TOKEN_SECRET` - Must be changed in production
-- `BCRYPT_ROUNDS` - Password hashing cost (default: 12)
-- `LOG_LEVEL` - info/debug/error
+```bash
+NODE_ENV=development
+PORT=3001
 
-**Frontend** (`/frontend/.env`):
-- `VITE_API_URL` - Backend API URL (default: http://localhost:3001/api)
-- `VITE_ENV` - development/production
+# SQLite (development)
+DB_DIALECT=sqlite
+DB_STORAGE=./data/nutrivault_dev.db
 
-### Sequelize Configuration
+# PostgreSQL (production)
+# DB_DIALECT=postgres
+# DB_HOST=localhost
+# DB_PORT=5432
+# DB_NAME=nutrivault
+# DB_USER=dbuser
+# DB_PASSWORD=secure_password
 
-**File**: `/config/database.js`
+# Authentication (MUST change in production)
+JWT_SECRET=change-this-to-a-secure-random-string-min-32-chars
+REFRESH_TOKEN_SECRET=change-this-to-a-different-secure-random-string
+BCRYPT_ROUNDS=12
 
-Defines connection settings for development (SQLite), test (in-memory), and production (PostgreSQL) environments.
+# Logging
+LOG_LEVEL=info
 
-**File**: `/.sequelizerc`
+# CORS
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+```
 
-Configures Sequelize CLI paths - points to root-level directories, not backend subdirectories.
+**Frontend** (`/frontend/.env` - when implemented):
+```bash
+VITE_API_URL=http://localhost:3001/api
+VITE_ENV=development
+```
 
 ## Development Workflow
 
-### Adding a New Feature
+### Adding a New API Endpoint
 
-1. **Database changes**:
-   - Create migration: `cd migrations && create new file with timestamp`
-   - Run migration: `npm run db:migrate`
-   - Create/update models in `/models/`
+1. **Add route** in `/backend/src/routes/{resource}.routes.js`:
+   ```javascript
+   router.post('/',
+     authenticate,
+     requirePermission('resource.create'),
+     controller.create
+   );
+   ```
 
-2. **Backend API**:
-   - Add route in `/backend/src/routes/`
-   - Add controller in `/backend/src/controllers/`
-   - Add business logic in `/backend/src/services/`
-   - Add middleware if needed (auth, validation)
-   - Add audit logging for CRUD operations
+2. **Add controller** in `/backend/src/controllers/{resource}.controller.js`:
+   ```javascript
+   async function create(req, res, next) {
+     try {
+       const result = await service.create(req.user, req.body);
+       res.status(201).json({ success: true, data: result });
+     } catch (error) {
+       next(error);
+     }
+   }
+   ```
 
-3. **Frontend**:
-   - Add components in `/frontend/src/components/`
-   - Add pages in `/frontend/src/pages/`
-   - Add API service calls in `/frontend/src/services/`
-   - Update state management if needed
+3. **Add service** in `/backend/src/services/{resource}.service.js`:
+   ```javascript
+   async function create(user, data) {
+     // Validate
+     // Business logic
+     // Database operation
+     // Audit logging
+     return result;
+   }
+   ```
 
-4. **Testing**:
-   - Write backend tests in `/backend/tests/`
-   - Write frontend tests in `/frontend/tests/`
-   - Run `npm test` to verify
+4. **Register route** in `/backend/src/server.js`:
+   ```javascript
+   const resourceRoutes = require('./routes/{resource}.routes');
+   app.use('/api/{resource}', resourceRoutes);
+   ```
 
 ### Creating Database Migrations
 
-**Important**: Migrations are at `/migrations/`, not `/backend/migrations/`
+**Location**: `/migrations/` (root level, NOT `/backend/migrations/`)
 
-**Naming convention**: `YYYYMMDDHHMMSS-description.js`
+**Naming**: `YYYYMMDDHHMMSS-description.js`
 
 **Template**:
 ```javascript
@@ -273,7 +484,6 @@ module.exports = {
       }
     });
 
-    // Add indexes
     await queryInterface.addIndex('table_name', ['field_name']);
   },
 
@@ -283,100 +493,126 @@ module.exports = {
 };
 ```
 
-**Must support both SQLite and PostgreSQL** - use Sequelize abstractions, avoid database-specific SQL.
+**Requirements**:
+- Must support both SQLite and PostgreSQL
+- Use Sequelize abstractions only
+- Provide both `up` and `down` functions
+- Foreign keys require parent tables to exist first
 
 ### Creating Seeders
 
-**Location**: `/seeders/`
+**Location**: `/seeders/` (root level)
 
-**Naming convention**: `YYYYMMDDHHMMSS-description.js`
+**Naming**: `YYYYMMDDHHMMSS-description.js`
 
-Use for initial data (roles, permissions) and test data. Always check for existing records before inserting to avoid duplicates.
+**Pattern**: Check for existing records before inserting to avoid duplicates
 
-## Multi-Agent Development Notes
+## Default Credentials
 
-This project was designed using a **10-agent collaborative approach**:
-1. Project Architect - System design
-2. Backend Developer - API development
-3. Database Specialist - Database layer (Phase 1 complete)
-4. Security Specialist - Auth/RBAC
-5. Frontend Developer - React UI
-6. UI/UX Specialist - Design
-7. Audit Logger - Logging infrastructure
-8. Testing Specialist - QA
-9. DevOps Specialist - Infrastructure (Phase 1 complete)
-10. Documentation Specialist - Docs
+After running `npm run db:seed`:
 
-**Current Status**: Phase 1 complete (foundation), Phase 2+ in progress
+**Admin User:**
+- Username: `admin`
+- Password: `Admin123!`
+- Email: `admin@nutrivault.local`
+- Role: ADMIN (all 29 permissions)
 
-See `/NUTRIVAULT_SPECIFICATION.md` for complete multi-agent workflow details.
+**⚠️ Change before production deployment**
 
-## Security Considerations
+## Copilot Integration
 
-- **Never commit** `.env` files (use `.env.example` templates)
-- **Change default secrets** before production deployment
-- **Password requirements**: Min 8 chars, uppercase, lowercase, number, special char
-- **Password hashing**: bcrypt with cost factor 12+
-- **JWT tokens**: Access tokens expire in 15-30 minutes, refresh tokens in 7-30 days
-- **Rate limiting**: Implemented on all endpoints
-- **Audit logging**: All sensitive operations must be logged
-- **Input validation**: Use express-validator on all endpoints
-- **HTTPS only** in production
+The `.github/copilot-instructions.md` file defines code review guidelines for:
+
+**Prompt files** (`.prompt.md`):
+- Must have frontmatter with `mode`, `description` (required)
+- Should specify `tools` and `model` fields
+- Filename: lowercase-with-hyphens
+
+**Instruction files** (`.instructions.md`):
+- Must have frontmatter with `description` and `applyTo` (glob patterns)
+- Used for domain-specific memory and guidance
+- Example: `.github/instructions/testing-memory.instructions.md`
+
+**Agent skills** (`skills/` directory):
+- Must have `SKILL.md` with frontmatter
+- `name` field must match folder name
 
 ## Testing
 
-**Backend tests**: Use Jest, located in `/backend/tests/`
-- Unit tests for services and utilities
-- Integration tests for API endpoints
+**Backend** (`/backend/tests/`):
+- Framework: Jest
+- Run: `npm test` (from backend/)
+- Watch mode: `npm run test:watch`
+- Coverage: `npm run test:coverage`
 - Target: >80% code coverage
 
-**Frontend tests**: React Testing Library, located in `/frontend/tests/`
-- Component tests
-- E2E tests for critical flows
-
-**Database tests**: Seeders provide test data, use in-memory SQLite for tests
+**Note**: Frontend tests not yet implemented
 
 ## Troubleshooting
 
 ### Database Issues
 
-**Problem**: "Database locked" error
-- **Solution**: Close all database connections, restart server
+**"Database locked" error**:
+- Close all database connections
+- Restart server
+- Ensure only one process accessing SQLite
 
-**Problem**: Migration fails
-- **Solution**: `npm run db:migrate:undo`, fix migration, retry
+**Migration fails**:
+```bash
+npm run db:migrate:undo
+# Fix migration file
+npm run db:migrate
+```
 
-**Problem**: Seed data duplicates
-- **Solution**: `npm run db:seed:undo`, then `npm run db:seed`
-
-**Problem**: Can't find models
-- **Solution**: Verify you're requiring from correct path: `require('./models')` from root or `require('../models')` from backend/src/
-
-### Module Path Issues
-
-**Problem**: Models not loading
-- **Solution**: Check `.sequelizerc` - paths should be relative to root directory
+**Can't find models**:
 - Models are at `/models/`, NOT `/backend/src/models/`
+- Use correct require path: `require('../../models')` from `backend/src/`
+
+**Seed data duplicates**:
+```bash
+npm run db:seed:undo
+npm run db:seed
+```
+
+### Authentication Issues
+
+**"Invalid token" errors**:
+- Check JWT_SECRET matches between token creation and verification
+- Verify token hasn't expired
+- Check Authorization header format: `Bearer <token>`
+
+**"Account locked" errors**:
+- User exceeded failed login attempts
+- Check `locked_until` timestamp in users table
+- Wait for lockout period or manually clear in database
 
 ## Documentation
 
 - **Full specification**: `/NUTRIVAULT_SPECIFICATION.md`
 - **Database setup**: `/DATABASE_SETUP_SUMMARY.md`
 - **DevOps setup**: `/PHASE1_DEVOPS_COMPLETE.md`
-- **Development setup**: `/docs/setup/DEVELOPMENT_SETUP.md`
-- **API documentation**: `/docs/api/` (to be created)
-- **Agent status**: `/docs/agents/AGENT-STATUS.md`
+- **Authentication**: `/AUTHENTICATION_COMPLETE.md`
+- **RBAC system**: `/RBAC_COMPLETE.md`
+- **Backend progress**: `/PHASE2_BACKEND_STARTED.md`
+- **Project tracker**: `/PROJECT_TODO.md` (auto-updated via `npm run update-todo`)
 
 ## Important Notes
 
-1. **Root-level models directory**: Unlike typical Node.js projects, Sequelize models are in `/models/` at root level, not inside `/backend/`. This is configured in `.sequelizerc`.
+1. **Root-level models**: Unlike typical Node.js projects, Sequelize models live in `/models/` at root, configured via `.sequelizerc`
 
-2. **Database file location**: SQLite database is at `backend/data/nutrivault_dev.db`, but migrations/models are at root level.
+2. **Database commands run from root**: `npm run db:migrate`, `npm run db:seed`, etc. must run from root directory, not `/backend/`
 
-3. **Environment-specific behavior**: Application uses SQLite for development (zero configuration) and PostgreSQL for production (requires configuration).
+3. **Backend commands run from backend/**: `npm run dev`, `npm test` run from `/backend/` directory
 
-4. **Default credentials**: After seeding, use `admin`/`Admin123!` to log in. Change these before production.
+4. **Dual authentication**: System supports both JWT tokens and API keys on same endpoints
 
-5. **Migration order matters**: Migrations must run in chronological order. Foreign key dependencies require parent tables to exist first.
+5. **Migration order matters**: Foreign key dependencies require parent tables exist first
 
-6. **Audit everything**: All CRUD operations on sensitive data (patients, visits, billing, users) must be logged to audit_logs table.
+6. **Audit everything**: All CRUD on sensitive data (patients, visits, billing, users) must be logged
+
+7. **Multi-agent development**: Project designed with 10-agent collaboration approach (see `/NUTRIVAULT_SPECIFICATION.md`)
+
+8. **Personnal Note**: 
+- Do not start a new development phase if you have only 85% left on the current session or 90% on the Current week
+- Commit and push at the end of each task of phase.
+- Execute all bash command without requeting to proceed.

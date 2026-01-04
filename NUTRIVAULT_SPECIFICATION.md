@@ -1374,7 +1374,51 @@ npm run test:e2e          # E2E tests
 
 ---
 
-### 8.6 Agent Handoff Checklist
+### 8.6 Using the `/epcd` Command for Feature Implementation
+
+**All agents must use the `/epcd` command for implementing features**, which enforces the **Explore → Plan → Code → Test** workflow:
+
+#### The EPCT Workflow
+
+1. **Explore Phase**
+   - Research best practices using web search
+   - Analyze the codebase to understand existing patterns
+   - Review CLAUDE.md for project architecture
+   - Identify all relevant files and dependencies
+
+2. **Plan Phase** ⚠️ **REQUIRES USER APPROVAL**
+   - Create detailed implementation plan
+   - List all files to be created/modified
+   - Identify uncertainties and ask questions
+   - **STOP and wait for user validation before coding**
+
+3. **Code Phase**
+   - Implement the complete feature following the approved plan
+   - Follow NutriVault patterns (RBAC, audit logging, service layer)
+   - Write both backend and frontend code as needed
+
+4. **Test Phase**
+   - Run existing test commands (no new test creation)
+   - Execute linting and validation tools
+   - Verify the feature works end-to-end
+
+#### Example Usage
+
+```bash
+# For implementing a new feature
+/epcd Implement complete patient management API endpoints with assigned dietitian filtering, RBAC, and audit logging
+
+# For adding a UI component
+/epcd Implement patient management UI including list view, detail view, create form, edit form with validation and error handling
+```
+
+The `/epcd` command ensures:
+- ✅ Thorough exploration before planning
+- ✅ User approval before implementation
+- ✅ Complete implementation following project patterns
+- ✅ Proper testing with existing tools
+
+### 8.7 Agent Handoff Checklist
 
 When an agent completes their work, they must provide:
 
@@ -1388,68 +1432,163 @@ When an agent completes their work, they must provide:
 8. ✅ Integration tested with dependent modules
 9. ✅ Known issues documented
 10. ✅ Next steps or blockers communicated
+11. ✅ `/epcd` workflow completed (Explore → Plan → Code → Test)
 
 ---
 
 ## 9. IMPLEMENTATION PHASES
 
+> **Development Workflow**: For each feature implementation task below, use the `/epcd` command which follows the **Explore → Plan → Code → Test** workflow. This ensures thorough exploration, user-approved planning, complete implementation, and proper testing for every feature.
+
 ### Phase 1: Foundation (Backend Core)
-1. Set up Node.js/Express project structure
-2. Configure SQLite database for development (PostgreSQL for production)
-3. Implement database schema with migrations (SQLite & PostgreSQL compatible)
-4. Create seed data for roles and permissions
-5. Implement authentication (JWT + refresh tokens)
-6. Implement basic RBAC middleware
-7. Set up Winston logging infrastructure
-8. Create basic audit logging service
+
+1. **Set up Node.js/Express project structure**
+   - Use: `/epcd Set up Node.js/Express project with proper folder structure, middleware configuration, and error handling`
+
+2. **Configure SQLite database for development (PostgreSQL for production)**
+   - Use: `/epcd Configure dual-database support with SQLite for development and PostgreSQL for production using Sequelize`
+
+3. **Implement database schema with migrations (SQLite & PostgreSQL compatible)**
+   - Use: `/epcd Create database schema with all tables (users, roles, permissions, patients, visits, billing, audit_logs) with SQLite/PostgreSQL compatible migrations`
+
+4. **Create seed data for roles and permissions**
+   - Use: `/epcd Create seed data for roles (ADMIN, DIETITIAN, ASSISTANT, VIEWER) and permissions with proper role-permission mappings`
+
+5. **Implement authentication (JWT + refresh tokens)**
+   - Use: `/epcd Implement JWT authentication system with access tokens, refresh tokens, and token rotation`
+
+6. **Implement basic RBAC middleware**
+   - Use: `/epcd Implement role-based access control (RBAC) middleware with permission checking functions`
+
+7. **Set up Winston logging infrastructure**
+   - Use: `/epcd Set up Winston logging infrastructure with multiple log levels (ERROR, WARN, INFO, DEBUG) and file rotation`
+
+8. **Create basic audit logging service**
+   - Use: `/epcd Create audit logging service to track all CRUD operations, authentication events, and authorization failures`
 
 ### Phase 2: Core API Development
-1. Implement user management endpoints
-2. Implement patient management endpoints
-3. Implement visit management endpoints
-4. Implement billing endpoints
-5. Add input validation to all endpoints
-6. Implement comprehensive error handling
-7. Add API documentation (Swagger)
-8. Write unit tests for business logic
+
+1. **Implement user management endpoints**
+   - Use: `/epcd Implement complete user management API endpoints (list, create, get, update, delete) with RBAC and audit logging`
+
+2. **Implement patient management endpoints**
+   - Use: `/epcd Implement complete patient management API endpoints with assigned dietitian filtering, RBAC, and audit logging`
+
+3. **Implement visit management endpoints**
+   - Use: `/epcd Implement visit management API endpoints including visit measurements, with RBAC and audit logging`
+
+4. **Implement billing endpoints**
+   - Use: `/epcd Implement billing API endpoints including invoice generation, payment recording, with RBAC and audit logging`
+
+5. **Add input validation to all endpoints**
+   - Use: `/epcd Add comprehensive input validation using express-validator to all API endpoints with clear error messages`
+
+6. **Implement comprehensive error handling**
+   - Use: `/epcd Implement centralized error handling middleware with structured error responses and proper HTTP status codes`
+
+7. **Add API documentation (Swagger)**
+   - Use: `/epcd Add Swagger/OpenAPI documentation for all API endpoints with request/response schemas and authentication info`
+
+8. **Write unit tests for business logic**
+   - Use: `/epcd Write comprehensive unit tests for all service layer business logic with >80% coverage target`
 
 ### Phase 3: Advanced Features
-1. Implement API key authentication
-2. Add advanced filtering and search
-3. Implement reporting endpoints
-4. Add audit log viewing endpoints
-5. Implement rate limiting
-6. Add file upload capability (patient documents)
-7. Implement data export functionality
+
+1. **Implement API key authentication**
+   - Use: `/epcd Implement API key authentication system with key generation, hashing, expiration, and usage tracking`
+
+2. **Add advanced filtering and search**
+   - Use: `/epcd Add advanced filtering, search, and sorting capabilities to patient, visit, and billing list endpoints`
+
+3. **Implement reporting endpoints**
+   - Use: `/epcd Implement reporting API endpoints for patient statistics, revenue reports, and visit analytics`
+
+4. **Add audit log viewing endpoints**
+   - Use: `/epcd Add audit log viewing API endpoints with filtering by user, action, resource type, and date range`
+
+5. **Implement rate limiting**
+   - Use: `/epcd Implement rate limiting middleware for all API endpoints with different limits for login vs regular endpoints`
+
+6. **Add file upload capability (patient documents)**
+   - Use: `/epcd Add secure file upload capability for patient documents with validation, storage, and retrieval endpoints`
+
+7. **Implement data export functionality**
+   - Use: `/epcd Implement data export functionality for patients, visits, and billing to CSV and PDF formats`
 
 ### Phase 4: Frontend Development
-1. Set up React project with routing
-2. Implement authentication flow (login, logout, token refresh)
-3. Create layout components (header, sidebar, footer)
-4. Implement patient management UI
-5. Implement visit management UI
-6. Implement billing management UI
-7. Implement user management UI (admin)
-8. Implement dashboard and reports
-9. Add audit log viewer
+
+1. **Set up React project with routing**
+   - Use: `/epcd Set up React project with Vite, React Router v6, and proper folder structure for components, pages, and services`
+
+2. **Implement authentication flow (login, logout, token refresh)**
+   - Use: `/epcd Implement complete authentication flow in React including login form, logout, token storage, and automatic token refresh`
+
+3. **Create layout components (header, sidebar, footer)**
+   - Use: `/epcd Create responsive layout components (header with navigation, sidebar menu, footer) with Bootstrap styling`
+
+4. **Implement patient management UI**
+   - Use: `/epcd Implement complete patient management UI including list view, detail view, create form, edit form with validation and error handling`
+
+5. **Implement visit management UI**
+   - Use: `/epcd Implement visit management UI including calendar view, list view, detail view, create/edit forms with measurements`
+
+6. **Implement billing management UI**
+   - Use: `/epcd Implement billing management UI including invoice list, invoice detail, create form, and payment recording interface`
+
+7. **Implement user management UI (admin)**
+   - Use: `/epcd Implement user management UI for admins including user list, create form, edit form, and role assignment`
+
+8. **Implement dashboard and reports**
+   - Use: `/epcd Implement dashboard with statistics cards, charts, and reports for patient data, visits, and revenue`
+
+9. **Add audit log viewer**
+   - Use: `/epcd Add audit log viewer UI with filtering, search, and export capabilities for administrators`
 
 ### Phase 5: Security & Testing
-1. Security audit and penetration testing
-2. Implement rate limiting and DDoS protection
-3. Add comprehensive error handling
-4. Integration testing for all API endpoints
-5. End-to-end testing for critical user flows
-6. Performance testing and optimization
-7. Accessibility testing
+
+1. **Security audit and penetration testing**
+   - Use: `/epcd Conduct comprehensive security audit covering authentication, authorization, input validation, and data protection`
+
+2. **Implement rate limiting and DDoS protection**
+   - Use: `/epcd Implement advanced rate limiting with tiered limits, IP-based blocking, and DDoS protection mechanisms`
+
+3. **Add comprehensive error handling**
+   - Use: `/epcd Add comprehensive error handling across frontend and backend with user-friendly messages and proper logging`
+
+4. **Integration testing for all API endpoints**
+   - Use: `/epcd Write integration tests for all API endpoints testing authentication, authorization, and business logic`
+
+5. **End-to-end testing for critical user flows**
+   - Use: `/epcd Create end-to-end tests for critical user flows (login, patient creation, visit booking, billing) using Cypress or Playwright`
+
+6. **Performance testing and optimization**
+   - Use: `/epcd Conduct performance testing, identify bottlenecks, and optimize database queries, API responses, and frontend rendering`
+
+7. **Accessibility testing**
+   - Use: `/epcd Conduct accessibility testing and implement WCAG 2.1 AA compliance fixes across all UI components`
 
 ### Phase 6: Deployment & Monitoring
-1. Set up production environment
-2. Configure SSL/TLS certificates
-3. Set up database backups
-4. Configure log aggregation (optional: ELK stack)
-5. Set up monitoring and alerting
-6. Create deployment documentation
-7. Implement CI/CD pipeline
+
+1. **Set up production environment**
+   - Use: `/epcd Set up production environment configuration including PostgreSQL, environment variables, and production builds`
+
+2. **Configure SSL/TLS certificates**
+   - Use: `/epcd Configure SSL/TLS certificates for HTTPS with automatic renewal and secure configuration`
+
+3. **Set up database backups**
+   - Use: `/epcd Set up automated database backup system with daily backups, retention policy, and restore procedures`
+
+4. **Configure log aggregation (optional: ELK stack)**
+   - Use: `/epcd Configure centralized log aggregation using ELK stack or cloud logging service with proper indexing and search`
+
+5. **Set up monitoring and alerting**
+   - Use: `/epcd Set up monitoring for application health, performance metrics, and alerting for critical errors and downtime`
+
+6. **Create deployment documentation**
+   - Use: `/epcd Create comprehensive deployment documentation including setup guides, environment configuration, and troubleshooting`
+
+7. **Implement CI/CD pipeline**
+   - Use: `/epcd Implement CI/CD pipeline with automated testing, linting, building, and deployment to staging and production`
 
 ---
 
