@@ -186,42 +186,40 @@ async function logDataAccess({
 }
 
 /**
- * Get audit logs with filtering
+ * Get audit logs with filtering and search
+ * Supports search across username, action, resource_type, request_path, error_message
  */
 async function getAuditLogs(filters = {}) {
-  const {
-    user_id,
-    action,
-    resource_type,
-    resource_id,
-    status,
-    severity,
-    from_date,
-    to_date,
-    limit = 100,
-    offset = 0
-  } = filters;
+  // Use QueryBuilder for advanced filtering and search
+  const QueryBuilder = require('../utils/queryBuilder');
+  const { AUDIT_CONFIG } = require('../config/queryConfigs');
 
-  const where = {};
+  const queryBuilder = new QueryBuilder(AUDIT_CONFIG);
+  const { where, pagination, sort } = queryBuilder.build(filters);
 
-  if (user_id) where.user_id = user_id;
-  if (action) where.action = action;
-  if (resource_type) where.resource_type = resource_type;
-  if (resource_id) where.resource_id = resource_id;
-  if (status) where.status = status;
-  if (severity) where.severity = severity;
-
+  // Handle legacy from_date/to_date parameters (backward compatibility)
+  const { from_date, to_date } = filters;
   if (from_date || to_date) {
-    where.timestamp = {};
-    if (from_date) where.timestamp[db.Sequelize.Op.gte] = new Date(from_date);
-    if (to_date) where.timestamp[db.Sequelize.Op.lte] = new Date(to_date);
+    if (!where.timestamp) {
+      where.timestamp = {};
+    }
+    if (from_date) {
+      if (typeof where.timestamp === 'object') {
+        where.timestamp[db.Sequelize.Op.gte] = new Date(from_date);
+      }
+    }
+    if (to_date) {
+      if (typeof where.timestamp === 'object') {
+        where.timestamp[db.Sequelize.Op.lte] = new Date(to_date);
+      }
+    }
   }
 
   const logs = await db.AuditLog.findAndCountAll({
     where,
-    limit: parseInt(limit),
-    offset: parseInt(offset),
-    order: [['timestamp', 'DESC']],
+    limit: pagination.limit,
+    offset: pagination.offset,
+    order: sort,
     include: [{
       model: db.User,
       as: 'user',
@@ -233,8 +231,8 @@ async function getAuditLogs(filters = {}) {
   return {
     logs: logs.rows,
     total: logs.count,
-    limit: parseInt(limit),
-    offset: parseInt(offset)
+    limit: pagination.limit,
+    offset: pagination.offset
   };
 }
 

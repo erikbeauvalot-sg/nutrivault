@@ -28,6 +28,7 @@ class QueryBuilder {
    * @param {Object} config.filterableFields - Filterable fields with type definitions
    * @param {string[]} config.sortableFields - Fields that can be sorted
    * @param {Object} config.defaultSort - Default sort configuration { field, order }
+   * @param {number} config.defaultLimit - Default records per page (default: 10)
    * @param {number} config.maxLimit - Maximum records per page (default: 100)
    */
   constructor(config) {
@@ -35,6 +36,7 @@ class QueryBuilder {
     this.filterableFields = config.filterableFields || {};
     this.sortableFields = config.sortableFields || [];
     this.defaultSort = config.defaultSort || { field: 'created_at', order: 'DESC' };
+    this.defaultLimit = config.defaultLimit || 10;
     this.maxLimit = config.maxLimit || 100;
   }
 
@@ -473,7 +475,7 @@ class QueryBuilder {
 
     // Validate and apply defaults
     if (isNaN(limit) || limit <= 0) {
-      limit = 10; // Default limit
+      limit = this.defaultLimit;
     }
 
     if (limit > this.maxLimit) {

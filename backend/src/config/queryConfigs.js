@@ -113,7 +113,7 @@ const AUDIT_CONFIG = {
     },
     severity: {
       type: 'enum',
-      values: ['INFO', 'WARNING', 'ERROR', 'CRITICAL']
+      values: ['INFO', 'WARN', 'ERROR', 'CRITICAL']
     },
     timestamp: { type: 'date' },
     request_method: {
@@ -127,7 +127,8 @@ const AUDIT_CONFIG = {
   },
   sortableFields: ['timestamp', 'action', 'resource_type', 'status', 'severity'],
   defaultSort: { field: 'timestamp', order: 'DESC' },
-  maxLimit: 500 // Higher limit for audit logs
+  defaultLimit: 100, // Higher default limit for audit logs
+  maxLimit: 500 // Higher max limit for audit logs
 };
 
 /**

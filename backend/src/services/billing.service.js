@@ -8,6 +8,8 @@ const db = require('../../../models');
 const { AppError } = require('../middleware/errorHandler');
 const { logCrudEvent } = require('./audit.service');
 const { Op } = require('sequelize');
+const QueryBuilder = require('../utils/queryBuilder');
+const { BILLING_CONFIG } = require('../config/queryConfigs');
 
 /**
  * Check if user has access to patient for billing
@@ -61,41 +63,19 @@ async function generateInvoiceNumber() {
 
 /**
  * Get all billing records with filtering and pagination
+ * Supports search across invoice_number and notes
  */
 async function getBillingRecords(filters = {}, requestingUser) {
-  const {
-    patient_id,
-    status,
-    from_date,
-    to_date,
-    limit = 50,
-    offset = 0,
-    sort_by = 'invoice_date',
-    sort_order = 'DESC'
-  } = filters;
+  // Use QueryBuilder for advanced filtering and search
+  const queryBuilder = new QueryBuilder(BILLING_CONFIG);
+  const { where, pagination, sort } = queryBuilder.build(filters);
 
-  // Build where clause
-  const where = {};
-
-  if (patient_id) {
-    where.patient_id = patient_id;
-    // Verify access to this patient
-    await checkPatientAccessForBilling(patient_id, requestingUser);
+  // Verify patient access if filtering by specific patient
+  if (filters.patient_id) {
+    await checkPatientAccessForBilling(filters.patient_id, requestingUser);
   }
 
-  if (status) {
-    where.status = status;
-  }
-
-  if (from_date) {
-    where.invoice_date = { [Op.gte]: from_date };
-  }
-
-  if (to_date) {
-    where.invoice_date = { ...where.invoice_date, [Op.lte]: to_date };
-  }
-
-  // If user is a dietitian, only show billing for their assigned patients
+  // Apply RBAC: Dietitians can only see billing for their assigned patients
   if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
     const assignedPatients = await db.Patient.findAll({
       where: { assigned_dietitian_id: requestingUser.id },
@@ -106,8 +86,27 @@ async function getBillingRecords(filters = {}, requestingUser) {
     if (patientIds.length > 0) {
       where.patient_id = { [Op.in]: patientIds };
     } else {
-      // Dietitian has no assigned patients
+      // Dietitian has no assigned patients - return empty results
       where.patient_id = null;
+    }
+  }
+
+  // Handle legacy from_date/to_date parameters (backward compatibility)
+  // Fixed: now properly converts strings to Date objects
+  const { from_date, to_date } = filters;
+  if (from_date || to_date) {
+    if (!where.invoice_date) {
+      where.invoice_date = {};
+    }
+    if (from_date) {
+      if (typeof where.invoice_date === 'object') {
+        where.invoice_date[Op.gte] = new Date(from_date);
+      }
+    }
+    if (to_date) {
+      if (typeof where.invoice_date === 'object') {
+        where.invoice_date[Op.lte] = new Date(to_date);
+      }
     }
   }
 
@@ -125,16 +124,16 @@ async function getBillingRecords(filters = {}, requestingUser) {
         attributes: ['id', 'visit_date', 'visit_type']
       }
     ],
-    limit: parseInt(limit),
-    offset: parseInt(offset),
-    order: [[sort_by, sort_order.toUpperCase()]]
+    limit: pagination.limit,
+    offset: pagination.offset,
+    order: sort
   });
 
   return {
     billing: rows,
     total: count,
-    limit: parseInt(limit),
-    offset: parseInt(offset)
+    limit: pagination.limit,
+    offset: pagination.offset
   };
 }
 

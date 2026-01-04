@@ -8,6 +8,8 @@ const db = require('../../../models');
 const { AppError } = require('../middleware/errorHandler');
 const { logCrudEvent } = require('./audit.service');
 const { Op } = require('sequelize');
+const QueryBuilder = require('../utils/queryBuilder');
+const { VISITS_CONFIG } = require('../config/queryConfigs');
 
 /**
  * Check if user has access to patient
@@ -36,60 +38,50 @@ async function checkPatientAccess(patientId, user) {
 /**
  * Get all visits with filtering and pagination
  * Dietitians can only see visits for their assigned patients
+ * Supports search across chief_complaint, assessment, recommendations
  */
 async function getVisits(filters = {}, requestingUser) {
-  const {
-    patient_id,
-    dietitian_id,
-    status,
-    visit_type,
-    from_date,
-    to_date,
-    limit = 50,
-    offset = 0,
-    sort_by = 'visit_date',
-    sort_order = 'DESC'
-  } = filters;
+  // Use QueryBuilder for advanced filtering and search
+  const queryBuilder = new QueryBuilder(VISITS_CONFIG);
+  const { where, pagination, sort } = queryBuilder.build(filters);
 
-  // Build where clause
-  const where = {};
-
-  if (patient_id) {
-    where.patient_id = patient_id;
-    // Verify access to this patient
-    await checkPatientAccess(patient_id, requestingUser);
+  // Verify patient access if filtering by specific patient
+  if (filters.patient_id) {
+    await checkPatientAccess(filters.patient_id, requestingUser);
   }
 
-  if (status) {
-    where.status = status;
-  }
-
-  if (visit_type) {
-    where.visit_type = visit_type;
-  }
-
-  if (from_date) {
-    where.visit_date = { [Op.gte]: new Date(from_date) };
-  }
-
-  if (to_date) {
-    where.visit_date = { ...where.visit_date, [Op.lte]: new Date(to_date) };
-  }
-
-  // If user is a dietitian, only show visits for their assigned patients
+  // Apply RBAC: Dietitians can only see their own visits
   if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    if (!dietitian_id) {
-      where.dietitian_id = requestingUser.id;
-    } else if (dietitian_id !== requestingUser.id) {
+    if (filters.dietitian_id && filters.dietitian_id !== requestingUser.id) {
       throw new AppError(
         'Access denied. You can only view your own visits',
         403,
         'ACCESS_DENIED'
       );
     }
-  } else if (dietitian_id) {
-    // Admins can filter by specific dietitian
-    where.dietitian_id = dietitian_id;
+    // Force dietitian filter for dietitian users
+    where.dietitian_id = requestingUser.id;
+  } else if (filters.dietitian_id && !where.dietitian_id) {
+    // Admins can filter by specific dietitian (if not already set by QueryBuilder)
+    where.dietitian_id = filters.dietitian_id;
+  }
+
+  // Handle legacy from_date/to_date parameters (backward compatibility)
+  const { from_date, to_date } = filters;
+  if (from_date || to_date) {
+    if (!where.visit_date) {
+      where.visit_date = {};
+    }
+    if (from_date) {
+      if (typeof where.visit_date === 'object') {
+        where.visit_date[Op.gte] = new Date(from_date);
+      }
+    }
+    if (to_date) {
+      if (typeof where.visit_date === 'object') {
+        where.visit_date[Op.lte] = new Date(to_date);
+      }
+    }
   }
 
   const { count, rows } = await db.Visit.findAndCountAll({
@@ -106,16 +98,16 @@ async function getVisits(filters = {}, requestingUser) {
         attributes: ['id', 'username', 'first_name', 'last_name']
       }
     ],
-    limit: parseInt(limit),
-    offset: parseInt(offset),
-    order: [[sort_by, sort_order.toUpperCase()]]
+    limit: pagination.limit,
+    offset: pagination.offset,
+    order: sort
   });
 
   return {
     visits: rows,
     total: count,
-    limit: parseInt(limit),
-    offset: parseInt(offset)
+    limit: pagination.limit,
+    offset: pagination.offset
   };
 }
 
