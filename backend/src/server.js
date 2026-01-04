@@ -19,6 +19,7 @@ const db = require('../../models');
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const { requestLogger } = require('./middleware/logging');
+const { globalLimiter } = require('./middleware/rateLimiter');
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');
@@ -79,6 +80,9 @@ if (NODE_ENV === 'development') {
 
 // Audit logging middleware
 app.use(requestLogger);
+
+// Global rate limiting (fallback protection)
+app.use(globalLimiter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

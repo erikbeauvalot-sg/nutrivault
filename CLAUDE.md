@@ -127,11 +127,15 @@ Morgan logging (console)
   ↓
 Request logger middleware (audit trail)
   ↓
+Global rate limiter (500 req/15min)
+  ↓
 CORS & Security (helmet)
   ↓
 Body parsing
   ↓
 Route matching
+  ↓
+Endpoint-specific rate limiter (auth/API/report/export)
   ↓
 authenticate middleware (JWT or API key)
   ↓
@@ -145,6 +149,87 @@ Response or Error
   ↓
 Error handler middleware (centralized)
 ```
+
+### Rate Limiting
+
+**Multi-tier Rate Limiting Strategy:**
+
+NutriVault implements multiple rate limiters to prevent abuse while allowing legitimate usage:
+
+**Limiter Types:**
+
+1. **Global Limiter** (500 requests per 15 min)
+   - Applied to ALL requests as fallback protection
+   - Only counts failed requests
+   - Location: `backend/src/server.js`
+
+2. **Auth Limiter** (5 requests per 15 min)
+   - Applied to: `/api/auth/login`, `/api/auth/logout`, `/api/auth/refresh`
+   - Prevents brute force attacks
+   - Very strict to protect authentication endpoints
+
+3. **API Limiter** (100 requests per 15 min)
+   - Applied to: patients, visits, billing, users, audit endpoints
+   - Standard rate limiting for normal operations
+   - Balances usability and protection
+
+4. **Report Limiter** (50 requests per 15 min)
+   - Applied to: `/api/reports/*`
+   - Resource-intensive queries require moderate limits
+
+5. **Password Reset Limiter** (3 requests per hour)
+   - Applied to: password reset endpoints (when implemented)
+   - Prevents email/SMS flooding
+
+6. **Export Limiter** (10 requests per hour)
+   - Applied to: data export endpoints (when implemented)
+   - Resource-intensive operations
+
+**Configuration:**
+
+Rate limiters are defined in `/backend/src/middleware/rateLimiter.js`:
+
+```javascript
+const { authLimiter, apiLimiter, reportLimiter } = require('../middleware/rateLimiter');
+
+// Apply to routes
+router.use(authenticate);
+router.use(apiLimiter);
+```
+
+**Test Environment:**
+
+Rate limiting is **automatically disabled** when `NODE_ENV=test` to allow test suites to run without hitting limits.
+
+**Rate Limit Response:**
+
+When rate limit is exceeded, clients receive:
+- HTTP Status: `429 Too Many Requests`
+- Headers: `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`
+- Body:
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "TOO_MANY_REQUESTS",
+      "message": "Too many requests from this IP. Please try again later.",
+      "retryAfter": "15 minutes"
+    }
+  }
+  ```
+
+**Adjusting Limits:**
+
+To modify rate limits, edit `/backend/src/middleware/rateLimiter.js`:
+- `windowMs`: Time window in milliseconds
+- `max`: Maximum requests per window
+- `message`: Custom error message
+
+**Important Notes:**
+- Limits are per-IP address
+- Successful and failed requests both count (except global limiter)
+- Standard headers provided for client rate limit tracking
+- Legacy `X-RateLimit-*` headers disabled
 
 ### Authentication System
 

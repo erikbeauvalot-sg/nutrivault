@@ -9,6 +9,7 @@ const router = express.Router();
 const visitController = require('../controllers/visit.controller');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
+const { apiLimiter } = require('../middleware/rateLimiter');
 const {
   validateVisitCreation,
   validateVisitUpdate,
@@ -17,9 +18,10 @@ const {
 } = require('../validators/visit.validator');
 
 /**
- * All routes require authentication
+ * All routes require authentication and rate limiting
  */
 router.use(authenticate);
+router.use(apiLimiter);
 
 /**
  * Get visit statistics

@@ -9,6 +9,7 @@ const router = express.Router();
 const authController = require('../controllers/auth.controller');
 const { authenticate } = require('../middleware/auth');
 const { requireRole } = require('../middleware/rbac');
+const { authLimiter } = require('../middleware/rateLimiter');
 const {
   validateLogin,
   validateRegistration,
@@ -20,14 +21,14 @@ const {
  * Public routes (no authentication required)
  */
 
-// Login
-router.post('/login', validateLogin, authController.login);
+// Login - with strict rate limiting
+router.post('/login', authLimiter, validateLogin, authController.login);
 
 // Logout
-router.post('/logout', validateRefreshToken, authController.logout);
+router.post('/logout', authLimiter, validateRefreshToken, authController.logout);
 
-// Refresh access token
-router.post('/refresh', validateRefreshToken, authController.refresh);
+// Refresh access token - with rate limiting
+router.post('/refresh', authLimiter, validateRefreshToken, authController.refresh);
 
 /**
  * Protected routes (authentication required)

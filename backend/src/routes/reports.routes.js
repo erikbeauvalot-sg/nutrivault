@@ -9,12 +9,14 @@ const router = express.Router();
 const reportsController = require('../controllers/reports.controller');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
+const { reportLimiter } = require('../middleware/rateLimiter');
 const { validateDateRange } = require('../validators/reports.validator');
 
 /**
- * All routes require authentication
+ * All routes require authentication and rate limiting
  */
 router.use(authenticate);
+router.use(reportLimiter);
 
 /**
  * Get patient statistics report

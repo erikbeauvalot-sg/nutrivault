@@ -9,6 +9,7 @@ const router = express.Router();
 const billingController = require('../controllers/billing.controller');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
+const { apiLimiter } = require('../middleware/rateLimiter');
 const {
   validateBillingCreation,
   validateBillingUpdate,
@@ -18,9 +19,10 @@ const {
 } = require('../validators/billing.validator');
 
 /**
- * All routes require authentication
+ * All routes require authentication and rate limiting
  */
 router.use(authenticate);
+router.use(apiLimiter);
 
 /**
  * Get billing statistics
