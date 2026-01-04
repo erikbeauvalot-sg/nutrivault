@@ -5,6 +5,8 @@
  */
 
 const { body, query, param, validationResult } = require('express-validator');
+const { createQueryValidator } = require('./queryValidator');
+const { BILLING_CONFIG } = require('../config/queryConfigs');
 
 /**
  * Middleware to handle validation errors
@@ -197,17 +199,10 @@ const validateBillingId = [
 
 /**
  * Validation rules for billing query parameters
+ * Uses QueryBuilder validation factory with legacy date filter support
  */
 const validateBillingQuery = [
-  query('patient_id')
-    .optional()
-    .isUUID().withMessage('Patient ID must be a valid UUID'),
-
-  query('status')
-    .optional()
-    .isIn(['PENDING', 'PAID', 'OVERDUE', 'CANCELLED', 'REFUNDED'])
-    .withMessage('Status must be one of: PENDING, PAID, OVERDUE, CANCELLED, REFUNDED'),
-
+  // Legacy date filters (backward compatibility)
   query('from_date')
     .optional()
     .isISO8601().withMessage('From date must be a valid date'),
@@ -216,25 +211,8 @@ const validateBillingQuery = [
     .optional()
     .isISO8601().withMessage('To date must be a valid date'),
 
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-
-  query('offset')
-    .optional()
-    .isInt({ min: 0 }).withMessage('Offset must be 0 or greater'),
-
-  query('sort_by')
-    .optional()
-    .isIn(['invoice_date', 'due_date', 'amount', 'created_at'])
-    .withMessage('Invalid sort_by field'),
-
-  query('sort_order')
-    .optional()
-    .isIn(['ASC', 'DESC', 'asc', 'desc'])
-    .withMessage('Sort order must be ASC or DESC'),
-
-  handleValidationErrors
+  // Auto-generated validators for QueryBuilder fields
+  ...createQueryValidator(BILLING_CONFIG, handleValidationErrors)
 ];
 
 module.exports = {

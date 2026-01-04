@@ -5,6 +5,8 @@
  */
 
 const { body, query, param, validationResult } = require('express-validator');
+const { createQueryValidator } = require('./queryValidator');
+const { PATIENTS_CONFIG } = require('../config/queryConfigs');
 
 /**
  * Middleware to handle validation errors
@@ -196,21 +198,10 @@ const validatePatientId = [
 
 /**
  * Validation rules for patient query parameters
+ * Uses QueryBuilder validation factory with legacy age filter support
  */
 const validatePatientQuery = [
-  query('assigned_dietitian_id')
-    .optional()
-    .isUUID().withMessage('Assigned dietitian ID must be a valid UUID'),
-
-  query('is_active')
-    .optional()
-    .isBoolean().withMessage('is_active must be a boolean'),
-
-  query('search')
-    .optional()
-    .trim()
-    .isLength({ max: 200 }).withMessage('Search term must not exceed 200 characters'),
-
+  // Legacy age filters (backward compatibility)
   query('age_min')
     .optional()
     .isInt({ min: 0, max: 120 }).withMessage('Minimum age must be between 0 and 120'),
@@ -219,25 +210,8 @@ const validatePatientQuery = [
     .optional()
     .isInt({ min: 0, max: 120 }).withMessage('Maximum age must be between 0 and 120'),
 
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-
-  query('offset')
-    .optional()
-    .isInt({ min: 0 }).withMessage('Offset must be 0 or greater'),
-
-  query('sort_by')
-    .optional()
-    .isIn(['created_at', 'updated_at', 'first_name', 'last_name', 'date_of_birth'])
-    .withMessage('Invalid sort_by field'),
-
-  query('sort_order')
-    .optional()
-    .isIn(['ASC', 'DESC', 'asc', 'desc'])
-    .withMessage('Sort order must be ASC or DESC'),
-
-  handleValidationErrors
+  // Auto-generated validators for QueryBuilder fields
+  ...createQueryValidator(PATIENTS_CONFIG, handleValidationErrors)
 ];
 
 module.exports = {

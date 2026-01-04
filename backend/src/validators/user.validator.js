@@ -5,6 +5,8 @@
  */
 
 const { body, query, param, validationResult } = require('express-validator');
+const { createQueryValidator } = require('./queryValidator');
+const { USERS_CONFIG } = require('../config/queryConfigs');
 
 /**
  * Middleware to handle validation errors
@@ -79,42 +81,9 @@ const validateUserId = [
 
 /**
  * Validation rules for user query parameters
+ * Uses QueryBuilder validation factory
  */
-const validateUserQuery = [
-  query('role')
-    .optional()
-    .isIn(['ADMIN', 'DIETITIAN', 'ASSISTANT', 'VIEWER'])
-    .withMessage('Role must be one of: ADMIN, DIETITIAN, ASSISTANT, VIEWER'),
-
-  query('is_active')
-    .optional()
-    .isBoolean().withMessage('is_active must be a boolean'),
-
-  query('search')
-    .optional()
-    .trim()
-    .isLength({ max: 200 }).withMessage('Search term must not exceed 200 characters'),
-
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-
-  query('offset')
-    .optional()
-    .isInt({ min: 0 }).withMessage('Offset must be 0 or greater'),
-
-  query('sort_by')
-    .optional()
-    .isIn(['created_at', 'updated_at', 'username', 'email', 'first_name', 'last_name'])
-    .withMessage('Invalid sort_by field'),
-
-  query('sort_order')
-    .optional()
-    .isIn(['ASC', 'DESC', 'asc', 'desc'])
-    .withMessage('Sort order must be ASC or DESC'),
-
-  handleValidationErrors
-];
+const validateUserQuery = createQueryValidator(USERS_CONFIG, handleValidationErrors);
 
 module.exports = {
   validateUserUpdate,
