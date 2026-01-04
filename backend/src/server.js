@@ -24,7 +24,7 @@ const auditRoutes = require('./routes/audit.routes');
 const usersRoutes = require('./routes/users.routes');
 const patientsRoutes = require('./routes/patients.routes');
 const visitsRoutes = require('./routes/visits.routes');
-// const billingRoutes = require('./routes/billing.routes');
+const billingRoutes = require('./routes/billing.routes');
 
 // Initialize Express app
 const app = express();
@@ -113,7 +113,7 @@ app.use('/api/audit-logs', auditRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/patients', patientsRoutes);
 app.use('/api/visits', visitsRoutes);
-// app.use('/api/billing', billingRoutes);
+app.use('/api/billing', billingRoutes);
 
 // 404 handler
 app.use((req, res) => {
