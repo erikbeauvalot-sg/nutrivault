@@ -88,17 +88,17 @@ const taskCheckers = {
   // Phase 2: Core API Development
   'Phase 2: Implement user management API endpoints': () => {
     return exists('backend/src/routes/users.routes.js') &&
-           exists('backend/src/controllers/users.controller.js');
+           exists('backend/src/controllers/user.controller.js');
   },
 
   'Phase 2: Implement patient management API endpoints': () => {
     return exists('backend/src/routes/patients.routes.js') &&
-           exists('backend/src/controllers/patients.controller.js');
+           exists('backend/src/controllers/patient.controller.js');
   },
 
   'Phase 2: Implement visit management API endpoints': () => {
     return exists('backend/src/routes/visits.routes.js') &&
-           exists('backend/src/controllers/visits.controller.js');
+           exists('backend/src/controllers/visit.controller.js');
   },
 
   'Phase 2: Implement billing API endpoints': () => {
