@@ -42,7 +42,7 @@ module.exports = {
       'billing.create', 'billing.read', 'billing.update', 'billing.list',
       'users.read',
       'api_keys.create', 'api_keys.read', 'api_keys.delete',
-      'reports.read'
+      'reports.read', 'reports.patients', 'reports.visits', 'reports.billing', 'reports.overview'
     ];
     dietitianPermissionNames.forEach(name => {
       if (permissionMap[name]) {

@@ -48,7 +48,11 @@ module.exports = {
       { name: 'api_keys.delete', resource: 'api_keys', action: 'delete', description: 'Delete API keys' },
 
       // Report permissions
-      { name: 'reports.read', resource: 'reports', action: 'read', description: 'View reports and analytics' }
+      { name: 'reports.read', resource: 'reports', action: 'read', description: 'View reports and analytics' },
+      { name: 'reports.patients', resource: 'reports', action: 'patients', description: 'View patient statistics report' },
+      { name: 'reports.visits', resource: 'reports', action: 'visits', description: 'View visit analytics report' },
+      { name: 'reports.billing', resource: 'reports', action: 'billing', description: 'View billing report' },
+      { name: 'reports.overview', resource: 'reports', action: 'overview', description: 'View practice overview dashboard' }
     ].map(p => ({
       id: uuidv4(),
       ...p,
