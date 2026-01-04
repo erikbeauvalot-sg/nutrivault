@@ -10,6 +10,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
 
 // Import database
 const db = require('../../models');
@@ -106,6 +108,12 @@ app.get('/api', (req, res) => {
     }
   });
 });
+
+// Swagger API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'NutriVault API Documentation'
+}));
 
 // API Routes
 app.use('/api/auth', authRoutes);
