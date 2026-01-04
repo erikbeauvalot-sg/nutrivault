@@ -121,7 +121,7 @@ const taskCheckers = {
   },
 
   'Phase 2: Write unit tests for business logic': () => {
-    return countFiles('backend/tests/unit') > 0;
+    return countFiles('backend/tests/services') >= 6;
   },
 
   // Phase 3: Advanced Features

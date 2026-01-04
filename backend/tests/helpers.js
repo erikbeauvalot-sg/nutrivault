@@ -126,19 +126,29 @@ async function createBilling(data = {}) {
     patient = await db.Patient.findByPk(visit.patient_id);
   }
 
+  // Generate unique invoice number with random component
+  const uniqueInvoice = data.invoice_number || `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+  // Calculate amount and tax, then total
+  const amount = data.amount !== undefined ? data.amount : 100.00;
+  const taxAmount = data.tax_amount !== undefined ? data.tax_amount : 10.00;
+  const totalAmount = data.total_amount !== undefined ? data.total_amount : (amount + taxAmount);
+
   return await db.Billing.create({
     patient_id: patient.id,
     visit_id: visit ? visit.id : null,
-    invoice_number: data.invoice_number || `INV-${Date.now()}`,
+    invoice_number: uniqueInvoice,
     invoice_date: data.invoice_date || new Date(),
     due_date: data.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    amount: data.amount || 100.00,
-    tax_amount: data.tax_amount || 10.00,
-    total_amount: data.total_amount || 110.00,
+    amount: amount,
+    tax_amount: taxAmount,
+    total_amount: totalAmount,
     currency: data.currency || 'USD',
     status: data.status || 'PENDING',
-    created_by: data.created_by || patient.assigned_dietitian_id,
-    ...data
+    payment_method: data.payment_method || null,
+    payment_date: data.payment_date || null,
+    notes: data.notes || null,
+    created_by: data.created_by || patient.assigned_dietitian_id
   });
 }
 
