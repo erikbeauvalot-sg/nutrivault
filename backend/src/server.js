@@ -29,6 +29,7 @@ const patientsRoutes = require('./routes/patients.routes');
 const visitsRoutes = require('./routes/visits.routes');
 const billingRoutes = require('./routes/billing.routes');
 const reportsRoutes = require('./routes/reports.routes');
+const documentsRoutes = require('./routes/documents.routes');
 
 // Initialize Express app
 const app = express();
@@ -109,7 +110,8 @@ app.get('/api', (req, res) => {
       visits: '/api/visits',
       billing: '/api/billing',
       reports: '/api/reports',
-      audit: '/api/audit-logs'
+      audit: '/api/audit-logs',
+      documents: '/api/documents'
     }
   });
 });
@@ -128,6 +130,7 @@ app.use('/api/patients', patientsRoutes);
 app.use('/api/visits', visitsRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/documents', documentsRoutes);
 
 // 404 handler
 app.use((req, res) => {

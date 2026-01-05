@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const patientController = require('../controllers/patient.controller');
+const documentController = require('../controllers/document.controller');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
 const { apiLimiter } = require('../middleware/rateLimiter');
@@ -16,6 +17,11 @@ const {
   validatePatientId,
   validatePatientQuery
 } = require('../validators/patient.validator');
+const {
+  validateDocumentUpload,
+  validateResourceId
+} = require('../validators/document.validator');
+const { upload, setUploadResourceType } = require('../config/multer');
 
 /**
  * All routes require authentication and rate limiting
@@ -99,6 +105,48 @@ router.delete('/:id',
   requirePermission('patients.delete'),
   validatePatientId,
   patientController.deletePatientHandler
+);
+
+/**
+ * Document Management Routes for Patients
+ */
+
+// Middleware to set resource type for documents
+const setPatientResourceType = (req, res, next) => {
+  req.resourceType = 'patients';
+  next();
+};
+
+/**
+ * Get document statistics for a patient
+ */
+router.get('/:id/documents/stats',
+  requirePermission('documents.read'),
+  validateResourceId,
+  setPatientResourceType,
+  documentController.getDocumentStatsHandler
+);
+
+/**
+ * Upload documents for a patient
+ */
+router.post('/:id/documents',
+  requirePermission('documents.upload'),
+  setUploadResourceType('patients'),
+  setPatientResourceType,
+  upload.array('files', 10),
+  validateDocumentUpload,
+  documentController.uploadDocumentsHandler
+);
+
+/**
+ * Get all documents for a patient
+ */
+router.get('/:id/documents',
+  requirePermission('documents.read'),
+  validateResourceId,
+  setPatientResourceType,
+  documentController.getResourceDocumentsHandler
 );
 
 module.exports = router;

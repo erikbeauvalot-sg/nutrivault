@@ -94,7 +94,7 @@ const db = require('./models');
 
 // Models available: db.User, db.Role, db.Permission, db.Patient,
 // db.Visit, db.VisitMeasurement, db.Billing, db.AuditLog,
-// db.RefreshToken, db.ApiKey, db.RolePermission
+// db.RefreshToken, db.ApiKey, db.RolePermission, db.Document
 ```
 
 **Sequelize paths** (defined in `.sequelizerc`):
@@ -230,6 +230,223 @@ To modify rate limits, edit `/backend/src/middleware/rateLimiter.js`:
 - Successful and failed requests both count (except global limiter)
 - Standard headers provided for client rate limit tracking
 - Legacy `X-RateLimit-*` headers disabled
+
+### File Upload System
+
+**Overview:**
+
+NutriVault supports file uploads for patients, visits, and users using a polymorphic document system with Multer middleware.
+
+**Features:**
+- Polymorphic design: Single `documents` table supports multiple resource types
+- Local filesystem storage (organized by resource type and date)
+- File type validation (images, PDFs, Office documents, archives)
+- File size limit: 10MB per file, max 10 files per request
+- UUID-based filenames to prevent conflicts
+- Comprehensive audit logging of all upload/download/delete operations
+
+**Supported Resource Types:**
+- `patients`: Medical records, lab results, diet plans, insurance cards
+- `visits`: Meal plans, progress photos
+- `users`: Profile photos, credentials
+
+**Supported Document Types:**
+```javascript
+[
+  'medical_record', 'lab_result', 'diet_plan', 'profile_photo',
+  'meal_plan', 'progress_photo', 'prescription', 'insurance_card',
+  'consent_form', 'other'
+]
+```
+
+**Allowed File Types:**
+- **Images**: JPEG, PNG, GIF, WebP
+- **Documents**: PDF, DOC, DOCX, XLS, XLSX, TXT, CSV
+- **Archives**: ZIP, RAR
+
+**API Endpoints:**
+
+```javascript
+// Upload documents for a patient
+POST /api/patients/:id/documents
+  - Body: multipart/form-data
+  - Fields: files[] (required), document_type, title, description
+  - Permission: documents.upload
+  - Returns: Array of created document records
+
+// Get all documents for a patient
+GET /api/patients/:id/documents
+  - Permission: documents.read
+  - Returns: Array of documents with creator info
+
+// Get document statistics
+GET /api/patients/:id/documents/stats
+  - Permission: documents.read
+  - Returns: Document counts and sizes grouped by type
+
+// Same endpoints available for visits and users:
+// POST /api/visits/:id/documents
+// GET /api/visits/:id/documents
+// GET /api/visits/:id/documents/stats
+// POST /api/users/:id/documents
+// GET /api/users/:id/documents
+// GET /api/users/:id/documents/stats
+
+// Direct document operations:
+GET /api/documents/:id              // Get document metadata
+GET /api/documents/:id/download     // Download file
+PATCH /api/documents/:id            // Update metadata
+DELETE /api/documents/:id           // Delete document and file
+```
+
+**Multer Configuration:**
+
+Located in `/backend/src/config/multer.js`:
+
+```javascript
+const { upload, setUploadResourceType, deleteFile } = require('../config/multer');
+
+// Apply to routes
+router.post('/:id/documents',
+  requirePermission('documents.upload'),
+  setUploadResourceType('patients'),  // Organizes files by resource type
+  upload.array('files', 10),          // Accept up to 10 files
+  validateDocumentUpload,
+  controller.uploadDocumentsHandler
+);
+```
+
+**Storage Organization:**
+
+Files are stored in `/backend/uploads/` with this structure:
+```
+uploads/
+├── patients/
+│   ├── 2024-01-05/
+│   │   ├── 550e8400-e29b-41d4-a716-446655440000.pdf
+│   │   └── 650e8400-e29b-41d4-a716-446655440001.jpg
+├── visits/
+│   └── 2024-01-05/
+│       └── 750e8400-e29b-41d4-a716-446655440002.png
+└── users/
+    └── 2024-01-05/
+        └── 850e8400-e29b-41d4-a716-446655440003.jpg
+```
+
+**Document Model Fields:**
+```javascript
+{
+  id: UUID,
+  resource_type: 'patients' | 'visits' | 'users',
+  resource_id: UUID,
+  document_type: String,
+  original_filename: String,
+  stored_filename: String (UUID-based),
+  file_path: String,
+  mime_type: String,
+  file_size: Integer (bytes),
+  title: String (optional),
+  description: Text (optional),
+  metadata: JSON (optional),
+  created_by: UUID,
+  updated_by: UUID,
+  created_at: DateTime,
+  updated_at: DateTime
+}
+```
+
+**RBAC Integration:**
+
+Document permissions are managed through the standard RBAC system:
+- `documents.upload`: Upload files
+- `documents.read`: View and download files
+- `documents.update`: Modify document metadata
+- `documents.delete`: Delete documents
+
+**Role Assignments:**
+- **ADMIN**: All document permissions
+- **DIETITIAN**: All document permissions (for assigned patients)
+- **ASSISTANT**: Upload and read only
+- **VIEWER**: Read only
+
+**Security Features:**
+1. **MIME Type Validation**: Only allowed file types accepted
+2. **File Size Limits**: 10MB per file prevents abuse
+3. **Filename Sanitization**: UUID-based names prevent path traversal
+4. **Access Control**: Service layer validates resource ownership
+5. **Audit Logging**: All operations logged with user/IP/timestamp
+
+**Usage Example:**
+
+```javascript
+// Service layer
+const documentService = require('./services/document.service');
+
+// Upload documents
+const documents = await documentService.uploadDocuments(
+  req.files,                    // From multer
+  {
+    resource_type: 'patients',
+    resource_id: patientId,
+    document_type: 'lab_result',
+    title: 'Blood Test Results',
+    description: 'Annual physical'
+  },
+  req.user,                     // Authenticated user
+  {
+    ip: req.ip,
+    userAgent: req.get('user-agent'),
+    method: req.method,
+    path: req.path
+  }
+);
+
+// Retrieve documents
+const documents = await documentService.getDocumentsByResource(
+  'patients',
+  patientId,
+  req.user,
+  requestMetadata
+);
+
+// Delete document (removes file and database record)
+await documentService.deleteDocument(documentId, req.user, requestMetadata);
+```
+
+**Error Handling:**
+
+Common errors:
+- `NO_FILES`: No files provided in request
+- `DOCUMENT_NOT_FOUND`: Document ID doesn't exist
+- `PATIENT_NOT_FOUND`: Parent resource doesn't exist
+- `NOT_ASSIGNED_DIETITIAN`: Dietitian not assigned to this patient
+- `ACCESS_DENIED`: Insufficient permissions
+- Invalid file type error from Multer
+- File size exceeded error from Multer
+
+**Testing File Uploads:**
+
+Using curl:
+```bash
+# Upload single file
+curl -X POST http://localhost:3001/api/patients/{id}/documents \
+  -H "Authorization: Bearer {token}" \
+  -F "files=@/path/to/file.pdf" \
+  -F "document_type=medical_record" \
+  -F "title=Medical History"
+
+# Upload multiple files
+curl -X POST http://localhost:3001/api/patients/{id}/documents \
+  -H "Authorization: Bearer {token}" \
+  -F "files=@/path/to/file1.pdf" \
+  -F "files=@/path/to/file2.jpg" \
+  -F "document_type=lab_result"
+
+# Download file
+curl -X GET http://localhost:3001/api/documents/{id}/download \
+  -H "Authorization: Bearer {token}" \
+  -O -J
+```
 
 ### Authentication System
 
@@ -375,10 +592,10 @@ throw new AppError('Permission denied', 403, 'PERMISSION_DENIED');
 
 ### Database Models & Relationships
 
-**11 Models Total:**
+**12 Models Total:**
 
 1. **Role** - 4 roles: ADMIN, DIETITIAN, ASSISTANT, VIEWER
-2. **Permission** - 29 granular permissions (format: `resource.action`)
+2. **Permission** - 37 granular permissions (format: `resource.action`)
 3. **RolePermission** - Many-to-many junction table
 4. **User** - System users with authentication
 5. **Patient** - Patient demographics and medical info
@@ -388,6 +605,7 @@ throw new AppError('Permission denied', 403, 'PERMISSION_DENIED');
 9. **AuditLog** - Comprehensive audit trail
 10. **RefreshToken** - JWT refresh token management
 11. **ApiKey** - API key authentication
+12. **Document** - Polymorphic file uploads (patients, visits, users)
 
 **Key Relationships:**
 - User → Role (many-to-one)
@@ -396,6 +614,7 @@ throw new AppError('Permission denied', 403, 'PERMISSION_DENIED');
 - Visit → Patient, Visit → User (dietitian)
 - Visit → VisitMeasurement (one-to-many)
 - Billing → Patient, Billing → Visit
+- Document → User as created_by/updated_by (polymorphic: resource_type + resource_id)
 - All models track `created_by`/`updated_by` → User
 
 **Permission Format Examples:**
@@ -403,7 +622,8 @@ throw new AppError('Permission denied', 403, 'PERMISSION_DENIED');
 - `visits.create`, `visits.read`, `visits.update`, `visits.delete`
 - `billing.create`, `billing.read`, `billing.update`, `billing.delete`
 - `users.create`, `users.read`, `users.update`, `users.delete`
-- `audit.read`, `reports.generate`, etc.
+- `documents.upload`, `documents.read`, `documents.update`, `documents.delete`
+- `audit_logs.read`, `reports.read`, etc.
 
 ### Audit Logging
 

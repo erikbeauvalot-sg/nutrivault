@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const visitController = require('../controllers/visit.controller');
+const documentController = require('../controllers/document.controller');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
 const { apiLimiter } = require('../middleware/rateLimiter');
@@ -16,6 +17,11 @@ const {
   validateVisitId,
   validateVisitQuery
 } = require('../validators/visit.validator');
+const {
+  validateDocumentUpload,
+  validateResourceId
+} = require('../validators/document.validator');
+const { upload, setUploadResourceType } = require('../config/multer');
 
 /**
  * All routes require authentication and rate limiting
@@ -79,6 +85,48 @@ router.delete('/:id',
   requirePermission('visits.delete'),
   validateVisitId,
   visitController.deleteVisitHandler
+);
+
+/**
+ * Document Management Routes for Visits
+ */
+
+// Middleware to set resource type for documents
+const setVisitResourceType = (req, res, next) => {
+  req.resourceType = 'visits';
+  next();
+};
+
+/**
+ * Get document statistics for a visit
+ */
+router.get('/:id/documents/stats',
+  requirePermission('documents.read'),
+  validateResourceId,
+  setVisitResourceType,
+  documentController.getDocumentStatsHandler
+);
+
+/**
+ * Upload documents for a visit
+ */
+router.post('/:id/documents',
+  requirePermission('documents.upload'),
+  setUploadResourceType('visits'),
+  setVisitResourceType,
+  upload.array('files', 10),
+  validateDocumentUpload,
+  documentController.uploadDocumentsHandler
+);
+
+/**
+ * Get all documents for a visit
+ */
+router.get('/:id/documents',
+  requirePermission('documents.read'),
+  validateResourceId,
+  setVisitResourceType,
+  documentController.getResourceDocumentsHandler
 );
 
 module.exports = router;

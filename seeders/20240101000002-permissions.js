@@ -52,7 +52,13 @@ module.exports = {
       { name: 'reports.patients', resource: 'reports', action: 'patients', description: 'View patient statistics report' },
       { name: 'reports.visits', resource: 'reports', action: 'visits', description: 'View visit analytics report' },
       { name: 'reports.billing', resource: 'reports', action: 'billing', description: 'View billing report' },
-      { name: 'reports.overview', resource: 'reports', action: 'overview', description: 'View practice overview dashboard' }
+      { name: 'reports.overview', resource: 'reports', action: 'overview', description: 'View practice overview dashboard' },
+
+      // Document permissions
+      { name: 'documents.upload', resource: 'documents', action: 'upload', description: 'Upload documents/files' },
+      { name: 'documents.read', resource: 'documents', action: 'read', description: 'View and download documents' },
+      { name: 'documents.update', resource: 'documents', action: 'update', description: 'Update document metadata' },
+      { name: 'documents.delete', resource: 'documents', action: 'delete', description: 'Delete documents' }
     ].map(p => ({
       id: uuidv4(),
       ...p,

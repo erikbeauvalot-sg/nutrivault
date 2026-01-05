@@ -7,6 +7,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/user.controller');
+const documentController = require('../controllers/document.controller');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission, requireOwnerOrPermission } = require('../middleware/rbac');
 const { apiLimiter } = require('../middleware/rateLimiter');
@@ -16,6 +17,11 @@ const {
   validateUserQuery
 } = require('../validators/user.validator');
 const { validatePasswordChange } = require('../validators/auth.validator');
+const {
+  validateDocumentUpload,
+  validateResourceId
+} = require('../validators/document.validator');
+const { upload, setUploadResourceType } = require('../config/multer');
 
 /**
  * All routes require authentication and rate limiting
@@ -101,6 +107,50 @@ router.delete('/:id',
   requirePermission('users.delete'),
   validateUserId,
   userController.deleteUserHandler
+);
+
+/**
+ * Document Management Routes for Users
+ * (Profile photos, credentials, etc.)
+ */
+
+// Middleware to set resource type for documents
+const setUserResourceType = (req, res, next) => {
+  req.resourceType = 'users';
+  next();
+};
+
+/**
+ * Get document statistics for a user
+ */
+router.get('/:id/documents/stats',
+  requireOwnerOrPermission('id', 'documents.read'),
+  validateResourceId,
+  setUserResourceType,
+  documentController.getDocumentStatsHandler
+);
+
+/**
+ * Upload documents for a user
+ * Users can upload their own documents (e.g., profile photo)
+ */
+router.post('/:id/documents',
+  requireOwnerOrPermission('id', 'documents.upload'),
+  setUploadResourceType('users'),
+  setUserResourceType,
+  upload.array('files', 10),
+  validateDocumentUpload,
+  documentController.uploadDocumentsHandler
+);
+
+/**
+ * Get all documents for a user
+ */
+router.get('/:id/documents',
+  requireOwnerOrPermission('id', 'documents.read'),
+  validateResourceId,
+  setUserResourceType,
+  documentController.getResourceDocumentsHandler
 );
 
 module.exports = router;

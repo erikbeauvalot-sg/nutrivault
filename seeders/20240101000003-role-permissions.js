@@ -42,7 +42,8 @@ module.exports = {
       'billing.create', 'billing.read', 'billing.update', 'billing.list',
       'users.read',
       'api_keys.create', 'api_keys.read', 'api_keys.delete',
-      'reports.read', 'reports.patients', 'reports.visits', 'reports.billing', 'reports.overview'
+      'reports.read', 'reports.patients', 'reports.visits', 'reports.billing', 'reports.overview',
+      'documents.upload', 'documents.read', 'documents.update', 'documents.delete'
     ];
     dietitianPermissionNames.forEach(name => {
       if (permissionMap[name]) {
@@ -59,7 +60,8 @@ module.exports = {
       'patients.read', 'patients.list',
       'visits.create', 'visits.read', 'visits.update', 'visits.list',
       'billing.create', 'billing.read', 'billing.list',
-      'users.read'
+      'users.read',
+      'documents.upload', 'documents.read'
     ];
     assistantPermissionNames.forEach(name => {
       if (permissionMap[name]) {
@@ -76,7 +78,8 @@ module.exports = {
       'patients.read', 'patients.list',
       'visits.read', 'visits.list',
       'billing.read', 'billing.list',
-      'users.read'
+      'users.read',
+      'documents.read'
     ];
     viewerPermissionNames.forEach(name => {
       if (permissionMap[name]) {
