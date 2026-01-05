@@ -448,6 +448,152 @@ curl -X GET http://localhost:3001/api/documents/{id}/download \
   -O -J
 ```
 
+### Data Export System
+
+**Overview:**
+
+NutriVault supports exporting data to CSV, Excel (XLSX), and PDF formats for patients, visits, and billing records.
+
+**Supported Formats:**
+- **CSV**: Comma-separated values (universal compatibility)
+- **Excel (XLSX)**: Microsoft Excel format with styling
+- **PDF**: Portable Document Format with tabular layout
+
+**API Endpoints:**
+
+```javascript
+// Export patients data
+GET /api/export/patients?format=csv|excel|pdf&is_active=true
+  - Permission: export.patients
+  - Filters: is_active (boolean)
+  - Returns: File download (CSV/Excel/PDF)
+
+// Export visits data
+GET /api/export/visits?format=csv|excel|pdf&patient_id=xxx&status=completed
+  - Permission: export.visits
+  - Filters: patient_id (UUID), status (scheduled|completed|cancelled|no-show)
+  - Returns: File download (CSV/Excel/PDF)
+
+// Export billing data
+GET /api/export/billing?format=csv|excel|pdf&patient_id=xxx&status=paid
+  - Permission: export.billing
+  - Filters: patient_id (UUID), status (pending|paid|overdue|cancelled)
+  - Returns: File download (CSV/Excel/PDF)
+```
+
+**Export Libraries:**
+
+- **CSV**: `json2csv` - Converts JSON to CSV format
+- **Excel**: `exceljs` - Creates Excel workbooks with styling
+- **PDF**: `pdfkit` - Generates PDF documents
+
+**Features:**
+
+1. **Format-Specific Styling**:
+   - CSV: Plain text, universally compatible
+   - Excel: Bold headers, gray background, auto-column width
+   - PDF: Title, timestamp, tabular layout with auto-pagination
+
+2. **RBAC Integration**:
+   - Dietitians: Can only export their assigned patients' data
+   - Admins: Can export all data
+   - Requires specific export permissions (export.patients, export.visits, export.billing)
+
+3. **Automatic Filename Generation**:
+   - Pattern: `{resource}_{YYYY-MM-DD}.{extension}`
+   - Example: `patients_2024-01-05.csv`
+
+4. **Rate Limiting**:
+   - Export limiter: 10 requests per hour (resource-intensive)
+   - Applied to all export endpoints
+
+5. **Audit Logging**:
+   - All export operations logged with format and record count
+   - Includes user, IP, timestamp, and resource type
+
+**Exported Data Fields:**
+
+**Patients Export:**
+- ID, First Name, Last Name, Date of Birth
+- Gender, Email, Phone
+- City, Postal Code, Country
+- Assigned Dietitian, Is Active, Created At
+
+**Visits Export:**
+- ID, Patient Name, Visit Date
+- Visit Type, Status, Chief Complaint
+- Dietitian, Duration, Created At
+
+**Billing Export:**
+- Invoice Number, Patient Name
+- Invoice Date, Due Date
+- Amount, Amount Paid, Status
+- Payment Method, Visit Date, Created At
+
+**Usage Example:**
+
+```javascript
+// Service layer
+const exportService = require('./services/export.service');
+
+// Export patients to Excel
+const result = await exportService.exportPatients(
+  'excel',
+  { is_active: true },
+  req.user,
+  requestMetadata
+);
+
+// Returns: { data: Buffer, contentType: string, extension: string }
+
+// Send as download
+res.setHeader('Content-Type', result.contentType);
+res.setHeader('Content-Disposition', `attachment; filename="patients_2024-01-05.${result.extension}"`);
+res.send(result.data);
+```
+
+**Testing Exports:**
+
+Using curl:
+```bash
+# Export patients to CSV
+curl -X GET "http://localhost:3001/api/export/patients?format=csv" \
+  -H "Authorization: Bearer {token}" \
+  -O -J
+
+# Export visits to Excel
+curl -X GET "http://localhost:3001/api/export/visits?format=excel&status=completed" \
+  -H "Authorization: Bearer {token}" \
+  -O -J
+
+# Export billing to PDF
+curl -X GET "http://localhost:3001/api/export/billing?format=pdf&status=paid" \
+  -H "Authorization: Bearer {token}" \
+  -O -J
+```
+
+**Error Handling:**
+
+Common errors:
+- `INVALID_FORMAT`: Unsupported export format (not csv/excel/pdf)
+- `NO_DATA`: No records available for export
+- `PERMISSION_DENIED`: User lacks export permission
+- `NOT_ASSIGNED_DIETITIAN`: Dietitian trying to export unassigned patients
+
+**Performance Considerations:**
+
+- Large exports (>1000 records) may take several seconds
+- CSV is fastest, PDF is slowest
+- Export rate limiter prevents abuse (10 exports/hour)
+- All exports processed in-memory (suitable for typical practice sizes)
+
+**Future Enhancements:**
+- Streaming exports for very large datasets
+- Custom field selection
+- Scheduled automated exports
+- Email delivery of exported files
+- Additional formats (JSON, XML)
+
 ### Authentication System
 
 **Dual Authentication Support:**
@@ -595,7 +741,7 @@ throw new AppError('Permission denied', 403, 'PERMISSION_DENIED');
 **12 Models Total:**
 
 1. **Role** - 4 roles: ADMIN, DIETITIAN, ASSISTANT, VIEWER
-2. **Permission** - 37 granular permissions (format: `resource.action`)
+2. **Permission** - 40 granular permissions (format: `resource.action`)
 3. **RolePermission** - Many-to-many junction table
 4. **User** - System users with authentication
 5. **Patient** - Patient demographics and medical info
@@ -623,6 +769,7 @@ throw new AppError('Permission denied', 403, 'PERMISSION_DENIED');
 - `billing.create`, `billing.read`, `billing.update`, `billing.delete`
 - `users.create`, `users.read`, `users.update`, `users.delete`
 - `documents.upload`, `documents.read`, `documents.update`, `documents.delete`
+- `export.patients`, `export.visits`, `export.billing`
 - `audit_logs.read`, `reports.read`, etc.
 
 ### Audit Logging

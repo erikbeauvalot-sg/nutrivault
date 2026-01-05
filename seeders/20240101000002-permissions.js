@@ -58,7 +58,12 @@ module.exports = {
       { name: 'documents.upload', resource: 'documents', action: 'upload', description: 'Upload documents/files' },
       { name: 'documents.read', resource: 'documents', action: 'read', description: 'View and download documents' },
       { name: 'documents.update', resource: 'documents', action: 'update', description: 'Update document metadata' },
-      { name: 'documents.delete', resource: 'documents', action: 'delete', description: 'Delete documents' }
+      { name: 'documents.delete', resource: 'documents', action: 'delete', description: 'Delete documents' },
+
+      // Export permissions
+      { name: 'export.patients', resource: 'export', action: 'patients', description: 'Export patient data to CSV/Excel/PDF' },
+      { name: 'export.visits', resource: 'export', action: 'visits', description: 'Export visit data to CSV/Excel/PDF' },
+      { name: 'export.billing', resource: 'export', action: 'billing', description: 'Export billing data to CSV/Excel/PDF' }
     ].map(p => ({
       id: uuidv4(),
       ...p,
