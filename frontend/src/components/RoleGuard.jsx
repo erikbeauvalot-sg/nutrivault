@@ -1,0 +1,37 @@
+/**
+ * RoleGuard Component
+ * Conditionally renders children based on user role/permissions
+ * Use this for UI elements that should only be visible to certain roles
+ * (unlike ProtectedRoute which guards entire routes)
+ */
+
+import { useAuth } from '../hooks/useAuth';
+
+/**
+ * RoleGuard component for conditional rendering based on user roles
+ * @param {Object} props
+ * @param {React.ReactNode} props.children - Content to render if authorized
+ * @param {string[]} props.allowedRoles - Array of roles that can see the content
+ * @param {React.ReactNode} props.fallback - Optional fallback content if not authorized
+ * @returns {React.ReactNode}
+ */
+export function RoleGuard({ children, allowedRoles, fallback = null }) {
+  const { user, isAuthenticated } = useAuth();
+
+  // If not authenticated, don't render anything
+  if (!isAuthenticated || !user) {
+    return fallback;
+  }
+
+  // If no roles specified, render for all authenticated users
+  if (!allowedRoles || allowedRoles.length === 0) {
+    return children;
+  }
+
+  // Check if user's role is in the allowed roles
+  const hasRequiredRole = allowedRoles.includes(user.role);
+
+  return hasRequiredRole ? children : fallback;
+}
+
+export default RoleGuard;
