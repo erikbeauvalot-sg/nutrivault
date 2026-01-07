@@ -56,7 +56,7 @@
 [x] Implement billing management UI
 [x] Implement user management UI (admin)
 [x] Implement dashboard and reports
-[x] Add audit log viewer
+[ ] Add audit log viewer
 
 ### Phase 5 (0/5)
 
@@ -84,4 +84,4 @@ This todo list is automatically updated by `utils/update-todo.js`.
 
 **Run manually**: `node utils/update-todo.js`
 
-**Last scan**: 2026-01-07T07:27:16.545Z
+**Last scan**: 2026-01-07T09:39:47.415Z

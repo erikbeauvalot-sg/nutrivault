@@ -44,16 +44,23 @@ A secure, full-stack web application for dietitians to manage patient data, appo
 1. **Clone the repository**
    ```bash
    git clone https://github.com/erikbeauvalot/nutrivault.git
-   cd nutrivaul
+   cd nutrivault
    ```
 
 2. **Backend Setup**
    ```bash
    cd backend
    npm install
+   
+   # Copy environment template and configure
    cp .env.example .env
+   # Edit .env with your configuration (see Environment Variables section below)
+   
+   # Initialize database
    npm run db:migrate
    npm run db:seed
+   
+   # Start development server
    npm run dev
    ```
 
@@ -61,14 +68,106 @@ A secure, full-stack web application for dietitians to manage patient data, appo
    ```bash
    cd frontend
    npm install
+   
+   # Copy environment template and configure
    cp .env.example .env
+   # Edit .env with your configuration (see Environment Variables section below)
+   
+   # Start development server
    npm run dev
    ```
 
 4. **Access the application**
-   - Frontend: http://localhost:3000 (or http://localhost:5173)
+   - Frontend: http://localhost:5173
    - Backend API: http://localhost:3001
    - API Documentation: http://localhost:3001/api-docs
+
+## Environment Variables
+
+### Backend (.env)
+
+Create a `backend/.env` file with the following variables:
+
+```bash
+# Server Configuration
+NODE_ENV=development
+PORT=3001
+HOST=localhost
+
+# Database Configuration
+DB_DIALECT=sqlite                          # Use 'postgres' for production
+DB_HOST=localhost                          # PostgreSQL host (if using postgres)
+DB_PORT=5432                               # PostgreSQL port (if using postgres)
+DB_NAME=nutrivault_dev                     # Database name
+DB_USER=postgres                           # PostgreSQL user (if using postgres)
+DB_PASSWORD=yourpassword                   # PostgreSQL password (if using postgres)
+DB_STORAGE=./data/nutrivault_dev.db        # SQLite file path (if using sqlite)
+
+# JWT Configuration
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-this-in-production
+JWT_REFRESH_EXPIRES_IN=7d
+
+# Security
+BCRYPT_ROUNDS=10
+RATE_LIMIT_WINDOW_MS=900000                # 15 minutes
+RATE_LIMIT_MAX_REQUESTS=100                # Max requests per window
+
+# CORS Configuration
+CORS_ORIGIN=http://localhost:5173          # Frontend URL
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+
+# File Upload
+MAX_FILE_SIZE=10485760                     # 10MB in bytes
+UPLOAD_DIR=./uploads
+
+# Logging
+LOG_LEVEL=debug                            # debug, info, warn, error
+LOG_FILE_PATH=./logs/app.log
+
+# Session
+SESSION_SECRET=your-session-secret-change-this-in-production
+
+# API Documentation
+API_DOCS_ENABLED=true
+```
+
+### Frontend (.env)
+
+Create a `frontend/.env` file with the following variables:
+
+```bash
+# API Configuration
+VITE_API_BASE_URL=http://localhost:3001/api
+VITE_API_TIMEOUT=30000
+
+# Application Configuration
+VITE_APP_NAME=NutriVault
+VITE_APP_VERSION=1.0.0
+
+# Feature Flags
+VITE_ENABLE_ANALYTICS=false
+VITE_ENABLE_DEBUG=true
+
+# Environment
+VITE_ENVIRONMENT=development
+```
+
+### Production Environment
+
+For production deployment, ensure you:
+
+1. **Change all secrets** - Generate secure random strings for JWT_SECRET, JWT_REFRESH_SECRET, and SESSION_SECRET
+2. **Use PostgreSQL** - Set DB_DIALECT=postgres and configure PostgreSQL connection
+3. **Enable HTTPS** - Configure SSL/TLS certificates
+4. **Set NODE_ENV=production** - This enables production optimizations
+5. **Configure CORS** - Set CORS_ORIGIN to your production frontend URL
+6. **Disable API docs** - Set API_DOCS_ENABLED=false in production
+7. **Secure file uploads** - Configure appropriate file size limits and allowed types
+8. **Set strong bcrypt rounds** - Use BCRYPT_ROUNDS=12 or higher for production
+
+See [SECURITY.md](SECURITY.md) for detailed security guidelines.
 
 ### Docker Setup (Alternative)
 
