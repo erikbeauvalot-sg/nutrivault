@@ -11,6 +11,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
 const swaggerUi = require('swagger-ui-express');
+const compression = require('compression');
 const swaggerSpec = require('./config/swagger');
 
 // Import database
@@ -82,6 +83,21 @@ app.use(cors(corsOptions));
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Response compression middleware (gzip)
+// Compresses all responses > 1kb for faster transmission
+app.use(compression({
+  threshold: 1024,  // Only compress responses larger than 1kb
+  level: 6,         // Compression level (0-9, default 6)
+  filter: (req, res) => {
+    // Allow clients to opt-out of compression
+    if (req.headers["x-no-compression"]) {
+      return false;
+    }
+    // Use default compression filter (compresses JSON, text, HTML)
+    return compression.filter(req, res);
+  }
+}));
 
 // HTTP request logging (Morgan for console, custom logger for audit)
 if (NODE_ENV === 'development') {
