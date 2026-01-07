@@ -303,6 +303,37 @@ Both databases use the same Sequelize ORM, making migration seamless.
 
 ## Testing
 
+### Backend Tests
+```bash
+cd backend
+npm test                    # All unit tests
+npm run test:coverage       # With coverage report
+```
+
+### Frontend Tests
+```bash
+cd frontend
+npm test                    # Component tests (Vitest)
+```
+
+### E2E Tests (Playwright)
+```bash
+# Prerequisites: Backend and frontend must be running
+cd backend && npm start
+cd frontend && npm run dev
+
+# Run E2E tests
+npm run test:e2e            # All browsers, headless
+npm run test:e2e:headed     # With visible browser
+npm run test:e2e:ui         # Interactive UI mode
+npm run test:e2e:chromium   # Chromium only
+npm run test:e2e:report     # View HTML report
+```
+
+See [tests/e2e/README.md](tests/e2e/README.md) for comprehensive E2E testing documentation.
+
+## Original Testing Section
+
 ```bash
 # Backend tests
 cd backend
@@ -348,6 +379,6 @@ Built with modern web technologies and best practices for healthcare data manage
 
 ---
 
-**Last Updated**: 2026-01-03
+**Last Updated**: 2026-01-07
 **Version**: 1.0.0
-**Status**: Phase 1 - Foundation Complete
+**Status**: Phase 5.1 - E2E Testing Framework Complete
