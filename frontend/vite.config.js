@@ -23,10 +23,16 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Vendor chunks for better caching
+          // React vendor chunk (largest dependencies)
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['@heroicons/react'],
-          'utils': ['axios', 'jwt-decode'],
+          // UI library chunk
+          'ui-vendor': ['react-bootstrap', 'bootstrap', 'react-bootstrap-icons'],
+          // Chart library chunk
+          'chart-vendor': ['chart.js', 'react-chartjs-2'],
+          // Form handling chunk
+          'form-vendor': ['react-hook-form', '@hookform/resolvers', 'yup'],
+          // Utility libraries
+          'utils': ['axios', 'date-fns', 'uuid', 'react-toastify'],
         },
       },
     },
