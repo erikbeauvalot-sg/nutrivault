@@ -40,17 +40,27 @@ const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173';
 
-// Security middleware
+// Security middleware - Environment-aware Helmet configuration
 app.use(helmet({
-  contentSecurityPolicy: {
+  contentSecurityPolicy: NODE_ENV === 'production' ? {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"], // Consider removing unsafe-inline in future
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
     },
-  },
-  crossOriginEmbedderPolicy: false,
+  } : false, // Disable CSP in development for easier debugging
+  crossOriginEmbedderPolicy: NODE_ENV === 'production',
+  hsts: NODE_ENV === 'production' ? {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  } : false,
 }));
 
 // CORS configuration

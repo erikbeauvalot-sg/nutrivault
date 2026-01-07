@@ -3,7 +3,7 @@
  * Wraps app with authentication context and logic
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import AuthContext from './AuthContext';
 import authService from '../services/authService';
 import tokenManager from '../utils/tokenManager';
@@ -12,7 +12,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [refreshTimer, setRefreshTimer] = useState(null);
+  const refreshTimerRef = useRef(null);
 
   // Schedule token refresh 5 minutes before expiration
   const scheduleTokenRefresh = useCallback(() => {
@@ -27,12 +27,12 @@ export function AuthProvider({ children }) {
     const refreshIn = Math.max(expiresIn - 5 * 60 * 1000, 0);
 
     // Clear existing timer
-    if (refreshTimer) {
-      clearTimeout(refreshTimer);
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
     }
 
     // Schedule refresh
-    const timer = setTimeout(async () => {
+    refreshTimerRef.current = setTimeout(async () => {
       try {
         await authService.refreshToken();
         console.log('Token refreshed automatically');
@@ -42,9 +42,7 @@ export function AuthProvider({ children }) {
         console.error('Auto token refresh failed:', err);
       }
     }, refreshIn);
-
-    setRefreshTimer(timer);
-  }, [refreshTimer]);
+  }, []);
 
   // Initialize auth on app mount
   useEffect(() => {
@@ -76,11 +74,11 @@ export function AuthProvider({ children }) {
 
     // Cleanup timer on unmount
     return () => {
-      if (refreshTimer) {
-        clearTimeout(refreshTimer);
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
       }
     };
-  }, [scheduleTokenRefresh, refreshTimer]);
+  }, [scheduleTokenRefresh]);
 
   const login = useCallback(async (username, password, rememberMe = false) => {
     setError(null);
@@ -104,9 +102,9 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async () => {
     try {
       // Clear refresh timer
-      if (refreshTimer) {
-        clearTimeout(refreshTimer);
-        setRefreshTimer(null);
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
       }
 
       const refreshToken = tokenManager.getRefreshToken();
@@ -118,7 +116,7 @@ export function AuthProvider({ children }) {
       setError(null);
       tokenManager.clearAll();
     }
-  }, [refreshTimer]);
+  }, []);
 
   const clearError = useCallback(() => {
     setError(null);
