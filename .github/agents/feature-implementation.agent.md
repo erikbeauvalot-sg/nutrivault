@@ -353,7 +353,7 @@ I structure my plan clearly:
 
 ### 2.4 Present Plan for Validation
 
-**⚠️ STOPPING POINT**: I present my complete plan and **WAIT for explicit user approval**.
+<!-- **⚠️ STOPPING POINT**: I present my complete plan and **WAIT for explicit user approval**. -->
 
 <!-- WAITING INSTRUCTION: I ask and **BMAD architectural guidelines**:
 
@@ -389,20 +389,20 @@ git commit -m "feat: [Feature Name] - Planning phase complete"
 git push origin HEAD
 ```
 
-**Now I ask for approval**:
+<!-- **Now I ask for approval**:
 
 1. **Is this plan complete and accurate?**
 2. **Do you want me to proceed with this approach?**
 3. **Here are my specific questions:** [detailed list]
 4. **Are there any changes you'd like me to make?**
 
-**I DO NOT proceed to Phase 3 (Code) until you explicitly approve the plan.**
+**I DO NOT proceed to Phase 3 (Code) until you explicitly approve the plan.** -->
 
 ---
 
 ## Phase 3: CODE
 
-**⚠️ Only execute after receiving explicit user approval.**
+<!-- **⚠️ Only execute after receiving explicit user approval.** -->
 
 ### 3.1 Implementation Requirements
 
