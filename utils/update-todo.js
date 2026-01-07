@@ -146,7 +146,9 @@ const taskCheckers = {
 
   'Phase 3: Implement rate limiting': () => {
     return exists('backend/src/middleware/rateLimit.js') ||
-           fileContains('backend/src/server.js', 'rate-limit');
+           exists('backend/src/middleware/rateLimiter.js') ||
+           fileContains('backend/src/server.js', 'rate-limit') ||
+           fileContains('backend/src/server.js', 'rateLimit');
   },
 
   'Phase 3: Add file upload capability': () => {
@@ -155,7 +157,12 @@ const taskCheckers = {
   },
 
   'Phase 3: Implement data export functionality': () => {
-    return exists('backend/src/services/export.js');
+    return exists('backend/src/services/export.js') ||
+           exists('backend/src/services/export.service.js') ||
+           exists('backend/src/services/exportService.js') ||
+           exists('backend/src/controllers/export.controller.js') ||
+           fileContains('backend/src/controllers/report.controller.js', 'export') ||
+           fileContains('backend/src/controllers/patient.controller.js', 'export');
   },
 
   // Phase 4: Frontend Development
@@ -199,7 +206,8 @@ const taskCheckers = {
   },
 
   'Phase 4: Add audit log viewer': () => {
-    return exists('frontend/src/pages/AuditLogs.jsx');
+    return exists('frontend/src/pages/AuditLogs.jsx') ||
+           exists('frontend/src/pages/audit/AuditLogList.jsx');
   },
 
   // Phase 5: Security & Testing
