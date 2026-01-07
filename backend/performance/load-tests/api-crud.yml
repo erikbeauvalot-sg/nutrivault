@@ -1,0 +1,116 @@
+---
+name: API CRUD Operations Load Test
+config:
+  target: http://localhost:3001
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      name: Sustained load
+    - duration: 60
+      arrivalRate: 20
+      name: Peak load
+
+scenarios:
+  - name: Patient Management Operations
+    weight: 40
+    flow:
+      # Login first
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "admin"
+            password: "Admin123!"
+          capture:
+            - json: "$.data.access_token"
+              as: "accessToken"
+      
+      # List patients with pagination
+      - get:
+          url: "/api/patients"
+          qs:
+            limit: 20
+            offset: 0
+            sort_by: "last_name"
+            sort_order: "ASC"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+      
+      # Search patients
+      - get:
+          url: "/api/patients"
+          qs:
+            search: "test"
+            limit: 10
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+
+  - name: Visit Management Operations
+    weight: 30
+    flow:
+      # Login first
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "admin"
+            password: "Admin123!"
+          capture:
+            - json: "$.data.access_token"
+              as: "accessToken"
+      
+      # List visits with filters
+      - get:
+          url: "/api/visits"
+          qs:
+            limit: 20
+            offset: 0
+            sort_by: "visit_date"
+            sort_order: "DESC"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+
+  - name: Billing Operations
+    weight: 20
+    flow:
+      # Login first
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "admin"
+            password: "Admin123!"
+          capture:
+            - json: "$.data.access_token"
+              as: "accessToken"
+      
+      # List billing records
+      - get:
+          url: "/api/billing"
+          qs:
+            limit: 20
+            offset: 0
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+
+  - name: Reports Generation
+    weight: 10
+    flow:
+      # Login first
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "admin"
+            password: "Admin123!"
+          capture:
+            - json: "$.data.access_token"
+              as: "accessToken"
+      
+      # Get dashboard report
+      - get:
+          url: "/api/reports/dashboard"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+      
+      # Get visit analytics
+      - get:
+          url: "/api/reports/visit-analytics"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"

@@ -1,0 +1,49 @@
+---
+name: Authentication Flow Load Test
+config:
+  target: http://localhost:3001
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: Warm up
+    - duration: 120
+      arrivalRate: 10
+      name: Sustained load
+    - duration: 60
+      arrivalRate: 20
+      name: Peak load
+  processor: "./helpers/auth-helpers.js"
+
+scenarios:
+  - name: Login and Access Protected Endpoints
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "admin"
+            password: "Admin123!"
+          capture:
+            - json: "$.data.access_token"
+              as: "accessToken"
+      
+      # Get current user profile
+      - get:
+          url: "/api/auth/me"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+      
+      # List patients (protected endpoint)
+      - get:
+          url: "/api/patients"
+          qs:
+            limit: 20
+            offset: 0
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+      
+      # Get dashboard report
+      - get:
+          url: "/api/reports/dashboard"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
