@@ -11,6 +11,7 @@ const documentController = require('../controllers/document.controller');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
 const { apiLimiter } = require('../middleware/rateLimiter');
+const { cacheMiddleware } = require('../middleware/cache');
 const {
   validateVisitCreation,
   validateVisitUpdate,
@@ -34,6 +35,7 @@ router.use(apiLimiter);
  * Must come before /:id routes to avoid conflicts
  */
 router.get('/stats',
+  cacheMiddleware('medium'), // 1 min cache for stats
   requirePermission('visits.read'),
   visitController.getVisitStatsHandler
 );
@@ -44,6 +46,7 @@ router.get('/stats',
  */
 router.get('/',
   requirePermission('visits.list'),
+  cacheMiddleware('short'), // 30 sec cache for lists
   validateVisitQuery,
   visitController.getVisitsHandler
 );
@@ -63,6 +66,7 @@ router.post('/',
  */
 router.get('/:id',
   requirePermission('visits.read'),
+  cacheMiddleware('medium'), // 1 min cache for details
   validateVisitId,
   visitController.getVisitByIdHandler
 );
@@ -101,6 +105,7 @@ const setVisitResourceType = (req, res, next) => {
  * Get document statistics for a visit
  */
 router.get('/:id/documents/stats',
+  cacheMiddleware('medium'), // 1 min cache for stats
   requirePermission('documents.read'),
   validateResourceId,
   setVisitResourceType,

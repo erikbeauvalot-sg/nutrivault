@@ -11,6 +11,7 @@ const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
 const { apiLimiter } = require('../middleware/rateLimiter');
 const {
+const { cacheMiddleware } = require('../middleware/cache');
   validateBillingCreation,
   validateBillingUpdate,
   validateMarkAsPaid,
@@ -29,6 +30,7 @@ router.use(apiLimiter);
  * Must come before /:id routes to avoid conflicts
  */
 router.get('/stats',
+  cacheMiddleware('medium'), // 1 min cache for stats
   requirePermission('billing.read'),
   billingController.getBillingStatsHandler
 );
@@ -39,6 +41,7 @@ router.get('/stats',
  */
 router.get('/',
   requirePermission('billing.list'),
+  cacheMiddleware('short'), // 30 sec cache for lists
   validateBillingQuery,
   billingController.getBillingRecordsHandler
 );
@@ -58,6 +61,7 @@ router.post('/',
  */
 router.get('/:id',
   requirePermission('billing.read'),
+  cacheMiddleware('medium'), // 1 min cache for details
   validateBillingId,
   billingController.getBillingByIdHandler
 );

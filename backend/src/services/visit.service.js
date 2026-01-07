@@ -10,6 +10,7 @@ const { logCrudEvent } = require('./audit.service');
 const { Op } = require('sequelize');
 const QueryBuilder = require('../utils/queryBuilder');
 const { VISITS_CONFIG } = require('../config/queryConfigs');
+const cacheInvalidation = require('./cache-invalidation.service');
 
 /**
  * Check if user has access to patient
@@ -242,6 +243,9 @@ async function createVisit(visitData, createdBy, requestingUser) {
     ]
   });
 
+  // Invalidate cache
+  cacheInvalidation.invalidateVisitCache(visit.id, visit.patient_id);
+
   return visit;
 }
 
@@ -342,6 +346,9 @@ async function updateVisit(visitId, updates, updatedBy, requestingUser) {
     ]
   });
 
+  // Invalidate cache
+  cacheInvalidation.invalidateVisitCache(visitId, visit.patient_id);
+
   return visit;
 }
 
@@ -383,6 +390,9 @@ async function deleteVisit(visitId, deletedBy, requestingUser) {
     resource_id: visitId,
     status: 'SUCCESS'
   });
+
+  // Invalidate cache
+  cacheInvalidation.invalidateVisitCache(visitId, visit.patient_id);
 
   return { message: 'Visit deleted successfully' };
 }

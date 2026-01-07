@@ -10,6 +10,7 @@ const { logCrudEvent } = require('./audit.service');
 const { Op } = require('sequelize');
 const QueryBuilder = require('../utils/queryBuilder');
 const { PATIENTS_CONFIG } = require('../config/queryConfigs');
+const cacheInvalidation = require('./cache-invalidation.service');
 
 /**
  * Get all patients with filtering and pagination
@@ -195,6 +196,9 @@ async function createPatient(patientData, createdBy) {
     }]
   });
 
+  // Invalidate cache
+  cacheInvalidation.invalidatePatientCache();
+
   return patient;
 }
 
@@ -283,6 +287,9 @@ async function updatePatient(patientId, updates, updatedBy, requestingUser) {
     }]
   });
 
+  // Invalidate cache
+  cacheInvalidation.invalidatePatientCache(patientId);
+
   return patient;
 }
 
@@ -321,6 +328,9 @@ async function deletePatient(patientId, deletedBy, requestingUser) {
     resource_id: patientId,
     status: 'SUCCESS'
   });
+
+  // Invalidate cache
+  cacheInvalidation.invalidatePatientCache(patientId);
 
   return { message: 'Patient deactivated successfully' };
 }
@@ -365,6 +375,9 @@ async function activatePatient(patientId, activatedBy, requestingUser) {
     status: 'SUCCESS'
   });
 
+  // Invalidate cache
+  cacheInvalidation.invalidatePatientCache(patientId);
+
   return { message: 'Patient activated successfully' };
 }
 
@@ -407,6 +420,9 @@ async function deactivatePatient(patientId, deactivatedBy, requestingUser) {
     changes: { is_active: { old: true, new: false } },
     status: 'SUCCESS'
   });
+
+  // Invalidate cache
+  cacheInvalidation.invalidatePatientCache(patientId);
 
   return { message: 'Patient deactivated successfully' };
 }

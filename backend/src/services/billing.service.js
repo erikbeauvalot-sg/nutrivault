@@ -10,6 +10,7 @@ const { logCrudEvent } = require('./audit.service');
 const { Op } = require('sequelize');
 const QueryBuilder = require('../utils/queryBuilder');
 const { BILLING_CONFIG } = require('../config/queryConfigs');
+const cacheInvalidation = require('./cache-invalidation.service');
 
 /**
  * Check if user has access to patient for billing
@@ -270,6 +271,9 @@ async function createBilling(billingData, createdBy, requestingUser) {
     ]
   });
 
+  // Invalidate cache
+  cacheInvalidation.invalidateBillingCache(billing.id, billing.patient_id);
+
   return billing;
 }
 
@@ -369,6 +373,9 @@ async function updateBilling(billingId, updates, updatedBy, requestingUser) {
     ]
   });
 
+  // Invalidate cache
+  cacheInvalidation.invalidateBillingCache(billingId, billing.patient_id);
+
   return billing;
 }
 
@@ -419,6 +426,9 @@ async function deleteBilling(billingId, deletedBy, requestingUser) {
     status: 'SUCCESS'
   });
 
+  // Invalidate cache
+  cacheInvalidation.invalidateBillingCache(billingId, billing.patient_id);
+
   return { message: 'Billing record deleted successfully' };
 }
 
@@ -450,6 +460,9 @@ async function markAsPaid(billingId, paymentData, updatedBy, requestingUser) {
     changes: { status: { old: billing.status, new: 'PAID' } },
     status: 'SUCCESS'
   });
+
+  // Invalidate cache
+  cacheInvalidation.invalidateBillingCache(billingId, billing.patient_id);
 
   return billing;
 }

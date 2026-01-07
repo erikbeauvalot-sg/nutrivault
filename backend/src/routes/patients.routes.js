@@ -11,6 +11,7 @@ const documentController = require('../controllers/document.controller');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
 const { apiLimiter } = require('../middleware/rateLimiter');
+const { cacheMiddleware } = require('../middleware/cache');
 const {
   validatePatientCreation,
   validatePatientUpdate,
@@ -34,6 +35,7 @@ router.use(apiLimiter);
  * Must come before /:id routes to avoid conflicts
  */
 router.get('/stats',
+  cacheMiddleware('medium'), // 1 min cache for stats
   requirePermission('patients.read'),
   patientController.getPatientStatsHandler
 );
@@ -44,6 +46,7 @@ router.get('/stats',
  */
 router.get('/',
   requirePermission('patients.list'),
+  cacheMiddleware('short'), // 30 sec cache for lists
   validatePatientQuery,
   patientController.getPatientsHandler
 );
@@ -63,6 +66,7 @@ router.post('/',
  */
 router.get('/:id',
   requirePermission('patients.read'),
+  cacheMiddleware('medium'), // 1 min cache for details
   validatePatientId,
   patientController.getPatientByIdHandler
 );
@@ -121,6 +125,7 @@ const setPatientResourceType = (req, res, next) => {
  * Get document statistics for a patient
  */
 router.get('/:id/documents/stats',
+  cacheMiddleware('medium'), // 1 min cache for stats
   requirePermission('documents.read'),
   validateResourceId,
   setPatientResourceType,
@@ -145,6 +150,7 @@ router.post('/:id/documents',
 router.get('/:id/documents',
   requirePermission('documents.read'),
   validateResourceId,
+  cacheMiddleware('short'), // 30 sec cache for doc lists
   setPatientResourceType,
   documentController.getResourceDocumentsHandler
 );
