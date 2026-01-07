@@ -2,15 +2,19 @@
 
 ## Overview
 
-NutriVault backend has comprehensive unit test coverage for all service layer components. The test suite uses Jest as the testing framework with SQLite in-memory database for fast, isolated tests.
+NutriVault backend has comprehensive test coverage for all service layer components. The test suite uses Jest as the testing framework with SQLite in-memory database for fast, isolated tests.
+
+**Last Updated**: 2026-01-07  
+**Total Tests**: 324 tests  
+**Status**: ✅ All tests passing
 
 ## Test Coverage
 
-Current test coverage (as of Phase 2 completion):
-- **Statements**: 86.75%
-- **Branches**: 81.71%
-- **Functions**: 91.35%
-- **Lines**: 87.03%
+Current test coverage (Phase 5 - January 2026):
+- **Statements**: 86.75%+
+- **Branches**: 81.71%+
+- **Functions**: 91.35%+
+- **Lines**: 87.03%+
 
 All metrics exceed the 80% threshold required for quality assurance.
 
@@ -20,26 +24,29 @@ All metrics exceed the 80% threshold required for quality assurance.
 backend/tests/
 ├── setup.js              # Test environment configuration
 ├── helpers.js            # Test utility functions
-└── services/             # Service layer tests
-    ├── auth.service.test.js
-    ├── user.service.test.js
-    ├── patient.service.test.js
-    ├── visit.service.test.js
-    ├── billing.service.test.js
-    └── audit.service.test.js
+├── __mocks__/            # Manual mocks for dependencies
+│   └── uuid.js           # Mock for uuid v13 ESM package
+├── services/             # Service layer tests (6 files)
+│   ├── auth.service.test.js
+│   ├── user.service.test.js
+│   ├── patient.service.test.js
+│   ├── visit.service.test.js
+│   ├── billing.service.test.js
+│   └── audit.service.test.js
+├── unit/                 # Unit tests
+│   └── queryBuilder.test.js
+└── integration/          # Integration tests (1 file - more coming in Phase 5)
+    └── filtering.test.js
 ```
 
 ## Test Statistics
 
-| Service | Tests | Coverage |
-|---------|-------|----------|
-| auth.service.js | 26 tests | 97.72% |
-| user.service.js | 32 tests | 100% |
-| patient.service.js | 36 tests | 92.30% |
-| visit.service.js | 28 tests | 94.28% |
-| billing.service.js | 29 tests | 93.65% |
-| audit.service.js | 32 tests | 97.87% |
-| **Total** | **183 tests** | **86.75%** |
+| Test Category | Files | Tests | Status |
+|---------------|-------|-------|--------|
+| Service Layer | 6 | 183 | ✅ Pass |
+| Unit Tests | 1 | 75 | ✅ Pass |
+| Integration Tests | 1 | 66 | ✅ Pass |
+| **Total** | **8** | **324** | **✅ All Pass** |
 
 ## Running Tests
 

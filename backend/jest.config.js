@@ -45,6 +45,9 @@ module.exports = {
   // Setup files
   setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
 
+  // Manual mocks directory
+  moduleDirectories: ['node_modules', 'tests/__mocks__'],
+
   // Clear mocks between tests
   clearMocks: true,
   resetMocks: true,

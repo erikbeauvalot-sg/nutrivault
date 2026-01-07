@@ -84,4 +84,4 @@ This todo list is automatically updated by `utils/update-todo.js`.
 
 **Run manually**: `node utils/update-todo.js`
 
-**Last scan**: 2026-01-07T10:22:46.304Z
+**Last scan**: 2026-01-07T10:46:05.726Z
