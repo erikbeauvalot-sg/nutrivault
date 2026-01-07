@@ -1,0 +1,2723 @@
+{
+  "config": {
+    "configFile": "/Users/erik/Documents/Dev/Diet/nutrivault/playwright.config.js",
+    "rootDir": "/Users/erik/Documents/Dev/Diet/nutrivault/tests/e2e/specs",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": "/Users/erik/Documents/Dev/Diet/nutrivault/tests/e2e/fixtures/globalSetup.js",
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {},
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "html",
+        {
+          "outputFolder": "playwright-report"
+        }
+      ],
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "test-results/results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/Users/erik/Documents/Dev/Diet/nutrivault/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/Users/erik/Documents/Dev/Diet/nutrivault/tests/e2e/specs",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/erik/Documents/Dev/Diet/nutrivault/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "/Users/erik/Documents/Dev/Diet/nutrivault/tests/e2e/specs",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "/Users/erik/Documents/Dev/Diet/nutrivault/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "/Users/erik/Documents/Dev/Diet/nutrivault/tests/e2e/specs",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.57.0",
+    "workers": 7,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "audit.spec.js",
+      "file": "audit.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Audit Log Viewer (Admin Only)",
+          "file": "audit.spec.js",
+          "line": 11,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should display audit log page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-cbba3f9754f7e87f09f0",
+              "file": "audit.spec.js",
+              "line": 20,
+              "column": 7
+            },
+            {
+              "title": "should filter by action type",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-7a55ef8bbab6cd4eb9ee",
+              "file": "audit.spec.js",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should filter by date range",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-d845ab6d754c6cf99697",
+              "file": "audit.spec.js",
+              "line": 34,
+              "column": 7
+            },
+            {
+              "title": "should clear filters",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-6978d23d42c3ffab3565",
+              "file": "audit.spec.js",
+              "line": 43,
+              "column": 7
+            },
+            {
+              "title": "should export audit logs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-cb329a8fdc5528b7b791",
+              "file": "audit.spec.js",
+              "line": 57,
+              "column": 7
+            },
+            {
+              "title": "should paginate through logs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-279f52b149dea8fc8348",
+              "file": "audit.spec.js",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "should prevent non-admin from accessing audit log",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-b9175cd92f8c1fad17b2",
+              "file": "audit.spec.js",
+              "line": 81,
+              "column": 7
+            },
+            {
+              "title": "should display log entry details",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-153b6bee94edc624c6c1",
+              "file": "audit.spec.js",
+              "line": 101,
+              "column": 7
+            },
+            {
+              "title": "should display audit log page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-34b68a9cbfe1d7ddeec7",
+              "file": "audit.spec.js",
+              "line": 20,
+              "column": 7
+            },
+            {
+              "title": "should filter by action type",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-85c4cfa9ec5625f6874a",
+              "file": "audit.spec.js",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should filter by date range",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-4c01c9a00d51c434f42a",
+              "file": "audit.spec.js",
+              "line": 34,
+              "column": 7
+            },
+            {
+              "title": "should clear filters",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-5695ea2a0d0af0b16c24",
+              "file": "audit.spec.js",
+              "line": 43,
+              "column": 7
+            },
+            {
+              "title": "should export audit logs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-54c54b29832a7e0ed5fa",
+              "file": "audit.spec.js",
+              "line": 57,
+              "column": 7
+            },
+            {
+              "title": "should paginate through logs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-5290532f07125364617e",
+              "file": "audit.spec.js",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "should prevent non-admin from accessing audit log",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-bb6730437cb4b6161388",
+              "file": "audit.spec.js",
+              "line": 81,
+              "column": 7
+            },
+            {
+              "title": "should display log entry details",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-71b5dd8823ba4310871b",
+              "file": "audit.spec.js",
+              "line": 101,
+              "column": 7
+            },
+            {
+              "title": "should display audit log page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-57e53a1c32f2aa50a07f",
+              "file": "audit.spec.js",
+              "line": 20,
+              "column": 7
+            },
+            {
+              "title": "should filter by action type",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-bf5b3592a987d20b0cf9",
+              "file": "audit.spec.js",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should filter by date range",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-18c161d0fc03aa94e5df",
+              "file": "audit.spec.js",
+              "line": 34,
+              "column": 7
+            },
+            {
+              "title": "should clear filters",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-e06de7ea22c4b40e08ef",
+              "file": "audit.spec.js",
+              "line": 43,
+              "column": 7
+            },
+            {
+              "title": "should export audit logs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-1dc37aa6a02c37cc2a01",
+              "file": "audit.spec.js",
+              "line": 57,
+              "column": 7
+            },
+            {
+              "title": "should paginate through logs",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-09f655e7d079a3b7c3a1",
+              "file": "audit.spec.js",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "should prevent non-admin from accessing audit log",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-4e87998e7ffb82e920d3",
+              "file": "audit.spec.js",
+              "line": 81,
+              "column": 7
+            },
+            {
+              "title": "should display log entry details",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "cb3620ddbaaaeb17db70-e88085dfe43e25327f6f",
+              "file": "audit.spec.js",
+              "line": 101,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "auth.spec.js",
+      "file": "auth.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Authentication Flow",
+          "file": "auth.spec.js",
+          "line": 11,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should display login page correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-b78d5ccfcad74fb4f3a4",
+              "file": "auth.spec.js",
+              "line": 21,
+              "column": 7
+            },
+            {
+              "title": "should login successfully with valid admin credentials",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-49fc8991779417601cf8",
+              "file": "auth.spec.js",
+              "line": 28,
+              "column": 7
+            },
+            {
+              "title": "should login successfully with nutritionist credentials",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-57adccc112a80580da73",
+              "file": "auth.spec.js",
+              "line": 36,
+              "column": 7
+            },
+            {
+              "title": "should show error with invalid credentials",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-6d030ad220892425cae6",
+              "file": "auth.spec.js",
+              "line": 45,
+              "column": 7
+            },
+            {
+              "title": "should show error with empty username",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-bdf32ef8c3d19eb33117",
+              "file": "auth.spec.js",
+              "line": 57,
+              "column": 7
+            },
+            {
+              "title": "should show error with empty password",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-08a3965d61619ad10640",
+              "file": "auth.spec.js",
+              "line": 66,
+              "column": 7
+            },
+            {
+              "title": "should remember user session with \"Remember Me\"",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-a4fbab70312026005d3d",
+              "file": "auth.spec.js",
+              "line": 75,
+              "column": 7
+            },
+            {
+              "title": "should logout successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-2c1afcf4edb938cb82a8",
+              "file": "auth.spec.js",
+              "line": 94,
+              "column": 7
+            },
+            {
+              "title": "should redirect to login when accessing protected route without auth",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-94325d582962910f81a1",
+              "file": "auth.spec.js",
+              "line": 106,
+              "column": 7
+            },
+            {
+              "title": "should redirect to requested page after login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-2bb1d2ba4f96a1f7e268",
+              "file": "auth.spec.js",
+              "line": 113,
+              "column": 7
+            },
+            {
+              "title": "should prevent access to admin pages with non-admin user",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-49d50c695621d49eb7f5",
+              "file": "auth.spec.js",
+              "line": 128,
+              "column": 7
+            },
+            {
+              "title": "should display login page correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-3597abc1c18eaa257c06",
+              "file": "auth.spec.js",
+              "line": 21,
+              "column": 7
+            },
+            {
+              "title": "should login successfully with valid admin credentials",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-77a454b82e2ca039994b",
+              "file": "auth.spec.js",
+              "line": 28,
+              "column": 7
+            },
+            {
+              "title": "should login successfully with nutritionist credentials",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-7a7fbda0ddc54a1b6d5a",
+              "file": "auth.spec.js",
+              "line": 36,
+              "column": 7
+            },
+            {
+              "title": "should show error with invalid credentials",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-f8b20fb6a95672038802",
+              "file": "auth.spec.js",
+              "line": 45,
+              "column": 7
+            },
+            {
+              "title": "should show error with empty username",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-8c52986be90765647247",
+              "file": "auth.spec.js",
+              "line": 57,
+              "column": 7
+            },
+            {
+              "title": "should show error with empty password",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-be052f6ddf613ba3d186",
+              "file": "auth.spec.js",
+              "line": 66,
+              "column": 7
+            },
+            {
+              "title": "should remember user session with \"Remember Me\"",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-71392a4fd4d92208d933",
+              "file": "auth.spec.js",
+              "line": 75,
+              "column": 7
+            },
+            {
+              "title": "should logout successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-fb88c490584b2f3aed0e",
+              "file": "auth.spec.js",
+              "line": 94,
+              "column": 7
+            },
+            {
+              "title": "should redirect to login when accessing protected route without auth",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-466f52a2ad231e490cae",
+              "file": "auth.spec.js",
+              "line": 106,
+              "column": 7
+            },
+            {
+              "title": "should redirect to requested page after login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-797a85d4a018397999d8",
+              "file": "auth.spec.js",
+              "line": 113,
+              "column": 7
+            },
+            {
+              "title": "should prevent access to admin pages with non-admin user",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-00043e7ca1a7010fc886",
+              "file": "auth.spec.js",
+              "line": 128,
+              "column": 7
+            },
+            {
+              "title": "should display login page correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-bed7af92514c8fa32a1f",
+              "file": "auth.spec.js",
+              "line": 21,
+              "column": 7
+            },
+            {
+              "title": "should login successfully with valid admin credentials",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-6c97f4cf5722613122da",
+              "file": "auth.spec.js",
+              "line": 28,
+              "column": 7
+            },
+            {
+              "title": "should login successfully with nutritionist credentials",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-9c3fb83e7124181d5a7a",
+              "file": "auth.spec.js",
+              "line": 36,
+              "column": 7
+            },
+            {
+              "title": "should show error with invalid credentials",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-85e8f81d4173c6cda709",
+              "file": "auth.spec.js",
+              "line": 45,
+              "column": 7
+            },
+            {
+              "title": "should show error with empty username",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-1f94ed2606997aa2353a",
+              "file": "auth.spec.js",
+              "line": 57,
+              "column": 7
+            },
+            {
+              "title": "should show error with empty password",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-2f93b0e28132e154f276",
+              "file": "auth.spec.js",
+              "line": 66,
+              "column": 7
+            },
+            {
+              "title": "should remember user session with \"Remember Me\"",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-80c7e3f455c09c8da654",
+              "file": "auth.spec.js",
+              "line": 75,
+              "column": 7
+            },
+            {
+              "title": "should logout successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-7544822f37f3c8e044ba",
+              "file": "auth.spec.js",
+              "line": 94,
+              "column": 7
+            },
+            {
+              "title": "should redirect to login when accessing protected route without auth",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-b709ae428ada089ffe10",
+              "file": "auth.spec.js",
+              "line": 106,
+              "column": 7
+            },
+            {
+              "title": "should redirect to requested page after login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-940cfba425fd773091ce",
+              "file": "auth.spec.js",
+              "line": 113,
+              "column": 7
+            },
+            {
+              "title": "should prevent access to admin pages with non-admin user",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "d5ed79a6b333c2ba7209-0f8c29a5be4feb1d9c1a",
+              "file": "auth.spec.js",
+              "line": 128,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "billing.spec.js",
+      "file": "billing.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Billing Management",
+          "file": "billing.spec.js",
+          "line": 11,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should display billing list page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0b0fccf3417b7f161eaf-9f3d2a6643a5b1792f60",
+              "file": "billing.spec.js",
+              "line": 20,
+              "column": 7
+            },
+            {
+              "title": "should create a new invoice",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0b0fccf3417b7f161eaf-e275eb3a873508321bcd",
+              "file": "billing.spec.js",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should filter invoices by status",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0b0fccf3417b7f161eaf-58aa3eb2d63019e2a6c8",
+              "file": "billing.spec.js",
+              "line": 41,
+              "column": 7
+            },
+            {
+              "title": "should record payment for invoice",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0b0fccf3417b7f161eaf-f6879ffa316319e0f407",
+              "file": "billing.spec.js",
+              "line": 49,
+              "column": 7
+            },
+            {
+              "title": "should validate invoice amount",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0b0fccf3417b7f161eaf-2d332acf5c512a06741f",
+              "file": "billing.spec.js",
+              "line": 62,
+              "column": 7
+            },
+            {
+              "title": "should display billing list page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0b0fccf3417b7f161eaf-5b4dd6fd449026057117",
+              "file": "billing.spec.js",
+              "line": 20,
+              "column": 7
+            },
+            {
+              "title": "should create a new invoice",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0b0fccf3417b7f161eaf-0201efbac71df8736f90",
+              "file": "billing.spec.js",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should filter invoices by status",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0b0fccf3417b7f161eaf-dea2933f34e64b9365a5",
+              "file": "billing.spec.js",
+              "line": 41,
+              "column": 7
+            },
+            {
+              "title": "should record payment for invoice",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0b0fccf3417b7f161eaf-4fa806abf88c2979b4db",
+              "file": "billing.spec.js",
+              "line": 49,
+              "column": 7
+            },
+            {
+              "title": "should validate invoice amount",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0b0fccf3417b7f161eaf-45c574d5e249df952d08",
+              "file": "billing.spec.js",
+              "line": 62,
+              "column": 7
+            },
+            {
+              "title": "should display billing list page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0b0fccf3417b7f161eaf-6e17638899550e0b560c",
+              "file": "billing.spec.js",
+              "line": 20,
+              "column": 7
+            },
+            {
+              "title": "should create a new invoice",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0b0fccf3417b7f161eaf-9a3015a42a0a07d5e04f",
+              "file": "billing.spec.js",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should filter invoices by status",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0b0fccf3417b7f161eaf-456d582f0407521bdedc",
+              "file": "billing.spec.js",
+              "line": 41,
+              "column": 7
+            },
+            {
+              "title": "should record payment for invoice",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0b0fccf3417b7f161eaf-f42fff5bd3ccaae162bd",
+              "file": "billing.spec.js",
+              "line": 49,
+              "column": 7
+            },
+            {
+              "title": "should validate invoice amount",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "0b0fccf3417b7f161eaf-857b551c8a2adb07229a",
+              "file": "billing.spec.js",
+              "line": 62,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "patients.spec.js",
+      "file": "patients.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Patient Management",
+          "file": "patients.spec.js",
+          "line": 11,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should display patients list page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-c2e3a979600f7d7e0314",
+              "file": "patients.spec.js",
+              "line": 26,
+              "column": 7
+            },
+            {
+              "title": "should create a new patient successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-d355a6c8330190f16b59",
+              "file": "patients.spec.js",
+              "line": 32,
+              "column": 7
+            },
+            {
+              "title": "should validate required fields when creating patient",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-334bf9c770c923a285bc",
+              "file": "patients.spec.js",
+              "line": 65,
+              "column": 7
+            },
+            {
+              "title": "should search for patients",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-c3c713137b382acd0429",
+              "file": "patients.spec.js",
+              "line": 78,
+              "column": 7
+            },
+            {
+              "title": "should view patient details",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-e9c5c2142a70dab4f06b",
+              "file": "patients.spec.js",
+              "line": 100,
+              "column": 7
+            },
+            {
+              "title": "should update patient information",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-49bd90b7bd29965af4b1",
+              "file": "patients.spec.js",
+              "line": 122,
+              "column": 7
+            },
+            {
+              "title": "should delete patient",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-0a97dc689aa70d8021f1",
+              "file": "patients.spec.js",
+              "line": 152,
+              "column": 7
+            },
+            {
+              "title": "should prevent duplicate email",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-7988386745e05f83b4c3",
+              "file": "patients.spec.js",
+              "line": 176,
+              "column": 7
+            },
+            {
+              "title": "should display patients list page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-ccb3e3448211414b794d",
+              "file": "patients.spec.js",
+              "line": 26,
+              "column": 7
+            },
+            {
+              "title": "should create a new patient successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-363ef569401a38872ec2",
+              "file": "patients.spec.js",
+              "line": 32,
+              "column": 7
+            },
+            {
+              "title": "should validate required fields when creating patient",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-3784444207496795825c",
+              "file": "patients.spec.js",
+              "line": 65,
+              "column": 7
+            },
+            {
+              "title": "should search for patients",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-089105072304fc397437",
+              "file": "patients.spec.js",
+              "line": 78,
+              "column": 7
+            },
+            {
+              "title": "should view patient details",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-53645db33fee5ef8b3ee",
+              "file": "patients.spec.js",
+              "line": 100,
+              "column": 7
+            },
+            {
+              "title": "should update patient information",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-6a343192716a2b793830",
+              "file": "patients.spec.js",
+              "line": 122,
+              "column": 7
+            },
+            {
+              "title": "should delete patient",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-d5d265bf9930e22376d3",
+              "file": "patients.spec.js",
+              "line": 152,
+              "column": 7
+            },
+            {
+              "title": "should prevent duplicate email",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-6400e370b562bb98aa38",
+              "file": "patients.spec.js",
+              "line": 176,
+              "column": 7
+            },
+            {
+              "title": "should display patients list page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-ba72539bb0f93bccba5c",
+              "file": "patients.spec.js",
+              "line": 26,
+              "column": 7
+            },
+            {
+              "title": "should create a new patient successfully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-77d68ef8a52b9f6add65",
+              "file": "patients.spec.js",
+              "line": 32,
+              "column": 7
+            },
+            {
+              "title": "should validate required fields when creating patient",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-0df626eac012c12120da",
+              "file": "patients.spec.js",
+              "line": 65,
+              "column": 7
+            },
+            {
+              "title": "should search for patients",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-d2893bedc7019f66581c",
+              "file": "patients.spec.js",
+              "line": 78,
+              "column": 7
+            },
+            {
+              "title": "should view patient details",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-ea339d5fc32f8ce0603a",
+              "file": "patients.spec.js",
+              "line": 100,
+              "column": 7
+            },
+            {
+              "title": "should update patient information",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-4e9d97e787c3fbb54590",
+              "file": "patients.spec.js",
+              "line": 122,
+              "column": 7
+            },
+            {
+              "title": "should delete patient",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-cbf2ae019cfdc33e1f76",
+              "file": "patients.spec.js",
+              "line": 152,
+              "column": 7
+            },
+            {
+              "title": "should prevent duplicate email",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "6a975df688a00aaa07b3-aeeeebcfd05d27ddc2dd",
+              "file": "patients.spec.js",
+              "line": 176,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "users.spec.js",
+      "file": "users.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "User Management (Admin Only)",
+          "file": "users.spec.js",
+          "line": 11,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should display users list page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-bc3b3da6243f263374ca",
+              "file": "users.spec.js",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should create a new user",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-4235433195c0078cc3c3",
+              "file": "users.spec.js",
+              "line": 30,
+              "column": 7
+            },
+            {
+              "title": "should validate password requirements",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-6cb5f65eddafa896822c",
+              "file": "users.spec.js",
+              "line": 52,
+              "column": 7
+            },
+            {
+              "title": "should change user role",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-4e5a04f80a338d91494a",
+              "file": "users.spec.js",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "should deactivate user",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-2369b47d5ee068b8a154",
+              "file": "users.spec.js",
+              "line": 87,
+              "column": 7
+            },
+            {
+              "title": "should prevent non-admin from accessing users page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-f393b89ea0fe5c5d6dfb",
+              "file": "users.spec.js",
+              "line": 109,
+              "column": 7
+            },
+            {
+              "title": "should display users list page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-53e6367b987fbfa7b349",
+              "file": "users.spec.js",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should create a new user",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-e7265aaff7a5ea2e3115",
+              "file": "users.spec.js",
+              "line": 30,
+              "column": 7
+            },
+            {
+              "title": "should validate password requirements",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-8bdf0315bbfd9d249a73",
+              "file": "users.spec.js",
+              "line": 52,
+              "column": 7
+            },
+            {
+              "title": "should change user role",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-2f4bc86da8cd29d24740",
+              "file": "users.spec.js",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "should deactivate user",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-7583df51f2c7c72dfd06",
+              "file": "users.spec.js",
+              "line": 87,
+              "column": 7
+            },
+            {
+              "title": "should prevent non-admin from accessing users page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-2528de8ca1d468a05b30",
+              "file": "users.spec.js",
+              "line": 109,
+              "column": 7
+            },
+            {
+              "title": "should display users list page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-42b56c10de355eaca560",
+              "file": "users.spec.js",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should create a new user",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-a088df1b98a688645a5b",
+              "file": "users.spec.js",
+              "line": 30,
+              "column": 7
+            },
+            {
+              "title": "should validate password requirements",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-bda20eb2e3baa906984a",
+              "file": "users.spec.js",
+              "line": 52,
+              "column": 7
+            },
+            {
+              "title": "should change user role",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-eece6f10edcbfb63b101",
+              "file": "users.spec.js",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "should deactivate user",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-217e8f22d139e6026ce5",
+              "file": "users.spec.js",
+              "line": 87,
+              "column": 7
+            },
+            {
+              "title": "should prevent non-admin from accessing users page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "e43726c83847928dbeff-703ff3ffc7c85b3a100d",
+              "file": "users.spec.js",
+              "line": 109,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "visits.spec.js",
+      "file": "visits.spec.js",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Visit Management",
+          "file": "visits.spec.js",
+          "line": 11,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should display visits list page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7c2e898fa7ec8a2af7eb-5310f52dd6bb01d7a33b",
+              "file": "visits.spec.js",
+              "line": 20,
+              "column": 7
+            },
+            {
+              "title": "should create a new visit",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7c2e898fa7ec8a2af7eb-b236c5a45fe04defad02",
+              "file": "visits.spec.js",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should validate required fields",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7c2e898fa7ec8a2af7eb-0fee33963c8ed5f839f7",
+              "file": "visits.spec.js",
+              "line": 45,
+              "column": 7
+            },
+            {
+              "title": "should update visit status",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7c2e898fa7ec8a2af7eb-3647713dd19d6464e2bf",
+              "file": "visits.spec.js",
+              "line": 53,
+              "column": 7
+            },
+            {
+              "title": "should display visits list page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7c2e898fa7ec8a2af7eb-d7bc75781841bf62ff58",
+              "file": "visits.spec.js",
+              "line": 20,
+              "column": 7
+            },
+            {
+              "title": "should create a new visit",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7c2e898fa7ec8a2af7eb-d272d98c3c824309cc09",
+              "file": "visits.spec.js",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should validate required fields",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7c2e898fa7ec8a2af7eb-ef07074fd16abeed1098",
+              "file": "visits.spec.js",
+              "line": 45,
+              "column": 7
+            },
+            {
+              "title": "should update visit status",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "firefox",
+                  "projectName": "firefox",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7c2e898fa7ec8a2af7eb-2b8e42d95252630f2ac3",
+              "file": "visits.spec.js",
+              "line": 53,
+              "column": 7
+            },
+            {
+              "title": "should display visits list page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7c2e898fa7ec8a2af7eb-0b3720f9cd41107c15b0",
+              "file": "visits.spec.js",
+              "line": 20,
+              "column": 7
+            },
+            {
+              "title": "should create a new visit",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7c2e898fa7ec8a2af7eb-3b1ed83d788e2028ab65",
+              "file": "visits.spec.js",
+              "line": 25,
+              "column": 7
+            },
+            {
+              "title": "should validate required fields",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7c2e898fa7ec8a2af7eb-268392d15b8cd3220c1b",
+              "file": "visits.spec.js",
+              "line": 45,
+              "column": 7
+            },
+            {
+              "title": "should update visit status",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "webkit",
+                  "projectName": "webkit",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "7c2e898fa7ec8a2af7eb-84b8de522e73e982a7d7",
+              "file": "visits.spec.js",
+              "line": 53,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-01-07T14:43:09.555Z",
+    "duration": 69.875,
+    "expected": 0,
+    "skipped": 126,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
