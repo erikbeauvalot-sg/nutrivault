@@ -1,7 +1,7 @@
 ---
 description: 'Implement a project, feature, or task following an existing BMAD Method plan'
 mode: 'agent'
-tools: ['read_file', 'replace_string_in_file', 'multi_replace_string_in_file', 'run_in_terminal', 'file_search', 'grep_search', 'semantic_search', 'list_dir', 'get_errors']
+tools: ['read/readFile', 'edit/editFiles', 'execute/runInTerminal', 'search/fileSearch', 'search/textSearch', 'search/codebase', 'search/listDirectory', 'get_errors']
 model: 'claude-sonnet-4.5'
 ---
 
