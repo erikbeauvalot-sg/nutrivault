@@ -19,9 +19,6 @@ tests
 data/*.db
 *.sqlite
 
-# Models directory (copied separately from root)
-models
-
 # Logs
 logs
 *.log
