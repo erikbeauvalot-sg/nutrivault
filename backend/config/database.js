@@ -61,13 +61,14 @@ module.exports = {
   },
 
   production: {
-    dialect: 'postgres',
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    database: process.env.DB_NAME || 'nutrivault',
-    username: process.env.DB_USER || 'nutrivault_user',
-    password: process.env.DB_PASSWORD,
-    ssl: process.env.DB_SSL === 'true' ? {
+    dialect: dbDialect === 'postgres' ? 'postgres' : 'sqlite',
+    storage: dbDialect === 'sqlite' ? storageLocation : undefined,
+    host: dbDialect === 'postgres' ? (process.env.DB_HOST || 'localhost') : undefined,
+    port: dbDialect === 'postgres' ? (process.env.DB_PORT || 5432) : undefined,
+    database: dbDialect === 'postgres' ? (process.env.DB_NAME || 'nutrivault') : undefined,
+    username: dbDialect === 'postgres' ? (process.env.DB_USER || 'nutrivault_user') : undefined,
+    password: dbDialect === 'postgres' ? process.env.DB_PASSWORD : undefined,
+    ssl: dbDialect === 'postgres' && process.env.DB_SSL === 'true' ? {
       rejectUnauthorized: false // For cloud databases with self-signed certs
     } : false,
     logging: process.env.DB_LOGGING === 'true' ? console.log : false,
