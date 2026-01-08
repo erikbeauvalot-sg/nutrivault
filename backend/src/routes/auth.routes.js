@@ -21,9 +21,6 @@ const {
  * Public routes (no authentication required)
  */
 
-// Public registration (self-signup) - with rate limiting
-router.post('/register', authLimiter, validateRegistration, authController.publicRegister);
-
 // Login - with strict rate limiting
 router.post('/login', authLimiter, validateLogin, authController.login);
 
@@ -40,8 +37,8 @@ router.post('/refresh', authLimiter, validateRefreshToken, authController.refres
 // Get current user info
 router.get('/me', authenticate, authController.getCurrentUser);
 
-// Admin-only registration (create users as admin)
-router.post('/admin/register', authenticate, requireRole('ADMIN'), validateRegistration, authController.register);
+// Register new user (Admin only)
+router.post('/register', authenticate, requireRole('ADMIN'), validateRegistration, authController.register);
 
 // Create API key
 router.post('/api-keys', authenticate, validateApiKeyCreation, authController.createApiKey);
