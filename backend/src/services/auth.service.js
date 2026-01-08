@@ -71,6 +71,52 @@ async function register(userData, createdBy) {
 }
 
 /**
+ * Public registration with immediate login
+ */
+async function publicRegister(userData, ipAddress, userAgent) {
+  const { username, email, password, first_name, last_name, role_id } = userData;
+
+  // Check if username already exists
+  const existingUser = await db.User.findOne({
+    where: { username }
+  });
+
+  if (existingUser) {
+    throw new AppError('Username already exists', 409, 'USERNAME_EXISTS');
+  }
+
+  // Check if email already exists
+  const existingEmail = await db.User.findOne({
+    where: { email }
+  });
+
+  if (existingEmail) {
+    throw new AppError('Email already exists', 409, 'EMAIL_EXISTS');
+  }
+
+  // Hash password
+  const password_hash = await hashPassword(password);
+
+  // Create user (self-created, so no createdBy)
+  const user = await db.User.create({
+    username,
+    email,
+    password_hash,
+    first_name,
+    last_name,
+    role_id,
+    is_active: true,
+    created_by: null, // Self-registered
+    updated_by: null
+  });
+
+  // Immediately log in the user
+  const loginResult = await login(username, password, ipAddress, userAgent);
+
+  return loginResult;
+}
+
+/**
  * Login user
  */
 async function login(username, password, ipAddress, userAgent) {
@@ -301,7 +347,7 @@ async function createApiKey(userId, name, expiresAt) {
   // Return the full API key (this is the only time it's available)
   return {
     id: apiKeyRecord.id,
-    apiKey: apiKey, // Full key - show to user ONCE
+    key: apiKey, // Full key - show to user ONCE
     prefix: keyPrefix,
     name: apiKeyRecord.name,
     expires_at: apiKeyRecord.expires_at,
@@ -349,6 +395,7 @@ async function revokeApiKey(apiKeyId, userId) {
 }
 
 module.exports = {
+  publicRegister,
   register,
   login,
   logout,
