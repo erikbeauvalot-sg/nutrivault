@@ -167,7 +167,7 @@ For production deployment, ensure you:
 7. **Secure file uploads** - Configure appropriate file size limits and allowed types
 8. **Set strong bcrypt rounds** - Use BCRYPT_ROUNDS=12 or higher for production
 
-See [SECURITY.md](SECURITY.md) for detailed security guidelines.
+See [docs/SECURITY.md](docs/SECURITY.md) for detailed security guidelines.
 
 ### Docker Setup (Alternative)
 
