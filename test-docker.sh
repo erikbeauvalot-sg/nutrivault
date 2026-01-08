@@ -97,9 +97,23 @@ run_test "SQLite compose file exists" "test -f docker-compose.sqlite.yml"
 print_header "2. Backend Dockerfile Tests"
 
 print_info "Building backend image..."
-if docker build -t nutrivault-backend-test ./backend; then
-    print_success "Backend image built successfully"
-    ((TESTS_PASSED++))
+if docker build -t nutrivault-backend-test ./backend 2>&1 | tee backend-build.log; then
+    if [ "${PIPESTATUS[0]}" -eq 0 ]; then
+        print_success "Backend image built successfully"
+        ((TESTS_PASSED++))
+    else
+        print_error "Backend image build failed"
+        cat backend-build.log | tail -50
+        ((TESTS_FAILED++))
+        cleanup
+        exit 1
+    fi
+else
+    print_error "Backend build command failed"
+    ((TESTS_FAILED++))
+    cleanup
+    exit 1
+fi
     
     # Test backend image
     run_test "Backend image exists" "docker images nutrivault-backend-test -q"
@@ -136,10 +150,6 @@ if docker build -t nutrivault-backend-test ./backend; then
     
     # Cleanup image
     docker rmi nutrivault-backend-test > /dev/null 2>&1 || true
-else
-    print_error "Backend image build failed"
-    ((TESTS_FAILED++))
-fi
 
 # ============================================
 # Frontend Dockerfile Tests
@@ -147,15 +157,37 @@ fi
 print_header "3. Frontend Dockerfile Tests"
 
 print_info "Building frontend image..."
-if docker build -t nutrivault-frontend-test ./frontend; then
-    print_success "Frontend image built successfully"
-    ((TESTS_PASSED++))
+if docker build -t nutrivault-frontend-test ./frontend 2>&1 | tee frontend-build.log; then
+    if [ "${PIPESTATUS[0]}" -eq 0 ]; then
+        print_success "Frontend image built successfully"
+        ((TESTS_PASSED++))
+    else
+        print_error "Frontend image build failed"
+        cat frontend-build.log | tail -50
+        ((TESTS_FAILED++))
+        cleanup
+        exit 1
+    fi
+else
+    print_error "Frontend build command failed"
+    ((TESTS_FAILED++))
+    cleanup
+    exit 1
+fi
     
     # Test frontend image
     run_test "Frontend image exists" "docker images nutrivault-frontend-test -q"
     run_test "Frontend image has nginx" "docker inspect nutrivault-frontend-test | grep -q 'nginx'"
     run_test "Frontend image has non-root user" "docker inspect nutrivault-frontend-test | grep -q 'nutrivault'"
     run_test "Frontend image exposes port 80" "docker inspect nutrivault-frontend-test | grep -q '80'"
+    
+    # Verify npm ci ran successfully (check if node_modules was created during build)
+    print_info "Verifying npm dependencies were installed..."
+    if grep -q "added.*packages" frontend-build.log; then
+        print_success "npm ci completed successfully"
+    else
+        print_error "npm ci may have failed - check frontend-build.log"
+    fi
     
     # Test frontend container startup
     print_info "Testing frontend container startup..."
@@ -178,10 +210,6 @@ if docker build -t nutrivault-frontend-test ./frontend; then
     
     # Cleanup image
     docker rmi nutrivault-frontend-test > /dev/null 2>&1 || true
-else
-    print_error "Frontend image build failed"
-    ((TESTS_FAILED++))
-fi
 
 # ============================================
 # PostgreSQL Docker Compose Tests
