@@ -117,6 +117,7 @@ RATE_LIMIT_MAX_REQUESTS=100                # Max requests per window
 # CORS Configuration
 CORS_ORIGIN=http://localhost:5173          # Frontend URL
 ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+# For network access, add your IP addresses (e.g., http://192.168.1.173:5173,http://192.168.1.173:3001)
 
 # File Upload
 MAX_FILE_SIZE=10485760                     # 10MB in bytes
