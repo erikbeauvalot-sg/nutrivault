@@ -371,7 +371,7 @@ See [docs/setup/DEPLOYMENT.md](docs/setup/DEPLOYMENT.md) for production deployme
 
 ## Support
 
-For support, please contact [your-email@example.com] or open an issue on GitHub.
+For support, please contact [erik@beauvalot.com] or open an issue on GitHub.
 
 ## Acknowledgments
 
