@@ -33,8 +33,7 @@ npm run dev
 
 ## 🔑 Test Credentials
 
-- **Admin**: `admin` / `admin123`
-- **Dietitian**: `dietitian1` / `dietitian123`
+- **Admin**: `admin` / `Admin123!`
 
 ## 🛠️ Managing PostgreSQL
 

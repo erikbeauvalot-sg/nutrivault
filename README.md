@@ -181,12 +181,11 @@ After seeding the database:
 
 | Role | Username | Password |
 |------|----------|----------|
-| Admin | admin | admin123 |
-| Dietitian | dietitian1 | dietitian123 |
-| Assistant | assistant1 | assistant123 |
-| Viewer | viewer1 | viewer123 |
+| Admin | admin | Admin123! |
 
-**⚠️ Change these passwords before deploying to production!**
+**⚠️ Change this password before deploying to production!**
+
+**Note**: Only the admin user is created by the seeder. Other users must be created through the application.
 
 ## NPM Scripts
 
