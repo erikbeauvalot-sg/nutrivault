@@ -15,7 +15,7 @@ const compression = require('compression');
 const swaggerSpec = require('./config/swagger');
 
 // Import database
-const db = require('../../models');
+const db = require('../models');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');

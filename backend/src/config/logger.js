@@ -58,8 +58,8 @@ const jsonFormat = winston.format.combine(
   winston.format.json()
 );
 
-// Create logs directory path
-const logsDir = path.join(__dirname, '../../../backend/logs');
+// Create logs directory path (works in Docker and local development)
+const logsDir = path.join(__dirname, '../../logs');
 
 // Transports
 const transports = [
