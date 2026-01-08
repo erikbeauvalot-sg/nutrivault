@@ -38,6 +38,7 @@ const app = express();
 
 // Environment variables
 const PORT = process.env.PORT || 3001;
+const HOST = process.env.HOST || 'localhost';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173';
 
@@ -194,14 +195,19 @@ async function startServer() {
     }
 
     // Start server
-    app.listen(PORT, () => {
+    app.listen(PORT, HOST, () => {
       console.log('╔════════════════════════════════════════════╗');
       console.log('║          NutriVault API Server            ║');
       console.log('╚════════════════════════════════════════════╝');
       console.log(`Environment: ${NODE_ENV}`);
-      console.log(`Server: http://localhost:${PORT}`);
-      console.log(`Health: http://localhost:${PORT}/health`);
-      console.log(`API Info: http://localhost:${PORT}/api`);
+      console.log(`Host: ${HOST}`);
+      console.log(`Port: ${PORT}`);
+      console.log(`Server: http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
+      console.log(`Health: http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}/health`);
+      console.log(`API Info: http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}/api`);
+      if (HOST === '0.0.0.0') {
+        console.log(`Network: Available on all network interfaces`);
+      }
       console.log('');
       console.log('Press CTRL+C to stop');
       console.log('');

@@ -92,7 +92,7 @@ Create a `backend/.env` file with the following variables:
 # Server Configuration
 NODE_ENV=development
 PORT=3001
-HOST=localhost
+HOST=localhost                             # Use '0.0.0.0' to listen on all network interfaces for network access
 
 # Database Configuration
 DB_DIALECT=sqlite                          # Use 'postgres' for production
