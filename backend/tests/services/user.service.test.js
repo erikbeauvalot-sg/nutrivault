@@ -3,7 +3,7 @@
  */
 
 const userService = require('../../src/services/user.service');
-const db = require('../../../models');
+const db = require('../../models');
 const { AppError } = require('../../src/middleware/errorHandler');
 const { createRole, createUser } = require('../helpers');
 

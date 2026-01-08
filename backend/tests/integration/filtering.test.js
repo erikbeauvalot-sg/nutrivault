@@ -7,7 +7,7 @@
 
 const request = require('supertest');
 const app = require('../../src/server');
-const db = require('../../../models');
+const db = require('../../models');
 const { createUser, createRole, createPatient, createVisit, createBilling, createPermission } = require('../helpers');
 
 describe('Advanced Filtering & Search - Integration Tests', () => {

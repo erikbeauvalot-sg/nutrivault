@@ -3,7 +3,7 @@
  */
 
 const auditService = require('../../src/services/audit.service');
-const db = require('../../../models');
+const db = require('../../models');
 const { createRole, createUser } = require('../helpers');
 
 describe('Audit Service', () => {

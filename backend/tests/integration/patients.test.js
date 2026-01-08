@@ -11,7 +11,7 @@
 const request = require('supertest');
 const app = require('../../src/server');
 const { createUser, createRole, createPatient, createPermission } = require('../helpers');
-const db = require('../../../models');
+const db = require('../../models');
 
 describe('Patients API - Integration Tests', () => {
   let adminToken, dietitianToken, adminUser, dietitianUser, adminRole, dietitianRole;

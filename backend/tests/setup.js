@@ -4,7 +4,7 @@
  * This file runs before each test suite
  */
 
-const db = require('../../models');
+const db = require('../models');
 
 // Set test environment
 process.env.NODE_ENV = 'test';

@@ -11,7 +11,7 @@ const request = require('supertest');
 const app = require('../../src/server');
 const { createUser, createRole, createPermission } = require('../helpers');
 const auditService = require('../../src/services/audit.service');
-const db = require('../../../models');
+const db = require('../../models');
 
 describe('Audit Logs API - Integration Tests', () => {
   let adminToken, dietitianToken;

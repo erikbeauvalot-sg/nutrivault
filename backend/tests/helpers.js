@@ -4,7 +4,7 @@
  * Common utilities for tests
  */
 
-const db = require('../../models');
+const db = require('../models');
 const bcrypt = require('bcrypt');
 
 /**

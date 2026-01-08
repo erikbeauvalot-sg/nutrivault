@@ -3,7 +3,7 @@
  */
 
 const visitService = require('../../src/services/visit.service');
-const db = require('../../../models');
+const db = require('../../models');
 const { AppError } = require('../../src/middleware/errorHandler');
 const { createRole, createUser, createPatient, createVisit } = require('../helpers');
 

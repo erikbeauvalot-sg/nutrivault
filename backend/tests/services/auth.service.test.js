@@ -3,7 +3,7 @@
  */
 
 const authService = require('../../src/services/auth.service');
-const db = require('../../../models');
+const db = require('../../models');
 const { AppError } = require('../../src/middleware/errorHandler');
 const { createRole, createUser, wait } = require('../helpers');
 const { verifyAccessToken } = require('../../src/auth/jwt');

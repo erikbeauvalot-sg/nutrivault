@@ -12,7 +12,7 @@
 const request = require('supertest');
 const app = require('../../src/server');
 const { createUser, createRole, createPatient, createVisit, createBilling, createPermission } = require('../helpers');
-const db = require('../../../models');
+const db = require('../../models');
 
 describe('Billing API - Integration Tests', () => {
   let adminToken, dietitianToken, otherDietitianToken;

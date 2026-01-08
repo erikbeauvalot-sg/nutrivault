@@ -11,7 +11,7 @@
 
 const request = require('supertest');
 const app = require('../../src/server');
-const db = require('../../../models');
+const db = require('../../models');
 const { createUser, createRole } = require('../helpers');
 
 describe('Authentication API - Integration Tests', () => {
