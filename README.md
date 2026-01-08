@@ -43,7 +43,7 @@ A secure, full-stack web application for dietitians to manage patient data, appo
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/erikbeauvalot/nutrivault.git
+   git clone https://github.com/erikbeauvalot-sg/nutrivault.git
    cd nutrivault
    ```
 
