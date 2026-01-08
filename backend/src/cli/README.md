@@ -117,3 +117,30 @@ For help:
 ```bash
 node src/cli/manage-admin.js --help
 ```
+
+## Database Support
+
+The CLI automatically works with both SQLite and PostgreSQL based on your environment configuration:
+
+- **Development/Test**: Uses SQLite (configured in `config/database.js`)
+- **Production**: Uses PostgreSQL (configured via environment variables)
+
+The database connection is determined by the `NODE_ENV` environment variable:
+
+```bash
+# Use SQLite (development)
+NODE_ENV=development npm run admin:create username email@example.com First Last
+
+# Use PostgreSQL (production)
+NODE_ENV=production npm run admin:create username email@example.com First Last
+```
+
+**Environment Variables for PostgreSQL** (set in `.env`):
+- `DB_HOST` - PostgreSQL host (e.g., localhost)
+- `DB_PORT` - PostgreSQL port (default: 5432)
+- `DB_NAME` - Database name
+- `DB_USER` - Database username
+- `DB_PASSWORD` - Database password
+- `DB_SSL` - Enable SSL (true/false)
+
+The CLI uses Sequelize ORM, which is database-agnostic, so all commands work identically with both SQLite and PostgreSQL.

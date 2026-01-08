@@ -209,6 +209,11 @@ async function main() {
     process.exit(0);
   }
 
+    // Show database info
+    const env = process.env.NODE_ENV || 'development';
+    const dbDialect = db.sequelize.getDialect();
+    console.log(`\n💾 Using database: ${dbDialect.toUpperCase()} (${env} environment)\n`);
+
   try {
     switch (command) {
       case 'create':

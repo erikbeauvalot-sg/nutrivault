@@ -279,6 +279,14 @@ npm run admin:reset-password admin
 - At least one number
 - At least one special character
 
+
+**Database Support:**
+The CLI commands automatically work with both SQLite (development) and PostgreSQL (production). The database is determined by the `NODE_ENV` environment variable. For production use:
+
+```bash
+NODE_ENV=production npm run admin:create username email@example.com First Last
+```
+
 **Note:** Auto-generated passwords are 16 characters long and meet all security requirements. See [backend/src/cli/README.md](backend/src/cli/README.md) for more details.
 
 ## Project Structure
