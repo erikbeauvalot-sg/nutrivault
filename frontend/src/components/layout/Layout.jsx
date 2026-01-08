@@ -14,6 +14,8 @@ import '../../styles/layout.css';
 export function Layout({ children }) {
   const [sidebarShow, setSidebarShow] = useState(false);
 
+  console.log('[Layout] Rendering layout, has children:', !!children);
+
   return (
     <div className="layout-wrapper">
       {/* Header */}

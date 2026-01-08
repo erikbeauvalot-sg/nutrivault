@@ -42,15 +42,19 @@ export function LoginPage() {
   });
 
   const onSubmit = async (data) => {
+    console.log('[LoginPage] Form submitted:', { username: data.username, rememberMe: data.rememberMe });
     setSubmitError(null);
 
     try {
+      console.log('[LoginPage] Calling login...');
       await login(data.username, data.password, data.rememberMe);
 
       // Redirect to dashboard or requested page
       const from = location.state?.from?.pathname || '/dashboard';
+      console.log('[LoginPage] Login successful, navigating to:', from);
       navigate(from);
     } catch (err) {
+      console.error('[LoginPage] Login error:', err);
       setSubmitError(err.message || 'Login failed. Please try again.');
     }
   };

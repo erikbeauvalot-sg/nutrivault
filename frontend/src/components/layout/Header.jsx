@@ -16,7 +16,10 @@ export function Header({ onMenuToggle }) {
   const { user, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
+  console.log('[Header] Rendering header, user:', user?.username);
+
   const handleLogout = async () => {
+    console.log('[Header] Logout initiated');
     await logout();
     navigate('/login');
   };

@@ -70,9 +70,12 @@ function LoadingFallback() {
  * Routes Component (inside provider to access auth context)
  */
 function AppRoutes() {
-  const { loading } = useAuth();
+  const { loading, user, isAuthenticated } = useAuth();
+
+  console.log('[AppRoutes] Rendering routes', { loading, isAuthenticated, username: user?.username });
 
   if (loading) {
+    console.log('[AppRoutes] Still loading, showing fallback');
     return <LoadingFallback />;
   }
 

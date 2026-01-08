@@ -37,9 +37,11 @@ export function PatientDetailsPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await patientService.getPatient(id);
-      setPatient(response.data);
+      const patientData = await patientService.getPatient(id);
+      console.log('[PatientDetails] Loaded patient:', patientData);
+      setPatient(patientData);
     } catch (err) {
+      console.error('[PatientDetails] Load error:', err);
       setError(err.message);
     } finally {
       setLoading(false);

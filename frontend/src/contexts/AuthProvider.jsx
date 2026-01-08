@@ -47,26 +47,38 @@ export function AuthProvider({ children }) {
   // Initialize auth on app mount
   useEffect(() => {
     const initializeAuth = async () => {
+      console.log('[AuthProvider] Initializing authentication');
       try {
         const token = tokenManager.getAccessToken();
         const storedUser = tokenManager.getUser();
 
+        console.log('[AuthProvider] Stored credentials:', {
+          hasToken: !!token,
+          hasUser: !!storedUser,
+          username: storedUser?.username
+        });
+
         if (token && storedUser) {
           // Verify token is still valid
           if (!tokenManager.isTokenExpired(token)) {
+            console.log('[AuthProvider] Token valid, restoring session');
             setUser(storedUser);
             // Schedule automatic token refresh
             scheduleTokenRefresh();
           } else {
+            console.log('[AuthProvider] Token expired, clearing session');
             // Token expired, clear all
             tokenManager.clearAll();
           }
+        } else {
+          console.log('[AuthProvider] No stored credentials found');
         }
       } catch (err) {
-        console.error('Auth initialization error:', err);
+        console.error('[AuthProvider] Auth initialization error:', err);
         tokenManager.clearAll();
       } finally {
         setLoading(false);
+        console.log('[AuthProvider] Initialization complete');
       }
     };
 
@@ -81,16 +93,20 @@ export function AuthProvider({ children }) {
   }, [scheduleTokenRefresh]);
 
   const login = useCallback(async (username, password, rememberMe = false) => {
+    console.log('[AuthProvider] Login initiated:', username);
     setError(null);
     setLoading(true);
 
     try {
       const { user: userData } = await authService.login(username, password, rememberMe);
+      console.log('[AuthProvider] Login successful, setting user:', userData?.username);
       setUser(userData);
       // Schedule automatic token refresh
       scheduleTokenRefresh();
+      console.log('[AuthProvider] Token refresh scheduled');
       return userData;
     } catch (err) {
+      console.error('[AuthProvider] Login failed:', err.message);
       const errorMessage = err.message || 'Login failed';
       setError(errorMessage);
       throw err;

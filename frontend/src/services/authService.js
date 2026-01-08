@@ -11,20 +11,41 @@ export const authService = {
    * Login user with credentials
    */
   async login(username, password, rememberMe = false) {
+    console.log('[AuthService] Login attempt:', { username, rememberMe });
     try {
       const response = await api.post('/auth/login', {
         username,
         password
       });
 
-      const { access_token, refresh_token, user } = response.data;
+      console.log('[AuthService] Login response:', {
+        status: response.status,
+        dataKeys: Object.keys(response.data),
+        success: response.data.success
+      });
+
+      // Backend returns: {success, message, data: {user, accessToken, refreshToken}}
+      const { user, accessToken, refreshToken } = response.data.data;
+
+      console.log('[AuthService] Extracted data:', {
+        hasUser: !!user,
+        hasAccessToken: !!accessToken,
+        hasRefreshToken: !!refreshToken,
+        username: user?.username
+      });
 
       // Store tokens and user (use rememberMe for storage strategy)
-      tokenManager.setTokens(access_token, refresh_token, rememberMe);
+      tokenManager.setTokens(accessToken, refreshToken, rememberMe);
       tokenManager.setUser(user, rememberMe);
 
-      return { user, access_token, refresh_token };
+      console.log('[AuthService] Login successful, tokens stored');
+      return { user, accessToken, refreshToken };
     } catch (error) {
+      console.error('[AuthService] Login error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       const message = error.response?.data?.message || 'Login failed';
       throw new Error(message);
     }
@@ -34,15 +55,18 @@ export const authService = {
    * Logout user
    */
   async logout(refreshToken) {
+    console.log('[AuthService] Logout initiated');
     try {
       await api.post('/auth/logout', {
         refresh_token: refreshToken || tokenManager.getRefreshToken()
       });
+      console.log('[AuthService] Logout successful');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('[AuthService] Logout error:', error);
     } finally {
       // Always clear local data even if API call fails
       tokenManager.clearAll();
+      console.log('[AuthService] Tokens cleared');
     }
   },
 
@@ -50,6 +74,7 @@ export const authService = {
    * Refresh access token
    */
   async refreshToken(refreshToken) {
+    console.log('[AuthService] Token refresh initiated');
     try {
       const response = await api.post('/auth/refresh', {
         refresh_token: refreshToken || tokenManager.getRefreshToken()
@@ -58,8 +83,10 @@ export const authService = {
       const { access_token } = response.data;
       tokenManager.setTokens(access_token, refreshToken || tokenManager.getRefreshToken());
 
+      console.log('[AuthService] Token refresh successful');
       return access_token;
     } catch (error) {
+      console.error('[AuthService] Token refresh failed:', error);
       tokenManager.clearAll();
       throw new Error('Token refresh failed');
     }
@@ -69,12 +96,15 @@ export const authService = {
    * Get current user info
    */
   async getCurrentUser() {
+    console.log('[AuthService] Fetching current user');
     try {
       const response = await api.get('/auth/me');
       const { user } = response.data;
       tokenManager.setUser(user);
+      console.log('[AuthService] Current user fetched:', user?.username);
       return user;
     } catch (error) {
+      console.error('[AuthService] Failed to fetch current user:', error);
       tokenManager.clearAll();
       throw new Error('Failed to fetch current user');
     }

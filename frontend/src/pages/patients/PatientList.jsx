@@ -45,9 +45,12 @@ export function PatientListPage() {
       }
 
       const response = await patientService.getPatients(filters, currentPage, itemsPerPage);
-      setPatients(response.data || []);
-      setTotalPages(response.pagination?.totalPages || 1);
-      setTotalCount(response.pagination?.totalCount || 0);
+      console.log('[PatientList] Patients response:', response);
+      // Response is {patients: [], total: number, limit: number, offset: number}
+      setPatients(response.patients || []);
+      const total = response.total || 0;
+      setTotalPages(Math.ceil(total / itemsPerPage));
+      setTotalCount(total);
     } catch (err) {
       setError(err.message);
     } finally {

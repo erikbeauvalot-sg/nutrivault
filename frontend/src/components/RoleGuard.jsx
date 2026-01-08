@@ -5,7 +5,7 @@
  * (unlike ProtectedRoute which guards entire routes)
  */
 
-import { useAuth } from '../hooks/useAuth';
+import useAuth from '../hooks/useAuth';
 
 /**
  * RoleGuard component for conditional rendering based on user roles
@@ -18,19 +18,29 @@ import { useAuth } from '../hooks/useAuth';
 export function RoleGuard({ children, allowedRoles, fallback = null }) {
   const { user, isAuthenticated } = useAuth();
 
+  console.log('[RoleGuard] Checking role access', {
+    isAuthenticated,
+    username: user?.username,
+    userRole: user?.role?.name,
+    allowedRoles
+  });
+
   // If not authenticated, don't render anything
   if (!isAuthenticated || !user) {
+    console.log('[RoleGuard] Not authenticated or no user');
     return fallback;
   }
 
   // If no roles specified, render for all authenticated users
   if (!allowedRoles || allowedRoles.length === 0) {
+    console.log('[RoleGuard] No role restriction, allowing access');
     return children;
   }
 
-  // Check if user's role is in the allowed roles
-  const hasRequiredRole = allowedRoles.includes(user.role);
+  // Check if user's role is in the allowed roles (user.role is an object with 'name' property)
+  const hasRequiredRole = allowedRoles.includes(user.role?.name);
 
+  console.log('[RoleGuard] Role check result:', hasRequiredRole);
   return hasRequiredRole ? children : fallback;
 }
 

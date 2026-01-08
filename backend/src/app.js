@@ -99,6 +99,21 @@ app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Debug logging for all requests in development
+if (NODE_ENV === 'development') {
+  app.use((req, res, next) => {
+    console.log(`[REQUEST] ${req.method} ${req.path}`, {
+      headers: {
+        authorization: req.headers.authorization ? 'Bearer ***' : 'none',
+        'content-type': req.headers['content-type']
+      },
+      query: req.query,
+      body: req.method !== 'GET' ? req.body : undefined
+    });
+    next();
+  });
+}
+
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -154,6 +169,13 @@ app.use('/api/export', exportRoutes);
 
 // 404 handler
 app.use((req, res) => {
+  console.error(`[404] Cannot ${req.method} ${req.path}`, {
+    headers: {
+      authorization: req.headers.authorization ? 'Bearer ***' : 'none',
+      origin: req.headers.origin,
+      referer: req.headers.referer
+    }
+  });
   res.status(404).json({
     success: false,
     error: {

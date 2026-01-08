@@ -8,6 +8,8 @@ import useAuth from '../hooks/useAuth';
 export function DashboardPage() {
   const { user } = useAuth();
 
+  console.log('[Dashboard] Rendering dashboard, user:', user);
+
   return (
     <div>
       <h1 className="mb-4">Dashboard</h1>
@@ -30,7 +32,7 @@ export function DashboardPage() {
           <Card>
             <Card.Body>
               <Card.Title>Your Role</Card.Title>
-              <Card.Text>{user?.role}</Card.Text>
+              <Card.Text>{user?.role?.name || 'No role assigned'}</Card.Text>
             </Card.Body>
           </Card>
         </Col>

@@ -26,9 +26,11 @@ export function EditPatientPage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await patientService.getPatient(id);
-      setPatient(response.data);
+      const patientData = await patientService.getPatient(id);
+      console.log('[EditPatient] Loaded patient:', patientData);
+      setPatient(patientData);
     } catch (err) {
+      console.error('[EditPatient] Load error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -37,16 +39,19 @@ export function EditPatientPage() {
 
   const handleSubmit = async (data) => {
     try {
+      console.log('[EditPatient] Form submitted with data:', data);
       setIsSubmitting(true);
       setError(null);
 
-      await patientService.updatePatient(id, data);
+      const updatedPatient = await patientService.updatePatient(id, data);
+      console.log('[EditPatient] Patient updated successfully:', updatedPatient);
       
       // Navigate to patient details with success message
       navigate(`/patients/${id}`, {
         state: { message: 'Patient updated successfully', variant: 'success' }
       });
     } catch (err) {
+      console.error('[EditPatient] Update failed:', err);
       setError(err.message);
       setIsSubmitting(false);
     }
