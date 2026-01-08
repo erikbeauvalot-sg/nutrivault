@@ -11,6 +11,8 @@
     "db:seed": "sequelize-cli db:seed:all",
     "db:seed:undo": "sequelize-cli db:seed:undo:all",
     "db:reset": "sequelize-cli db:migrate:undo:all && sequelize-cli db:migrate && sequelize-cli db:seed:all",
+    "admin:create": "node src/cli/manage-admin.js create",
+    "admin:reset-password": "node src/cli/manage-admin.js reset-password",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

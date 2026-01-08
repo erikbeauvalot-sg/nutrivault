@@ -198,8 +198,6 @@ After seeding the database:
 - `npm run db:seed` - Seed database with test data
 - `npm run db:reset` - Reset database (undo, migrate, seed)
 - `npm test` - Run tests
-- `npm run admin:create` - Create a new admin user (CLI)
-- `npm run admin:reset-password` - Reset admin user password (CLI)
 - `npm run test:coverage` - Run tests with coverage
 - `npm run lint` - Run ESLint
 - `npm run lint:fix` - Fix ESLint issues
