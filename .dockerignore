@@ -1,32 +1,40 @@
-# Exclude everything by default
-**
+# Node modules
+**/node_modules
 
-# Include what's needed for backend build
-!backend/
-!models/
-!backend/**
-!models/**
+# Test files
+**/coverage
+**/*.test.js
+**/*.spec.js
+**/tests
 
-# But exclude these from backend
-backend/node_modules
-backend/coverage
-backend/tests
-backend/*.test.js
-backend/*.spec.js
-backend/.env.development
-backend/.env.local
-backend/.env.test
-backend/data/*.db
-backend/*.sqlite
-backend/logs
-backend/*.log
-backend/.DS_Store
-backend/.vscode
-backend/.idea
+# Environment files
+**/.env.development
+**/.env.local
+**/.env.test
+
+# Logs
+**/logs
+**/*.log
+
+# OS files
+**/.DS_Store
+**/.vscode
+**/.idea
+
+# Frontend (not needed for backend build)
+frontend
+
+# Git
+.git
+.gitignore
+.github
+
+# Backend models directory (will use root models instead)
 backend/models
 
-# Exclude from root
-.git
+# Documentation
+**/*.md
+!backend/README.md
+
+# CI/CD
 .github
-node_modules
-frontend
