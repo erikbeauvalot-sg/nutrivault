@@ -8,7 +8,7 @@
  */
 
 const request = require('supertest');
-const app = require('../../src/server');
+const app = require('../../src/app');
 const { createUser, createRole, createPermission } = require('../helpers');
 const auditService = require('../../src/services/audit.service');
 const db = require('../../models');

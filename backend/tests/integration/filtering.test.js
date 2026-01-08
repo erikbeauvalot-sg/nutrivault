@@ -6,7 +6,7 @@
  */
 
 const request = require('supertest');
-const app = require('../../src/server');
+const app = require('../../src/app');
 const db = require('../../models');
 const { createUser, createRole, createPatient, createVisit, createBilling, createPermission } = require('../helpers');
 
