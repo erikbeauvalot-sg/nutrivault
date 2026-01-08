@@ -10,8 +10,8 @@ const billingController = require('../controllers/billing.controller');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
 const { apiLimiter } = require('../middleware/rateLimiter');
-const {
 const { cacheMiddleware } = require('../middleware/cache');
+const {
   validateBillingCreation,
   validateBillingUpdate,
   validateMarkAsPaid,
