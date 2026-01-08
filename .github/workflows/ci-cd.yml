@@ -17,7 +17,7 @@ env:
   # Feature Flags - Control Workflow Execution
   # ============================================
   # Global enable flag - if false or not present, workflow is skipped
-  WORKFLOW_ENABLED: 'true'
+  WORKFLOW_ENABLED: 'false'
   
   # Security scan feature flags
   SECURITY_SCAN_ENABLED: 'true'
