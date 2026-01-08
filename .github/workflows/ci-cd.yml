@@ -12,14 +12,51 @@ on:
 env:
   NODE_VERSION: '18.x'
   POSTGRES_VERSION: '14'
+  
+  # ============================================
+  # Feature Flags - Control Workflow Execution
+  # ============================================
+  # Global enable flag - if false or not present, workflow is skipped
+  WORKFLOW_ENABLED: 'true'
+  
+  # Security scan feature flags
+  SECURITY_SCAN_ENABLED: 'true'
+  SNYK_SCAN_ENABLED: 'true'
+  TRIVY_SCAN_ENABLED: 'true'
+  
+  # Deployment feature flags
+  DEPLOYMENT_ENABLED: 'true'
+  STAGING_DEPLOYMENT_ENABLED: 'true'
+  PRODUCTION_DEPLOYMENT_ENABLED: 'true'
 
 jobs:
+  # ============================================
+  # Check if workflow should run
+  # ============================================
+  check-workflow:
+    name: Check Workflow Enabled
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - name: Check if workflow is enabled
+        id: check
+        run: |
+          if [ "${{ env.WORKFLOW_ENABLED }}" == "true" ]; then
+            echo "enabled=true" >> $GITHUB_OUTPUT
+          else
+            echo "enabled=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Workflow is disabled via WORKFLOW_ENABLED flag"
+          fi
+
   # ============================================
   # Backend Tests
   # ============================================
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
+    needs: check-workflow
+    if: needs.check-workflow.outputs.enabled == 'true'
     
     services:
       postgres:
@@ -99,6 +136,8 @@ jobs:
   frontend-tests:
     name: Frontend Tests
     runs-on: ubuntu-latest
+    needs: check-workflow
+    if: needs.check-workflow.outputs.enabled == 'true'
 
     steps:
       - name: Checkout code
@@ -148,12 +187,15 @@ jobs:
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
+    needs: check-workflow
+    if: needs.check-workflow.outputs.enabled == 'true' && vars.SECURITY_SCAN_ENABLED == 'true'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Run Snyk Security Scan (Backend)
+        if: vars.SNYK_SCAN_ENABLED == 'true'
         uses: snyk/actions/node@master
         continue-on-error: true
         env:
@@ -162,6 +204,7 @@ jobs:
           args: --severity-threshold=high --file=backend/package.json
 
       - name: Run Snyk Security Scan (Frontend)
+        if: vars.SNYK_SCAN_ENABLED == 'true'
         uses: snyk/actions/node@master
         continue-on-error: true
         env:
@@ -170,6 +213,7 @@ jobs:
           args: --severity-threshold=high --file=frontend/package.json
 
       - name: Run Trivy vulnerability scanner
+        if: vars.TRIVY_SCAN_ENABLED == 'true'
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
@@ -178,6 +222,7 @@ jobs:
           output: 'trivy-results.sarif'
 
       - name: Upload Trivy results to GitHub Security
+        if: vars.TRIVY_SCAN_ENABLED == 'true'
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: 'trivy-results.sarif'
@@ -188,6 +233,8 @@ jobs:
   code-quality:
     name: Code Quality Analysis
     runs-on: ubuntu-latest
+    needs: check-workflow
+    if: needs.check-workflow.outputs.enabled == 'true'
 
     steps:
       - name: Checkout code
@@ -207,8 +254,8 @@ jobs:
   build-images:
     name: Build Docker Images
     runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-tests]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [check-workflow, backend-tests, frontend-tests]
+    if: needs.check-workflow.outputs.enabled == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
@@ -251,8 +298,13 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [build-images, security-scan]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    needs: [check-workflow, build-images, security-scan]
+    if: |
+      needs.check-workflow.outputs.enabled == 'true' &&
+      vars.DEPLOYMENT_ENABLED == 'true' &&
+      vars.STAGING_DEPLOYMENT_ENABLED == 'true' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/develop'
     environment:
       name: staging
       url: https://staging.nutrivault.com
@@ -293,8 +345,13 @@ jobs:
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: [build-images, security-scan]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [check-workflow, build-images, security-scan]
+    if: |
+      needs.check-workflow.outputs.enabled == 'true' &&
+      vars.DEPLOYMENT_ENABLED == 'true' &&
+      vars.PRODUCTION_DEPLOYMENT_ENABLED == 'true' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
     environment:
       name: production
       url: https://nutrivault.com
