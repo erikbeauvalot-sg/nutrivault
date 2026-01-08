@@ -1,0 +1,32 @@
+# Exclude everything by default
+**
+
+# Include what's needed for backend build
+!backend/
+!models/
+!backend/**
+!models/**
+
+# But exclude these from backend
+backend/node_modules
+backend/coverage
+backend/tests
+backend/*.test.js
+backend/*.spec.js
+backend/.env.development
+backend/.env.local
+backend/.env.test
+backend/data/*.db
+backend/*.sqlite
+backend/logs
+backend/*.log
+backend/.DS_Store
+backend/.vscode
+backend/.idea
+backend/models
+
+# Exclude from root
+.git
+.github
+node_modules
+frontend
