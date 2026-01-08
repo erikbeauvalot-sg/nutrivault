@@ -7,7 +7,7 @@ RUN apk add --no-cache libc6-compat curl
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY backend/package*.json ./
 
 # Install dependencies (production only)
 RUN npm ci --omit=dev && npm cache clean --force
@@ -15,7 +15,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 # Development dependencies for build
 FROM base AS build-deps
 WORKDIR /app
-COPY package*.json ./
+COPY backend/package*.json ./
 RUN npm ci
 
 # Build stage (if needed for TypeScript compilation)
@@ -42,8 +42,9 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/package*.json ./
 
-# Copy application code
-COPY --chown=nutrivault:nodejs . .
+# Copy application code and models
+COPY --chown=nutrivault:nodejs backend/ .
+COPY --chown=nutrivault:nodejs models/ ./models/
 
 # Create necessary directories
 RUN mkdir -p /app/data /app/uploads /app/logs && \

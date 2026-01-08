@@ -7,8 +7,8 @@ services:
   # Backend API with SQLite
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: nutrivault-backend-sqlite
     restart: unless-stopped
     environment:
