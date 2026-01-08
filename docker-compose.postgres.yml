@@ -46,6 +46,7 @@ services:
       DB_USER: ${DB_USER:-nutrivault_user}
       DB_PASSWORD: ${DB_PASSWORD:-changeme123}
       DB_DIALECT: postgres
+      DB_SYNC: ${DB_SYNC:-true}
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-super-secret-refresh-key-change-in-production}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}

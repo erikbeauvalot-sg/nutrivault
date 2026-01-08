@@ -12,11 +12,20 @@ require('dotenv').config();
  * - idle: Max time a connection can be idle before being released
  */
 
+// Detect database dialect from environment or default based on NODE_ENV
+const dbDialect = process.env.DB_DIALECT || (process.env.NODE_ENV === 'production' ? 'postgres' : 'sqlite');
+const storageLocation = process.env.DB_STORAGE || './nutrivault.db';
+
 module.exports = {
   development: {
-    dialect: 'sqlite',
-    storage: './nutrivault.db',
-    logging: console.log,
+    dialect: dbDialect === 'postgres' ? 'postgres' : 'sqlite',
+    storage: dbDialect === 'sqlite' ? storageLocation : undefined,
+    host: dbDialect === 'postgres' ? (process.env.DB_HOST || 'localhost') : undefined,
+    port: dbDialect === 'postgres' ? (process.env.DB_PORT || 5432) : undefined,
+    database: dbDialect === 'postgres' ? (process.env.DB_NAME || 'nutrivault') : undefined,
+    username: dbDialect === 'postgres' ? (process.env.DB_USER || 'nutrivault_user') : undefined,
+    password: dbDialect === 'postgres' ? process.env.DB_PASSWORD : undefined,
+    logging: process.env.DB_LOGGING === 'true' ? console.log : false,
     define: {
       timestamps: true,
       underscored: true,

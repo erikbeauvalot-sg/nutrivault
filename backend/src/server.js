@@ -184,9 +184,12 @@ async function startServer() {
     await db.sequelize.authenticate();
     console.log(`✓ Database connected (${db.sequelize.options.dialect})`);
 
-    // Sync database (only in development)
-    if (NODE_ENV === 'development') {
-      // Don't sync in production - use migrations instead
+    // Sync database (create tables if they don't exist)
+    // In development/docker, we sync models. In production, use migrations.
+    if (NODE_ENV === 'development' || process.env.DB_SYNC === 'true') {
+      await db.sequelize.sync({ alter: false });
+      console.log('✓ Database tables synced');
+    } else {
       console.log('✓ Database models loaded');
     }
 
