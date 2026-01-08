@@ -354,10 +354,9 @@ See [docs/setup/DEPLOYMENT.md](docs/setup/DEPLOYMENT.md) for production deployme
 
 Contributions are welcome! Please follow these steps:
 1. Fork the [repository](https://github.com/erikbeauvalot-sg/nutrivault)
-
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create a feature branch (`git checkout -b feature/your-feature-name`)
+3. Commit your changes (`git commit -m 'Add your feature'`)
+4. Push to the branch (`git push origin feature/your-feature-name`)
 5. Open a Pull Request
 
 ## Compliance
