@@ -9,8 +9,12 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Verify package-lock.json exists (npm ci requires it)
+RUN test -f package-lock.json || (echo "ERROR: package-lock.json not found!" && exit 1)
+
+# Install dependencies with retry logic and better error handling
+RUN npm ci --prefer-offline --no-audit || \
+    (npm cache clean --force && npm ci --prefer-offline --no-audit)
 
 # Copy source code
 COPY . .
