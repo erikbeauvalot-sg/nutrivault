@@ -4,7 +4,7 @@
  * Business logic for user management operations
  */
 
-const db = require('../../../models');
+const db = require('../../models');
 const { hashPassword, validatePasswordStrength } = require('../auth/password');
 const { AppError } = require('../middleware/errorHandler');
 const { logCrudEvent } = require('./audit.service');

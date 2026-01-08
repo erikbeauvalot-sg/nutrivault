@@ -4,7 +4,7 @@
  * Business logic for generating various reports and analytics
  */
 
-const db = require('../../../models');
+const db = require('../../models');
 const { Op } = require('sequelize');
 const auditService = require('./audit.service');
 

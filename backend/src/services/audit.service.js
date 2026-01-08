@@ -4,7 +4,7 @@
  * Handles audit log creation and retrieval
  */
 
-const db = require('../../../models');
+const db = require('../../models');
 const logger = require('../config/logger');
 
 /**

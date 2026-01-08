@@ -4,7 +4,7 @@
  * Business logic for authentication operations
  */
 
-const db = require('../../../models');
+const db = require('../../models');
 const { hashPassword, verifyPassword } = require('../auth/password');
 const {
   generateAccessToken,

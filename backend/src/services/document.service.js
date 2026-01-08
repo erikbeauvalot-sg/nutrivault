@@ -5,7 +5,7 @@
  * Supports polymorphic associations with patients, visits, and users
  */
 
-const db = require('../../../models');
+const db = require('../../models');
 const { AppError } = require('../middleware/errorHandler');
 const { logCrudEvent } = require('./audit.service');
 const { deleteFile } = require('../config/multer');

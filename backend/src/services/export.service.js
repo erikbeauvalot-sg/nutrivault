@@ -7,7 +7,7 @@
 const { Parser } = require('json2csv');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
-const db = require('../../../models');
+const db = require('../../models');
 const { AppError } = require('../middleware/errorHandler');
 const { logCrudEvent } = require('./audit.service');
 const fs = require('fs');

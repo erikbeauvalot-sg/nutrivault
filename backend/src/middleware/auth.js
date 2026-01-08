@@ -5,7 +5,7 @@
  */
 
 const { verifyAccessToken, hashToken } = require('../auth/jwt');
-const db = require('../../../models');
+const db = require('../../models');
 const { AppError } = require('./errorHandler');
 
 /**

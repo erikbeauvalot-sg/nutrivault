@@ -4,7 +4,7 @@
  * Business logic for patient management operations
  */
 
-const db = require('../../../models');
+const db = require('../../models');
 const { AppError } = require('../middleware/errorHandler');
 const { logCrudEvent } = require('./audit.service');
 const { Op } = require('sequelize');
