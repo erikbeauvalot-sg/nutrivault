@@ -31,6 +31,11 @@ npm run dev
 - **API Docs**: http://localhost:3001/api-docs
 - **PostgreSQL**: localhost:5432
 
+**For Network Access:**
+- Set `HOST=0.0.0.0` in `backend/.env`
+- Add your network IPs to `ALLOWED_ORIGINS` (e.g., `http://192.168.1.173:3001,http://192.168.1.173:5173`)
+- Access via: `http://192.168.1.173:3001` (backend) and `http://192.168.1.173:5173` (frontend)
+
 ## 🔑 Test Credentials
 
 - **Admin**: `admin` / `Admin123!`
