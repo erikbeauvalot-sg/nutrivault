@@ -97,7 +97,7 @@ run_test "SQLite compose file exists" "test -f docker-compose.sqlite.yml"
 print_header "2. Backend Dockerfile Tests"
 
 print_info "Building backend image..."
-if docker build -t nutrivault-backend-test ./backend 2>&1 | tee backend-build.log; then
+if docker build -f backend/Dockerfile -t nutrivault-backend-test . 2>&1 | tee backend-build.log; then
     if [ "${PIPESTATUS[0]}" -eq 0 ]; then
         print_success "Backend image built successfully"
         ((TESTS_PASSED++))
