@@ -4,51 +4,34 @@
  * Main application entry point
  */
 
-console.log('[DEBUG] Starting server...');
 require('dotenv').config();
-console.log('[DEBUG] dotenv loaded');
 const express = require('express');
-console.log('[DEBUG] express loaded');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
 const swaggerUi = require('swagger-ui-express');
 const compression = require('compression');
-console.log('[DEBUG] basic modules loaded');
 const swaggerSpec = require('./config/swagger');
-console.log('[DEBUG] swagger loaded');
 
 // Import database
 const db = require('../models');
-console.log('[DEBUG] models loaded');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const { requestLogger } = require('./middleware/logging');
 const { globalLimiter } = require('./middleware/rateLimiter');
-console.log('[DEBUG] middleware loaded');
 
 // Import routes
-console.log('[DEBUG] Loading authRoutes...');
 const authRoutes = require('./routes/auth.routes');
-console.log('[DEBUG] Loading auditRoutes...');
 const auditRoutes = require('./routes/audit.routes');
-console.log('[DEBUG] Loading usersRoutes...');
 const usersRoutes = require('./routes/users.routes');
-console.log('[DEBUG] Loading patientsRoutes...');
 const patientsRoutes = require('./routes/patients.routes');
-console.log('[DEBUG] Loading visitsRoutes...');
 const visitsRoutes = require('./routes/visits.routes');
-console.log('[DEBUG] Loading billingRoutes...');
 const billingRoutes = require('./routes/billing.routes');
-console.log('[DEBUG] Loading reportsRoutes...');
 const reportsRoutes = require('./routes/reports.routes');
-console.log('[DEBUG] Loading documentsRoutes...');
 const documentsRoutes = require('./routes/documents.routes');
-console.log('[DEBUG] Loading exportRoutes...');
 const exportRoutes = require('./routes/export.routes');
-console.log('[DEBUG] routes loaded');
 
 // Initialize Express app
 const app = express();

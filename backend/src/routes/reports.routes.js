@@ -63,7 +63,7 @@ router.get('/performance',
   requirePermission('reports.performance'),
   validateDateRange,
   cacheMiddleware('long'), // 5 min cache for reports
-  reportsController.getPerformanceReportHandler
+  reportsController.getPracticeOverviewHandler
 );
 
 module.exports = router;
