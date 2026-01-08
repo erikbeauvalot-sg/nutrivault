@@ -42,9 +42,11 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/package*.json ./
 
-# Copy application code and models
-COPY --chown=nutrivault:nodejs backend/ .
+# Copy models from root first (before backend code)
 COPY --chown=nutrivault:nodejs models/ ./models/
+
+# Copy application code (backend directory excluding models which was copied above)
+COPY --chown=nutrivault:nodejs backend/ .
 
 # Create necessary directories
 RUN mkdir -p /app/data /app/uploads /app/logs && \
