@@ -30,6 +30,10 @@ export function PatientDetailsPage() {
       toast.success(location.state.message);
       // Clear the state
       window.history.replaceState({}, document.title);
+      // Reload patient data to show updated information
+      if (location.state?.reload) {
+        loadPatient();
+      }
     }
   }, [location.state]);
 

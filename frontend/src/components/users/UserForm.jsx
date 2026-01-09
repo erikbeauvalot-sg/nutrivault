@@ -5,7 +5,6 @@
  */
 
 import { useEffect } from 'react';
-import { Form, Row, Col, Button, Spinner } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -83,89 +82,97 @@ const UserForm = ({
   }, [initialData, reset]);
 
   return (
-    <Form onSubmit={handleSubmit(onSubmit)}>
-      <Row className="g-3">
-        <Col md={6}>
-          <Form.Group>
-            <Form.Label>
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <div className="row g-3">
+        <div className="col-md-6">
+          <div className="form-group">
+            <label>
               First Name <span className="text-danger">*</span>
-            </Form.Label>
-            <Form.Control
+            </label>
+            <input
               type="text"
+              className={`form-control ${errors.first_name ? 'is-invalid' : ''}`}
               {...register('first_name')}
-              isInvalid={!!errors.first_name}
               disabled={isLoading}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.first_name?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
+            {errors.first_name && (
+              <div className="invalid-feedback">
+                {errors.first_name?.message}
+              </div>
+            )}
+          </div>
+        </div>
 
-        <Col md={6}>
-          <Form.Group>
-            <Form.Label>
+        <div className="col-md-6">
+          <div className="form-group">
+            <label>
               Last Name <span className="text-danger">*</span>
-            </Form.Label>
-            <Form.Control
+            </label>
+            <input
               type="text"
+              className={`form-control ${errors.last_name ? 'is-invalid' : ''}`}
               {...register('last_name')}
-              isInvalid={!!errors.last_name}
               disabled={isLoading}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.last_name?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
+            {errors.last_name && (
+              <div className="invalid-feedback">
+                {errors.last_name?.message}
+              </div>
+            )}
+          </div>
+        </div>
 
-        <Col md={12}>
-          <Form.Group>
-            <Form.Label>
+        <div className="col-md-12">
+          <div className="form-group">
+            <label>
               Email <span className="text-danger">*</span>
-            </Form.Label>
-            <Form.Control
+            </label>
+            <input
               type="email"
+              className={`form-control ${errors.email ? 'is-invalid' : ''}`}
               {...register('email')}
-              isInvalid={!!errors.email}
               disabled={isLoading}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.email?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
+            {errors.email && (
+              <div className="invalid-feedback">
+                {errors.email?.message}
+              </div>
+            )}
+          </div>
+        </div>
 
         {!isEdit && (
-          <Col md={12}>
-            <Form.Group>
-              <Form.Label>
+          <div className="col-md-12">
+            <div className="form-group">
+              <label>
                 Password <span className="text-danger">*</span>
-              </Form.Label>
-              <Form.Control
+              </label>
+              <input
                 type="password"
+                className={`form-control ${errors.password ? 'is-invalid' : ''}`}
                 {...register('password')}
-                isInvalid={!!errors.password}
                 disabled={isLoading}
               />
-              <Form.Control.Feedback type="invalid">
-                {errors.password?.message}
-              </Form.Control.Feedback>
-              <Form.Text className="text-muted">
+              {errors.password && (
+                <div className="invalid-feedback">
+                  {errors.password?.message}
+                </div>
+              )}
+              <small className="form-text text-muted">
                 Password must be at least 8 characters and contain uppercase, lowercase, number, and special character (!@#$%^&*)
-              </Form.Text>
-            </Form.Group>
-          </Col>
+              </small>
+            </div>
+          </div>
         )}
 
-        <Col md={12}>
-          <Form.Group>
-            <Form.Label>
+        <div className="col-md-12">
+          <div className="form-group">
+            <label>
               Role <span className="text-danger">*</span>
-            </Form.Label>
-            <Form.Select
+            </label>
+            <select
+              className={`form-control ${errors.role_id ? 'is-invalid' : ''}`}
               {...register('role_id')}
-              isInvalid={!!errors.role_id}
               disabled={isLoading}
             >
               <option value="">Select a role...</option>
@@ -174,48 +181,43 @@ const UserForm = ({
                   {role.name} - {role.description}
                 </option>
               ))}
-            </Form.Select>
-            <Form.Control.Feedback type="invalid">
-              {errors.role_id?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
+            </select>
+            {errors.role_id && (
+              <div className="invalid-feedback">
+                {errors.role_id?.message}
+              </div>
+            )}
+          </div>
+        </div>
 
-        <Col md={12}>
+        <div className="col-md-12">
           <div className="d-flex gap-2 justify-content-end">
-            <Button
+            <button
               type="button"
-              variant="secondary"
+              className="btn btn-secondary"
               onClick={() => reset()}
               disabled={isLoading}
             >
               Reset
-            </Button>
-            <Button
+            </button>
+            <button
               type="submit"
-              variant="primary"
+              className="btn btn-primary"
               disabled={isLoading}
             >
               {isLoading ? (
                 <>
-                  <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                    className="me-2"
-                  />
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                   Saving...
                 </>
               ) : (
                 isEdit ? 'Update User' : 'Create User'
               )}
-            </Button>
+            </button>
           </div>
-        </Col>
-      </Row>
-    </Form>
+        </div>
+      </div>
+    </form>
   );
 };
 

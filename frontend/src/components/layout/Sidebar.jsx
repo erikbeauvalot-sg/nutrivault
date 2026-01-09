@@ -1,121 +1,86 @@
-/**
- * Sidebar Component
- * Left navigation menu with role-based visibility
- */
+'use client';
 
-import { NavLink } from 'react-router-dom';
-import { Nav, Offcanvas } from 'react-bootstrap';
+import { Link, useLocation } from 'react-router-dom';
 import useAuth from '../../hooks/useAuth';
-import '../../styles/layout.css';
 
-export function Sidebar({ show, onHide }) {
+export default function Sidebar({ collapsed, visible, onClose }) {
+  const location = useLocation();
   const { user } = useAuth();
 
-  const isAdmin = user?.role === 'ADMIN';
-  const isDietitian = user?.role === 'DIETITIAN';
-  const isAssistant = user?.role === 'ASSISTANT';
-  const isViewer = user?.role === 'VIEWER';
+  const isAdmin = user?.role?.name === 'ADMIN';
+  const isDietitian = user?.role?.name === 'DIETITIAN';
+  const isAssistant = user?.role?.name === 'ASSISTANT';
 
-  const menuItems = [
-    {
-      label: 'Dashboard',
-      path: '/dashboard',
-      icon: 'bi-speedometer2',
-      visible: true,
-    },
-    {
-      label: 'Patients',
-      path: '/patients',
-      icon: 'bi-people',
-      visible: true,
-    },
-    {
-      label: 'Visits',
-      path: '/visits',
-      icon: 'bi-calendar-event',
-      visible: isDietitian || isAssistant,
-    },
-    {
-      label: 'Billing',
-      path: '/billing',
-      icon: 'bi-receipt',
-      visible: isDietitian || isAdmin,
-    },
-    {
-      label: 'Reports',
-      path: '/reports',
-      icon: 'bi-bar-chart',
-      visible: isDietitian || isAdmin,
-    },
-    {
-      label: 'Audit Logs',
-      path: '/audit-logs',
-      icon: 'bi-clock-history',
-      visible: isAdmin,
-    },
-    {
-      label: 'Settings',
-      path: '/settings',
-      icon: 'bi-gear',
-      visible: isAdmin,
-      dividerBefore: true,
-    },
-    {
-      label: 'User Management',
-      path: '/users',
-      icon: 'bi-person-badge',
-      visible: isAdmin,
-    },
+  const navigationItems = [
+    { href: '/dashboard', label: 'Tableau de bord', icon: 'fas fa-tachometer-alt', visible: true },
+    { href: '/patients', label: 'Patients', icon: 'fas fa-users', visible: true },
+    { href: '/visits', label: 'Visites', icon: 'fas fa-calendar-check', visible: isDietitian || isAssistant },
+    { href: '/billing', label: 'Facturation', icon: 'fas fa-receipt', visible: isDietitian || isAdmin },
+    { href: '/reports', label: 'Rapports', icon: 'fas fa-chart-bar', visible: isDietitian || isAdmin },
+    { href: '/audit-logs', label: 'Logs d\'audit', icon: 'fas fa-clock-history', visible: isAdmin },
+    { href: '/settings', label: 'Paramètres', icon: 'fas fa-cogs', visible: isAdmin },
+    { href: '/users', label: 'Utilisateurs', icon: 'fas fa-user-shield', visible: isAdmin },
   ];
 
-  const sidebarContent = (
-    <Nav className="flex-column">
-      {menuItems.map((item, index) => (
-        item.visible && (
-          <div key={item.path}>
-            {item.dividerBefore && <hr className="my-2" />}
-            <NavLink
-              to={item.path}
-              className={({ isActive }) => `nav-link d-flex align-items-center ${isActive ? 'active' : ''}`}
-              onClick={onHide}
-            >
-              <i className={`bi ${item.icon} me-2`} />
-              {item.label}
-            </NavLink>
-          </div>
-        )
-      ))}
-    </Nav>
-  );
+  const isActive = (href) => {
+    if (href === '/dashboard') {
+      return location.pathname === href;
+    }
+    return location.pathname.startsWith(href);
+  };
+
+  const sidebarClasses = [
+    'adminlte-sidebar',
+    collapsed && 'collapsed',
+    visible && 'show'
+  ].filter(Boolean).join(' ');
 
   return (
-    <>
-      {/* Sidebar - Desktop (always visible) */}
-      <div className="sidebar-desktop d-none d-lg-block">
-        <div className="sidebar-content">
-          <div className="sidebar-header">
-            <h6 className="text-muted px-3 py-2">Menu</h6>
-          </div>
-          {sidebarContent}
-        </div>
+    <aside className={sidebarClasses}>
+      {/* Brand */}
+      <div className="sidebar-brand">
+        <Link to="/dashboard" onClick={onClose}>
+          <i className="fas fa-heartbeat me-2"></i>
+          {!collapsed && 'NutriVault'}
+        </Link>
       </div>
 
-      {/* Sidebar - Mobile (offcanvas) */}
-      <Offcanvas show={show} onHide={onHide} placement="start" className="d-lg-none">
-        <Offcanvas.Header closeButton>
-          <Offcanvas.Title>NutriVault</Offcanvas.Title>
-        </Offcanvas.Header>
-        <Offcanvas.Body className="p-0">
-          <div className="sidebar-content">
-            <div className="sidebar-header">
-              <h6 className="text-muted px-3 py-2">Menu</h6>
+      {/* Navigation */}
+      <nav>
+        <ul className="sidebar-nav">
+          {navigationItems
+            .filter(item => item.visible)
+            .map((item) => (
+            <li key={item.href}>
+              <Link
+                to={item.href}
+                className={`nav-link ${isActive(item.href) ? 'active' : ''}`}
+                onClick={onClose}
+              >
+                <i className={item.icon}></i>
+                {!collapsed && <span>{item.label}</span>}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      {/* User section at bottom */}
+      {!collapsed && (
+        <div className="sidebar-footer mt-auto p-3">
+          <div className="user-info text-center">
+            <div className="user-avatar mb-2">
+              <i className="fas fa-user-circle fa-2x text-light"></i>
             </div>
-            {sidebarContent}
+            <div className="user-name small text-light opacity-75">
+              {user?.firstName} {user?.lastName}
+            </div>
+            <div className="user-role small text-light opacity-50">
+              {user?.role?.name}
+            </div>
           </div>
-        </Offcanvas.Body>
-      </Offcanvas>
-    </>
+        </div>
+      )}
+    </aside>
   );
 }
-
-export default Sidebar;

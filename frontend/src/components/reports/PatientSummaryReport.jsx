@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Card, Row, Col, Spinner, Alert, Button, Table } from 'react-bootstrap';
 import PropTypes from 'prop-types';
 import { getPatientReport, exportReportCSV } from '../../services/reportService';
 import { downloadBlob, generateCsvFilename } from '../../utils/csvExport';
@@ -47,62 +46,76 @@ function PatientSummaryReport({ dateRange }) {
   if (loading) {
     return (
       <div className="text-center py-5">
-        <Spinner animation="border" />
+        <div className="spinner-border" role="status">
+          <span className="sr-only">Loading...</span>
+        </div>
         <div className="mt-2 text-muted">Loading patient report...</div>
       </div>
     );
   }
 
-  if (error) return <Alert variant="danger">{error}</Alert>;
+  if (error) return (
+    <div className="alert alert-danger">
+      {error}
+    </div>
+  );
 
   return (
-    <Card className="shadow-sm">
-      <Card.Header className="d-flex justify-content-between align-items-center bg-white">
+    <div className="card">
+      <div className="card-header d-flex justify-content-between align-items-center">
         <h5 className="mb-0">Patient Summary</h5>
-        <Button 
-          variant="outline-secondary" 
-          size="sm" 
+        <button
+          className="btn btn-outline-secondary btn-sm"
           onClick={handleExport}
           disabled={exporting}
         >
           {exporting ? 'Exporting...' : 'Export to CSV'}
-        </Button>
-      </Card.Header>
-      <Card.Body>
+        </button>
+      </div>
+      <div className="card-body">
         {report && (
           <>
-            <Row className="g-3 mb-4">
-              <Col md={4}>
-                <Card className="border-start border-primary border-4 h-100">
-                  <Card.Body>
-                    <div className="text-muted text-uppercase small mb-1">Total Patients</div>
-                    <div className="h4 mb-0 fw-bold text-primary">{report.totalPatients}</div>
-                  </Card.Body>
-                </Card>
-              </Col>
-              <Col md={4}>
-                <Card className="border-start border-success border-4 h-100">
-                  <Card.Body>
-                    <div className="text-muted text-uppercase small mb-1">New Patients</div>
-                    <div className="h4 mb-0 fw-bold text-success">{report.newPatients}</div>
-                  </Card.Body>
-                </Card>
-              </Col>
-              <Col md={4}>
-                <Card className="border-start border-info border-4 h-100">
-                  <Card.Body>
-                    <div className="text-muted text-uppercase small mb-1">Active Patients</div>
-                    <div className="h4 mb-0 fw-bold text-info">{report.activePatients}</div>
-                  </Card.Body>
-                </Card>
-              </Col>
-            </Row>
+            <div className="row g-3 mb-4">
+              <div className="col-md-4">
+                <div className="info-box">
+                  <span className="info-box-icon bg-primary">
+                    <i className="fas fa-users"></i>
+                  </span>
+                  <div className="info-box-content">
+                    <span className="info-box-text">Total Patients</span>
+                    <span className="info-box-number">{report.totalPatients}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="info-box">
+                  <span className="info-box-icon bg-success">
+                    <i className="fas fa-user-plus"></i>
+                  </span>
+                  <div className="info-box-content">
+                    <span className="info-box-text">New Patients</span>
+                    <span className="info-box-number">{report.newPatients}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="info-box">
+                  <span className="info-box-icon bg-info">
+                    <i className="fas fa-user-check"></i>
+                  </span>
+                  <div className="info-box-content">
+                    <span className="info-box-text">Active Patients</span>
+                    <span className="info-box-number">{report.activePatients}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {report.byStatus && report.byStatus.length > 0 && (
               <div className="mt-4">
                 <h6 className="mb-3">Patients by Status</h6>
-                <Table bordered hover size="sm">
-                  <thead className="table-light">
+                <table className="table table-bordered table-striped">
+                  <thead>
                     <tr>
                       <th>Status</th>
                       <th className="text-end">Count</th>
@@ -118,13 +131,13 @@ function PatientSummaryReport({ dateRange }) {
                       </tr>
                     ))}
                   </tbody>
-                </Table>
+                </table>
               </div>
             )}
           </>
         )}
-      </Card.Body>
-    </Card>
+      </div>
+    </div>
   );
 }
 

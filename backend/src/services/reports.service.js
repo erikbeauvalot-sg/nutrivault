@@ -88,7 +88,7 @@ async function getPatientStats(user, filters = {}) {
   });
 
   // Audit log
-  await auditService.log({
+  await auditService.logAuditEvent({
     user_id: user.id,
     username: user.username,
     action: 'READ',
@@ -208,7 +208,7 @@ async function getVisitAnalytics(user, filters = {}) {
   });
 
   // Audit log
-  await auditService.log({
+  await auditService.logAuditEvent({
     user_id: user.id,
     username: user.username,
     action: 'READ',
@@ -332,7 +332,7 @@ async function getBillingReport(user, filters = {}) {
   });
 
   // Audit log
-  await auditService.log({
+  await auditService.logAuditEvent({
     user_id: user.id,
     username: user.username,
     action: 'READ',
@@ -376,7 +376,7 @@ async function getPracticeOverview(user, filters = {}) {
   ]);
 
   // Audit log
-  await auditService.log({
+  await auditService.logAuditEvent({
     user_id: user.id,
     username: user.username,
     action: 'READ',

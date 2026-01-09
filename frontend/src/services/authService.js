@@ -75,13 +75,20 @@ export const authService = {
    */
   async refreshToken(refreshToken) {
     console.log('[AuthService] Token refresh initiated');
+    const tokenToUse = refreshToken || tokenManager.getRefreshToken();
+    if (!tokenToUse) {
+      throw new Error('No refresh token available');
+    }
     try {
       const response = await api.post('/auth/refresh', {
-        refresh_token: refreshToken || tokenManager.getRefreshToken()
+        refresh_token: tokenToUse
       });
 
       const { access_token } = response.data;
-      tokenManager.setTokens(access_token, refreshToken || tokenManager.getRefreshToken());
+      
+      // Preserve rememberMe preference when updating tokens
+      const rememberMe = localStorage.getItem('rememberMe') === 'true';
+      tokenManager.setTokens(access_token, tokenToUse, rememberMe);
 
       console.log('[AuthService] Token refresh successful');
       return access_token;

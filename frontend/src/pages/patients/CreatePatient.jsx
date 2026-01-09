@@ -4,7 +4,6 @@
  */
 
 import { useState } from 'react';
-import { Container, Card, Alert } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import PatientForm from '../../components/forms/PatientForm';
@@ -37,25 +36,26 @@ export function CreatePatientPage() {
   };
 
   return (
-    <Container>
+    <div className="container-fluid">
       <h1 className="mb-4">Create New Patient</h1>
 
       {error && (
-        <Alert variant="danger" dismissible onClose={() => setError(null)}>
+        <div className="alert alert-danger alert-dismissible">
+          <button type="button" className="btn-close" onClick={() => setError(null)}></button>
           {error}
-        </Alert>
+        </div>
       )}
 
-      <Card>
-        <Card.Body>
+      <div className="card">
+        <div className="card-body">
           <PatientForm
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             isSubmitting={isSubmitting}
           />
-        </Card.Body>
-      </Card>
-    </Container>
+        </div>
+      </div>
+    </div>
   );
 }
 

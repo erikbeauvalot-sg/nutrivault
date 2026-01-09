@@ -26,8 +26,12 @@ const isDevelopment = process.env.NODE_ENV === 'development';
  * Returns noOpLimiter if limit is 0 (infinite)
  */
 const parseRateLimit = (envValue, defaultValue) => {
-  const limit = parseInt(envValue) || defaultValue;
-  return limit;
+  // Handle 0 explicitly since parseInt("0") || defaultValue returns defaultValue
+  if (envValue !== undefined && envValue !== null && envValue !== '') {
+    const parsed = parseInt(envValue, 10);
+    return isNaN(parsed) ? defaultValue : parsed;
+  }
+  return defaultValue;
 };
 
 /**

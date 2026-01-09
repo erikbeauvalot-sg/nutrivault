@@ -1,6 +1,7 @@
 /* Main stylesheet */
 
 @import 'variables.css';
+@import 'theme.css';
 @import 'layout.css';
 @import 'login.css';
 

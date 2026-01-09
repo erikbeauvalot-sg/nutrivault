@@ -48,14 +48,18 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const initializeAuth = async () => {
       console.log('[AuthProvider] Initializing authentication');
+      let storedUser = null;
       try {
         const token = tokenManager.getAccessToken();
-        const storedUser = tokenManager.getUser();
+        storedUser = tokenManager.getUser();
+        const refreshToken = tokenManager.getRefreshToken();
 
         console.log('[AuthProvider] Stored credentials:', {
           hasToken: !!token,
           hasUser: !!storedUser,
-          username: storedUser?.username
+          hasRefreshToken: !!refreshToken,
+          username: storedUser?.username,
+          storage: localStorage.getItem('rememberMe') === 'true' ? 'localStorage' : 'sessionStorage'
         });
 
         if (token && storedUser) {
@@ -65,8 +69,26 @@ export function AuthProvider({ children }) {
             setUser(storedUser);
             // Schedule automatic token refresh
             scheduleTokenRefresh();
+          } else if (refreshToken) {
+            // Token expired but we have refresh token, try to refresh
+            console.log('[AuthProvider] Access token expired, attempting refresh');
+            try {
+              await authService.refreshToken(refreshToken);
+              const newToken = tokenManager.getAccessToken();
+              if (newToken && !tokenManager.isTokenExpired(newToken)) {
+                console.log('[AuthProvider] Token refreshed successfully, restoring session');
+                setUser(storedUser);
+                scheduleTokenRefresh();
+              } else {
+                console.log('[AuthProvider] Token refresh failed, clearing session');
+                tokenManager.clearAll();
+              }
+            } catch (refreshErr) {
+              console.error('[AuthProvider] Token refresh failed:', refreshErr);
+              tokenManager.clearAll();
+            }
           } else {
-            console.log('[AuthProvider] Token expired, clearing session');
+            console.log('[AuthProvider] Token expired and no refresh token, clearing session');
             // Token expired, clear all
             tokenManager.clearAll();
           }
@@ -78,7 +100,7 @@ export function AuthProvider({ children }) {
         tokenManager.clearAll();
       } finally {
         setLoading(false);
-        console.log('[AuthProvider] Initialization complete');
+        console.log('[AuthProvider] Initialization complete, user:', !!storedUser);
       }
     };
 

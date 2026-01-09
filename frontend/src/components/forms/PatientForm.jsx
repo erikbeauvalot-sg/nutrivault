@@ -6,7 +6,6 @@
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { Form, Row, Col, Button } from 'react-bootstrap';
 
 // Validation schema
 const patientSchema = yup.object({
@@ -64,410 +63,442 @@ function PatientForm({ initialData = {}, onSubmit, onCancel, isSubmitting = fals
   });
 
   return (
-    <Form onSubmit={handleSubmit(onSubmit)}>
+    <div>
       {/* Basic Information */}
       <h4 className="mb-3">Basic Information</h4>
-      <Row className="mb-3">
-        <Col md={6}>
-          <Form.Group>
-            <Form.Label>First Name <span className="text-danger">*</span></Form.Label>
+      <div className="row mb-3">
+        <div className="col-md-6">
+          <div className="form-group">
+            <label>First Name <span className="text-danger">*</span></label>
             <Controller
               name="firstName"
               control={control}
               render={({ field }) => (
-                <Form.Control
+                <input
                   {...field}
                   type="text"
-                  isInvalid={!!errors.firstName}
+                  className={`form-control ${errors.firstName ? 'is-invalid' : ''}`}
                   placeholder="Enter first name"
                 />
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.firstName?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-        <Col md={6}>
-          <Form.Group>
-            <Form.Label>Last Name <span className="text-danger">*</span></Form.Label>
+            {errors.firstName && (
+              <div className="invalid-feedback">
+                {errors.firstName?.message}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="col-md-6">
+          <div className="form-group">
+            <label>Last Name <span className="text-danger">*</span></label>
             <Controller
               name="lastName"
               control={control}
               render={({ field }) => (
-                <Form.Control
+                <input
                   {...field}
                   type="text"
-                  isInvalid={!!errors.lastName}
+                  className={`form-control ${errors.lastName ? 'is-invalid' : ''}`}
                   placeholder="Enter last name"
                 />
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.lastName?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-      </Row>
-
-      <Row className="mb-3">
-        <Col md={6}>
-          <Form.Group>
-            <Form.Label>Email</Form.Label>
+            {errors.lastName && (
+              <div className="invalid-feedback">
+                {errors.lastName?.message}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="row mb-3">
+        <div className="col-md-6">
+          <div className="form-group">
+            <label>Email</label>
             <Controller
               name="email"
               control={control}
               render={({ field }) => (
-                <Form.Control
+                <input
                   {...field}
                   type="email"
-                  isInvalid={!!errors.email}
+                  className={`form-control ${errors.email ? 'is-invalid' : ''}`}
                   placeholder="patient@example.com"
                 />
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.email?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-        <Col md={6}>
-          <Form.Group>
-            <Form.Label>Phone</Form.Label>
+            {errors.email && (
+              <div className="invalid-feedback">
+                {errors.email?.message}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="col-md-6">
+          <div className="form-group">
+            <label>Phone</label>
             <Controller
               name="phone"
               control={control}
               render={({ field }) => (
-                <Form.Control
+                <input
                   {...field}
                   type="tel"
-                  isInvalid={!!errors.phone}
+                  className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
                   placeholder="(555) 123-4567"
                 />
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.phone?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-      </Row>
-
-      <Row className="mb-3">
-        <Col md={6}>
-          <Form.Group>
-            <Form.Label>Date of Birth</Form.Label>
+            {errors.phone && (
+              <div className="invalid-feedback">
+                {errors.phone?.message}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="row mb-3">
+        <div className="col-md-6">
+          <div className="form-group">
+            <label>Date of Birth</label>
             <Controller
               name="dateOfBirth"
               control={control}
               render={({ field }) => (
-                <Form.Control
+                <input
                   {...field}
                   type="date"
-                  isInvalid={!!errors.dateOfBirth}
+                  className={`form-control ${errors.dateOfBirth ? 'is-invalid' : ''}`}
                 />
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.dateOfBirth?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-        <Col md={6}>
-          <Form.Group>
-            <Form.Label>Gender</Form.Label>
+            {errors.dateOfBirth && (
+              <div className="invalid-feedback">
+                {errors.dateOfBirth?.message}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="col-md-6">
+          <div className="form-group">
+            <label>Gender</label>
             <Controller
               name="gender"
               control={control}
               render={({ field }) => (
-                <Form.Select {...field} isInvalid={!!errors.gender}>
-                  <option value="">Select gender</option>
+                <select
+                  {...field}
+                  className={`form-control ${errors.gender ? 'is-invalid' : ''}`}
+                >
+                  <option value="">Select gender...</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                   <option value="other">Other</option>
                   <option value="prefer_not_to_say">Prefer not to say</option>
-                </Form.Select>
+                </select>
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.gender?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-      </Row>
+            {errors.gender && (
+              <div className="invalid-feedback">
+                {errors.gender?.message}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Address Information */}
       <h4 className="mb-3 mt-4">Address Information</h4>
-      <Row className="mb-3">
-        <Col md={12}>
-          <Form.Group>
-            <Form.Label>Street Address</Form.Label>
+      <div className="row mb-3">
+        <div className="col-md-12">
+          <div className="form-group">
+            <label>Street Address</label>
             <Controller
               name="address"
               control={control}
               render={({ field }) => (
-                <Form.Control
+                <input
                   {...field}
                   type="text"
-                  isInvalid={!!errors.address}
+                  className={`form-control ${errors.address ? 'is-invalid' : ''}`}
                   placeholder="123 Main St"
                 />
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.address?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-      </Row>
+            {errors.address && (
+              <div className="invalid-feedback">
+                {errors.address?.message}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-      <Row className="mb-3">
-        <Col md={5}>
-          <Form.Group>
-            <Form.Label>City</Form.Label>
+      <div className="row mb-3">
+        <div className="col-md-5">
+          <div className="form-group">
+            <label>City</label>
             <Controller
               name="city"
               control={control}
               render={({ field }) => (
-                <Form.Control
+                <input
                   {...field}
                   type="text"
-                  isInvalid={!!errors.city}
+                  className={`form-control ${errors.city ? 'is-invalid' : ''}`}
                   placeholder="City"
                 />
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.city?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-        <Col md={4}>
-          <Form.Group>
-            <Form.Label>State</Form.Label>
+            {errors.city && (
+              <div className="invalid-feedback">
+                {errors.city?.message}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="col-md-4">
+          <div className="form-group">
+            <label>State</label>
             <Controller
               name="state"
               control={control}
               render={({ field }) => (
-                <Form.Control
+                <input
                   {...field}
                   type="text"
-                  isInvalid={!!errors.state}
+                  className={`form-control ${errors.state ? 'is-invalid' : ''}`}
                   placeholder="State"
                 />
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.state?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-        <Col md={3}>
-          <Form.Group>
-            <Form.Label>ZIP Code</Form.Label>
+            {errors.state && (
+              <div className="invalid-feedback">
+                {errors.state?.message}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="col-md-3">
+          <div className="form-group">
+            <label>ZIP Code</label>
             <Controller
               name="zipCode"
               control={control}
               render={({ field }) => (
-                <Form.Control
+                <input
                   {...field}
                   type="text"
-                  isInvalid={!!errors.zipCode}
+                  className={`form-control ${errors.zipCode ? 'is-invalid' : ''}`}
                   placeholder="12345"
                 />
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.zipCode?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-      </Row>
+            {errors.zipCode && (
+              <div className="invalid-feedback">
+                {errors.zipCode?.message}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Emergency Contact */}
       <h4 className="mb-3 mt-4">Emergency Contact</h4>
-      <Row className="mb-3">
-        <Col md={6}>
-          <Form.Group>
-            <Form.Label>Contact Name</Form.Label>
+      <div className="row mb-3">
+        <div className="col-md-6">
+          <div className="form-group">
+            <label>Contact Name</label>
             <Controller
               name="emergencyContactName"
               control={control}
               render={({ field }) => (
-                <Form.Control
+                <input
                   {...field}
                   type="text"
-                  isInvalid={!!errors.emergencyContactName}
+                  className={`form-control ${errors.emergencyContactName ? 'is-invalid' : ''}`}
                   placeholder="Emergency contact name"
                 />
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.emergencyContactName?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-        <Col md={6}>
-          <Form.Group>
-            <Form.Label>Contact Phone</Form.Label>
+            {errors.emergencyContactName && (
+              <div className="invalid-feedback">
+                {errors.emergencyContactName?.message}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="col-md-6">
+          <div className="form-group">
+            <label>Contact Phone</label>
             <Controller
               name="emergencyContactPhone"
               control={control}
               render={({ field }) => (
-                <Form.Control
+                <input
                   {...field}
                   type="tel"
-                  isInvalid={!!errors.emergencyContactPhone}
+                  className={`form-control ${errors.emergencyContactPhone ? 'is-invalid' : ''}`}
                   placeholder="(555) 123-4567"
                 />
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.emergencyContactPhone?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-      </Row>
+            {errors.emergencyContactPhone && (
+              <div className="invalid-feedback">
+                {errors.emergencyContactPhone?.message}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Medical Information */}
       <h4 className="mb-3 mt-4">Medical Information</h4>
-      <Row className="mb-3">
-        <Col md={12}>
-          <Form.Group>
-            <Form.Label>Medical History</Form.Label>
+      <div className="row mb-3">
+        <div className="col-md-12">
+          <div className="form-group">
+            <label>Medical History</label>
             <Controller
               name="medicalHistory"
               control={control}
               render={({ field }) => (
-                <Form.Control
+                <textarea
                   {...field}
-                  as="textarea"
+                  className={`form-control ${errors.medicalHistory ? 'is-invalid' : ''}`}
                   rows={3}
-                  isInvalid={!!errors.medicalHistory}
                   placeholder="Relevant medical history"
                 />
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.medicalHistory?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-      </Row>
+            {errors.medicalHistory && (
+              <div className="invalid-feedback">
+                {errors.medicalHistory?.message}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-      <Row className="mb-3">
-        <Col md={6}>
-          <Form.Group>
-            <Form.Label>Allergies</Form.Label>
+      <div className="row mb-3">
+        <div className="col-md-6">
+          <div className="form-group">
+            <label>Allergies</label>
             <Controller
               name="allergies"
               control={control}
               render={({ field }) => (
-                <Form.Control
+                <textarea
                   {...field}
-                  as="textarea"
+                  className={`form-control ${errors.allergies ? 'is-invalid' : ''}`}
                   rows={2}
-                  isInvalid={!!errors.allergies}
                   placeholder="Known allergies"
                 />
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.allergies?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-        <Col md={6}>
-          <Form.Group>
-            <Form.Label>Current Medications</Form.Label>
+            {errors.allergies && (
+              <div className="invalid-feedback">
+                {errors.allergies?.message}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="col-md-6">
+          <div className="form-group">
+            <label>Current Medications</label>
             <Controller
               name="currentMedications"
               control={control}
               render={({ field }) => (
-                <Form.Control
+                <textarea
                   {...field}
-                  as="textarea"
+                  className={`form-control ${errors.currentMedications ? 'is-invalid' : ''}`}
                   rows={2}
-                  isInvalid={!!errors.currentMedications}
                   placeholder="Current medications"
                 />
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.currentMedications?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-      </Row>
+            {errors.currentMedications && (
+              <div className="invalid-feedback">
+                {errors.currentMedications?.message}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-      <Row className="mb-3">
-        <Col md={12}>
-          <Form.Group>
-            <Form.Label>Dietary Restrictions</Form.Label>
+      <div className="row mb-3">
+        <div className="col-md-12">
+          <div className="form-group">
+            <label>Dietary Restrictions</label>
             <Controller
               name="dietaryRestrictions"
               control={control}
               render={({ field }) => (
-                <Form.Control
+                <textarea
                   {...field}
-                  as="textarea"
+                  className={`form-control ${errors.dietaryRestrictions ? 'is-invalid' : ''}`}
                   rows={2}
-                  isInvalid={!!errors.dietaryRestrictions}
                   placeholder="Dietary restrictions or preferences"
                 />
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.dietaryRestrictions?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-      </Row>
+            {errors.dietaryRestrictions && (
+              <div className="invalid-feedback">
+                {errors.dietaryRestrictions?.message}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Additional Notes */}
       <h4 className="mb-3 mt-4">Additional Notes</h4>
-      <Row className="mb-3">
-        <Col md={12}>
-          <Form.Group>
-            <Form.Label>Notes</Form.Label>
+      <div className="row mb-3">
+        <div className="col-md-12">
+          <div className="form-group">
+            <label>Notes</label>
             <Controller
               name="notes"
               control={control}
               render={({ field }) => (
-                <Form.Control
+                <textarea
                   {...field}
-                  as="textarea"
+                  className={`form-control ${errors.notes ? 'is-invalid' : ''}`}
                   rows={3}
-                  isInvalid={!!errors.notes}
-                  placeholder="Additional notes or comments"
+                  placeholder="Additional notes"
                 />
               )}
             />
-            <Form.Control.Feedback type="invalid">
-              {errors.notes?.message}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-      </Row>
+            {errors.notes && (
+              <div className="invalid-feedback">
+                {errors.notes?.message}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Action Buttons */}
       <div className="d-flex gap-2 justify-content-end mt-4">
-        <Button
-          variant="secondary"
+        <button
+          type="button"
+          className="btn btn-secondary"
           onClick={onCancel}
           disabled={isSubmitting}
         >
           Cancel
-        </Button>
-        <Button
+        </button>
+        <button
           type="submit"
-          variant="primary"
+          className="btn btn-primary"
           disabled={isSubmitting}
+          onClick={handleSubmit(onSubmit)}
         >
           {isSubmitting ? 'Saving...' : 'Save Patient'}
-        </Button>
+        </button>
       </div>
-    </Form>
+    </div>
   );
 }
 

@@ -8,9 +8,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
-import {
-  Container, Form, Button, Alert, Card, Row, Col
-} from 'react-bootstrap';
 import useAuth from '../hooks/useAuth';
 import '../styles/login.css';
 
@@ -62,11 +59,11 @@ export function LoginPage() {
   const displayError = submitError || authError;
 
   return (
-    <Container fluid className="login-container">
-      <Row className="justify-content-center align-items-center min-vh-100">
-        <Col xs={12} sm={10} md={6} lg={5}>
-          <Card className="login-card shadow-lg">
-            <Card.Body className="p-5">
+    <div className="login-container">
+      <div className="row justify-content-center align-items-center min-vh-100">
+        <div className="col-12 col-sm-10 col-md-6 col-lg-5">
+          <div className="card login-card shadow-lg">
+            <div className="card-body p-5">
               {/* Logo/Branding */}
               <div className="text-center mb-4">
                 <h1 className="login-title">NutriVault</h1>
@@ -75,84 +72,89 @@ export function LoginPage() {
 
               {/* Error Alert */}
               {displayError && (
-                <Alert variant="danger" dismissible onClose={() => setSubmitError(null)}>
+                <div className="alert alert-danger alert-dismissible">
+                  <button type="button" className="btn-close" onClick={() => setSubmitError(null)}></button>
                   <strong>Login Failed</strong>
                   {' '}
                   {displayError}
-                </Alert>
+                </div>
               )}
 
               {/* Login Form */}
-              <Form onSubmit={handleSubmit(onSubmit)}>
+              <form onSubmit={handleSubmit(onSubmit)}>
                 {/* Username Field */}
-                <Form.Group className="mb-3">
-                  <Form.Label htmlFor="username">Username</Form.Label>
-                  <Form.Control
+                <div className="form-group mb-3">
+                  <label htmlFor="username">Username</label>
+                  <input
                     id="username"
                     type="text"
+                    className={`form-control ${errors.username ? 'is-invalid' : ''}`}
                     placeholder="Enter your username"
                     {...register('username')}
-                    isInvalid={!!errors.username}
                     disabled={loading}
                     autoFocus
                   />
                   {errors.username && (
-                    <Form.Control.Feedback type="invalid" className="d-block">
+                    <div className="invalid-feedback d-block">
                       {errors.username.message}
-                    </Form.Control.Feedback>
+                    </div>
                   )}
-                </Form.Group>
+                </div>
 
                 {/* Password Field */}
-                <Form.Group className="mb-3">
-                  <Form.Label htmlFor="password">Password</Form.Label>
-                  <Form.Control
+                <div className="form-group mb-3">
+                  <label htmlFor="password">Password</label>
+                  <input
                     id="password"
                     type="password"
+                    className={`form-control ${errors.password ? 'is-invalid' : ''}`}
                     placeholder="Enter your password"
                     {...register('password')}
-                    isInvalid={!!errors.password}
                     disabled={loading}
                   />
                   {errors.password && (
-                    <Form.Control.Feedback type="invalid" className="d-block">
+                    <div className="invalid-feedback d-block">
                       {errors.password.message}
-                    </Form.Control.Feedback>
+                    </div>
                   )}
-                </Form.Group>
+                </div>
 
                 {/* Remember Me Checkbox */}
-                <Form.Group className="mb-4">
-                  <Form.Check
-                    type="checkbox"
-                    id="rememberMe"
-                    label="Remember me (keeps you logged in for 7 days)"
-                    {...register('rememberMe')}
-                    disabled={loading}
-                  />
-                </Form.Group>
+                <div className="form-group mb-4">
+                  <div className="form-check">
+                    <input
+                      type="checkbox"
+                      id="rememberMe"
+                      className="form-check-input"
+                      {...register('rememberMe')}
+                      disabled={loading}
+                    />
+                    <label className="form-check-label" htmlFor="rememberMe">
+                      Remember me (keeps you logged in for 7 days)
+                    </label>
+                  </div>
+                </div>
 
                 {/* Submit Button */}
-                <Button
-                  variant="primary"
+                <button
                   type="submit"
-                  className="w-100 login-btn"
+                  className="btn btn-primary w-100 login-btn"
                   disabled={loading}
                 >
                   {loading ? 'Signing in...' : 'Sign In'}
-                </Button>
-              </Form>
+                </button>
+              </form>
 
               {/* Footer Info */}
               <div className="text-center mt-4 text-muted small">
                 <p>Demo credentials for testing:</p>
                 <p>Username: admin | Password: (check your notes)</p>
               </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

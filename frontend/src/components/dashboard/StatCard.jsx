@@ -1,38 +1,33 @@
-import { Card } from 'react-bootstrap';
 import PropTypes from 'prop-types';
 
 /**
  * StatCard Component
  * Displays a key metric with icon, label, value, and optional change indicator
+ * Uses AdminLTE small-box styling
  */
-function StatCard({ icon, label, value, change, changeType, variant = 'primary', loading = false }) {
+function StatCard({ icon, label, value, change, changeType, variant = 'info', loading = false }) {
+  // Ensure value is a valid renderable type
+  const displayValue = loading ? '...' : (typeof value === 'number' || typeof value === 'string' ? value : '0');
+  const bgClass = `bg-${variant}`;
+
   return (
-    <Card className={`border-start border-${variant} border-4 shadow-sm`}>
-      <Card.Body>
-        <div className="d-flex align-items-center">
-          <div className={`me-3 text-${variant}`} style={{ fontSize: '2.5rem' }}>
-            {icon}
-          </div>
-          <div className="flex-grow-1">
-            <div className="text-muted text-uppercase small mb-1">{label}</div>
-            {loading ? (
-              <div className="spinner-border spinner-border-sm text-muted" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
-            ) : (
-              <div className="h4 mb-0 fw-bold">{value}</div>
-            )}
-            {change !== undefined && !loading && (
-              <div className={`small text-${changeType === 'positive' ? 'success' : changeType === 'negative' ? 'danger' : 'muted'}`}>
-                {changeType === 'positive' && '↑ '}
-                {changeType === 'negative' && '↓ '}
-                {change}
-              </div>
-            )}
-          </div>
+    <div className={`small-box ${bgClass}`}>
+      <div className="inner">
+        <h3>{displayValue}</h3>
+        <p>{label}</p>
+      </div>
+      <div className="icon">
+        {icon}
+      </div>
+      {change !== undefined && !loading && (
+        <div className="small-box-footer">
+          {changeType === 'positive' && 'More info '}
+          {changeType === 'negative' && 'More info '}
+          {changeType === 'neutral' && 'More info '}
+          <i className="fas fa-arrow-circle-right" />
         </div>
-      </Card.Body>
-    </Card>
+      )}
+    </div>
   );
 }
 
@@ -42,7 +37,7 @@ StatCard.propTypes = {
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   change: PropTypes.string,
   changeType: PropTypes.oneOf(['positive', 'negative', 'neutral']),
-  variant: PropTypes.oneOf(['primary', 'success', 'info', 'warning', 'danger', 'secondary']),
+  variant: PropTypes.oneOf(['info', 'success', 'warning', 'danger', 'primary', 'secondary']),
   loading: PropTypes.bool
 };
 

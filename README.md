@@ -448,7 +448,7 @@ Contributions are welcome! Please follow these steps:
 
 ## License
 
-[Your License Here]
+License: GPL-2.0
 
 ## Support
 

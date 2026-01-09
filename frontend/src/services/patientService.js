@@ -77,7 +77,8 @@ export const getPatients = async (filters = {}) => {
  */
 export const getPatient = async (id) => {
   try {
-    const response = await api.get(`/patients/${id}`);
+    // Force fresh data by adding timestamp query param (cache busting)
+    const response = await api.get(`/patients/${id}?_t=${Date.now()}`);
     console.log('[PatientService] Get patient response:', response.data);
     // Backend returns {success, data: {patient}}
     const patient = response.data.data?.patient;

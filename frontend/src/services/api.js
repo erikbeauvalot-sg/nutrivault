@@ -1,4 +1,5 @@
 import axios from 'axios';
+import tokenManager from '../utils/tokenManager';
 
 // Create axios instance with base config
 const api = axios.create({
@@ -15,16 +16,14 @@ console.log('[API] Configured with baseURL:', import.meta.env.VITE_API_URL);
 const storedApiUrl = localStorage.getItem('apiUrl');
 if (storedApiUrl && storedApiUrl !== import.meta.env.VITE_API_URL) {
   console.log('[API] API URL changed, clearing old tokens');
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('refreshToken');
-  localStorage.removeItem('user');
+  tokenManager.clearAll();
 }
 localStorage.setItem('apiUrl', import.meta.env.VITE_API_URL);
 
 // Request interceptor - add auth token to headers
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = tokenManager.getAccessToken(); // Use tokenManager instead of localStorage
     console.log(`[API] ${config.method.toUpperCase()} ${config.url}`, {
       hasToken: !!token,
       baseURL: config.baseURL
@@ -57,7 +56,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       console.log('[API] 401 error, attempting token refresh');
       originalRequest._retry = true;
-      const refreshToken = localStorage.getItem('refreshToken');
+      const refreshToken = tokenManager.getRefreshToken(); // Use tokenManager
 
       if (refreshToken) {
         try {
@@ -68,7 +67,10 @@ api.interceptors.response.use(
           );
 
           const { access_token } = response.data;
-          localStorage.setItem('accessToken', access_token);
+          
+          // Preserve rememberMe preference
+          const rememberMe = localStorage.getItem('rememberMe') === 'true';
+          tokenManager.setTokens(access_token, refreshToken, rememberMe);
           console.log('[API] Token refreshed successfully');
 
           // Retry original request with new token
@@ -77,9 +79,7 @@ api.interceptors.response.use(
         } catch (refreshError) {
           console.error('[API] Token refresh failed, redirecting to login');
           // Refresh failed, clear tokens and redirect to login
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
+          tokenManager.clearAll();
           if (window.location.pathname !== '/login') {
             window.location.href = '/login';
           }
@@ -88,9 +88,7 @@ api.interceptors.response.use(
       } else {
         console.log('[API] No refresh token available, redirecting to login');
         // No refresh token, clear everything and redirect
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
+        tokenManager.clearAll();
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';
         }

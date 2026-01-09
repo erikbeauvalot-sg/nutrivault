@@ -6,9 +6,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Table, Button, Form, Badge, Pagination, Spinner } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
-import { PersonPlus, Search, Funnel } from 'react-bootstrap-icons';
+import { PersonPlus } from 'react-bootstrap-icons';
 import { toast } from 'react-toastify';
 import { getUsers, getRoles } from '../../services/userService';
 import { format } from 'date-fns';
@@ -77,12 +76,12 @@ const UserList = () => {
 
   const getStatusBadge = (user) => {
     if (user.is_active === false) {
-      return <Badge bg="danger">Inactive</Badge>;
+      return <span className="badge badge-danger">Inactive</span>;
     }
     if (user.is_locked) {
-      return <Badge bg="warning" text="dark">Locked</Badge>;
+      return <span className="badge badge-warning">Locked</span>;
     }
-    return <Badge bg="success">Active</Badge>;
+    return <span className="badge badge-success">Active</span>;
   };
 
   const totalPages = Math.ceil(totalUsers / limit);
@@ -99,77 +98,107 @@ const UserList = () => {
 
     if (currentPage > 1) {
       items.push(
-        <Pagination.First key="first" onClick={() => setCurrentPage(1)} />,
-        <Pagination.Prev key="prev" onClick={() => setCurrentPage(currentPage - 1)} />
+        <li key="first" className="page-item">
+          <a className="page-link" href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(1); }}>
+            First
+          </a>
+        </li>,
+        <li key="prev" className="page-item">
+          <a className="page-link" href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(currentPage - 1); }}>
+            Previous
+          </a>
+        </li>
       );
     }
 
     for (let page = startPage; page <= endPage; page++) {
       items.push(
-        <Pagination.Item
-          key={page}
-          active={page === currentPage}
-          onClick={() => setCurrentPage(page)}
-        >
-          {page}
-        </Pagination.Item>
+        <li key={page} className={`page-item ${page === currentPage ? 'active' : ''}`}>
+          <a className="page-link" href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page); }}>
+            {page}
+          </a>
+        </li>
       );
     }
 
     if (currentPage < totalPages) {
       items.push(
-        <Pagination.Next key="next" onClick={() => setCurrentPage(currentPage + 1)} />,
-        <Pagination.Last key="last" onClick={() => setCurrentPage(totalPages)} />
+        <li key="next" className="page-item">
+          <a className="page-link" href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(currentPage + 1); }}>
+            Next
+          </a>
+        </li>,
+        <li key="last" className="page-item">
+          <a className="page-link" href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(totalPages); }}>
+            Last
+          </a>
+        </li>
       );
     }
 
-    return <Pagination>{items}</Pagination>;
+    return (
+      <nav aria-label="User pagination">
+        <ul className="pagination justify-content-center">
+          {items}
+        </ul>
+      </nav>
+    );
   };
 
   return (
-    <Container fluid className="py-4">
-      <Row className="mb-4">
-        <Col>
+    <div className="py-4">
+      <div className="row mb-4">
+        <div className="col">
           <h2>User Management</h2>
           <p className="text-muted">Manage system users and their roles</p>
-        </Col>
-        <Col xs="auto">
-          <Button 
-            variant="primary" 
+        </div>
+        <div className="col-auto">
+          <button
+            className="btn btn-primary"
             onClick={() => navigate('/users/new')}
           >
-            <PersonPlus className="me-2" />
+            <i className="fas fa-plus me-2"></i>
             Add User
-          </Button>
-        </Col>
-      </Row>
+          </button>
+        </div>
+      </div>
 
       {/* Filters */}
-      <Card className="mb-4">
-        <Card.Body>
-          <Form onSubmit={handleSearch}>
-            <Row className="g-3">
-              <Col md={4}>
-                <Form.Group>
-                  <Form.Label>
-                    <Search className="me-2" />
+      <div className="card card-primary">
+        <div className="card-header">
+          <h3 className="card-title">Filters</h3>
+          <div className="card-tools">
+            <button type="button" className="btn btn-tool" data-card-widget="collapse">
+              <i className="fas fa-minus"></i>
+            </button>
+          </div>
+        </div>
+        <div className="card-body">
+          <form onSubmit={handleSearch}>
+            <div className="row align-items-end g-3">
+              <div className="col-md-4">
+                <div className="form-group">
+                  <label>
+                    <i className="fas fa-search me-2"></i>
                     Search
-                  </Form.Label>
-                  <Form.Control
+                  </label>
+                  <input
                     type="text"
+                    className="form-control"
                     placeholder="Search by name or email..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
-                </Form.Group>
-              </Col>
-              <Col md={3}>
-                <Form.Group>
-                  <Form.Label>
-                    <Funnel className="me-2" />
+                </div>
+              </div>
+              <div className="col-md-3">
+                <div className="form-group">
+                  <label>
+                    <i className="fas fa-filter me-2"></i>
                     Role
-                  </Form.Label>
-                  <Form.Select
+                  </label>
+                  <select
+                    className="form-control"
                     value={selectedRole}
                     onChange={(e) => {
                       setSelectedRole(e.target.value);
@@ -180,13 +209,14 @@ const UserList = () => {
                     {roles.map(role => (
                       <option key={role.id} value={role.name}>{role.name}</option>
                     ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={3}>
-                <Form.Group>
-                  <Form.Label>Status</Form.Label>
-                  <Form.Select
+                  </select>
+                </div>
+              </div>
+              <div className="col-md-3">
+                <div className="form-group">
+                  <label>Status</label>
+                  <select
+                    className="form-control"
                     value={selectedStatus}
                     onChange={(e) => {
                       setSelectedStatus(e.target.value);
@@ -197,29 +227,31 @@ const UserList = () => {
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                     <option value="locked">Locked</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={2} className="d-flex align-items-end">
-                <Button 
-                  variant="outline-secondary" 
+                  </select>
+                </div>
+              </div>
+              <div className="col-md-2 d-flex align-items-end">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary w-100"
                   onClick={handleClearFilters}
-                  className="w-100"
                 >
                   Clear
-                </Button>
-              </Col>
-            </Row>
-          </Form>
-        </Card.Body>
-      </Card>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
 
       {/* User Table */}
-      <Card>
-        <Card.Body>
+      <div className="card">
+        <div className="card-body">
           {loading ? (
             <div className="text-center py-5">
-              <Spinner animation="border" />
+              <div className="spinner-border" role="status">
+                <span className="sr-only">Loading...</span>
+              </div>
               <p className="mt-3">Loading users...</p>
             </div>
           ) : users.length === 0 ? (
@@ -228,7 +260,7 @@ const UserList = () => {
             </div>
           ) : (
             <>
-              <Table responsive hover>
+              <table className="table table-bordered table-striped table-hover">
                 <thead>
                   <tr>
                     <th>Name</th>
@@ -251,9 +283,9 @@ const UserList = () => {
                       <td>{user.email}</td>
                       <td>
                         {user.role ? (
-                          <Badge bg="info">{user.role.name}</Badge>
+                          <span className="badge badge-info">{user.role.name}</span>
                         ) : (
-                          <Badge bg="secondary">No Role</Badge>
+                          <span className="badge badge-secondary">No Role</span>
                         )}
                       </td>
                       <td>{getStatusBadge(user)}</td>
@@ -264,19 +296,17 @@ const UserList = () => {
                       </td>
                       <td>{format(new Date(user.created_at), 'PP')}</td>
                       <td>
-                        <Button
-                          as={Link}
-                          to={`/users/${user.id}`}
-                          variant="outline-primary"
-                          size="sm"
+                        <a
+                          href={`/users/${user.id}`}
+                          className="btn btn-primary btn-sm"
                         >
                           View
-                        </Button>
+                        </a>
                       </td>
                     </tr>
                   ))}
                 </tbody>
-              </Table>
+              </table>
 
               {/* Pagination */}
               <div className="d-flex justify-content-between align-items-center mt-4">
@@ -287,9 +317,9 @@ const UserList = () => {
               </div>
             </>
           )}
-        </Card.Body>
-      </Card>
-    </Container>
+        </div>
+      </div>
+    </div>
   );
 };
 

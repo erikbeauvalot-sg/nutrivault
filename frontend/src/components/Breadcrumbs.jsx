@@ -46,9 +46,12 @@ export function Breadcrumbs() {
   }
 
   // Build breadcrumb items
-  const breadcrumbItems = [
-    { label: 'Home', path: '/dashboard' }
-  ];
+  const breadcrumbItems = [];
+
+  // Only add Home if not on dashboard
+  if (pathSegments[0] !== 'dashboard') {
+    breadcrumbItems.push({ label: 'Home', path: '/dashboard' });
+  }
 
   let currentPath = '';
   pathSegments.forEach((segment, index) => {

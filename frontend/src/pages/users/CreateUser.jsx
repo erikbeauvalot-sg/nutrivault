@@ -5,9 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Button } from 'react-bootstrap';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft } from 'react-bootstrap-icons';
 import { toast } from 'react-toastify';
 import UserForm from '../../components/users/UserForm';
 import { createUser, getRoles } from '../../services/userService';
@@ -47,38 +45,36 @@ const CreateUser = () => {
   };
 
   return (
-    <Container fluid className="py-4">
-      <Row className="mb-4">
-        <Col>
-          <Button
-            as={Link}
-            to="/users"
-            variant="outline-secondary"
-            className="mb-3"
+    <div className="py-4">
+      <div className="row mb-4">
+        <div className="col">
+          <a
+            href="/users"
+            className="btn btn-outline-secondary mb-3"
           >
-            <ArrowLeft className="me-2" />
+            <i className="fas fa-arrow-left me-2"></i>
             Back to Users
-          </Button>
+          </a>
           <h2>Create New User</h2>
           <p className="text-muted">Add a new user to the system</p>
-        </Col>
-      </Row>
+        </div>
+      </div>
 
-      <Row>
-        <Col lg={8}>
-          <Card>
-            <Card.Body>
+      <div className="row">
+        <div className="col-lg-8">
+          <div className="card">
+            <div className="card-body">
               <UserForm
                 onSubmit={handleSubmit}
                 isLoading={isLoading}
                 roles={roles}
                 isEdit={false}
               />
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

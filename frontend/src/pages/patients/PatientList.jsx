@@ -4,9 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Container, Table, Button, Form, InputGroup, Spinner, Alert, Pagination } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
-import { Search, Plus } from 'react-bootstrap-icons';
 import { toast } from 'react-toastify';
 import patientService from '../../services/patientService';
 
@@ -87,81 +85,108 @@ export function PatientListPage() {
     // First page
     if (startPage > 1) {
       items.push(
-        <Pagination.First key="first" onClick={() => handlePageChange(1)} />
+        <li key="first" className="page-item">
+          <a className="page-link" href="#" onClick={(e) => { e.preventDefault(); handlePageChange(1); }}>
+            First
+          </a>
+        </li>
       );
       items.push(
-        <Pagination.Prev key="prev" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} />
+        <li key="prev" className="page-item">
+          <a className="page-link" href="#" onClick={(e) => { e.preventDefault(); handlePageChange(currentPage - 1); }} style={{ pointerEvents: currentPage === 1 ? 'none' : 'auto', opacity: currentPage === 1 ? 0.5 : 1 }}>
+            Previous
+          </a>
+        </li>
       );
     }
 
     // Page numbers
     for (let page = startPage; page <= endPage; page++) {
       items.push(
-        <Pagination.Item
-          key={page}
-          active={page === currentPage}
-          onClick={() => handlePageChange(page)}
-        >
-          {page}
-        </Pagination.Item>
+        <li key={page} className={`page-item ${page === currentPage ? 'active' : ''}`}>
+          <a className="page-link" href="#" onClick={(e) => { e.preventDefault(); handlePageChange(page); }}>
+            {page}
+          </a>
+        </li>
       );
     }
 
     // Last page
     if (endPage < totalPages) {
       items.push(
-        <Pagination.Next key="next" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} />
+        <li key="next" className="page-item">
+          <a className="page-link" href="#" onClick={(e) => { e.preventDefault(); handlePageChange(currentPage + 1); }} style={{ pointerEvents: currentPage === totalPages ? 'none' : 'auto', opacity: currentPage === totalPages ? 0.5 : 1 }}>
+            Next
+          </a>
+        </li>
       );
       items.push(
-        <Pagination.Last key="last" onClick={() => handlePageChange(totalPages)} />
+        <li key="last" className="page-item">
+          <a className="page-link" href="#" onClick={(e) => { e.preventDefault(); handlePageChange(totalPages); }}>
+            Last
+          </a>
+        </li>
       );
     }
 
-    return <Pagination className="justify-content-center mt-4">{items}</Pagination>;
+    return (
+      <nav aria-label="Patient pagination" className="mt-4">
+        <ul className="pagination justify-content-center">
+          {items}
+        </ul>
+      </nav>
+    );
   };
 
   return (
-    <Container fluid>
+    <div className="container-fluid">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>Patients</h1>
-        <Button as={Link} to="/patients/new" variant="primary">
-          <Plus size={20} className="me-2" />
+        <a href="/patients/new" className="btn btn-primary">
+          <i className="fas fa-plus me-2"></i>
           Add New Patient
-        </Button>
+        </a>
       </div>
 
       <div className="mb-3">
-        <InputGroup>
-          <InputGroup.Text>
-            <Search />
-          </InputGroup.Text>
-          <Form.Control
+        <div className="input-group">
+          <div className="input-group-prepend">
+            <span className="input-group-text">
+              <i className="fas fa-search"></i>
+            </span>
+          </div>
+          <input
             type="text"
+            className="form-control"
             placeholder="Search by name, email, or phone..."
             value={search}
             onChange={handleSearchChange}
           />
-        </InputGroup>
+        </div>
       </div>
 
-      {error && <Alert variant="danger">{error}</Alert>}
+      {error && (
+        <div className="alert alert-danger">
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-5">
-          <Spinner animation="border" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </Spinner>
+          <div className="spinner-border" role="status">
+            <span className="sr-only">Loading...</span>
+          </div>
         </div>
       ) : patients.length === 0 ? (
-        <Alert variant="info">
+        <div className="alert alert-info">
           {search ? 'No patients found matching your search.' : 'No patients yet. Click "Add New Patient" to get started.'}
-        </Alert>
+        </div>
       ) : (
         <>
           <div className="mb-2 text-muted">
             Showing {patients.length} of {totalCount} patients
           </div>
-          <Table striped bordered hover responsive>
+          <table className="table table-bordered table-striped table-hover">
             <thead>
               <tr>
                 <th>Name</th>
@@ -176,32 +201,30 @@ export function PatientListPage() {
               {patients.map((patient) => (
                 <tr key={patient.id}>
                   <td>
-                    <Link to={`/patients/${patient.id}`}>
+                    <a href={`/patients/${patient.id}`}>
                       {patient.firstName} {patient.lastName}
-                    </Link>
+                    </a>
                   </td>
                   <td>{patient.email || '-'}</td>
                   <td>{patient.phone || '-'}</td>
                   <td>{formatDate(patient.dateOfBirth)}</td>
                   <td>{formatDate(patient.createdAt)}</td>
                   <td>
-                    <Button
-                      as={Link}
-                      to={`/patients/${patient.id}/edit`}
-                      variant="outline-primary"
-                      size="sm"
+                    <a
+                      href={`/patients/${patient.id}/edit`}
+                      className="btn btn-primary btn-sm"
                     >
                       Edit
-                    </Button>
+                    </a>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </Table>
+          </table>
           {renderPagination()}
         </>
       )}
-    </Container>
+    </div>
   );
 }
 

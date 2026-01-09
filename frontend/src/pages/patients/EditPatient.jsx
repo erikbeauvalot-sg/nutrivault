@@ -46,9 +46,14 @@ export function EditPatientPage() {
       const updatedPatient = await patientService.updatePatient(id, data);
       console.log('[EditPatient] Patient updated successfully:', updatedPatient);
       
-      // Navigate to patient details with success message
+      // Navigate to patient details with success message and reload flag
       navigate(`/patients/${id}`, {
-        state: { message: 'Patient updated successfully', variant: 'success' }
+        state: { 
+          message: 'Patient updated successfully', 
+          variant: 'success',
+          reload: true // Trigger reload of patient data
+        },
+        replace: false // Keep in history but force fresh navigation
       });
     } catch (err) {
       console.error('[EditPatient] Update failed:', err);

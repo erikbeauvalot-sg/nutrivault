@@ -10,8 +10,8 @@ import api from './api';
  * @returns {Promise<Object>} Dashboard stats (patients, visits, revenue, invoices)
  */
 export const getDashboardStats = async () => {
-  const response = await api.get('/reports/dashboard');
-  return response.data;
+  const response = await api.get('/reports/performance');
+  return response.data.data;
 };
 
 /**
@@ -86,7 +86,7 @@ export const getRecentVisits = async (limit = 5) => {
   const response = await api.get('/visits', {
     params: { limit, sort: 'visit_date:desc' }
   });
-  return response.data;
+  return response.data.data.visits;
 };
 
 /**
@@ -98,7 +98,7 @@ export const getRecentInvoices = async (limit = 5) => {
   const response = await api.get('/billing', {
     params: { limit, sort: 'invoice_date:desc' }
   });
-  return response.data;
+  return response.data.data.billing;
 };
 
 /**
@@ -115,7 +115,7 @@ export const getUpcomingAppointments = async (limit = 5) => {
       futureOnly: true
     }
   });
-  return response.data;
+  return response.data.data.visits;
 };
 
 /**

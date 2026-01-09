@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Container, Row, Col, Form, Card, Button } from 'react-bootstrap';
 import { subDays, format } from 'date-fns';
 import RevenueSummaryReport from '../components/reports/RevenueSummaryReport';
 import PatientSummaryReport from '../components/reports/PatientSummaryReport';
@@ -39,57 +38,63 @@ function Reports() {
   };
 
   return (
-    <Container fluid className="py-4">
+    <div className="py-4">
       <h1 className="mb-4">Reports</h1>
-      <Card className="shadow-sm mb-4">
-        <Card.Body>
-          <Row className="align-items-end g-3">
-            <Col md={4}>
-              <Form.Group>
-                <Form.Label>Report Type</Form.Label>
-                <Form.Select
+      <div className="card card-primary">
+        <div className="card-header">
+          <h3 className="card-title">Report Configuration</h3>
+        </div>
+        <div className="card-body">
+          <div className="row align-items-end g-3">
+            <div className="col-md-4">
+              <div className="form-group">
+                <label>Report Type</label>
+                <select
+                  className="form-control"
                   value={reportType}
                   onChange={(e) => setReportType(e.target.value)}
                 >
                   <option value="revenue">Revenue Summary</option>
                   <option value="patients">Patient Summary</option>
                   <option value="visits">Visit Summary</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label>Start Date</Form.Label>
-                <Form.Control
+                </select>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="form-group">
+                <label>Start Date</label>
+                <input
                   type="date"
+                  className="form-control"
                   name="startDate"
                   value={dateRange.startDate}
                   onChange={handleDateChange}
                 />
-              </Form.Group>
-            </Col>
-            <Col md={3}>
-              <Form.Group>
-                <Form.Label>End Date</Form.Label>
-                <Form.Control
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="form-group">
+                <label>End Date</label>
+                <input
                   type="date"
+                  className="form-control"
                   name="endDate"
                   value={dateRange.endDate}
                   onChange={handleDateChange}
                 />
-              </Form.Group>
-            </Col>
-            <Col md={2}>
-              <Button onClick={handleGenerateReport} className="w-100">
+              </div>
+            </div>
+            <div className="col-md-2">
+              <button onClick={handleGenerateReport} className="btn btn-primary w-100">
                 Generate
-              </Button>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {renderReport()}
-    </Container>
+    </div>
   );
 }
 
