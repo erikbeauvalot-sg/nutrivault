@@ -33,7 +33,7 @@ sleep 3
 
 echo ""
 echo "🎨 Starting frontend server on http://localhost:5173..."
-cd ../frontend && npm run dev &
+cd frontend && npm run dev &
 FRONTEND_PID=$!
 
 echo ""
