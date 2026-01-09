@@ -1,9 +1,10 @@
 module.exports = (sequelize, DataTypes) => {
   const Patient = sequelize.define('Patient', {
     id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
-      autoIncrement: true
+      allowNull: false
     },
     first_name: {
       type: DataTypes.STRING(100),
@@ -37,6 +38,26 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
+    city: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
+    state: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
+    zip_code: {
+      type: DataTypes.STRING(20),
+      allowNull: true
+    },
+    emergency_contact_name: {
+      type: DataTypes.STRING(200),
+      allowNull: true
+    },
+    emergency_contact_phone: {
+      type: DataTypes.STRING(20),
+      allowNull: true
+    },
     medical_notes: {
       type: DataTypes.TEXT,
       allowNull: true
@@ -49,16 +70,30 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
+    assigned_dietitian_id: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
     is_active: {
       type: DataTypes.BOOLEAN,
+      allowNull: false,
       defaultValue: true
     }
   }, {
     tableName: 'patients',
     timestamps: true,
     underscored: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at'
+    indexes: [
+      {
+        fields: ['email']
+      },
+      {
+        fields: ['assigned_dietitian_id']
+      },
+      {
+        fields: ['last_name']
+      }
+    ]
   });
 
   return Patient;
