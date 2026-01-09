@@ -1,0 +1,29 @@
+{
+  "name": "nutrivault",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/erikbeauvalot-sg/nutrivault.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/erikbeauvalot-sg/nutrivault/issues"
+  },
+  "homepage": "https://github.com/erikbeauvalot-sg/nutrivault#readme",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "sequelize": "^6.37.7",
+    "sqlite3": "^5.1.7"
+  }
+}
