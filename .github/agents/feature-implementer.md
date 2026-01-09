@@ -1,6 +1,6 @@
 ---
 description: 'EPCT workflow agent: Explore, Plan (with validation), Code, and Test features systematically with thorough context gathering and user approval. Integrates with BMAD methodology agents.'
-tools: ['execute/runInTerminal', 'read/readFile', 'edit/createFile', 'search/codebase', 'search/fileSearch', 'web/fetch']
+tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'todo']
 model: 'Claude Sonnet 4'
 bmad_integration: true
 version: '2.0.0'
