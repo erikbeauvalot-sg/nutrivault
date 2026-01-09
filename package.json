@@ -30,7 +30,8 @@
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "sequelize": "^6.37.7",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "sequelize-cli": "^6.6.5"
