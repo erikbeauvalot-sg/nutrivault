@@ -1041,12 +1041,12 @@ npm run db:seed
 ## Documentation
 
 - **Full specification**: `/NUTRIVAULT_SPECIFICATION.md`
-- **Database setup**: `/DATABASE_SETUP_SUMMARY.md`
+<!-- - **Database setup**: `/DATABASE_SETUP_SUMMARY.md`
 - **DevOps setup**: `/PHASE1_DEVOPS_COMPLETE.md`
 - **Authentication**: `/AUTHENTICATION_COMPLETE.md`
 - **RBAC system**: `/RBAC_COMPLETE.md`
 - **Backend progress**: `/PHASE2_BACKEND_STARTED.md`
-- **Project tracker**: `/PROJECT_TODO.md` (auto-updated via `npm run update-todo`)
+- **Project tracker**: `/PROJECT_TODO.md` (auto-updated via `npm run update-todo`) -->
 
 ## Important Notes
 

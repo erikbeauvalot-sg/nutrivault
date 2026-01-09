@@ -50,6 +50,16 @@ db.Permission.belongsToMany(db.Role, {
   as: 'roles'
 });
 
+// RolePermission also needs direct associations for verification queries
+db.RolePermission.belongsTo(db.Role, {
+  foreignKey: 'role_id',
+  as: 'role'
+});
+db.RolePermission.belongsTo(db.Permission, {
+  foreignKey: 'permission_id',
+  as: 'permission'
+});
+
 // Patient - User (assigned dietitian) relationship
 db.Patient.belongsTo(db.User, {
   foreignKey: 'assigned_dietitian_id',

@@ -1,0 +1,139 @@
+# NutriVault Project TODO
+
+## Project Status
+- **Current Phase**: MVP Foundation (Phase 2)
+- **Progress**: 21/257 tasks (8%)
+- **Last Updated**: 2026-01-09
+
+---
+
+## Phase 1: POC (Proof of Concept) ✅ COMPLETE
+
+**Goal**: Demonstrate core value proposition with basic patient management
+
+- [x] TASK-001: Create monolithic repository structure with basic Express.js server
+- [x] TASK-002: Set up SQLite database with basic patients table
+- [x] TASK-003: Implement basic patient CRUD API endpoints (no auth, no validation)
+- [x] TASK-004: Create simple React frontend with patient list and add/edit forms
+- [x] TASK-005: Verify end-to-end patient creation and retrieval flow
+
+**Completion Date**: 2026-01-09  
+**Branch**: V2  
+**Commit**: `feat: POC Implementation - Basic Patient Management System`
+
+---
+
+## Phase 2: MVP Foundation (Database & Models) ✅ COMPLETE
+
+**Goal**: Establish production-grade database architecture with all 12 models
+
+- [x] TASK-006: Create Sequelize configuration at root level (`.sequelizerc`, `/config/database.js`)
+- [x] TASK-007: Create migration for roles table with 4 predefined roles
+- [x] TASK-008: Create migration for users table with bcrypt password, account lockout fields
+- [x] TASK-009: Create migration for permissions table with 40 granular permissions
+- [x] TASK-010: Create migration for role_permissions junction table (many-to-many)
+- [x] TASK-011: Create migration for patients table with medical info, assigned_dietitian_id
+- [x] TASK-012: Create migration for visits table with patient_id, dietitian_id, status
+- [x] TASK-013: Create migration for visit_measurements table with vitals, BMI, blood pressure
+- [x] TASK-014: Create migration for billing table with patient_id, visit_id, payment tracking
+- [x] TASK-015: Create migration for refresh_tokens table with hashed tokens, expiration
+- [x] TASK-016: Create migration for api_keys table with hashed keys, usage tracking
+- [x] TASK-017: Create migration for audit_logs table with comprehensive tracking fields
+- [x] TASK-018: Create migration for documents table with polymorphic associations
+- [x] TASK-019: Create Sequelize models for all 12 tables at `/models/` (root level)
+- [x] TASK-020: Define all model associations in `/models/index.js`
+- [x] TASK-021: Create seeders for roles (ADMIN, DIETITIAN, ASSISTANT, VIEWER)
+- [x] TASK-022: Create seeders for permissions (40 permissions: `resource.action`)
+- [x] TASK-023: Create seeders for role_permissions (assign permissions to roles)
+- [x] TASK-024: Create seeder for default admin user (username: admin, password: Admin123!)
+- [x] TASK-025: Test migrations on both SQLite (✅ passed)
+- [x] TASK-026: Create database verification utility (`utils/verify-database.js`)
+
+**Completion Date**: 2026-01-09  
+**Branch**: V2  
+**Commits**:
+- `feat: MVP Foundation - Database migrations (TASK-006 to TASK-018)`
+- `feat: MVP Foundation - All 12 Sequelize models with associations (TASK-019 to TASK-020)`
+- `feat: MVP Foundation - Database seeders (TASK-021 to TASK-024)`
+- `feat: MVP Foundation - Database verification utility (TASK-026)`
+
+**Database Summary**:
+- ✅ 12 tables created (roles, users, permissions, role_permissions, patients, visits, visit_measurements, billing, refresh_tokens, api_keys, audit_logs, documents)
+- ✅ 4 roles seeded (ADMIN, DIETITIAN, ASSISTANT, VIEWER)
+- ✅ 40 permissions seeded (patients, visits, billing, users, documents, audit_logs, reports, exports, api_keys, system)
+- ✅ 91 role-permission mappings created (ADMIN: 40, DIETITIAN: 29, ASSISTANT: 10, VIEWER: 12)
+- ✅ Admin user created (username: admin, password: Admin123!)
+
+---
+
+## Phase 3: MVP Authentication & Security ⏳ PENDING
+
+**Goal**: Implement dual authentication system (JWT + API keys) with RBAC
+
+- [ ] TASK-027: Create JWT utility functions (`backend/src/auth/jwt.js`): sign, verify, refresh
+- [ ] TASK-028: Create authentication middleware (`backend/src/middleware/authenticate.js`)
+- [ ] TASK-029: Implement login endpoint with bcrypt validation, account lockout
+- [ ] TASK-030: Implement logout endpoint with refresh token invalidation
+- [ ] TASK-031: Implement token refresh endpoint with rotation strategy
+- [ ] TASK-032: Create API key generation service with bcrypt hashing
+- [ ] TASK-033: Implement API key authentication in authenticate middleware
+- [ ] TASK-034: Create RBAC middleware (`backend/src/middleware/rbac.js`) with 8 functions
+- [ ] TASK-035: Implement `requirePermission()` middleware
+- [ ] TASK-036: Implement `requireAnyPermission()` and `requireAllPermissions()` middleware
+- [ ] TASK-037: Implement `requireRole()` and `requireAnyRole()` middleware
+- [ ] TASK-038: Implement `requireOwnerOrPermission()` middleware
+- [ ] TASK-039: Implement `requireAssignedDietitian()` middleware for patient data
+- [ ] TASK-040: Create helper functions: `hasPermission()`, `hasRole()`, `isAdmin()`
+- [ ] TASK-041: Create auth routes (`/api/auth/login`, `/logout`, `/refresh`, `/api-keys`)
+- [ ] TASK-042: Test authentication flow: login → access token → refresh → API key
+
+---
+
+## Phase 4: MVP Core Infrastructure ⏳ PENDING
+
+**Goal**: Build supporting infrastructure (audit logging, error handling, rate limiting)
+
+- [ ] TASK-043 to TASK-058: Core infrastructure tasks (16 tasks)
+
+---
+
+## Phase 5-7: MVP API Endpoints ⏳ PENDING
+
+**Goal**: Implement patient, visit, and user management APIs
+
+- [ ] TASK-059 to TASK-090: API endpoint tasks (32 tasks)
+
+---
+
+## Phases 8-24: Beta & Production Features ⏳ PENDING
+
+**Goal**: Build complete production-ready system
+
+- [ ] TASK-091 to TASK-257: Billing, documents, frontend, testing, security, deployment (167 tasks)
+
+---
+
+## Quick Commands
+
+```bash
+# Database
+npm run db:migrate                  # Run all migrations
+npm run db:seed                     # Run all seeders
+node utils/verify-database.js       # Verify database integrity
+
+# Development
+cd backend && npm run dev           # Start backend server
+cd frontend && npm run dev          # Start frontend dev server
+
+# Testing
+npm test                            # Run all tests
+```
+
+---
+
+## Notes
+
+- **Default Admin Credentials**: username: `admin`, password: `Admin123!` ⚠️ Change before production!
+- **Database Location**: `backend/data/nutrivault.db` (SQLite for development)
+- **Models Location**: `/models/` (root level, not `/backend/src/models/`)
+- **Branch**: Currently working on `V2` branch
