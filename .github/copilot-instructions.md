@@ -55,3 +55,8 @@ The following instructions are only to be applied when performing a code review.
 - [ ] The folder name is lower case, with words separated by hyphens.
 - [ ] Any bundled assets (scripts, templates, data files) are referenced in the SKILL.md instructions.
 - [ ] Bundled assets are reasonably sized (under 5MB per file).
+
+
+## Plan file guide
+- Follow any plan file specific instructions stored in the /plan directory.
+

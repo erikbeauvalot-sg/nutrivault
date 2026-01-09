@@ -1,9 +1,10 @@
 require('dotenv').config();
+const path = require('path');
 
 module.exports = {
   development: {
     dialect: 'sqlite',
-    storage: './backend/data/nutrivault.db',
+    storage: path.join(__dirname, '..', 'backend', 'data', 'nutrivault.db'),
     logging: console.log,
     define: {
       timestamps: true,

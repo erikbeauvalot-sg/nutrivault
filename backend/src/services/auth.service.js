@@ -14,78 +14,128 @@ class AuthService {
    * @returns {Object} User object with tokens
    */
   async login(username, password) {
-    // Find user with role and permissions
-    const user = await db.User.findOne({
-      where: { username },
-      include: [
-        {
-          model: db.Role,
-          as: 'role',
-          include: [
-            {
-              model: db.Permission,
-              as: 'permissions',
-              through: { attributes: [] }
-            }
-          ]
-        }
-      ]
-    });
+    try {
+      console.log('🔐 LOGIN ATTEMPT:', { username, passwordLength: password?.length });
+      console.log('📁 DATABASE:', db.sequelize.config.storage || db.sequelize.config.database);
+      console.log('🔌 DB DIALECT:', db.sequelize.config.dialect);
+      
+      // First, try a simple query without associations
+      console.log('🔍 SIMPLE QUERY TEST...');
+      const simpleUser = await db.User.findOne({
+        where: { username }
+      });
+      console.log('   Simple query result:', simpleUser ? 'FOUND' : 'NOT FOUND');
+      
+      if (simpleUser) {
+        console.log('   Simple user data:', {
+          id: simpleUser.id,
+          username: simpleUser.username,
+          email: simpleUser.email,
+          role_id: simpleUser.role_id,
+          is_active: simpleUser.is_active
+        });
+      }
+      
+      // Find user with role and permissions
+      console.log('🔍 FULL QUERY WITH ASSOCIATIONS...');
+      const user = await db.User.findOne({
+        where: { username },
+        include: [
+          {
+            model: db.Role,
+            as: 'role',
+            include: [
+              {
+                model: db.Permission,
+                as: 'permissions',
+                through: { attributes: [] }
+              }
+            ]
+          }
+        ]
+      });
 
-    if (!user) {
-      throw new Error('Invalid credentials');
+      console.log('🔍 USER FOUND (with associations):', user ? 'YES' : 'NO');
+      if (user) {
+        console.log('   User ID:', user.id);
+        console.log('   Username:', user.username);
+        console.log('   Is Active:', user.is_active);
+        console.log('   Password Hash:', user.password_hash ? user.password_hash.substring(0, 20) + '...' : 'NULL');
+        console.log('   Role:', user.role?.name || 'NO ROLE');
+        console.log('   Permissions:', user.role?.permissions?.length || 0);
+      }
+
+      if (!user) {
+        console.log('❌ ERROR: User not found in database');
+        throw new Error('Invalid credentials');
+      }
+
+      // Check if account is active
+      if (!user.is_active) {
+        console.log('❌ ERROR: Account is not active');
+        throw new Error('Account is deactivated');
+      }
+
+      // Check if account is locked
+      if (user.locked_until && new Date(user.locked_until) > new Date()) {
+        const minutesRemaining = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
+        console.log('❌ ERROR: Account is locked until', user.locked_until);
+        throw new Error(`Account is locked. Try again in ${minutesRemaining} minutes`);
+      }
+
+      // Verify password
+      console.log('🔑 COMPARING PASSWORD...');
+      console.log('   Password provided:', password ? `"${password}"` : 'NULL/EMPTY');
+      console.log('   Hash in DB:', user.password_hash ? 'EXISTS' : 'NULL');
+      
+      const isValidPassword = await bcrypt.compare(password, user.password_hash);
+      
+      console.log('✓ BCRYPT RESULT:', isValidPassword);
+
+      if (!isValidPassword) {
+        console.log('❌ ERROR: Password comparison failed');
+        // Increment failed login attempts
+        await this.incrementFailedAttempts(user.id);
+        throw new Error('Invalid credentials');
+      }
+      
+      console.log('✅ PASSWORD VALID - Proceeding with login');
+
+      // Reset failed login attempts on successful login
+      await this.resetFailedAttempts(user.id);
+
+      // Update last login
+      await user.update({ last_login: new Date() });
+
+      // Generate token pair
+      const tokens = generateTokenPair(user);
+
+      // Store refresh token in database (hashed)
+      const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, 10);
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30); // 30 days from now
+
+      await db.RefreshToken.create({
+        user_id: user.id,
+        token_hash: refreshTokenHash,
+        expires_at: expiresAt
+      });
+
+      return {
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role.name,
+          permissions: user.role.permissions.map(p => p.code)
+        },
+        ...tokens
+      };
+    } catch (error) {
+      console.error('🔥 Login error:', error.message);
+      console.error('🔥 Stack:', error.stack);
+      throw error;
     }
-
-    // Check if account is active
-    if (!user.is_active) {
-      throw new Error('Account is deactivated');
-    }
-
-    // Check if account is locked
-    if (user.locked_until && new Date(user.locked_until) > new Date()) {
-      const minutesRemaining = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
-      throw new Error(`Account is locked. Try again in ${minutesRemaining} minutes`);
-    }
-
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
-
-    if (!isValidPassword) {
-      // Increment failed login attempts
-      await this.incrementFailedAttempts(user.id);
-      throw new Error('Invalid credentials');
-    }
-
-    // Reset failed login attempts on successful login
-    await this.resetFailedAttempts(user.id);
-
-    // Update last login
-    await user.update({ last_login: new Date() });
-
-    // Generate token pair
-    const tokens = generateTokenPair(user);
-
-    // Store refresh token in database (hashed)
-    const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, 10);
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 30); // 30 days from now
-
-    await db.RefreshToken.create({
-      user_id: user.id,
-      token_hash: refreshTokenHash,
-      expires_at: expiresAt
-    });
-
-    return {
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role.name,
-        permissions: user.role.permissions.map(p => p.code)
-      },
-      ...tokens
-    };
   }
 
   /**

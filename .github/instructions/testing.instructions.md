@@ -1,6 +1,6 @@
 ---
 description: 'Testing practices and guidelines for NutriVault, including server management for API and UI testing'
-applyTo: '**/*.test.js, **/*.test.ts, **/*.spec.js, **/*.spec.ts, **/test-*.sh, **/test-*.js'
+applyTo: '**'
 ---
 
 # Testing Instructions for NutriVault

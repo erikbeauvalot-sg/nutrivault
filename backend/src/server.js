@@ -24,14 +24,47 @@ app.get('/health', (req, res) => {
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
-// Patient routes (protected)
+// Patient routes (protected - RBAC enforced in routes file)
 const patientRoutes = require('./routes/patients');
-app.use('/api/patients', authenticate, requirePermission('patients.read'), patientRoutes);
+app.use('/api/patients', patientRoutes);
+
+// Visit routes (protected - RBAC enforced in routes file)
+const visitRoutes = require('./routes/visits');
+app.use('/api/visits', visitRoutes);
+
+// User routes (protected - RBAC enforced in routes file)
+const userRoutes = require('./routes/users');
+app.use('/api/users', userRoutes);
 
 // Basic error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);
-  res.status(err.status || 500).json({
+  
+  // Handle Sequelize validation errors
+  if (err.name === 'SequelizeValidationError') {
+    return res.status(400).json({
+      success: false,
+      error: 'Validation error',
+      details: err.errors.map(e => ({
+        field: e.path,
+        message: e.message
+      }))
+    });
+  }
+  
+  // Handle Sequelize unique constraint errors
+  if (err.name === 'SequelizeUniqueConstraintError') {
+    return res.status(400).json({
+      success: false,
+      error: 'Duplicate entry',
+      details: err.errors.map(e => ({
+        field: e.path,
+        message: `${e.path} already exists`
+      }))
+    });
+  }
+  
+  res.status(err.statusCode || err.status || 500).json({
     success: false,
     error: err.message || 'Internal Server Error'
   });
@@ -53,6 +86,8 @@ db.sequelize.sync()
       console.log(`✅ NutriVault POC server running on http://localhost:${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/health`);
       console.log(`👥 Patients API: http://localhost:${PORT}/api/patients`);
+      console.log(`📅 Visits API: http://localhost:${PORT}/api/visits`);
+      console.log(`👤 Users API: http://localhost:${PORT}/api/users`);
     });
   })
   .catch(err => {

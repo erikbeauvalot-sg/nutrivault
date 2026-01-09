@@ -111,6 +111,40 @@ const db = require('./models');
 
 **⚠️ Database commands MUST run from root directory**, not `/backend/`
 
+**⚠️ CRITICAL: Database Path Configuration**
+
+The database configuration in `/config/database.js` MUST use absolute paths with `path.join()` to avoid path resolution issues when the backend server runs from different directories.
+
+**❌ WRONG (relative path - breaks when running from `/backend/` directory):**
+```javascript
+module.exports = {
+  development: {
+    dialect: 'sqlite',
+    storage: './backend/data/nutrivault.db',  // ❌ Relative path
+    // ...
+  }
+}
+```
+
+**✅ CORRECT (absolute path using path.join):**
+```javascript
+const path = require('path');
+
+module.exports = {
+  development: {
+    dialect: 'sqlite',
+    storage: path.join(__dirname, '..', 'backend', 'data', 'nutrivault.db'),  // ✅ Absolute
+    // ...
+  }
+}
+```
+
+**Why this matters:**
+- Backend server runs from `/backend/` directory via `npm run dev`
+- Relative paths like `./backend/data/nutrivault.db` resolve to `backend/backend/data/nutrivault.db` (wrong!)
+- Using `path.join(__dirname, '..', 'backend', 'data', 'nutrivault.db')` creates absolute path from config file location
+- **Symptom:** Database queries execute but return no results; `db.sequelize.config.storage` is `undefined`
+
 ### 2. Backend Structure
 
 ```
@@ -1181,7 +1215,18 @@ docker-compose up --build
 
 ## Troubleshooting
 
+> **💡 Comprehensive Debugging Guide**: For detailed debugging strategies, proven diagnostic techniques, and lessons learned from real issues, see [`.github/instructions/lessons-learned.instructions.md`](.github/instructions/lessons-learned.instructions.md)
+
 ### Database Issues
+
+**Database queries return no results despite data existing:**
+```bash
+# Check if database path is configured correctly
+# Symptom: db.sequelize.config.storage is undefined
+# Solution: Use absolute paths in config/database.js
+# See: "CRITICAL: Database Path Configuration" section above
+# Reference: lessons-learned.instructions.md - "Sequelize Database Path Resolution"
+```
 
 **"Database locked" error (SQLite):**
 ```bash
@@ -1210,6 +1255,84 @@ const db = require('../../models'); // from backend/src/
 npm run db:seed:undo
 npm run db:seed
 ```
+
+**Sequelize Association Alias Errors (Critical):**
+
+⚠️ **These errors completely block authentication and all API calls**
+
+**Error symptoms:**
+- "Role is associated to User using an alias. You must use the 'as' keyword"
+- "Permission is associated to Role using an alias. You must use the 'as' keyword"  
+- All API endpoints returning 500 errors
+- Authentication failing with valid credentials
+- Server logs showing Sequelize association errors
+
+**Root cause:** Missing or incorrect `as` aliases in Sequelize `include` queries
+
+**❌ WRONG Pattern:**
+```javascript
+const user = await db.User.findOne({
+  where: { username },
+  include: [
+    { model: db.Role },                    // Missing 'as' alias
+    { 
+      model: db.Role, 
+      include: [{ model: db.Permission }]  // Missing 'as' alias
+    }
+  ]
+});
+// Property access: user.Role.Permissions (incorrect casing)
+```
+
+**✅ CORRECT Pattern:**
+```javascript
+const user = await db.User.findOne({
+  where: { username },
+  include: [
+    { 
+      model: db.Role, 
+      as: 'role',                          // Correct alias
+      include: [{ 
+        model: db.Permission, 
+        as: 'permissions'                  // Correct alias
+      }]
+    }
+  ]
+});
+// Property access: user.role.permissions (correct lowercase)
+```
+
+**Model Association Reference:**
+- User → Role: `as: 'role'` (singular, lowercase)
+- Role → Permission: `as: 'permissions'` (plural, lowercase)  
+- Patient → User: `as: 'assigned_dietitian'`
+- Visit → User: `as: 'dietitian'`  
+- Visit → Patient: `as: 'patient'`
+
+**Files commonly affected:**
+- `backend/src/services/auth.service.js` - login, token refresh
+- `backend/src/middleware/authenticate.js` - JWT/API key validation
+- `backend/src/middleware/rbac.js` - permission checks
+- `backend/src/controllers/authController.js` - authentication endpoints
+
+**Quick fix commands:**
+```bash
+# Find incorrect includes
+grep -r "model: db.Role" backend/src/
+grep -r "model: db.Permission" backend/src/
+grep -r "user\.Role" backend/src/
+grep -r "\.Permissions" backend/src/
+
+# Look for property access errors
+grep -r "user\.Role\." backend/src/
+grep -r "role\.Permissions" backend/src/
+```
+
+**Prevention checklist:**
+- ✅ Always use `as: 'alias'` in Sequelize includes
+- ✅ Use lowercase property names (user.role, not user.Role)  
+- ✅ Match aliases defined in model associations
+- ✅ Test authentication after any User/Role/Permission query changes
 
 ### Authentication Issues
 
