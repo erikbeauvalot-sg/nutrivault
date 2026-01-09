@@ -66,26 +66,40 @@
 
 ---
 
-## Phase 3: MVP Authentication & Security ⏳ PENDING
+## Phase 3: MVP Authentication & Security 🔄 IN PROGRESS
 
 **Goal**: Implement dual authentication system (JWT + API keys) with RBAC
 
-- [ ] TASK-027: Create JWT utility functions (`backend/src/auth/jwt.js`): sign, verify, refresh
-- [ ] TASK-028: Create authentication middleware (`backend/src/middleware/authenticate.js`)
-- [ ] TASK-029: Implement login endpoint with bcrypt validation, account lockout
-- [ ] TASK-030: Implement logout endpoint with refresh token invalidation
-- [ ] TASK-031: Implement token refresh endpoint with rotation strategy
-- [ ] TASK-032: Create API key generation service with bcrypt hashing
-- [ ] TASK-033: Implement API key authentication in authenticate middleware
-- [ ] TASK-034: Create RBAC middleware (`backend/src/middleware/rbac.js`) with 8 functions
-- [ ] TASK-035: Implement `requirePermission()` middleware
-- [ ] TASK-036: Implement `requireAnyPermission()` and `requireAllPermissions()` middleware
-- [ ] TASK-037: Implement `requireRole()` and `requireAnyRole()` middleware
-- [ ] TASK-038: Implement `requireOwnerOrPermission()` middleware
-- [ ] TASK-039: Implement `requireAssignedDietitian()` middleware for patient data
-- [ ] TASK-040: Create helper functions: `hasPermission()`, `hasRole()`, `isAdmin()`
-- [ ] TASK-041: Create auth routes (`/api/auth/login`, `/logout`, `/refresh`, `/api-keys`)
+- [x] TASK-027: Create JWT utility functions (`backend/src/auth/jwt.js`): sign, verify, refresh
+- [x] TASK-028: Create authentication middleware (`backend/src/middleware/authenticate.js`)
+- [x] TASK-029: Implement login endpoint with bcrypt validation, account lockout
+- [x] TASK-030: Implement logout endpoint with refresh token invalidation
+- [x] TASK-031: Implement token refresh endpoint with rotation strategy
+- [x] TASK-032: Create API key generation service with bcrypt hashing
+- [x] TASK-033: Implement API key authentication in authenticate middleware
+- [x] TASK-034: Create RBAC middleware (`backend/src/middleware/rbac.js`) with 8 functions
+- [x] TASK-035: Implement `requirePermission()` middleware
+- [x] TASK-036: Implement `requireAnyPermission()` and `requireAllPermissions()` middleware
+- [x] TASK-037: Implement `requireRole()` and `requireAnyRole()` middleware
+- [x] TASK-038: Implement `requireOwnerOrPermission()` middleware
+- [x] TASK-039: Implement `requireAssignedDietitian()` middleware for patient data
+- [x] TASK-040: Create helper functions: `hasPermission()`, `hasRole()`, `isAdmin()`
+- [x] TASK-041: Create auth routes (`/api/auth/login`, `/logout`, `/refresh`, `/api-keys`)
 - [ ] TASK-042: Test authentication flow: login → access token → refresh → API key
+
+**Completion Date**: In progress (2026-01-09)  
+**Branch**: V2  
+
+**Implementation Summary** (15/16 tasks complete):
+- ✅ JWT utilities with HS256, 30min access, 30day refresh tokens
+- ✅ Dual authentication: Bearer tokens + API keys (diet_ak_ prefix)
+- ✅ Authentication service: login, logout, refresh, API key management
+- ✅ Account lockout: 5 failed attempts = 30-minute lock
+- ✅ RBAC middleware: 8 authorization functions + 3 helpers
+- ✅ Authentication controller with express-validator
+- ✅ Auth routes: /api/auth/{login, logout, refresh, api-keys}
+- ✅ Server integration: Protected patient routes
+- ⏳ Testing pending (TASK-042)
 
 ---
 

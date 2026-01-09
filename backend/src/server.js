@@ -11,14 +11,22 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Import authentication and authorization middleware
+const authenticate = require('./middleware/authenticate');
+const { requirePermission } = require('./middleware/rbac');
+
 // Basic health check
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'NutriVault POC Server is running' });
 });
 
-// Patient routes (will be implemented)
+// Authentication routes (public)
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
+
+// Patient routes (protected)
 const patientRoutes = require('./routes/patients');
-app.use('/api/patients', patientRoutes);
+app.use('/api/patients', authenticate, requirePermission('patients.read'), patientRoutes);
 
 // Basic error handler
 app.use((err, req, res, next) => {
