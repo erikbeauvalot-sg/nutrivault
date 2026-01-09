@@ -26,6 +26,16 @@ export const getPatientById = async (id) => {
 };
 
 /**
+ * Get patient details with visits and measurements for graphical display
+ * @param {string} id - Patient UUID
+ * @returns {Promise<object>} Patient object with visits and measurements
+ */
+export const getPatientDetails = async (id) => {
+  const response = await api.get(`/api/patients/${id}/details`);
+  return response.data;
+};
+
+/**
  * Create new patient
  * @param {object} patientData - Patient information
  * @returns {Promise<object>} Created patient

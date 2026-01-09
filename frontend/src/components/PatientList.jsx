@@ -1,4 +1,4 @@
-function PatientList({ patients, loading, onEdit, onDelete }) {
+function PatientList({ patients, loading, onEdit, onDelete, onView }) {
   if (loading) {
     return (
       <div className="patients-list">
@@ -39,7 +39,14 @@ function PatientList({ patients, loading, onEdit, onDelete }) {
             </div>
             <div className="patient-actions">
               <button
-                className="btn btn-primary btn-sm"
+                className="btn btn-info btn-sm me-1"
+                onClick={() => onView(patient)}
+                title="View patient details and charts"
+              >
+                👁️ View
+              </button>
+              <button
+                className="btn btn-primary btn-sm me-1"
                 onClick={() => onEdit(patient)}
               >
                 ✏️ Edit

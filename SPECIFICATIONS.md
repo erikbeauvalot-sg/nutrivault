@@ -619,7 +619,9 @@ throw new AppError('Invalid input data', 400, 'VALIDATION_ERROR', validationDeta
 
 **Features:**
 - ✅ Complete billing (invoices, payments, reports)
-- ✅ Advanced visit records (measurements, recommendations)
+- ✅ Advanced visit records (measurements with full history tracking, recommendations)
+- ✅ **Measurement history tracking** - All measurement fields optional, append-only history
+- ✅ **Patient detail dashboard** - Graphical view of patient data with measurement charts
 - ✅ File uploads (documents, 10MB max)
 - ✅ Comprehensive audit logging
 - ✅ API keys for programmatic access
@@ -676,7 +678,7 @@ throw new AppError('Invalid input data', 400, 'VALIDATION_ERROR', validationDeta
 4. **RolePermission** - Many-to-many junction table
 5. **Patient** - Patient demographics and medical info
 6. **Visit** - Patient appointments/consultations
-7. **VisitMeasurement** - Vitals, BMI, blood pressure per visit
+7. **VisitMeasurement** - Vitals, BMI, blood pressure per visit (Beta: append-only history tracking)
 8. **Billing** - Invoices and payments
 9. **Document** - Polymorphic file uploads (patients, visits, users)
 10. **AuditLog** - Comprehensive audit trail
@@ -691,7 +693,7 @@ Role ←────> Permission (many-to-many via RolePermission)
 Patient ───> User (assigned_dietitian_id)
 Visit ─────> Patient (many-to-one)
 Visit ─────> User (dietitian_id)
-Visit ─────> VisitMeasurement (one-to-many)
+Visit ─────> VisitMeasurement (one-to-many) [Beta: supports history tracking]
 Billing ───> Patient (many-to-one)
 Billing ───> Visit (one-to-one or one-to-many)
 Document ──> User (created_by, polymorphic: resource_type + resource_id)
@@ -929,6 +931,7 @@ DELETE /api/users/:id                // Deactivate user (soft delete)
 ```javascript
 GET    /api/patients                 // List patients (filtered by role)
 GET    /api/patients/:id             // Get patient details
+GET    /api/patients/:id/details     // Get patient with visits and measurements (Beta: graphical dashboard)
 POST   /api/patients                 // Create patient
 PUT    /api/patients/:id             // Update patient
 DELETE /api/patients/:id             // Deactivate patient (soft delete)
@@ -945,7 +948,7 @@ GET    /api/visits/:id               // Get visit details
 POST   /api/visits                   // Create visit
 PUT    /api/visits/:id               // Update visit
 DELETE /api/visits/:id               // Delete visit
-POST   /api/visits/:id/measurements  // Add measurements
+POST   /api/visits/:id/measurements  // Add measurements (Beta: creates history record, all fields optional)
 POST   /api/visits/:id/documents     // Upload documents
 GET    /api/visits/:id/documents     // Get visit documents
 ```

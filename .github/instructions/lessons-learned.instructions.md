@@ -251,39 +251,338 @@ console.log('JWT payload:', payload); // Only has: sub, username, role_id, exp, 
 
 ## Development Workflow
 
-### Issue 5: Server Restart Requirements
+### Issue 5: Sequelize Attributes on Nested Many-to-Many Includes
 
-**Problem**: Code changes not taking effect; forgot to restart development server.
+**Problem**: 500 Internal Server Error when fetching users with role and permissions associations. Error occurs during `User.findByPk()` with nested includes.
 
-**Solution**: Use `nodemon` for auto-reload during development.
+**Root Cause**: When including a many-to-many relationship (e.g., Role → Permissions through RolePermission), specifying `attributes` on the nested model causes Sequelize to generate invalid SQL for SQLite. The attributes constraint is applied incorrectly to the junction table columns.
 
-**Package.json Scripts**:
-```json
-{
-  "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js"  // ← Auto-reloads on file changes
-  }
+**Example of Wrong Code**:
+```javascript
+// ❌ WRONG - attributes on nested many-to-many relationship
+const user = await User.findByPk(userId, {
+  include: [{
+    model: Role,
+    as: 'role',
+    include: [{
+      model: Permission,
+      as: 'permissions',
+      attributes: ['id', 'name', 'description'],  // ← CAUSES 500 ERROR
+      through: { attributes: [] }
+    }]
+  }]
+});
+```
+
+**Solution**: Remove `attributes` from nested models in many-to-many relationships. Sequelize will fetch all attributes by default, which is safe:
+
+```javascript
+// ✅ CORRECT - no attributes on nested many-to-many relationship
+const user = await User.findByPk(userId, {
+  include: [{
+    model: Role,
+    as: 'role',
+    attributes: ['id', 'name', 'description'],  // ← OK for direct relationships
+    include: [{
+      model: Permission,
+      as: 'permissions',
+      // No attributes specified - Sequelize handles this correctly
+      through: { attributes: [] }
+    }]
+  }]
+});
+```
+
+**Prevention**:
+- Never specify `attributes` on the nested model in many-to-many relationships
+- Only specify `attributes` on direct relationships (belongsTo, hasOne, hasMany without junction table)
+- Test all association queries that return 500 errors - this is often the culprit
+
+**Files Fixed**:
+- `backend/src/services/user.service.js` line 351 in updateUser()
+- Previously fixed same issue in getUsers() and getUserById()
+
+**Reference**: lessons-learned.instructions.md - "Sequelize Association Alias Errors" section
+
+---
+
+### Issue 6: express-validator Optional Fields with Empty Strings
+
+**Problem**: Validation fails with "Next visit date must be a valid ISO 8601 date" when creating/updating visits without selecting a next_visit_date field. The HTML datetime-local input sends an empty string `""` when no date is selected.
+
+**Root Cause**: express-validator's `.optional()` method only skips validation if the field is `undefined`. Empty strings `""` from form inputs are still considered "present" and are validated. The validation then fails because an empty string is not a valid ISO 8601 date.
+
+```javascript
+// ❌ WRONG - treats empty string as present
+body('next_visit_date')
+  .optional()  // Skips only undefined
+  .isISO8601()
+  .withMessage('Next visit date must be a valid ISO 8601 date')
+// When form sends: next_visit_date = ""
+// Result: Validation fails (empty string is not ISO 8601)
+```
+
+**Solution**: Use `.optional({ checkFalsy: true })` to skip validation for all falsy values including empty strings:
+
+```javascript
+// ✅ CORRECT - skips empty strings and other falsy values
+body('next_visit_date')
+  .optional({ checkFalsy: true })  // Skips "", null, false, 0, undefined
+  .isISO8601()
+  .withMessage('Next visit date must be a valid ISO 8601 date')
+// When form sends: next_visit_date = ""
+// Result: Validation skipped, field passes through
+```
+
+**Prevention**:
+- Always use `.optional({ checkFalsy: true })` for form fields that can be empty strings
+- Remember: HTML form inputs send empty strings `""`, not `undefined`
+- Test optional fields with empty values during development
+- Frontend should also convert empty strings to `null` when submitting data:
+  ```javascript
+  next_visit_date: data.next_visit_date && data.next_visit_date.trim() 
+    ? new Date(data.next_visit_date).toISOString() 
+    : null
+  ```
+
+**Files Fixed**:
+- `backend/src/routes/visits.js` - Lines 90 and 142 (both create and update validations)
+- `frontend/src/components/VisitModal.jsx` - Line 152 (frontend conversion)
+
+**Reference**: express-validator documentation on `.optional()` modifier - note the `checkFalsy` option.
+
+---
+
+### Issue 7: API Response Structure Inconsistency Between Endpoints
+
+**Problem**: Dropdown lists in forms fail silently when the API response structure doesn't match frontend expectations. The dietitian dropdown in VisitModal showed no options even though the backend was returning 3 users.
+
+**Root Cause**: Different API endpoints return different response structures:
+- Some endpoints return: `{ success: true, data: users }` (flat)
+- Some endpoints return: `{ success: true, data: { data: users, pagination: {...} } }` (nested)
+
+Frontend code was inconsistent in how it extracted data, leading to silent failures.
+
+**Example of Wrong Code**:
+```javascript
+// ❌ WRONG - assumes flat structure, doesn't work with nested
+const response = await userService.getDietitians();
+const data = response.data || response;  // Extracts entire response object instead of array
+setDietitians(Array.isArray(data) ? data : []);  // data is not array, so [] is set
+```
+
+**Correct Pattern**:
+```javascript
+// ✅ CORRECT - handles nested structure with optional chaining
+const response = await userService.getDietitians();
+const data = response.data?.data || response.data || [];  // Extract array from nested structure
+setDietitians(Array.isArray(data) ? data : []);
+```
+
+**Prevention**:
+1. **Standardize API response structure** across all endpoints:
+   ```javascript
+   // CONSISTENT: All endpoints should follow this structure
+   res.json({
+     success: true,
+     data: results,  // For single endpoint, not nested
+     pagination: { ... }  // Only if paginated
+   });
+   ```
+
+2. **Frontend extraction helper** to handle both cases:
+   ```javascript
+   // Utility function
+   const extractDataFromResponse = (response) => {
+     // Try nested structure first
+     if (response.data?.data) return response.data.data;
+     // Fallback to flat structure
+     if (Array.isArray(response.data)) return response.data;
+     // Last resort
+     return response;
+   };
+   ```
+
+3. **Document API response contracts** in README or API docs
+
+4. **Test API responses in browser DevTools** before integrating:
+   ```javascript
+   // In browser console
+   const response = await fetch('/api/endpoint').then(r => r.json());
+   console.log('Response structure:', response);  // See actual structure
+   console.log('Data location:', response.data?.data || response.data);
+   ```
+
+**Lesson**: Silent failures are worse than loud errors. When data doesn't appear:
+- Check browser console for errors
+- Log API response structure: `console.log('Response:', response)`
+- Verify data extraction: `console.log('Extracted data:', data)`
+- Test with `Array.isArray()` before iterating
+
+**Files Fixed**:
+- `frontend/src/components/VisitModal.jsx` - Line 128 (fetchDietitians function)
+
+**Reference**: This issue caused the dietitian dropdown to remain empty despite backend returning 3 users correctly.
+
+---
+
+### Issue 8: Authorization Barriers at API Level
+
+**Problem**: When creating a dropdown list for visit assignment, only the admin user appeared as an option. The API had 3 users (admin, dietitian, dietitian1) but the dropdown was empty except for the current user fallback.
+
+**Root Cause**: Two-part issue:
+1. Frontend was calling `/api/users` endpoint which required ADMIN role
+2. Non-admin users (DIETITIAN, ASSISTANT) got 403 Forbidden
+3. Frontend error handler fell back to only showing current user
+
+**Solution**: Created a dedicated public endpoint for fetching dietitians:
+
+**Backend Changes**:
+```javascript
+// ✅ NEW ENDPOINT: /api/users/list/dietitians
+// Only requires authentication, not ADMIN role
+router.get(
+  '/list/dietitians',
+  authenticate,  // ← Any authenticated user allowed
+  userController.getDietitians
+);
+```
+
+**Service Method**:
+```javascript
+async function getDietitians() {
+  // Query with Op.in for filtering by role name
+  const dietitians = await User.findAll({
+    where: { is_active: true },
+    include: [{
+      model: Role,
+      as: 'role',
+      where: { name: { [Op.in]: ['DIETITIAN', 'ADMIN'] } },
+      required: true  // INNER JOIN - only users with matching role
+    }]
+  });
+  return dietitians;
 }
 ```
 
-**When Auto-Reload Doesn't Work**:
-- Changes to `.env` files (requires manual restart)
-- Changes to `package.json` dependencies (run `npm install` first)
-- Changes to `/models/index.js` associations (Sequelize caches these)
-- Some module-level code that executes only once on require
+**Frontend Changes**:
+```javascript
+// ✅ Use new public endpoint instead of admin-only one
+const response = await userService.getDietitians();
+const data = response.data?.data || [];
+setDietitians(data);
+```
 
-**Verification**: After saving changes, check terminal for nodemon restart message:
+**Prevention**:
+1. **Consider authorization level when designing endpoints**
+   - Full user CRUD: `/api/users` (ADMIN only) ✅
+   - Specific lists: `/api/users/list/dietitians` (authenticated only) ✅
+   - Public data: `/api/public/roles` (no auth) ✅
+
+2. **Create role-specific list endpoints** for common dropdowns:
+   - `/api/users/list/dietitians` - For assigning visits
+   - `/api/users/list/supervisors` - For assigning supervisors
+   - `/api/patients/list/active` - For patient dropdowns
+
+3. **Don't reuse admin endpoints** for general features
+
+4. **Test with different roles** before considering dropdown complete:
+   - [ ] Test as ADMIN - should see all options
+   - [ ] Test as DIETITIAN - should see dietitians + self
+   - [ ] Test as ASSISTANT - should see only dietitians
+   - [ ] Test as VIEWER - should see only dietitians
+
+**Files Created**:
+- `backend/src/controllers/userController.js` - Added `getDietitians()` method
+- `backend/src/services/user.service.js` - Added `getDietitians()` service
+- `backend/src/routes/users.js` - Added `/list/dietitians` route (before `/:id` route)
+- `frontend/src/services/userService.js` - Added `getDietitians()` method
+
+**Also Created**:
+- `backend/src/fix-dietitian-role.js` - One-time cleanup script when dietitian had wrong role
+
+**Reference**: Remember that with includes and where clauses on associated models, Sequelize implicitly does INNER JOIN with `required: true`. Specify `required: false` for LEFT JOIN if needed.
+
+---
+
+### Issue 9: Sequelize Op.in Operator Syntax
+
+**Problem**: When filtering by multiple values in a where clause, using array syntax `where: { name: ['VALUE1', 'VALUE2'] }` doesn't work in Sequelize. Query returns 0 results silently.
+
+**Root Cause**: Sequelize requires explicit operators for array conditions. The `Op.in` operator must be used to generate SQL `IN (...)` clauses.
+
+**Wrong Code**:
+```javascript
+// ❌ WRONG - array syntax doesn't work in Sequelize where clauses
+const users = await User.findAll({
+  include: [{
+    model: Role,
+    as: 'role',
+    where: {
+      name: ['DIETITIAN', 'ADMIN']  // ← Doesn't work!
+    }
+  }]
+});
+// Result: Returns 0 users (silently fails)
 ```
-[nodemon] restarting due to changes...
-[nodemon] starting `node src/server.js`
+
+**Correct Code**:
+```javascript
+// ✅ CORRECT - use Op.in operator
+const { Op } = require('sequelize');
+
+const users = await User.findAll({
+  include: [{
+    model: Role,
+    as: 'role',
+    where: {
+      name: { [Op.in]: ['DIETITIAN', 'ADMIN'] }  // ← Works!
+    }
+  }]
+});
+// Result: Returns users with DIETITIAN or ADMIN roles
 ```
+
+**Other Common Operators**:
+```javascript
+// Comparison operators
+where: { age: { [Op.gt]: 18 } }        // >
+where: { age: { [Op.gte]: 18 } }       // >=
+where: { age: { [Op.lt]: 65 } }        // <
+where: { age: { [Op.lte]: 65 } }       // <=
+where: { age: { [Op.eq]: 25 } }        // =
+where: { age: { [Op.ne]: 25 } }        // !=
+
+// String operators
+where: { name: { [Op.like]: '%john%' } }        // LIKE
+where: { name: { [Op.iLike]: '%john%' } }       // ILIKE (case-insensitive)
+where: { name: { [Op.startsWith]: 'john' } }    // Starts with
+where: { name: { [Op.endsWith]: 'john' } }      // Ends with
+
+// Array operators
+where: { id: { [Op.in]: [1, 2, 3] } }          // IN (...)
+where: { id: { [Op.notIn]: [1, 2, 3] } }       // NOT IN (...)
+
+// Range operators
+where: { age: { [Op.between]: [18, 65] } }     // BETWEEN
+```
+
+**Prevention**:
+- Always import `Op` from sequelize: `const { Op } = require('sequelize')`
+- Remember: **When using arrays in where clauses, use `Op.in` or `Op.notIn`**
+- Test queries that filter by multiple values to ensure they return expected results
+- Add logging to see how many records were returned
+
+**Files Fixed**:
+- `backend/src/services/user.service.js` - Line 576 in `getDietitians()` method
+
+**Reference**: [Sequelize Operators Documentation](https://sequelize.org/docs/v6/core-concepts/model-querying-basics/#operators)
 
 ---
 
 ## Testing Strategy
 
-### Issue 6: Isolating Logic vs Integration Testing
+### Issue 10: Isolating Logic vs Integration Testing
 
 **Problem**: Couldn't determine if authentication logic was broken or if integration with database was the issue.
 
@@ -335,7 +634,7 @@ authService.login('admin', 'Admin123!')
 
 ---
 
-### Issue 7: Testing with Running Servers
+### Issue 11: Testing with Running Servers
 
 **Problem**: Tests that require backend and/or frontend servers running can interfere with development workflow if servers are stopped/restarted automatically.
 
@@ -423,7 +722,7 @@ console.log('✅ LOGIN SUCCESSFUL:', { userId: user.id, tokenType: 'JWT' });
 
 ## Git & Version Control
 
-### Issue 6: Committing Fixes Properly
+### Issue 12: Committing Fixes Properly
 
 **Good Practice**:
 ```bash
@@ -450,6 +749,207 @@ git commit -m "fix: Correct Sequelize association aliases and database path
 
 ---
 
+### Issue 13: Soft Delete Default Behavior Confusion
+
+**Problem**: Users were deleted (soft deleted) but still appeared in the user list with an "Inactive" status. Users expected deleted items to disappear from the list.
+
+**Root Cause**: Soft delete pattern uses `is_active = false` instead of physically removing records (good for data retention and audit trails). However, the `getUsers()` service didn't filter out inactive users by default. The filter was optional - it only applied if explicitly specified by the frontend.
+
+```javascript
+// ❌ WRONG - Shows both active AND inactive users unless explicitly filtered
+if (filters.is_active !== undefined) {
+  whereClause.is_active = filters.is_active;
+}
+// Result: Deleted users still appear in list (confusing UX)
+```
+
+**Solution**: Default to showing only active users. Only show inactive users if explicitly filtered for:
+
+```javascript
+// ✅ CORRECT - Default sensible behavior
+if (filters.is_active !== undefined && filters.is_active !== '') {
+  whereClause.is_active = filters.is_active === 'true' || filters.is_active === true;
+} else {
+  // Default: only show active users unless explicitly filtering for inactive
+  whereClause.is_active = true;
+}
+// Result: Deleted users disappear from list as expected; admin can filter to see inactive
+```
+
+**Prevention**:
+- **Think about defaults**: When implementing optional filters, consider what behavior users expect by default
+- **Soft delete needs special handling**: The is_active pattern requires explicit filtering decisions at the query level
+- **UI/UX alignment**: Make sure the query behavior matches what the UI displays (no confusing "zombie" records)
+- **Allow admin access to soft-deleted**: Still allow admins to filter/view inactive records for recovery or audit purposes
+
+**Key Insight**: The code technically "worked" (delete was executed, audit was logged), but the UX was confusing because inactive records remained visible. This is a subtle bug where functionality works but behavior doesn't match user expectations.
+
+**Files Fixed**:
+- `/backend/src/services/user.service.js` - Modified getUsers() to default `is_active = true`
+- Deleted users now disappear from list by default
+- Admins can still filter to view/recover inactive users
+
+**Testing**:
+- Delete a user → user should disappear from list immediately
+- Frontend should refresh list after delete → user gone
+- Admin can filter by "Inactive" status to see deleted users
+
+**Reference**: Similar issues likely in `getPatients()`, `getVisits()` - review all soft delete queries for default behavior consistency.
+
+---
+
+### Issue 14: Inconsistent Data Extraction from Single-Resource API Responses
+
+**Problem**: When viewing a visit detail page, the page showed no data even though the API request succeeded. The visit modal appeared but was empty.
+
+**Root Cause**: Inconsistent API response structure across endpoints:
+- List endpoints return: `{ success: true, data: [...] }`
+- Detail endpoints return: `{ success: true, data: {...} }`
+
+Frontend code for detail fetch did:
+```javascript
+// ❌ WRONG - extracts wrong level
+const response = await visitService.getVisitById(visitId);
+setSelectedVisit(response.data);  // Gets { success: true, data: {...} } instead of the visit
+```
+
+This passed the entire response object (with `success` and `data` properties) to the modal instead of just the visit object.
+
+**Solution**: Extract the nested data property for single-resource responses:
+
+```javascript
+// ✅ CORRECT - handles nested structure
+const response = await visitService.getVisitById(visitId);
+const visitData = response.data.data || response.data;  // Gets the actual visit object
+setSelectedVisit(visitData);
+```
+
+**Pattern Discovered**: The inconsistency comes from the backend response structure:
+
+```javascript
+// Backend controller - detail endpoint
+res.json({
+  success: true,
+  data: visit  // ← Single object, not array
+});
+
+// Backend controller - list endpoint  
+res.json({
+  success: true,
+  data: result.visits,  // ← Array of objects
+  pagination: {...}
+});
+```
+
+Both have a `data` property, but:
+- List: `response.data.data` = array of items
+- Detail: `response.data.data` = single item
+
+**Prevention**:
+1. **Always verify API response structure** in browser DevTools Network tab
+2. **Create consistent response wrapper** - decide: should single-resource responses have nested `data` or not?
+3. **Test data extraction** with actual responses before integration
+4. **Use optional chaining** to handle both structures: `response.data?.data || response.data`
+5. **Document response contracts** - make it explicit what structure each endpoint returns
+
+**Affected Endpoints**:
+- `GET /api/visits/:id` - Fixed in VisitsPage.jsx
+- Likely affects other detail pages: Patients, Users, etc.
+- Should standardize across all single-resource endpoints
+
+**Files Fixed**:
+- `/frontend/src/pages/VisitsPage.jsx`:
+  - `handleViewClick()` - Extract `response.data.data` 
+  - `handleEditClick()` - Extract `response.data.data`
+
+**Testing**:
+- Click "View" on a visit → modal should populate with visit data
+- Click "Edit" on a visit → modal should populate with visit data
+- Check browser console → see actual API response structure
+
+**Lesson**: API response structure inconsistency is a **silent failure** - the request succeeds but data doesn't appear. Always inspect actual responses, not assumptions about structure.
+
+**Reference**: This matches Issue 7 pattern from earlier sessions - "API Response Structure Inconsistency Between Endpoints". Need to standardize all API responses for consistency.
+
+---
+
+### Issue 15: Validation Constraints Blocking Legitimate Functionality
+
+**Problem**: Dashboard displayed "400 Bad Request" errors when trying to load. Network tab showed:
+```
+GET /api/visits?limit=1000 400
+GET /api/users?limit=1000 400
+```
+
+Dashboard statistics wouldn't display, console showed validation error messages.
+
+**Root Cause**: Backend query parameter validation had overly restrictive constraints:
+- `limit` parameter limited to `max: 100`
+- Dashboard required `limit: 1000` to fetch all records for statistics calculation
+- Express-validator middleware rejected the request with 400 status
+- Validation error message: "Limit must be between 1 and 100"
+
+**Affected Code**:
+- `/backend/src/routes/visits.js` line 215: `query('limit').isInt({ min: 1, max: 100 })`
+- `/backend/src/routes/users.js` line 179: `query('limit').isInt({ min: 1, max: 100 })`
+
+**Solution**: Increased validation constraint to accommodate dashboard requirements:
+
+```javascript
+// ❌ WRONG - Too restrictive
+query('limit')
+  .optional()
+  .isInt({ min: 1, max: 100 })
+  .withMessage('Limit must be between 1 and 100'),
+
+// ✅ CORRECT - Allows dashboard to fetch all records
+query('limit')
+  .optional()
+  .isInt({ min: 1, max: 1000 })
+  .withMessage('Limit must be between 1 and 1000'),
+```
+
+**Why This Happened**: Validation constraints were set conservatively during initial implementation without considering actual use cases. The `max: 100` was reasonable for typical API pagination but didn't account for dashboard needing to fetch all records at once for statistics.
+
+**Prevention**:
+1. **Consider all use cases when setting constraints**: Think about admin dashboards, reports, exports
+2. **Balance security with functionality**: Higher limits are acceptable if backed by proper authentication/authorization
+3. **Document constraint reasoning**: Add comments explaining why limits are set to specific values
+4. **Test with realistic data loads**: Use actual expected data volumes during testing
+5. **Monitor large requests**: Consider rate limiting or request timeouts if performance becomes an issue
+
+**Alternative Solutions** (for future optimization):
+- **Option A (Implemented)**: Increase limit to 1000 - simple, immediate fix
+- **Option B**: Create dedicated stats endpoints (e.g., `/api/visits/stats/count`) - more efficient for just counts
+- **Option C**: Implement pagination in dashboard - more scalable for large datasets
+- **Option D**: Cache aggregated statistics - best for frequently accessed stats
+
+**Example of Better Documentation**:
+```javascript
+// Dashboard needs all records to calculate statistics
+// Set to 1000 to accommodate typical deployment sizes
+// If larger datasets needed, implement stats caching or dedicated endpoints
+query('limit')
+  .optional()
+  .isInt({ min: 1, max: 1000 })  // ← Document the 'why'
+  .withMessage('Limit must be between 1 and 1000'),
+```
+
+**Testing After Fix**:
+- ✅ Dashboard loads without 400 errors
+- ✅ Visits statistics display correctly
+- ✅ User count displays correctly
+- ✅ Multiple concurrent requests with limit=1000 work
+- ✅ Browser console shows no validation errors
+
+**Files Fixed**:
+- `/backend/src/routes/visits.js` line 215
+- `/backend/src/routes/users.js` line 179
+
+**Reference**: This is a validation constraint mismatch issue - different from validation logic bugs (checkFalsy, expressions) or database path issues. Common pattern when constraints are set too conservatively without considering all client requirements.
+
+---
+
 ## Summary of Key Takeaways
 
 1. **Always use absolute paths** in configuration files using `path.join(__dirname, ...)`
@@ -466,6 +966,14 @@ git commit -m "fix: Correct Sequelize association aliases and database path
 12. **Always inspect actual API response structure** - don't assume it matches expectations
 13. **Store complete data from API responses** - don't reconstruct from limited JWT payloads
 14. **Test with fresh browser storage** - clear localStorage/sessionStorage to catch bugs
+15. **Soft delete requires explicit default behavior** - Set sensible defaults for optional filters (e.g., hide inactive by default)
+16. **UX bugs are real bugs** - Code that technically works but confuses users needs fixing
+17. **Admin always needs access to soft-deleted records** - Allow filtering/viewing for recovery and audit purposes
+18. **Extract single-resource responses correctly** - Use `response.data?.data || response.data` for detail endpoints
+19. **Silent failures are the worst** - When data doesn't appear, check if extraction is correct
+20. **Standardize API response structure** - Consistent response format prevents bugs across all features
+21. **Set validation constraints with all use cases in mind** - Consider dashboards, reports, exports, not just typical pagination
+22. **Document why validation limits are set** - Add comments explaining constraint reasoning
 
 ---
 

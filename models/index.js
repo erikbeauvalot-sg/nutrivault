@@ -91,11 +91,12 @@ db.User.hasMany(db.Visit, {
 });
 
 // VisitMeasurement - Visit relationship
+// Beta feature: Changed from hasOne to hasMany to support measurement history
 db.VisitMeasurement.belongsTo(db.Visit, {
   foreignKey: 'visit_id',
   as: 'visit'
 });
-db.Visit.hasOne(db.VisitMeasurement, {
+db.Visit.hasMany(db.VisitMeasurement, {
   foreignKey: 'visit_id',
   as: 'measurements'
 });

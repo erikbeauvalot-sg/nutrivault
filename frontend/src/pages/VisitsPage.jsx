@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import visitService from '../services/visitService';
 import { getPatients } from '../services/patientService';
+import VisitModal from '../components/VisitModal';
 
 const VisitsPage = () => {
   const { user } = useAuth();
@@ -24,6 +25,7 @@ const VisitsPage = () => {
     limit: 20
   });
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
+  const [viewMode, setViewMode] = useState('table'); // 'table' or 'timeline'
 
   useEffect(() => {
     fetchPatients();
@@ -73,6 +75,50 @@ const VisitsPage = () => {
     }
   };
 
+  const handleCreateClick = () => {
+    setSelectedVisit(null);
+    setModalMode('create');
+    setShowModal(true);
+  };
+
+  const handleViewClick = async (visitId) => {
+    try {
+      console.log('👁️ VIEW VISIT:', visitId);
+      const response = await visitService.getVisitById(visitId);
+      console.log('👁️ VISIT RESPONSE:', response);
+      const visitData = response.data.data || response.data;
+      console.log('👁️ VISIT DATA EXTRACTED:', visitData);
+      setSelectedVisit(visitData);
+      setModalMode('view');
+      setShowModal(true);
+    } catch (err) {
+      console.error('❌ Error fetching visit:', err);
+      alert(err.response?.data?.error || 'Failed to load visit');
+    }
+  };
+
+  const handleEditClick = async (visitId) => {
+    try {
+      const response = await visitService.getVisitById(visitId);
+      const visitData = response.data.data || response.data;
+      setSelectedVisit(visitData);
+      setModalMode('edit');
+      setShowModal(true);
+    } catch (err) {
+      console.error('Error fetching visit:', err);
+      alert(err.response?.data?.error || 'Failed to load visit');
+    }
+  };
+
+  const handleModalSave = () => {
+    fetchVisits();
+  };
+
+  const handleModalHide = () => {
+    setShowModal(false);
+    setSelectedVisit(null);
+  };
+
   const getStatusBadge = (status) => {
     const variants = {
       SCHEDULED: 'info',
@@ -106,9 +152,27 @@ const VisitsPage = () => {
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1>📅 Visits</h1>
-          <Button variant="primary" size="lg">
-            Create Visit (Coming Soon)
-          </Button>
+          <div>
+            <Button
+              variant={viewMode === 'table' ? 'primary' : 'outline-primary'}
+              size="lg"
+              className="me-2"
+              onClick={() => setViewMode('table')}
+            >
+              📋 Table View
+            </Button>
+            <Button
+              variant={viewMode === 'timeline' ? 'primary' : 'outline-primary'}
+              size="lg"
+              className="me-2"
+              onClick={() => setViewMode('timeline')}
+            >
+              ⏱️ Timeline View
+            </Button>
+            <Button variant="primary" size="lg" onClick={handleCreateClick}>
+              Create Visit
+            </Button>
+          </div>
         </div>
 
         {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
@@ -178,126 +242,235 @@ const VisitsPage = () => {
           </Card.Body>
         </Card>
 
-        {/* Visits Table */}
-        <Card>
-          <Card.Body>
-            {loading ? (
-              <div className="text-center py-5">
-                <Spinner animation="border" variant="primary" />
-                <p className="mt-3">Loading visits...</p>
-              </div>
-            ) : visits.length === 0 ? (
-              <div className="text-center py-5">
-                <h3>No visits found</h3>
-                <p className="text-muted">Try adjusting your filters or create a new visit</p>
-              </div>
-            ) : (
-              <>
-                <div className="table-responsive">
-                  <Table striped bordered hover>
-                    <thead>
-                      <tr>
-                        <th>Date & Time</th>
-                        <th>Patient</th>
-                        <th>Dietitian</th>
-                        <th>Type</th>
-                        <th>Status</th>
-                        <th>Duration</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visits.map(visit => (
-                        <tr key={visit.id}>
-                          <td>
-                            <div>{formatDate(visit.visit_date)}</div>
-                            <small className="text-muted">{formatTime(visit.visit_date)}</small>
-                          </td>
-                          <td>
-                            {visit.patient ? (
-                              <>
-                                <div>{visit.patient.first_name} {visit.patient.last_name}</div>
-                                <small className="text-muted">{visit.patient.email}</small>
-                              </>
-                            ) : '-'}
-                          </td>
-                          <td>
-                            {visit.dietitian ? (
-                              <>
-                                <div>{visit.dietitian.first_name} {visit.dietitian.last_name}</div>
-                                <small className="text-muted">{visit.dietitian.username}</small>
-                              </>
-                            ) : '-'}
-                          </td>
-                          <td>{visit.visit_type || '-'}</td>
-                          <td>{getStatusBadge(visit.status)}</td>
-                          <td>{visit.duration_minutes ? `${visit.duration_minutes} min` : '-'}</td>
-                          <td>
-                            <Button
-                              variant="outline-primary"
-                              size="sm"
-                              className="me-2"
-                              disabled
-                            >
-                              View
-                            </Button>
-                            {canEdit(visit) && (
-                              <>
-                                <Button
-                                  variant="outline-warning"
-                                  size="sm"
-                                  className="me-2"
-                                  disabled
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  variant="outline-danger"
-                                  size="sm"
-                                  onClick={() => handleDelete(visit.id)}
-                                >
-                                  Delete
-                                </Button>
-                              </>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
+        {/* Content based on view mode */}
+        {viewMode === 'table' ? (
+          /* Visits Table */
+          <Card>
+            <Card.Body>
+              {loading ? (
+                <div className="text-center py-5">
+                  <Spinner animation="border" variant="primary" />
+                  <p className="mt-3">Loading visits...</p>
                 </div>
-
-                {/* Pagination */}
-                {pagination.totalPages > 1 && (
-                  <div className="d-flex justify-content-between align-items-center mt-3">
-                    <div>
-                      Showing page {filters.page} of {pagination.totalPages} ({pagination.total} total visits)
-                    </div>
-                    <div>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        className="me-2"
-                        disabled={filters.page === 1}
-                        onClick={() => handleFilterChange('page', filters.page - 1)}
-                      >
-                        Previous
-                      </Button>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        disabled={filters.page >= pagination.totalPages}
-                        onClick={() => handleFilterChange('page', filters.page + 1)}
-                      >
-                        Next
-                      </Button>
-                    </div>
+              ) : visits.length === 0 ? (
+                <div className="text-center py-5">
+                  <h3>No visits found</h3>
+                  <p className="text-muted">Try adjusting your filters or create a new visit</p>
+                </div>
+              ) : (
+                <>
+                  <div className="table-responsive">
+                    <Table striped bordered hover>
+                      <thead>
+                        <tr>
+                          <th>Date & Time</th>
+                          <th>Patient</th>
+                          <th>Dietitian</th>
+                          <th>Type</th>
+                          <th>Status</th>
+                          <th>Duration</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visits.map(visit => (
+                          <tr key={visit.id}>
+                            <td>
+                              <div>{formatDate(visit.visit_date)}</div>
+                              <small className="text-muted">{formatTime(visit.visit_date)}</small>
+                            </td>
+                            <td>
+                              {visit.patient ? (
+                                <>
+                                  <div>{visit.patient.first_name} {visit.patient.last_name}</div>
+                                  <small className="text-muted">{visit.patient.email}</small>
+                                </>
+                              ) : '-'}
+                            </td>
+                            <td>
+                              {visit.dietitian ? (
+                                <>
+                                  <div>{visit.dietitian.first_name} {visit.dietitian.last_name}</div>
+                                  <small className="text-muted">{visit.dietitian.username}</small>
+                                </>
+                              ) : '-'}
+                            </td>
+                            <td>{visit.visit_type || '-'}</td>
+                            <td>{getStatusBadge(visit.status)}</td>
+                            <td>{visit.duration_minutes ? `${visit.duration_minutes} min` : '-'}</td>
+                            <td>
+                              <Button
+                                variant="outline-primary"
+                                size="sm"
+                                className="me-2"
+                                onClick={() => handleViewClick(visit.id)}
+                              >
+                                View
+                              </Button>
+                              {canEdit(visit) && (
+                                <>
+                                  <Button
+                                    variant="outline-warning"
+                                    size="sm"
+                                    className="me-2"
+                                    onClick={() => handleEditClick(visit.id)}
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    variant="outline-danger"
+                                    size="sm"
+                                    onClick={() => handleDelete(visit.id)}
+                                  >
+                                    Delete
+                                  </Button>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
                   </div>
-                )}
-              </>
-            )}
-          </Card.Body>
-        </Card>
+
+                  {/* Pagination */}
+                  {pagination.totalPages > 1 && (
+                    <div className="d-flex justify-content-between align-items-center mt-3">
+                      <div>
+                        Showing page {filters.page} of {pagination.totalPages} ({pagination.total} total visits)
+                      </div>
+                      <div>
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          className="me-2"
+                          disabled={filters.page === 1}
+                          onClick={() => handleFilterChange('page', filters.page - 1)}
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          disabled={filters.page >= pagination.totalPages}
+                          onClick={() => handleFilterChange('page', filters.page + 1)}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </Card.Body>
+          </Card>
+        ) : (
+          /* Timeline View */
+          <Card>
+            <Card.Body>
+              {loading ? (
+                <div className="text-center py-5">
+                  <Spinner animation="border" variant="primary" />
+                  <p className="mt-3">Loading visit timeline...</p>
+                </div>
+              ) : visits.length === 0 ? (
+                <div className="text-center py-5">
+                  <h3>No visits found</h3>
+                  <p className="text-muted">Try adjusting your filters or create a new visit</p>
+                </div>
+              ) : (
+                <div className="visit-timeline">
+                  {visits
+                    .sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date))
+                    .map((visit, index) => (
+                      <div key={visit.id} className="timeline-item">
+                        <div className="timeline-marker">
+                          <div className={`timeline-dot ${visit.status.toLowerCase()}`}></div>
+                          {index < visits.length - 1 && <div className="timeline-line"></div>}
+                        </div>
+                        <div className="timeline-content">
+                          <Card className="timeline-card">
+                            <Card.Body>
+                              <Row>
+                                <Col md={8}>
+                                  <div className="d-flex align-items-center mb-2">
+                                    <h5 className="mb-0 me-3">
+                                      📅 {formatDate(visit.visit_date)}
+                                    </h5>
+                                    {getStatusBadge(visit.status)}
+                                  </div>
+                                  <div className="timeline-meta">
+                                    <strong>Patient:</strong> {visit.patient ? `${visit.patient.first_name} ${visit.patient.last_name}` : 'Unknown'} |
+                                    <strong> Dietitian:</strong> {visit.dietitian ? `${visit.dietitian.first_name} ${visit.dietitian.last_name}` : 'Unknown'} |
+                                    <strong> Type:</strong> {visit.visit_type || 'General'} |
+                                    <strong> Duration:</strong> {visit.duration_minutes ? `${visit.duration_minutes} min` : 'N/A'}
+                                  </div>
+                                  {visit.chief_complaint && (
+                                    <div className="mt-2">
+                                      <strong>Chief Complaint:</strong> {visit.chief_complaint}
+                                    </div>
+                                  )}
+                                  {visit.assessment && (
+                                    <div className="mt-2">
+                                      <strong>Assessment:</strong> {visit.assessment}
+                                    </div>
+                                  )}
+                                </Col>
+                                <Col md={4} className="text-end">
+                                  <div className="timeline-actions">
+                                    <Button
+                                      variant="outline-primary"
+                                      size="sm"
+                                      className="me-2"
+                                      onClick={() => handleViewClick(visit.id)}
+                                    >
+                                      👁️ View Details
+                                    </Button>
+                                    {canEdit(visit) && (
+                                      <>
+                                        <Button
+                                          variant="outline-warning"
+                                          size="sm"
+                                          className="me-2"
+                                          onClick={() => handleEditClick(visit.id)}
+                                        >
+                                          ✏️ Edit
+                                        </Button>
+                                        <Button
+                                          variant="outline-danger"
+                                          size="sm"
+                                          onClick={() => handleDelete(visit.id)}
+                                        >
+                                          🗑️ Delete
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                  <div className="timeline-time mt-2">
+                                    <small className="text-muted">
+                                      {formatTime(visit.visit_date)}
+                                    </small>
+                                  </div>
+                                </Col>
+                              </Row>
+                            </Card.Body>
+                          </Card>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        )}
+
+        <VisitModal
+          show={showModal}
+          onHide={handleModalHide}
+          mode={modalMode}
+          visit={selectedVisit}
+          onSave={handleModalSave}
+        />
       </Container>
     </Layout>
   );

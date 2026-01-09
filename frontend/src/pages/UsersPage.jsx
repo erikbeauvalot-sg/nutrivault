@@ -9,6 +9,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import userService from '../services/userService';
+import UserModal from '../components/UserModal';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 
 const UsersPage = () => {
   const { user } = useAuth();
@@ -25,6 +27,10 @@ const UsersPage = () => {
     limit: 20
   });
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [userModalMode, setUserModalMode] = useState('create');
+  const [selectedUser, setSelectedUser] = useState(null);
 
   // Redirect if not admin
   useEffect(() => {
@@ -43,6 +49,7 @@ const UsersPage = () => {
     try {
       setLoading(true);
       const response = await userService.getUsers(filters);
+      
       const data = response.data.data || response.data;
       const usersList = Array.isArray(data) ? data : [];
       setUsers(usersList);
@@ -57,7 +64,8 @@ const UsersPage = () => {
         setRoles(uniqueRoles);
       }
       
-      setPagination(response.data.pagination || { total: 0, totalPages: 0 });
+      const paginationData = response.data.pagination || { total: 0, totalPages: 0 };
+      setPagination(paginationData);
       setError(null);
     } catch (err) {
       console.error('Error fetching users:', err);
@@ -99,6 +107,38 @@ const UsersPage = () => {
     }
   };
 
+  const handleCreateClick = () => {
+    setSelectedUser(null);
+    setUserModalMode('create');
+    setShowUserModal(true);
+  };
+
+  const handleEditClick = async (userId) => {
+    try {
+      const response = await userService.getUserById(userId);
+      const userData = response.data.data || response.data;
+      setSelectedUser(userData);
+      setUserModalMode('edit');
+      setShowUserModal(true);
+    } catch (err) {
+      console.error('Error fetching user:', err);
+      alert(err.response?.data?.error || 'Failed to load user');
+    }
+  };
+
+  const handlePasswordClick = (usr) => {
+    setSelectedUser(usr);
+    setShowPasswordModal(true);
+  };
+
+  const handleUserModalSave = () => {
+    fetchUsers();
+  };
+
+  const handlePasswordSuccess = () => {
+    fetchUsers();
+  };
+
   const getRoleBadge = (roleName) => {
     const variants = {
       ADMIN: 'danger',
@@ -132,8 +172,8 @@ const UsersPage = () => {
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
           <h1>👤 User Management</h1>
-          <Button variant="primary" size="lg" disabled>
-            Create User (Coming Soon)
+          <Button variant="primary" size="lg" onClick={handleCreateClick}>
+            Create User
           </Button>
         </div>
 
@@ -250,7 +290,7 @@ const UsersPage = () => {
                               <Button
                                 variant="outline-primary"
                                 size="sm"
-                                disabled
+                                onClick={() => handleEditClick(usr.id)}
                               >
                                 View/Edit
                               </Button>
@@ -266,7 +306,7 @@ const UsersPage = () => {
                               <Button
                                 variant="outline-info"
                                 size="sm"
-                                disabled
+                                onClick={() => handlePasswordClick(usr)}
                               >
                                 🔑 Reset Password
                               </Button>
@@ -318,6 +358,24 @@ const UsersPage = () => {
             )}
           </Card.Body>
         </Card>
+
+        <UserModal
+          show={showUserModal}
+          onHide={() => setShowUserModal(false)}
+          mode={userModalMode}
+          user={selectedUser}
+          roles={roles}
+          onSave={handleUserModalSave}
+        />
+
+        <ChangePasswordModal
+          show={showPasswordModal}
+          onHide={() => setShowPasswordModal(false)}
+          userId={selectedUser?.id}
+          username={selectedUser?.username}
+          isAdmin={user?.role === 'ADMIN'}
+          onSuccess={handlePasswordSuccess}
+        />
       </Container>
     </Layout>
   );

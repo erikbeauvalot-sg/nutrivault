@@ -177,3 +177,29 @@ exports.toggleUserStatus = async (req, res, next) => {
     next(error);
   }
 };
+/**
+ * GET /api/users/list/dietitians - Get all active dietitians
+ * Accessible to authenticated users (for visit assignment)
+ */
+exports.getDietitians = async (req, res, next) => {
+  try {
+    const result = await userService.getDietitians();
+    
+    console.log('👥 getDietitians() result:', {
+      count: result.length,
+      firstRecord: result[0] ? {
+        id: result[0].id,
+        username: result[0].username,
+        role: result[0].role?.name
+      } : null
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('🔥 Error in getDietitians:', error.message);
+    next(error);
+  }
+};

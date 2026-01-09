@@ -186,8 +186,8 @@ const queryValidation = [
   
   query('limit')
     .optional()
-    .isInt({ min: 1, max: 100 })
-    .withMessage('Limit must be between 1 and 100'),
+    .isInt({ min: 1, max: 1000 })
+    .withMessage('Limit must be between 1 and 1000'),
   
   query('role_id')
     .optional()
@@ -220,6 +220,13 @@ const checkOwnerOrAdmin = (req, res, next) => {
 /**
  * Routes
  */
+
+// GET /api/users/list/dietitians - Get all active dietitians (for visit assignment)
+router.get(
+  '/list/dietitians',
+  authenticate,
+  userController.getDietitians
+);
 
 // GET /api/users - Get all users (Admin only)
 router.get(

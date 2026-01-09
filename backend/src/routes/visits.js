@@ -87,7 +87,7 @@ const createVisitValidation = [
     .withMessage('Notes must be a string'),
   
   body('next_visit_date')
-    .optional()
+    .optional({ checkFalsy: true })
     .isISO8601()
     .withMessage('Next visit date must be a valid ISO 8601 date')
 ];
@@ -139,57 +139,58 @@ const updateVisitValidation = [
     .withMessage('Notes must be a string'),
   
   body('next_visit_date')
-    .optional()
+    .optional({ checkFalsy: true })
     .isISO8601()
     .withMessage('Next visit date must be a valid ISO 8601 date')
 ];
 
 /**
  * Validation rules for adding measurements
+ * Beta feature: All fields are optional - any combination can be recorded
  */
 const addMeasurementsValidation = [
   body('weight_kg')
-    .optional()
+    .optional({ checkFalsy: true })
     .isFloat({ min: 1, max: 500 })
     .withMessage('Weight must be between 1 and 500 kg'),
   
   body('height_cm')
-    .optional()
+    .optional({ checkFalsy: true })
     .isFloat({ min: 30, max: 300 })
     .withMessage('Height must be between 30 and 300 cm'),
   
   body('bmi')
-    .optional()
+    .optional({ checkFalsy: true })
     .isFloat({ min: 10, max: 100 })
     .withMessage('BMI must be between 10 and 100'),
   
   body('blood_pressure_systolic')
-    .optional()
+    .optional({ checkFalsy: true })
     .isInt({ min: 50, max: 300 })
     .withMessage('Systolic blood pressure must be between 50 and 300 mmHg'),
   
   body('blood_pressure_diastolic')
-    .optional()
+    .optional({ checkFalsy: true })
     .isInt({ min: 30, max: 200 })
     .withMessage('Diastolic blood pressure must be between 30 and 200 mmHg'),
   
   body('waist_circumference_cm')
-    .optional()
+    .optional({ checkFalsy: true })
     .isFloat({ min: 20, max: 300 })
     .withMessage('Waist circumference must be between 20 and 300 cm'),
   
   body('body_fat_percentage')
-    .optional()
+    .optional({ checkFalsy: true })
     .isFloat({ min: 1, max: 80 })
     .withMessage('Body fat percentage must be between 1 and 80%'),
   
   body('muscle_mass_percentage')
-    .optional()
+    .optional({ checkFalsy: true })
     .isFloat({ min: 10, max: 90 })
     .withMessage('Muscle mass percentage must be between 10 and 90%'),
   
   body('notes')
-    .optional()
+    .optional({ checkFalsy: true })
     .isString()
     .withMessage('Notes must be a string')
 ];
@@ -214,8 +215,8 @@ const queryValidation = [
   
   query('limit')
     .optional()
-    .isInt({ min: 1, max: 100 })
-    .withMessage('Limit must be between 1 and 100'),
+    .isInt({ min: 1, max: 1000 })
+    .withMessage('Limit must be between 1 and 1000'),
   
   query('patient_id')
     .optional()

@@ -8,6 +8,7 @@ import { Container } from 'react-bootstrap';
 import Layout from '../components/layout/Layout';
 import PatientForm from '../components/PatientForm';
 import PatientList from '../components/PatientList';
+import PatientDetailModal from '../components/PatientDetailModal';
 import api from '../services/api';
 
 const PatientsPage = () => {
@@ -15,6 +16,7 @@ const PatientsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingPatient, setEditingPatient] = useState(null);
+  const [viewingPatientId, setViewingPatientId] = useState(null);
 
   useEffect(() => {
     fetchPatients();
@@ -82,6 +84,14 @@ const PatientsPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleViewPatient = (patient) => {
+    setViewingPatientId(patient.id);
+  };
+
+  const handleCloseViewModal = () => {
+    setViewingPatientId(null);
+  };
+
   const handleCancelEdit = () => {
     setEditingPatient(null);
   };
@@ -117,9 +127,16 @@ const PatientsPage = () => {
             loading={loading}
             onEdit={handleEditPatient}
             onDelete={handleDeletePatient}
+            onView={handleViewPatient}
           />
         </div>
       </Container>
+
+      <PatientDetailModal
+        patientId={viewingPatientId}
+        show={!!viewingPatientId}
+        onHide={handleCloseViewModal}
+      />
     </Layout>
   );
 };

@@ -84,6 +84,15 @@ export const toggleUserStatus = async (id) => {
   return response;
 };
 
+/**
+ * Get all active dietitians (for visit assignment)
+ * @returns {Promise} API response with list of dietitians
+ */
+export const getDietitians = async () => {
+  const response = await api.get('/api/users/list/dietitians');
+  return response;
+};
+
 export default {
   getUsers,
   getUserById,
@@ -91,5 +100,6 @@ export default {
   updateUser,
   deleteUser,
   changePassword,
-  toggleUserStatus
+  toggleUserStatus,
+  getDietitians
 };

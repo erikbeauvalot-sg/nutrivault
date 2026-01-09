@@ -117,6 +117,26 @@ exports.updatePatient = async (req, res, next) => {
 };
 
 /**
+ * GET /api/patients/:id/details - Get patient details with visits and measurements
+ */
+exports.getPatientDetails = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const user = req.user;
+    const requestMetadata = getRequestMetadata(req);
+
+    const patient = await patientService.getPatientDetails(id, user, requestMetadata);
+
+    res.json({
+      success: true,
+      data: patient
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * DELETE /api/patients/:id - Delete patient (soft delete)
  */
 exports.deletePatient = async (req, res, next) => {

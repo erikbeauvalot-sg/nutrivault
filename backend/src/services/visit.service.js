@@ -165,6 +165,8 @@ async function getVisits(user, filters = {}, requestMetadata = {}) {
  */
 async function getVisitById(user, visitId, requestMetadata = {}) {
   try {
+    console.log('📅 [getVisitById] Fetching visit:', visitId);
+    
     const visit = await Visit.findByPk(visitId, {
       include: [
         {
@@ -183,6 +185,8 @@ async function getVisitById(user, visitId, requestMetadata = {}) {
         }
       ]
     });
+
+    console.log('📅 [getVisitById] Visit found:', !!visit);
 
     if (!visit) {
       const error = new Error('Visit not found');
@@ -214,9 +218,11 @@ async function getVisitById(user, visitId, requestMetadata = {}) {
       user_agent: requestMetadata.userAgent
     });
 
+    console.log('📅 [getVisitById] Returning visit data');
     return visit;
   } catch (error) {
-    console.error('Error in getVisitById:', error);
+    console.error('❌ [getVisitById] Error:', error.message);
+    throw error;
     throw error;
   }
 }
@@ -478,50 +484,34 @@ async function addMeasurements(user, visitId, measurementData, requestMetadata =
       bmi = (measurementData.weight_kg / (heightInMeters * heightInMeters)).toFixed(2);
     }
 
-    // Check if measurements already exist for this visit
-    let measurement = await VisitMeasurement.findOne({ where: { visit_id: visitId } });
-
-    if (measurement) {
-      // Update existing measurements
-      await measurement.update({
-        weight_kg: measurementData.weight_kg || measurement.weight_kg,
-        height_cm: measurementData.height_cm || measurement.height_cm,
-        bmi: bmi || measurement.bmi,
-        blood_pressure_systolic: measurementData.blood_pressure_systolic || measurement.blood_pressure_systolic,
-        blood_pressure_diastolic: measurementData.blood_pressure_diastolic || measurement.blood_pressure_diastolic,
-        waist_circumference_cm: measurementData.waist_circumference_cm || measurement.waist_circumference_cm,
-        body_fat_percentage: measurementData.body_fat_percentage || measurement.body_fat_percentage,
-        muscle_mass_percentage: measurementData.muscle_mass_percentage || measurement.muscle_mass_percentage,
-        notes: measurementData.notes || measurement.notes
-      });
-    } else {
-      // Create new measurements
-      measurement = await VisitMeasurement.create({
-        visit_id: visitId,
-        weight_kg: measurementData.weight_kg,
-        height_cm: measurementData.height_cm,
-        bmi: bmi,
-        blood_pressure_systolic: measurementData.blood_pressure_systolic,
-        blood_pressure_diastolic: measurementData.blood_pressure_diastolic,
-        waist_circumference_cm: measurementData.waist_circumference_cm,
-        body_fat_percentage: measurementData.body_fat_percentage,
-        muscle_mass_percentage: measurementData.muscle_mass_percentage,
-        notes: measurementData.notes
-      });
-    }
+    // Always create new measurement record for history tracking (Beta feature)
+    // This allows tracking measurement changes over time for trend analysis
+    const measurement = await VisitMeasurement.create({
+      visit_id: visitId,
+      weight_kg: measurementData.weight_kg || null,
+      height_cm: measurementData.height_cm || null,
+      bmi: bmi || null,
+      blood_pressure_systolic: measurementData.blood_pressure_systolic || null,
+      blood_pressure_diastolic: measurementData.blood_pressure_diastolic || null,
+      waist_circumference_cm: measurementData.waist_circumference_cm || null,
+      body_fat_percentage: measurementData.body_fat_percentage || null,
+      muscle_mass_percentage: measurementData.muscle_mass_percentage || null,
+      notes: measurementData.notes || null
+    });
 
     // Audit log
     await auditService.log({
       user_id: user.id,
       username: user.username,
-      action: measurement.created_at === measurement.updated_at ? 'CREATE' : 'UPDATE',
+      action: 'CREATE',
       resource_type: 'visit_measurements',
       resource_id: measurement.id,
       details: {
         visit_id: visitId,
         bmi: bmi,
         weight_kg: measurementData.weight_kg,
-        height_cm: measurementData.height_cm
+        height_cm: measurementData.height_cm,
+        timestamp: new Date().toISOString()
       },
       ip_address: requestMetadata.ip,
       user_agent: requestMetadata.userAgent

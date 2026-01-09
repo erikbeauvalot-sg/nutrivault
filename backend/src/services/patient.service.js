@@ -190,6 +190,84 @@ async function getPatientById(patientId, user, requestMetadata = {}) {
 }
 
 /**
+ * Get patient details with visits and measurements for graphical display
+ * 
+ * @param {string} patientId - Patient UUID
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Patient data with visits and measurements
+ */
+async function getPatientDetails(patientId, user, requestMetadata = {}) {
+  try {
+    const patient = await Patient.findOne({
+      where: { 
+        id: patientId,
+        is_active: true
+      },
+      include: [
+        {
+          model: User,
+          as: 'assigned_dietitian',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        },
+        {
+          model: db.Visit,
+          as: 'visits',
+          where: { status: 'COMPLETED' },
+          required: false,
+          include: [
+            {
+              model: db.VisitMeasurement,
+              as: 'measurements',
+              required: false
+            },
+            {
+              model: User,
+              as: 'dietitian',
+              attributes: ['id', 'username', 'first_name', 'last_name']
+            }
+          ],
+          order: [['visit_date', 'ASC']]
+        }
+      ]
+    });
+
+    if (!patient) {
+      const error = new Error('Patient not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // RBAC: Dietitians can only access their assigned patients
+    if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
+      const error = new Error('Access denied. You can only access your assigned patients');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'READ',
+      resource_type: 'patients',
+      resource_id: patient.id,
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200,
+      details: 'Patient details with visits and measurements accessed'
+    });
+
+    return patient;
+  } catch (error) {
+    console.error('Error in getPatientDetails:', error);
+    throw error;
+  }
+}
+
+/**
  * Create new patient
  * 
  * @param {Object} patientData - Patient data
@@ -437,6 +515,7 @@ async function deletePatient(patientId, user, requestMetadata = {}) {
 module.exports = {
   getPatients,
   getPatientById,
+  getPatientDetails,
   createPatient,
   updatePatient,
   deletePatient

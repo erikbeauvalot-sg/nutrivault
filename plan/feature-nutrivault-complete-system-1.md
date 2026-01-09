@@ -20,6 +20,7 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 
 - **REQ-001**: System must support patient management (CRUD, notes, allergies, dietary preferences, medical history)
 - **REQ-002**: System must track patient visits with measurements, assessments, and recommendations
+- **REQ-002-BETA**: Visit measurements must support full history tracking with all fields optional
 - **REQ-003**: System must manage billing (invoices, payments, financial reports)
 - **REQ-004**: System must implement role-based access control with 4 predefined roles (ADMIN, DIETITIAN, ASSISTANT, VIEWER)
 - **REQ-005**: System must support dual authentication (JWT tokens + API keys)
@@ -200,17 +201,18 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-070 | Create visit service (`backend/src/services/visit.service.js`) | 🔄 | In Progress |
-| TASK-071 | Implement `getVisits()` with filtering by patient, dietitian, status | | |
-| TASK-072 | Implement `getVisitById()` with measurements included | | |
-| TASK-073 | Implement `createVisit()` with patient validation | | |
-| TASK-074 | Implement `updateVisit()` with status tracking | | |
-| TASK-075 | Implement `deleteVisit()` | | |
-| TASK-076 | Implement `addMeasurements()` for visit vitals | | |
-| TASK-077 | Create visit controller (`backend/src/controllers/visit.controller.js`) | | |
-| TASK-078 | Create visit routes with RBAC (`backend/src/routes/visits.js`) | | |
-| TASK-079 | Add visit validation (date, status, patient_id, dietitian_id) | | |
-| TASK-080 | Test visit creation and retrieval with measurements | | |
+| TASK-070 | Create visit service (`backend/src/services/visit.service.js`) | ✅ | 2026-01-09 |
+| TASK-071 | Implement `getVisits()` with filtering by patient, dietitian, status | ✅ | 2026-01-09 |
+| TASK-072 | Implement `getVisitById()` with measurements included | ✅ | 2026-01-09 |
+| TASK-073 | Implement `createVisit()` with patient validation | ✅ | 2026-01-09 |
+| TASK-074 | Implement `updateVisit()` with status tracking | ✅ | 2026-01-09 |
+| TASK-075 | Implement `deleteVisit()` | ✅ | 2026-01-09 |
+| TASK-076 | Implement `addMeasurements()` for visit vitals | ✅ | 2026-01-09 |
+| TASK-076-BETA | **Beta Enhancement**: Refactor measurements to append-only history (all fields optional) | ✅ | 2026-01-09 |
+| TASK-077 | Create visit controller (`backend/src/controllers/visit.controller.js`) | ✅ | 2026-01-09 |
+| TASK-078 | Create visit routes with RBAC (`backend/src/routes/visits.js`) | ✅ | 2026-01-09 |
+| TASK-079 | Add visit validation (date, status, patient_id, dietitian_id) | ✅ | 2026-01-09 |
+| TASK-080 | Test visit creation and retrieval with measurements | ✅ | 2026-01-09 |
 
 ### Implementation Phase 7: MVP User Management API
 
@@ -218,16 +220,16 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-081 | Create user service (`backend/src/services/user.service.js`) | 🔄 | In Progress |
-| TASK-082 | Implement `getUsers()` (Admin only) | 🔄 | In Progress |
-| TASK-083 | Implement `getUserById()` with role/permissions included | 🔄 | In Progress |
-| TASK-084 | Implement `createUser()` with password hashing, role assignment | | |
-| TASK-085 | Implement `updateUser()` with password change validation | | |
-| TASK-086 | Implement `deleteUser()` (soft delete, deactivate account) | | |
-| TASK-087 | Create user controller (`backend/src/controllers/user.controller.js`) | | |
-| TASK-088 | Create user routes with Admin-only access (`backend/src/routes/users.js`) | | |
-| TASK-089 | Add user validation (username, email, password requirements) | | |
-| TASK-090 | Test user CRUD with role-based access control | | |
+| TASK-081 | Create user service (`backend/src/services/user.service.js`) | ✅ | 2026-01-09 |
+| TASK-082 | Implement `getUsers()` (Admin only) | ✅ | 2026-01-09 |
+| TASK-083 | Implement `getUserById()` with role/permissions included | ✅ | 2026-01-09 |
+| TASK-084 | Implement `createUser()` with password hashing, role assignment | ✅ | 2026-01-09 |
+| TASK-085 | Implement `updateUser()` with password change validation | ✅ | 2026-01-09 |
+| TASK-086 | Implement `deleteUser()` (soft delete, deactivate account) | ✅ | 2026-01-09 |
+| TASK-087 | Create user controller (`backend/src/controllers/user.controller.js`) | ✅ | 2026-01-09 |
+| TASK-088 | Create user routes with Admin-only access (`backend/src/routes/users.js`) | ✅ | 2026-01-09 |
+| TASK-089 | Add user validation (username, email, password requirements) | ✅ | 2026-01-09 |
+| TASK-090 | Test user CRUD with role-based access control | ✅ | 2026-01-09 |
 
 ### Implementation Phase 8: Beta - Billing Management API
 
@@ -348,22 +350,28 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 | TASK-159 | Create patient service (`src/services/patientService.js`) with API calls | | |
 | TASK-160 | Add role-based UI elements (hide create/delete for Viewers) | | |
 | TASK-161 | Test patient CRUD flow with all 4 roles | | |
+| TASK-161a | **Beta Enhancement**: Create PatientDetailModal with measurement charts | ✅ | 2026-01-09 |
+| TASK-161b | **Beta Enhancement**: Add View button to PatientList component | ✅ | 2026-01-09 |
+| TASK-161c | **Beta Enhancement**: Implement backend endpoint for patient details with visits | ✅ | 2026-01-09 |
 
 ### Implementation Phase 15: Beta - Frontend Visit Management
 
-**GOAL-015**: Create visit tracking UI with measurements
+**GOAL-015**: Create visit tracking UI with measurements and history tracking
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-162 | Create VisitsPage component with calendar view | | |
-| TASK-163 | Implement visit list with filters (patient, dietitian, status, date range) | | |
-| TASK-164 | Create ScheduleVisitModal with date picker, patient selector | | |
-| TASK-165 | Create VisitDetailPage with measurements, notes, recommendations | | |
-| TASK-166 | Implement AddMeasurementsForm (weight, height, BMI, blood pressure) | | |
-| TASK-167 | Create visit status badges (scheduled, in-progress, completed, cancelled) | | |
-| TASK-168 | Add visit timeline visualization | | |
-| TASK-169 | Create visit service (`src/services/visitService.js`) | | |
-| TASK-170 | Test visit scheduling and documentation flow | | |
+| TASK-162 | Create VisitsPage component with table view | ✅ | 2026-01-09 |
+| TASK-163 | Implement visit list with pagination, filters (patient, status, date) | ✅ | 2026-01-09 |
+| TASK-164 | Create ScheduleVisitModal with date picker, patient selector | ✅ | 2026-01-09 |
+| TASK-165 | Create VisitDetailPage with measurements, notes, recommendations | ✅ | 2026-01-09 |
+| TASK-166 | Implement AddMeasurementsForm (weight, height, BMI, blood pressure) | ✅ | 2026-01-09 |
+| TASK-166a | **Beta Enhancement**: Make all measurement fields optional | ✅ | 2026-01-09 |
+| TASK-166b | **Beta Enhancement**: Implement measurement history tracking (append-only) | ✅ | 2026-01-09 |
+| TASK-166c | **Beta Enhancement**: Update Visit-VisitMeasurement relationship to hasMany | ✅ | 2026-01-09 |
+| TASK-167 | Create visit status badges (scheduled, in-progress, completed, cancelled) | ✅ | 2026-01-09 |
+| TASK-168 | Add visit timeline visualization | ✅ | 2026-01-09 |
+| TASK-169 | Create visit service (`src/services/visitService.js`) | ✅ | 2026-01-09 |
+| TASK-170 | Test visit scheduling and documentation flow | ✅ | 2026-01-09 |
 
 ### Implementation Phase 16: Beta - Frontend Billing
 
@@ -403,14 +411,14 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-189 | Create UsersPage component (Admin only) | | |
-| TASK-190 | Implement user list with role badges | | |
-| TASK-191 | Create CreateUserModal with role selector | | |
-| TASK-192 | Create EditUserModal with password change option | | |
-| TASK-193 | Implement user activation/deactivation toggle | | |
-| TASK-194 | Add account status indicators (active, locked, inactive) | | |
-| TASK-195 | Create user service (`src/services/userService.js`) | | |
-| TASK-196 | Test user CRUD with Admin role | | |
+| TASK-189 | Create UsersPage component (Admin only) | ✅ | 2026-01-09 |
+| TASK-190 | Implement user list with role badges | ✅ | 2026-01-09 |
+| TASK-191 | Create CreateUserModal with role selector | ✅ | 2026-01-09 |
+| TASK-192 | Create EditUserModal with password change option | ✅ | 2026-01-09 |
+| TASK-193 | Implement user activation/deactivation toggle | ✅ | 2026-01-09 |
+| TASK-194 | Add account status indicators (active, locked, inactive) | ✅ | 2026-01-09 |
+| TASK-195 | Create user service (`src/services/userService.js`) | ✅ | 2026-01-09 |
+| TASK-196 | Test user CRUD with Admin role | ✅ | 2026-01-09 |
 
 ### Implementation Phase 19: Beta - Frontend Reports & Export
 

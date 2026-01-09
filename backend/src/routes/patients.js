@@ -166,6 +166,20 @@ router.get(
 );
 
 /**
+ * GET /api/patients/:id/details - Get patient details with visits and measurements
+ * Requires: patients.read permission
+ * RBAC enforced in service layer (dietitian filtering)
+ * Used for graphical patient dashboard view
+ */
+router.get(
+  '/:id/details',
+  authenticate,
+  requirePermission('patients.read'),
+  patientIdValidation,
+  patientController.getPatientDetails
+);
+
+/**
  * POST /api/patients - Create new patient
  * Requires: patients.create permission
  * Only ADMIN and DIETITIAN can create patients

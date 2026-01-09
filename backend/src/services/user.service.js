@@ -44,8 +44,13 @@ async function getUsers(user, filters = {}, requestMetadata = {}) {
       whereClause.role_id = filters.role_id;
     }
 
-    if (filters.is_active !== undefined) {
-      whereClause.is_active = filters.is_active;
+    // Filter by is_active status
+    // If not explicitly specified, default to showing only active users
+    if (filters.is_active !== undefined && filters.is_active !== '') {
+      whereClause.is_active = filters.is_active === 'true' || filters.is_active === true;
+    } else {
+      // Default: only show active users unless explicitly filtering for inactive
+      whereClause.is_active = true;
     }
 
     // Pagination
@@ -59,6 +64,7 @@ async function getUsers(user, filters = {}, requestMetadata = {}) {
       offset,
       order: [['username', 'ASC']],
       attributes: { exclude: ['password_hash'] },
+      distinct: true,  // ✅ FIX: Prevent count from being multiplied by joins
       include: [
         {
           model: Role,
@@ -322,7 +328,7 @@ async function updateUser(user, userId, updateData, requestMetadata = {}) {
         throw error;
       }
     }
-
+    
     allowedFields.forEach(field => {
       if (updateData[field] !== undefined && updateData[field] !== targetUser[field]) {
         changes[field] = { old: targetUser[field], new: updateData[field] };
@@ -344,7 +350,6 @@ async function updateUser(user, userId, updateData, requestMetadata = {}) {
             {
               model: Permission,
               as: 'permissions',
-              attributes: ['id', 'name', 'description'],
               through: { attributes: [] }
             }
           ]
@@ -412,7 +417,7 @@ async function deleteUser(user, userId, requestMetadata = {}) {
       user_agent: requestMetadata.userAgent
     });
   } catch (error) {
-    console.error('Error in deleteUser:', error);
+    console.error('Error in deleteUser:', error.message);
     throw error;
   }
 }
@@ -555,6 +560,71 @@ async function toggleUserStatus(user, userId, requestMetadata = {}) {
   }
 }
 
+/**
+ * Get all active dietitians (for visit assignment)
+ * 
+ * @returns {Promise<Array>} Array of dietitian users with their roles
+ */
+async function getDietitians() {
+  try {
+    console.log('🔍 getDietitians() - Querying for active users with DIETITIAN or ADMIN roles...');
+    
+    // First, let's see all active users
+    const allActiveUsers = await User.findAll({
+      where: { is_active: true },
+      attributes: ['id', 'username', 'first_name', 'last_name', 'role_id'],
+      include: [{
+        model: Role,
+        as: 'role',
+        attributes: ['id', 'name']
+      }]
+    });
+    
+    console.log(`🔍 All active users (${allActiveUsers.length}):`);
+    allActiveUsers.forEach(u => {
+      console.log(`   - ${u.username}: role_id=${u.role_id}, role.name=${u.role?.name}`);
+    });
+
+    // Now fetch only dietitians and admins
+    const dietitians = await User.findAll({
+      where: {
+        is_active: true
+      },
+      attributes: { exclude: ['password_hash'] },
+      include: [
+        {
+          model: Role,
+          as: 'role',
+          attributes: ['id', 'name', 'description'],
+          where: {
+            name: { [Op.in]: ['DIETITIAN', 'ADMIN'] }
+          },
+          required: true,  // Explicit INNER JOIN
+          include: [
+            {
+              model: Permission,
+              as: 'permissions',
+              through: { attributes: [] }
+            }
+          ]
+        }
+      ],
+      order: [['first_name', 'ASC'], ['last_name', 'ASC']]
+    });
+
+    console.log(`✅ getDietitians() - Found ${dietitians.length} dietitians/admins:`);
+    dietitians.forEach(u => {
+      console.log(`   - ${u.username}: role=${u.role?.name}, is_active=${u.is_active}`);
+    });
+
+    return dietitians;
+  } catch (error) {
+    console.error('🔥 Error in getDietitians:', error.message);
+    console.error('🔥 Stack:', error.stack);
+    throw error;
+  }
+}
+
 module.exports = {
   getUsers,
   getUserById,
@@ -562,5 +632,6 @@ module.exports = {
   updateUser,
   deleteUser,
   changePassword,
-  toggleUserStatus
+  toggleUserStatus,
+  getDietitians
 };

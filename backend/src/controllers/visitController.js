@@ -65,13 +65,18 @@ exports.getVisitById = async (req, res, next) => {
     const visitId = req.params.id;
     const requestMetadata = getRequestMetadata(req);
 
+    console.log('📅 GET VISIT BY ID:', { visitId, userId: user.id });
+    
     const visit = await visitService.getVisitById(user, visitId, requestMetadata);
+
+    console.log('📅 VISIT FOUND:', { visitId, patientId: visit.patient_id });
 
     res.json({
       success: true,
       data: visit
     });
   } catch (error) {
+    console.log('📅 GET VISIT ERROR:', { error: error.message });
     next(error);
   }
 };
