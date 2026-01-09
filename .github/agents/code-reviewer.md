@@ -1,6 +1,6 @@
 ---
 description: 'Expert code reviewer focused on code quality, security, performance, and best practices. Performs comprehensive reviews with specific, actionable feedback.'
-tools: ['read/readFile', 'search/fileSearch', 'search/codebase', 'diagnostics/getErrors']
+tools: ['vscode/runCommand', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'ms-python.python/getPythonEnvironmentInfo', 'ms-python.python/getPythonExecutableCommand', 'ms-python.python/installPythonPackage', 'ms-python.python/configurePythonEnvironment', 'todo']
 ---
 
 # Code Reviewer Agent

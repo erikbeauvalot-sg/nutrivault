@@ -19,11 +19,11 @@
  * @returns {boolean}
  */
 function hasPermission(user, permission) {
-  if (!user || !user.Role || !user.Role.Permissions) {
+  if (!user || !user.role || !user.role.permissions) {
     return false;
   }
 
-  return user.Role.Permissions.some(p => p.code === permission);
+  return user.role.permissions.some(p => p.code === permission);
 }
 
 /**
@@ -33,11 +33,11 @@ function hasPermission(user, permission) {
  * @returns {boolean}
  */
 function hasRole(user, roleName) {
-  if (!user || !user.Role) {
+  if (!user || !user.role) {
     return false;
   }
 
-  return user.Role.name === roleName;
+  return user.role.name === roleName;
 }
 
 /**

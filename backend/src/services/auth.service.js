@@ -20,9 +20,11 @@ class AuthService {
       include: [
         {
           model: db.Role,
+          as: 'role',
           include: [
             {
               model: db.Permission,
+              as: 'permissions',
               through: { attributes: [] }
             }
           ]
@@ -79,8 +81,8 @@ class AuthService {
         id: user.id,
         username: user.username,
         email: user.email,
-        role: user.Role.name,
-        permissions: user.Role.Permissions.map(p => p.code)
+        role: user.role.name,
+        permissions: user.role.permissions.map(p => p.code)
       },
       ...tokens
     };
@@ -112,7 +114,8 @@ class AuthService {
       }
     }
 
-    return false;
+    // Token not found - throw error for consistency
+    throw new Error('Invalid refresh token');
   }
 
   /**
@@ -136,9 +139,11 @@ class AuthService {
       include: [
         {
           model: db.Role,
+          as: 'role',
           include: [
             {
               model: db.Permission,
+              as: 'permissions',
               through: { attributes: [] }
             }
           ]
@@ -200,8 +205,8 @@ class AuthService {
         id: user.id,
         username: user.username,
         email: user.email,
-        role: user.Role.name,
-        permissions: user.Role.Permissions.map(p => p.code)
+        role: user.role.name,
+        permissions: user.role.permissions.map(p => p.code)
       },
       ...newTokens
     };
@@ -256,9 +261,11 @@ class AuthService {
           include: [
             {
               model: db.Role,
+              as: 'role',
               include: [
                 {
                   model: db.Permission,
+                  as: 'permissions',
                   through: { attributes: [] }
                 }
               ]

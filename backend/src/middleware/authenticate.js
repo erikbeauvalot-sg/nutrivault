@@ -23,9 +23,11 @@ async function authenticate(req, res, next) {
           include: [
             {
               model: db.Role,
+              as: 'role',
               include: [
                 {
                   model: db.Permission,
+                  as: 'permissions',
                   through: { attributes: [] }
                 }
               ]

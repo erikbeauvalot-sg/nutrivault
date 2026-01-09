@@ -129,7 +129,7 @@ class AuthController {
         data: result
       });
     } catch (error) {
-      if (error.message === 'Invalid refresh token' || error.message === 'Refresh token not found or revoked') {
+      if (error.message === 'Invalid refresh token') {
         return res.status(401).json({
           success: false,
           error: error.message
