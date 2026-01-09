@@ -1,6 +1,6 @@
 ---
 description: 'Debug your application to find and fix a bug'
-tools: ['execute', 'read', 'edit', 'search', 'web', 'agent']
+tools: ['vscode', 'execute', 'read', 'edit', 'search', 'web', 'agent', 'todo']
 ---
 
 # Debug Mode Instructions

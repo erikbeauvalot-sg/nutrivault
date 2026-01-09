@@ -26,6 +26,9 @@ const VisitsPage = () => {
   });
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'timeline'
+  const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState('create');
+  const [selectedVisit, setSelectedVisit] = useState(null);
 
   useEffect(() => {
     fetchPatients();

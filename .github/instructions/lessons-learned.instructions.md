@@ -580,6 +580,90 @@ where: { age: { [Op.between]: [18, 65] } }     // BETWEEN
 
 ---
 
+## React & Frontend Issues
+
+### Issue 16: React State Variable Not Defined
+
+**Problem**: `Uncaught ReferenceError: showModal is not defined` error in React component console, despite using `setShowModal()` function calls throughout the code.
+
+**Root Cause**: React state setter functions (`setShowModal`, `setModalMode`, `setSelectedVisit`) were being called, but the corresponding state variables were never declared with `useState()`. The component was trying to use state setters without defining the state variables first.
+
+**Example of Wrong Code**:
+```jsx
+// ❌ WRONG - Missing state declarations
+const MyComponent = () => {
+  // These state variables are never declared!
+  // const [showModal, setShowModal] = useState(false);
+  // const [modalMode, setModalMode] = useState('create');
+  // const [selectedItem, setSelectedItem] = useState(null);
+
+  const handleOpenModal = () => {
+    setShowModal(true);        // ❌ ReferenceError: setShowModal is not defined
+    setModalMode('edit');
+    setSelectedItem(item);
+  };
+
+  return (
+    <Modal show={showModal}>  {/* ❌ ReferenceError: showModal is not defined */}
+      {/* modal content */}
+    </Modal>
+  );
+};
+```
+
+**Solution**: Always declare state variables before using their setter functions:
+
+```jsx
+// ✅ CORRECT - Declare all state variables
+const MyComponent = () => {
+  const [showModal, setShowModal] = useState(false);
+  const [modalMode, setModalMode] = useState('create');
+  const [selectedItem, setSelectedItem] = useState(null);
+
+  const handleOpenModal = () => {
+    setShowModal(true);        // ✅ Now works
+    setModalMode('edit');
+    setSelectedItem(item);
+  };
+
+  return (
+    <Modal show={showModal}>  {/* ✅ Now works */}
+      {/* modal content */}
+    </Modal>
+  );
+};
+```
+
+**Prevention**:
+- **Always declare state variables at the top of the component** before any function definitions
+- **Use consistent naming**: If you have `setShowModal`, you must have `const [showModal, setShowModal] = useState(...)`
+- **Check for missing state declarations** when you see "X is not defined" errors for variables that should be state
+- **Use React DevTools** to inspect component state during development
+- **Enable ESLint rules** for React hooks to catch missing dependencies and state issues
+
+**Quick Diagnostic Check**:
+```bash
+# Search for state setter usage without declarations
+grep -r "set[A-Z]" src/components/ | grep -v "useState\|useReducer"
+
+# Look for common modal state patterns
+grep -r "setShowModal\|setModalMode\|setSelected" src/components/
+```
+
+**Common Variations of This Issue**:
+- Modal state: `showModal`, `setShowModal`
+- Form state: `formData`, `setFormData`
+- Loading state: `loading`, `setLoading`
+- Error state: `error`, `setError`
+- Selected item state: `selectedItem`, `setSelectedItem`
+
+**Files Fixed**:
+- `/frontend/src/pages/VisitsPage.jsx` - Added missing `showModal`, `modalMode`, and `selectedVisit` state declarations
+
+**Reference**: This commonly occurs when copying code from other components or when refactoring existing components. Always verify state declarations match state setter usage.
+
+---
+
 ## Testing Strategy
 
 ### Issue 10: Isolating Logic vs Integration Testing
@@ -986,6 +1070,8 @@ query('limit')
 - **When integrating frontend with backend APIs**: Always inspect actual response structure with curl/DevTools
 - **When authentication works once but fails on navigation**: Check if user data is properly persisted in storage
 - **When JWT tokens are involved**: Decode them to verify they contain expected data
+- **When React components throw "X is not defined" errors**: Check if state variables are declared before using setters
+- **When copying code between components**: Verify all state variables and dependencies are properly declared
 
 ---
 
