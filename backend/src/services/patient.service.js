@@ -290,7 +290,9 @@ async function createPatient(patientData, user, requestMetadata = {}) {
         throw error;
       }
 
-      if (dietitian.role.name !== 'DIETITIAN') {
+      // Only non-admin users are restricted to assigning DIETITIAN role users
+      // Admins can assign any active user
+      if (user.role.name !== 'ADMIN' && dietitian.role.name !== 'DIETITIAN') {
         const error = new Error('Assigned user must have DIETITIAN role');
         error.statusCode = 400;
         throw error;
@@ -381,7 +383,9 @@ async function updatePatient(patientId, updateData, user, requestMetadata = {}) 
         throw error;
       }
 
-      if (dietitian.role.name !== 'DIETITIAN') {
+      // Only non-admin users are restricted to assigning DIETITIAN role users
+      // Admins can assign any active user
+      if (user.role.name !== 'ADMIN' && dietitian.role.name !== 'DIETITIAN') {
         const error = new Error('Assigned user must have DIETITIAN role');
         error.statusCode = 400;
         throw error;

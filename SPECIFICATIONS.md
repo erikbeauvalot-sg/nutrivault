@@ -300,10 +300,10 @@ NutriVault implements **6 rate limiters** to prevent abuse:
 
 | Role | Permissions | Use Case |
 |------|-------------|----------|
-| **ADMIN** | All 40 permissions | System administration, user management |
-| **DIETITIAN** | Patient CRUD, visits, billing (assigned only), audit view | Primary practitioners |
-| **ASSISTANT** | Patient/visit/billing create/read | Front desk, scheduling |
-| **VIEWER** | Read-only access | Observers, trainees, external auditors |
+| **ADMIN** | All permissions | System administration, full access to everything |
+| **DIETITIAN** | Patient CRUD, visits CRUD, billing, documents, reports, audit logs (no user management) | Licensed dietitians managing patient care |
+| **ASSISTANT** | Patient read, visits CRUD, billing create/read, documents | Administrative assistants helping with scheduling and patient coordination |
+| **VIEWER** | Read-only access to patients, visits, billing, documents, reports, audit logs | Observers, trainees, external auditors |
 
 **Permission Format:** `resource.action`
 

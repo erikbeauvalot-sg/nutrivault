@@ -42,6 +42,7 @@ const UsersPage = () => {
   useEffect(() => {
     if (user && user.role === 'ADMIN') {
       fetchUsers();
+      fetchRoles();
     }
   }, [filters, user]);
 
@@ -54,16 +55,6 @@ const UsersPage = () => {
       const usersList = Array.isArray(data) ? data : [];
       setUsers(usersList);
       
-      // Extract unique roles from users
-      if (usersList.length > 0) {
-        const uniqueRoles = [...new Map(
-          usersList
-            .filter(u => u.role)
-            .map(u => [u.role.id, u.role])
-        ).values()];
-        setRoles(uniqueRoles);
-      }
-      
       const paginationData = response.data.pagination || { total: 0, totalPages: 0 };
       setPagination(paginationData);
       setError(null);
@@ -73,6 +64,18 @@ const UsersPage = () => {
       setUsers([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRoles = async () => {
+    try {
+      const response = await userService.getRoles();
+      const data = response.data.data || response.data;
+      const rolesList = Array.isArray(data) ? data : [];
+      setRoles(rolesList);
+    } catch (err) {
+      console.error('Error fetching roles:', err);
+      // Don't set error state for roles, just log it
     }
   };
 

@@ -238,6 +238,13 @@ router.get(
   userController.getDietitians
 );
 
+// GET /api/users/roles - Get all available roles (Authenticated users)
+router.get(
+  '/roles',
+  authenticate,
+  userController.getRoles
+);
+
 // GET /api/users - Get all users (Admin or Dietitian for POC)
 router.get(
   '/',

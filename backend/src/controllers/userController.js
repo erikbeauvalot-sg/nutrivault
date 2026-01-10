@@ -203,3 +203,21 @@ exports.getDietitians = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * GET /api/users/roles - Get all available roles
+ */
+exports.getRoles = async (req, res, next) => {
+  try {
+    const requestMetadata = getRequestMetadata(req);
+    const roles = await userService.getRoles();
+
+    res.json({
+      success: true,
+      data: roles
+    });
+  } catch (error) {
+    console.error('🔥 Error in getRoles:', error.message);
+    next(error);
+  }
+};

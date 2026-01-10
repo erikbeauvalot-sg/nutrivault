@@ -1299,6 +1299,69 @@ case 2: // Medical Information
 
 ---
 
+### Issue 21: Admin User Restrictions in Patient Assignment Validation
+
+**Problem**: Admin users received "Assigned user must have DIETITIAN role" error when creating patients, despite admins being intended to have full permissions.
+
+**Root Cause**: Patient creation validation in `patient.service.js` applied DIETITIAN role restriction to all users, including admins. The validation logic didn't differentiate between admin users (who should have full permissions) and non-admin users (who should be restricted to assigning DIETITIANS).
+
+**Solution**: Modified validation to allow admins full assignment permissions while restricting non-admins:
+
+```javascript
+// Before (restrictive for all users)
+if (dietitian.role.name !== 'DIETITIAN') {
+  const error = new Error('Assigned user must have DIETITIAN role');
+  error.statusCode = 400;
+  throw error;
+}
+
+// After (admins can assign anyone, non-admins restricted)
+if (user.role.name !== 'ADMIN' && dietitian.role.name !== 'DIETITIAN') {
+  const error = new Error('Assigned user must have DIETITIAN role');
+  error.statusCode = 400;
+  throw error;
+}
+```
+
+**Prevention**:
+- **Differentiate admin vs non-admin permissions** in validation logic
+- **Test with admin accounts** during permission-related development
+- **Document admin override permissions** clearly in specifications
+- **Use role-based validation logic** instead of blanket restrictions
+- **Consider admin permissions first** when designing access controls
+
+**Role Permission Updates**:
+- **ADMIN**: All permissions (unchanged)
+- **DIETITIAN**: All permissions except `users.*` (removed user management)
+- **ASSISTANT**: Patient read, visits CRUD, billing create/read, documents (unchanged)
+- **VIEWER**: Read-only access (unchanged)
+
+**Additional Fixes**:
+- Created `/api/users/roles` endpoint to fetch all available roles
+- Updated frontend to use dedicated roles endpoint instead of extracting from users
+- This ensures ASSISTANT role appears in user creation dropdown even when no users have that role
+
+**Files Fixed**:
+- `/backend/src/services/patient.service.js` - Updated createPatient() and updatePatient() validation
+- `/backend/src/services/user.service.js` - Added getRoles() function
+- `/backend/src/controllers/userController.js` - Added getRoles() controller
+- `/backend/src/routes/users.js` - Added `/roles` route
+- `/frontend/src/services/userService.js` - Added getRoles() method
+- `/frontend/src/pages/UsersPage.jsx` - Updated to fetch roles separately
+- `/seeders/20240101000003-role-permissions.js` - Removed user management from DIETITIANS
+- `/SPECIFICATIONS.md` - Updated role permission descriptions
+
+**Testing Checklist**:
+- ✅ Admin can assign any user (including non-DIETITIANS) to patients
+- ✅ Non-admin users still restricted to DIETITIAN assignments
+- ✅ ASSISTANT role appears in user creation dropdown
+- ✅ DIETITIANS cannot manage users (create/update/delete)
+- ✅ Role permissions match business requirements
+
+**Reference**: This addresses the core issue where admin permissions were incorrectly restricted, and ensures proper role separation as specified in business requirements.
+
+---
+
 **Last Updated**: January 10, 2026  
 **Next Review**: After completing Phase 1
 

@@ -48,12 +48,13 @@ module.exports = {
       });
     }
 
-    // DIETITIAN: All except system and api_keys (32 permissions for POC - includes user management)
+    // DIETITIAN: Patients, visits, billing, documents, reports, audit logs (no user management)
     if (dietitianRole) {
       permissions
         .filter(p => 
           !p.code.startsWith('api_keys.') &&
-          !p.code.startsWith('system.')
+          !p.code.startsWith('system.') &&
+          !p.code.startsWith('users.')
         )
         .forEach(permission => {
           rolePermissions.push({
@@ -66,12 +67,12 @@ module.exports = {
         });
     }
 
-    // ASSISTANT: Create/read for patients, visits, billing (15 permissions)
+    // ASSISTANT: View patients and manage visits (create/read/update for visits, read for patients)
     if (assistantRole) {
       permissions
         .filter(p => 
-          (p.code.startsWith('patients.') && (p.code.includes('create') || p.code.includes('read'))) ||
-          (p.code.startsWith('visits.') && (p.code.includes('create') || p.code.includes('read') || p.code.includes('schedule'))) ||
+          (p.code.startsWith('patients.') && p.code.includes('read')) ||
+          (p.code.startsWith('visits.')) ||
           (p.code.startsWith('billing.') && (p.code.includes('create') || p.code.includes('read'))) ||
           (p.code.startsWith('documents.') && (p.code.includes('upload') || p.code.includes('read') || p.code.includes('download')))
         )

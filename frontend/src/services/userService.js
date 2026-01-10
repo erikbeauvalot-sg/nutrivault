@@ -93,6 +93,15 @@ export const getDietitians = async () => {
   return response;
 };
 
+/**
+ * Get all available roles
+ * @returns {Promise} API response
+ */
+export const getRoles = async () => {
+  const response = await api.get('/api/users/roles');
+  return response;
+};
+
 export default {
   getUsers,
   getUserById,
@@ -101,5 +110,6 @@ export default {
   deleteUser,
   changePassword,
   toggleUserStatus,
-  getDietitians
+  getDietitians,
+  getRoles
 };

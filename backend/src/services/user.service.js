@@ -626,6 +626,29 @@ async function getDietitians() {
   }
 }
 
+/**
+ * Get all available roles
+ * @returns {Promise<Array>} Array of all roles
+ */
+async function getRoles() {
+  try {
+    console.log('🔍 getRoles() - Fetching all available roles...');
+
+    const roles = await Role.findAll({
+      where: { is_active: true },
+      order: [['name', 'ASC']]
+    });
+
+    console.log(`✅ Found ${roles.length} active roles:`, roles.map(r => r.name).join(', '));
+
+    return roles;
+  } catch (error) {
+    console.error('🔥 Error in getRoles:', error.message);
+    console.error('🔥 Stack:', error.stack);
+    throw error;
+  }
+}
+
 module.exports = {
   getUsers,
   getUserById,
@@ -634,5 +657,6 @@ module.exports = {
   deleteUser,
   changePassword,
   toggleUserStatus,
-  getDietitians
+  getDietitians,
+  getRoles
 };
