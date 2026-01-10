@@ -1075,6 +1075,135 @@ query('limit')
 
 ---
 
+### Issue 17: RBAC Filtering Preventing Non-Admin Users from Seeing Data
+
+**Problem**: Non-admin users (DIETITIAN, ASSISTANT, VIEWER) could not see any patients or visits in the application, despite having the correct permissions.
+
+**Root Cause**: Overly restrictive RBAC (Role-Based Access Control) logic in service layers that filtered data based on user roles:
+- Patient service filtered DIETITIANS to only see patients assigned to them (`assigned_dietitian_id = user.id`)
+- Visit service had complex logic restricting DIETITIANS to only see visits they're assigned to or visits for their assigned patients
+- Since most patients had `assigned_dietitian_id = NULL`, DIETITIANS saw 0 patients
+- ASSISTANT and VIEWER users should have seen all data, but the restrictive logic created confusion
+
+**Solution**: For POC/demo system, disable restrictive RBAC filtering to allow all authenticated users to see all data:
+
+**Patient Service** (`/backend/src/services/patient.service.js`):
+```javascript
+// Before (restrictive):
+if (user && user.role && user.role.name === 'DIETITIAN') {
+  whereClause.assigned_dietitian_id = user.id;
+}
+
+// After (POC - all users see all data):
+// RBAC: In POC system, all authenticated users can see all active patients
+// (Original restrictive logic commented out for POC purposes)
+// if (user && user.role && user.role.name === 'DIETITIAN') {
+//   whereClause.assigned_dietitian_id = user.id;
+// }
+```
+
+**Visit Service** (`/backend/src/services/visit.service.js`):
+```javascript
+// Before (restrictive):
+if (user && user.role && user.role.name === 'DIETITIAN') {
+  // Complex logic to filter visits...
+}
+
+// After (POC - all users see all data):
+// RBAC: In POC system, all authenticated users can see all visits
+// (Original restrictive logic commented out for POC purposes)
+// if (user && user.role && user.role.name === 'DIETITIAN') {
+//   // ...
+// }
+```
+
+**Prevention**:
+- **Test with different user roles** during development, not just admin
+- **Document RBAC expectations clearly** in code comments and specifications
+- **Consider POC vs production requirements** - demo systems may need different access controls
+- **Add safety checks** for user.role existence before accessing properties
+- **Test data setup** - ensure test users have appropriate data relationships
+- **Clear user expectations** - communicate what data different roles can access
+
+**Diagnostic Steps**:
+1. Check user permissions: `SELECT r.name, p.code FROM roles r JOIN role_permissions rp ON r.id = rp.role_id JOIN permissions p ON rp.permission_id = p.id WHERE r.name = 'DIETITIAN';`
+2. Verify user role loading: Add `console.log('User role:', user.role?.name)` in service methods
+3. Check data relationships: `SELECT assigned_dietitian_id FROM patients WHERE is_active = 1;`
+4. Test API directly: `curl -H "Authorization: Bearer <token>" http://localhost:3001/api/patients`
+
+**Lesson**: RBAC logic can silently hide data from users. Always test with non-admin accounts and verify that users can see expected data. For POC systems, consider simplified access controls.
+
+**Files Modified**:
+- `/backend/src/services/patient.service.js` - Disabled DIETITIAN filtering
+- `/backend/src/services/visit.service.js` - Disabled DIETITIAN filtering
+
+**Reference**: This affected all non-admin users in the POC system, making the application appear broken for normal users.
+
+---
+
+### Issue 18: RBAC Permission Updates for POC Testing
+
+**Problem**: DIETITIANS lacked user management permissions despite expecting "edit everything" capabilities. Could not delete users or patients, and couldn't even list users due to restrictive route permissions.
+
+**Root Cause**: Multiple layers of permission restrictions:
+1. **Database Permissions**: DIETITIAN role excluded user management permissions (`users.*`) in seeder
+2. **Route Permissions**: User routes required ADMIN role only, preventing DIETITIANS from accessing user management endpoints
+3. **Service Logic**: Patient deletion had additional RBAC checks restricting DIETITIANS to assigned patients only
+
+**Solution**: 
+
+**Database Permission Updates**:
+- Modified `/seeders/20240101000003-role-permissions.js` to include user permissions for DIETITIANS
+- Removed `!p.code.startsWith('users.')` filter to grant DIETITIANS full user management capabilities
+- Re-ran seeders to apply updated permissions (DIETITIAN: 34 permissions → includes users.delete, users.create, etc.)
+
+**Route Permission Updates**:
+- Modified `/backend/src/routes/users.js` DELETE route: `requireRole('ADMIN')` → `requireAnyRole(['ADMIN', 'DIETITIAN'])`
+- Modified `/backend/src/routes/users.js` GET route: `requireRole('ADMIN')` → `requireAnyRole(['ADMIN', 'DIETITIAN'])`
+- Added `requireAnyRole` import to routes
+
+**Service Logic Updates**:
+- Modified `/backend/src/services/patient.service.js` deletePatient(): Commented out restrictive RBAC logic for POC
+
+**Verification**:
+- ✅ DIETITIANS can now list users (`GET /api/users`)
+- ✅ DIETITIANS can now delete users (soft delete via `DELETE /api/users/:id`)
+- ✅ DIETITIANS can now delete patients (soft delete via `DELETE /api/patients/:id`)
+- ✅ User activation: Activated test DIETITIAN account for testing
+- ✅ Database verification: Confirmed soft deletes work (is_active = 0)
+
+**Prevention**:
+- **Test with non-admin roles** during permission changes
+- **Update both database permissions AND route permissions** when expanding role capabilities
+- **Check service layer logic** for additional RBAC restrictions beyond route middleware
+- **Document POC-specific changes** with clear comments for future production adjustments
+- **Use requireAnyRole()** for flexible multi-role permissions instead of single-role checks
+- **Verify soft delete behavior** - ensure deactivated records don't appear in normal queries
+
+**Diagnostic Commands**:
+```bash
+# Check DIETITIAN permissions
+sqlite3 backend/data/nutrivault.db "SELECT r.name, p.code FROM roles r JOIN role_permissions rp ON r.id = rp.role_id JOIN permissions p ON rp.permission_id = p.id WHERE r.name = 'DIETITIAN' AND (p.code LIKE '%delete%' OR p.code LIKE '%users%');"
+
+# Test API access
+curl -H "Authorization: Bearer <dietitian_token>" http://localhost:3001/api/users
+curl -X DELETE -H "Authorization: Bearer <dietitian_token>" http://localhost:3001/api/users/<user_id>
+
+# Verify soft deletes
+sqlite3 backend/data/nutrivault.db "SELECT username, is_active FROM users WHERE username = 'assistant';"
+```
+
+**Lesson**: Permission systems have multiple layers (database, routes, services). When granting new capabilities, update all layers and test end-to-end functionality. POC systems often need broader permissions than production systems.
+
+**Files Modified**:
+- `/seeders/20240101000003-role-permissions.js` - Added user permissions for DIETITIANS
+- `/backend/src/routes/users.js` - Updated routes to allow DIETITIAN access
+- `/backend/src/services/patient.service.js` - Disabled restrictive patient deletion logic
+
+**Reference**: This resolved the user's requirement for DIETITIANS to have "edit everything" permissions including user and patient deletion capabilities.
+
+---
+
 **Last Updated**: January 9, 2026  
 **Next Review**: After completing Phase 1
 

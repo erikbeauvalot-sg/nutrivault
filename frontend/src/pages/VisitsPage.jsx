@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Button, Badge, Form, InputGroup, Spinner, Alert } from 'react-bootstrap';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import visitService from '../services/visitService';
@@ -13,6 +14,7 @@ import VisitModal from '../components/VisitModal';
 
 const VisitsPage = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [visits, setVisits] = useState([]);
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -102,13 +104,25 @@ const VisitsPage = () => {
 
   const handleEditClick = async (visitId) => {
     try {
+      console.log('✏️ EDIT VISIT:', visitId);
       const response = await visitService.getVisitById(visitId);
+      console.log('✏️ EDIT RESPONSE:', response);
       const visitData = response.data.data || response.data;
+      console.log('✏️ EDIT VISIT DATA:', visitData);
+      console.log('✏️ SETTING selectedVisit to:', visitData);
+      
+      // Set the visit data first
       setSelectedVisit(visitData);
       setModalMode('edit');
-      setShowModal(true);
+      
+      // Use setTimeout to ensure state updates before opening modal
+      setTimeout(() => {
+        setShowModal(true);
+        console.log('✏️ MODAL SHOULD OPEN NOW');
+      }, 0);
+      
     } catch (err) {
-      console.error('Error fetching visit:', err);
+      console.error('❌ Error fetching visit for edit:', err);
       alert(err.response?.data?.error || 'Failed to load visit');
     }
   };
@@ -145,16 +159,16 @@ const VisitsPage = () => {
   };
 
   const canEdit = (visit) => {
-    if (user.role === 'ADMIN') return true;
-    if (user.role === 'DIETITIAN' && visit.dietitian_id === user.id) return true;
-    return false;
+    const canEditResult = user.role === 'ADMIN' || (user.role === 'DIETITIAN' && visit.dietitian_id === user.id);
+    console.log('🔒 CAN EDIT CHECK:', { visitId: visit.id, dietitianId: visit.dietitian_id, userId: user.id, userRole: user.role, canEdit: canEditResult });
+    return canEditResult;
   };
 
   return (
     <Layout>
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h1>📅 Visits</h1>
+          <h1>📅 {t('visits.title')}</h1>
           <div>
             <Button
               variant={viewMode === 'table' ? 'primary' : 'outline-primary'}
@@ -162,7 +176,7 @@ const VisitsPage = () => {
               className="me-2"
               onClick={() => setViewMode('table')}
             >
-              📋 Table View
+              📋 {t('visits.tableView')}
             </Button>
             <Button
               variant={viewMode === 'timeline' ? 'primary' : 'outline-primary'}
@@ -170,10 +184,10 @@ const VisitsPage = () => {
               className="me-2"
               onClick={() => setViewMode('timeline')}
             >
-              ⏱️ Timeline View
+              ⏱️ {t('visits.timelineView')}
             </Button>
             <Button variant="primary" size="lg" onClick={handleCreateClick}>
-              Create Visit
+              {t('visits.createVisit')}
             </Button>
           </div>
         </div>

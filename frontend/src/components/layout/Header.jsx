@@ -6,10 +6,13 @@
 import { Navbar, Container, Nav, NavDropdown } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
+import LanguageSelector from '../LanguageSelector';
 
 const Header = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleLogout = async () => {
     try {
@@ -29,10 +32,13 @@ const Header = () => {
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="me-auto">
-            <Nav.Link as={Link} to="/dashboard">Dashboard</Nav.Link>
-            <Nav.Link as={Link} to="/patients">Patients</Nav.Link>
+            <Nav.Link as={Link} to="/dashboard">{t('navigation.dashboard')}</Nav.Link>
+            <Nav.Link as={Link} to="/patients">{t('navigation.patients')}</Nav.Link>
           </Nav>
-          <Nav>
+          <Nav className="align-items-center">
+            <div className="me-3">
+              <LanguageSelector />
+            </div>
             <NavDropdown
               title={
                 <>
@@ -50,7 +56,7 @@ const Header = () => {
               <NavDropdown.Divider />
               <NavDropdown.Item onClick={handleLogout}>
                 <i className="bi bi-box-arrow-right me-2"></i>
-                Logout
+                {t('navigation.logout')}
               </NavDropdown.Item>
             </NavDropdown>
           </Nav>

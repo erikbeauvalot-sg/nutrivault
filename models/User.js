@@ -56,6 +56,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true
+    },
+    language_preference: {
+      type: DataTypes.ENUM('fr', 'en'),
+      allowNull: false,
+      defaultValue: 'fr',
+      comment: 'User preferred language (fr=french, en=english)'
     }
   }, {
     tableName: 'users',

@@ -622,6 +622,7 @@ throw new AppError('Invalid input data', 400, 'VALIDATION_ERROR', validationDeta
 - ✅ Advanced visit records (measurements with full history tracking, recommendations)
 - ✅ **Measurement history tracking** - All measurement fields optional, append-only history
 - ✅ **Patient detail dashboard** - Graphical view of patient data with measurement charts
+- ✅ **Internationalization (i18n)** - French and English language support (French default)
 - ✅ File uploads (documents, 10MB max)
 - ✅ Comprehensive audit logging
 - ✅ API keys for programmatic access

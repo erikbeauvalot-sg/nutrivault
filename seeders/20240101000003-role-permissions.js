@@ -48,11 +48,10 @@ module.exports = {
       });
     }
 
-    // DIETITIAN: All except system, user management, api_keys (27 permissions)
+    // DIETITIAN: All except system and api_keys (32 permissions for POC - includes user management)
     if (dietitianRole) {
       permissions
         .filter(p => 
-          !p.code.startsWith('users.') &&
           !p.code.startsWith('api_keys.') &&
           !p.code.startsWith('system.')
         )

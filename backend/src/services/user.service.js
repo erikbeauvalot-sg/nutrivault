@@ -216,6 +216,7 @@ async function createUser(user, userData, requestMetadata = {}) {
       first_name: userData.first_name,
       last_name: userData.last_name,
       phone: userData.phone,
+      language_preference: userData.language_preference || 'fr',
       is_active: true
     });
 
@@ -289,10 +290,10 @@ async function updateUser(user, userId, updateData, requestMetadata = {}) {
 
     if (isAdmin) {
       // Admin can update all fields except password (use separate endpoint)
-      allowedFields = ['username', 'email', 'role_id', 'first_name', 'last_name', 'phone', 'is_active'];
+      allowedFields = ['username', 'email', 'role_id', 'first_name', 'last_name', 'phone', 'is_active', 'language_preference'];
     } else {
       // Regular users can only update their own basic info
-      allowedFields = ['first_name', 'last_name', 'phone', 'email'];
+      allowedFields = ['first_name', 'last_name', 'phone', 'email', 'language_preference'];
     }
 
     // Check if email is being changed and if it's already taken

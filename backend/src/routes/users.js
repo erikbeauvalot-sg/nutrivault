@@ -10,7 +10,7 @@ const router = express.Router();
 const { body, param, query, validationResult } = require('express-validator');
 const userController = require('../controllers/userController');
 const authenticate = require('../middleware/authenticate');
-const { requireRole, requireOwnerOrRole } = require('../middleware/rbac');
+const { requireRole, requireOwnerOrRole, requireAnyRole } = require('../middleware/rbac');
 
 /**
  * Validation middleware - check for validation errors
@@ -95,7 +95,12 @@ const createUserValidation = [
     .optional({ checkFalsy: true })
     .trim()
     .isLength({ max: 20 })
-    .withMessage('Phone must be less than 20 characters')
+    .withMessage('Phone must be less than 20 characters'),
+
+  body('language_preference')
+    .optional()
+    .isIn(['fr', 'en'])
+    .withMessage('Language preference must be either "fr" or "en"')
 ];
 
 /**
@@ -143,7 +148,12 @@ const updateUserValidation = [
   body('is_active')
     .optional()
     .isBoolean()
-    .withMessage('is_active must be a boolean')
+    .withMessage('is_active must be a boolean'),
+
+  body('language_preference')
+    .optional()
+    .isIn(['fr', 'en'])
+    .withMessage('Language preference must be either "fr" or "en"')
 ];
 
 /**
@@ -228,11 +238,11 @@ router.get(
   userController.getDietitians
 );
 
-// GET /api/users - Get all users (Admin only)
+// GET /api/users - Get all users (Admin or Dietitian for POC)
 router.get(
   '/',
   authenticate,
-  requireRole('ADMIN'),
+  requireAnyRole(['ADMIN', 'DIETITIAN']), // Allow both ADMIN and DIETITIAN for POC testing
   queryValidation,
   validate,
   userController.getAllUsers
@@ -269,11 +279,11 @@ router.put(
   userController.updateUser
 );
 
-// DELETE /api/users/:id - Delete user (Admin only)
+// DELETE /api/users/:id - Delete user (Admin or Dietitian for POC)
 router.delete(
   '/:id',
   authenticate,
-  requireRole('ADMIN'),
+  requireAnyRole(['ADMIN', 'DIETITIAN']), // Allow both ADMIN and DIETITIAN for POC testing
   uuidParamValidation,
   validate,
   userController.deleteUser

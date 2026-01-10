@@ -1,8 +1,12 @@
+import { useTranslation } from 'react-i18next';
+
 function PatientList({ patients, loading, onEdit, onDelete, onView }) {
+  const { t } = useTranslation();
+
   if (loading) {
     return (
       <div className="patients-list">
-        <div className="loading">Loading patients...</div>
+        <div className="loading">{t('common.loading')}</div>
       </div>
     )
   }
@@ -10,10 +14,10 @@ function PatientList({ patients, loading, onEdit, onDelete, onView }) {
   if (patients.length === 0) {
     return (
       <div className="patients-list">
-        <h2>👥 Patients</h2>
+        <h2>👥 {t('patients.title')}</h2>
         <div className="empty-state">
-          <h3>No patients yet</h3>
-          <p>Create your first patient using the form above</p>
+          <h3>{t('patients.noPatients')}</h3>
+          <p>{t('patients.createFirstPatient')}</p>
         </div>
       </div>
     )
@@ -21,9 +25,12 @@ function PatientList({ patients, loading, onEdit, onDelete, onView }) {
 
   return (
     <div className="patients-list">
-      <h2>👥 Patients</h2>
+      <h2>👥 {t('patients.title')}</h2>
       <div className="patient-count">
-        Total: {patients.length} patient{patients.length !== 1 ? 's' : ''}
+        {t('patients.totalPatients', {
+          count: patients.length,
+          plural: patients.length !== 1 ? 's' : ''
+        })}
       </div>
 
       {patients.map(patient => (
@@ -34,28 +41,28 @@ function PatientList({ patients, loading, onEdit, onDelete, onView }) {
                 {patient.first_name} {patient.last_name}
               </div>
               <span className={`status-badge ${patient.is_active ? 'status-active' : 'status-inactive'}`}>
-                {patient.is_active ? 'Active' : 'Inactive'}
+                {patient.is_active ? t('common.active') : t('common.inactive')}
               </span>
             </div>
             <div className="patient-actions">
               <button
                 className="btn btn-info btn-sm me-1"
                 onClick={() => onView(patient)}
-                title="View patient details and charts"
+                title={t('patients.viewPatient')}
               >
-                👁️ View
+                👁️ {t('common.view')}
               </button>
               <button
                 className="btn btn-primary btn-sm me-1"
                 onClick={() => onEdit(patient)}
               >
-                ✏️ Edit
+                ✏️ {t('common.edit')}
               </button>
               <button
                 className="btn btn-danger btn-sm"
                 onClick={() => onDelete(patient.id)}
               >
-                🗑️ Delete
+                🗑️ {t('common.delete')}
               </button>
             </div>
           </div>

@@ -7,6 +7,17 @@ module.exports = {
   up: async (queryInterface, Sequelize) => {
     const { v4: uuidv4 } = require('uuid');
     
+    // Check if patients already exist
+    const existingPatients = await queryInterface.sequelize.query(
+      "SELECT COUNT(*) as count FROM patients",
+      { type: Sequelize.QueryTypes.SELECT }
+    );
+    
+    if (existingPatients[0].count > 0) {
+      console.log('ℹ️  Sample patients already exist, skipping seed');
+      return;
+    }
+    
     await queryInterface.bulkInsert('patients', [
       {
         id: uuidv4(),

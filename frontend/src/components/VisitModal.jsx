@@ -40,6 +40,10 @@ const measurementSchema = yup.object().shape({
 });
 
 const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
+  console.log('🔧 VisitModal rendered with props:', { show, mode, visit: visit ? 'present' : 'null' });
+  if (visit) {
+    console.log('🔧 VisitModal visit object:', visit);
+  }
   const { user } = useAuth();
   const [patients, setPatients] = useState([]);
   const [dietitians, setDietitians] = useState([]);
@@ -52,6 +56,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
     watch
   } = useForm({
     resolver: yupResolver(visitSchema),
@@ -75,24 +80,34 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
   const isCreateMode = mode === 'create';
 
   useEffect(() => {
+    console.log('🔧 VisitModal useEffect triggered:', { show, mode, visit: visit ? 'present' : 'null' });
+    if (visit) {
+      console.log('🔧 VisitModal visit data:', visit);
+    }
+    
     if (show) {
       fetchPatients();
       fetchDietitians();
       
       if (visit) {
-        reset({
-          patient_id: visit.patient_id,
-          dietitian_id: visit.dietitian_id,
-          visit_date: visit.visit_date ? new Date(visit.visit_date).toISOString().slice(0, 16) : '',
-          visit_type: visit.visit_type || '',
-          status: visit.status || 'SCHEDULED',
-          duration_minutes: visit.duration_minutes || '',
-          chief_complaint: visit.chief_complaint || '',
-          assessment: visit.assessment || '',
-          recommendations: visit.recommendations || '',
-          notes: visit.notes || '',
-          next_visit_date: visit.next_visit_date ? new Date(visit.next_visit_date).toISOString().slice(0, 16) : ''
-        });
+        console.log('🔧 VisitModal setting form values with visit data');
+        console.log('🔧 VisitModal visit_date raw:', visit.visit_date);
+        const formattedVisitDate = visit.visit_date ? new Date(visit.visit_date).toISOString().slice(0, 16) : '';
+        console.log('🔧 VisitModal patient_id:', visit.patient_id, 'type:', typeof visit.patient_id);
+        console.log('🔧 VisitModal dietitian_id:', visit.dietitian_id, 'type:', typeof visit.dietitian_id);
+        setValue('patient_id', visit.patient_id);
+        setValue('dietitian_id', visit.dietitian_id);
+        setValue('visit_date', formattedVisitDate);
+        setValue('visit_type', visit.visit_type || '');
+        setValue('status', visit.status || 'SCHEDULED');
+        setValue('duration_minutes', visit.duration_minutes || '');
+        setValue('chief_complaint', visit.chief_complaint || '');
+        setValue('assessment', visit.assessment || '');
+        setValue('recommendations', visit.recommendations || '');
+        setValue('notes', visit.notes || '');
+        const formattedNextVisitDate = visit.next_visit_date ? new Date(visit.next_visit_date).toISOString().slice(0, 16) : '';
+        console.log('🔧 VisitModal next_visit_date formatted:', formattedNextVisitDate);
+        setValue('next_visit_date', formattedNextVisitDate);
 
         if (visit.measurements) {
           // Reset form to empty - measurements now stored as history (Beta feature)
@@ -107,7 +122,8 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
             notes: ''
           });
         }
-      } else {
+      } else if (mode === 'create') {
+        console.log('🔧 VisitModal resetting form for create mode');
         reset({ status: 'SCHEDULED' });
         resetMeasurement({});
       }

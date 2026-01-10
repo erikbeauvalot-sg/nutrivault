@@ -5,18 +5,20 @@
 
 import { Nav } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import './Sidebar.css';
 
 const Sidebar = () => {
   const location = useLocation();
+  const { t } = useTranslation();
 
   const menuItems = [
-    { path: '/dashboard', icon: '📊', label: 'Dashboard' },
-    { path: '/patients', icon: '👥', label: 'Patients' },
-    { path: '/visits', icon: '📅', label: 'Visits' },
-    { path: '/billing', icon: '💰', label: 'Billing', disabled: true },
-    { path: '/reports', icon: '📈', label: 'Reports', disabled: true },
-    { path: '/users', icon: '👤', label: 'Users' },
+    { path: '/dashboard', icon: '📊', label: t('navigation.dashboard') },
+    { path: '/patients', icon: '👥', label: t('navigation.patients') },
+    { path: '/visits', icon: '📅', label: t('navigation.visits') },
+    { path: '/billing', icon: '💰', label: t('navigation.billing'), disabled: true },
+    { path: '/reports', icon: '📈', label: t('navigation.reports'), disabled: true },
+    { path: '/users', icon: '👤', label: t('navigation.users') },
   ];
 
   return (

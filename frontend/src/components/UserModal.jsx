@@ -33,7 +33,8 @@ const createUserSchema = yup.object().shape({
   role_id: yup.string().required('Role is required'),
   first_name: yup.string().required('First name is required').max(100),
   last_name: yup.string().required('Last name is required').max(100),
-  phone: yup.string().max(20)
+  phone: yup.string().max(20),
+  language_preference: yup.string().oneOf(['fr', 'en'], 'Language must be either French or English').default('fr')
 });
 
 const editUserSchema = yup.object().shape({
@@ -44,7 +45,8 @@ const editUserSchema = yup.object().shape({
   first_name: yup.string().required('First name is required').max(100),
   last_name: yup.string().required('Last name is required').max(100),
   phone: yup.string().max(20),
-  is_active: yup.boolean()
+  is_active: yup.boolean(),
+  language_preference: yup.string().oneOf(['fr', 'en'], 'Language must be either French or English')
 });
 
 const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
@@ -76,7 +78,8 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
           first_name: user.first_name,
           last_name: user.last_name,
           phone: user.phone || '',
-          is_active: user.is_active
+          is_active: user.is_active,
+          language_preference: user.language_preference || 'fr'
         });
       } else {
         reset({
@@ -88,7 +91,8 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
           first_name: '',
           last_name: '',
           phone: '',
-          is_active: true
+          is_active: true,
+          language_preference: 'fr'
         });
       }
     }
@@ -333,6 +337,24 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
                   placeholder="+1-555-123-4567"
                 />
                 <Form.Control.Feedback type="invalid">{errors.phone?.message}</Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+
+            <Col md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>Language Preference *</Form.Label>
+                <Form.Select
+                  {...register('language_preference')}
+                  isInvalid={!!errors.language_preference}
+                  defaultValue="fr"
+                >
+                  <option value="fr">🇫🇷 French</option>
+                  <option value="en">🇬🇧 English</option>
+                </Form.Select>
+                <Form.Control.Feedback type="invalid">{errors.language_preference?.message}</Form.Control.Feedback>
+                <Form.Text className="text-muted">
+                  Preferred language for the user interface
+                </Form.Text>
               </Form.Group>
             </Col>
 

@@ -29,11 +29,11 @@ async function getPatients(user, filters = {}, requestMetadata = {}) {
   try {
     const whereClause = { is_active: true };
 
-    // RBAC: Dietitians can only see their assigned patients
-    // ADMIN and ASSISTANT can see all patients
-    if (user.role.name === 'DIETITIAN') {
-      whereClause.assigned_dietitian_id = user.id;
-    }
+    // RBAC: In POC system, all authenticated users can see all active patients
+    // (Original restrictive logic commented out for POC purposes)
+    // if (user && user.role && user.role.name === 'DIETITIAN') {
+    //   whereClause.assigned_dietitian_id = user.id;
+    // }
 
     // Apply additional filters
     if (filters.search) {
@@ -458,12 +458,13 @@ async function deletePatient(patientId, user, requestMetadata = {}) {
       throw error;
     }
 
-    // RBAC: Dietitians can only delete their assigned patients
-    if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
-      const error = new Error('Access denied. You can only delete your assigned patients');
-      error.statusCode = 403;
-      throw error;
-    }
+    // RBAC: In POC system, DIETITIANS can delete all patients
+    // (Original restrictive logic commented out for POC purposes)
+    // if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
+    //   const error = new Error('Access denied. You can only delete your assigned patients');
+    //   error.statusCode = 403;
+    //   throw error;
+    // }
 
     // Capture before state
     const beforeData = patient.toJSON();

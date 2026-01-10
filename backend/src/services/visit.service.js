@@ -34,21 +34,22 @@ async function getVisits(user, filters = {}, requestMetadata = {}) {
   try {
     const whereClause = {};
 
-    // RBAC: Dietitians can only see visits where they're assigned OR their assigned patients' visits
-    if (user.role.name === 'DIETITIAN') {
-      // Get patients assigned to this dietitian
-      const assignedPatients = await Patient.findAll({
-        where: { assigned_dietitian_id: user.id, is_active: true },
-        attributes: ['id']
-      });
-      const patientIds = assignedPatients.map(p => p.id);
+    // RBAC: In POC system, all authenticated users can see all visits
+    // (Original restrictive logic commented out for POC purposes)
+    // if (user && user.role && user.role.name === 'DIETITIAN') {
+    //   // Get patients assigned to this dietitian
+    //   const assignedPatients = await Patient.findAll({
+    //     where: { assigned_dietitian_id: user.id, is_active: true },
+    //     attributes: ['id']
+    //   });
+    //   const patientIds = assignedPatients.map(p => p.id);
 
-      // Can see visits where they're the dietitian OR visits for their assigned patients
-      whereClause[Op.or] = [
-        { dietitian_id: user.id },
-        { patient_id: { [Op.in]: patientIds } }
-      ];
-    }
+    //   // Can see visits where they're the dietitian OR visits for their assigned patients
+    //   whereClause[Op.or] = [
+    //     { dietitian_id: user.id },
+    //     { patient_id: { [Op.in]: patientIds } }
+    //   ];
+    // }
 
     // Apply additional filters
     if (filters.patient_id) {

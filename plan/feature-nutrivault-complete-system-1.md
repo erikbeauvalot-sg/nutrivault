@@ -372,6 +372,7 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 | TASK-168 | Add visit timeline visualization | ✅ | 2026-01-09 |
 | TASK-169 | Create visit service (`src/services/visitService.js`) | ✅ | 2026-01-09 |
 | TASK-170 | Test visit scheduling and documentation flow | ✅ | 2026-01-09 |
+| TASK-171 | **Beta Enhancement**: Implement internationalization (i18n) with French/English support | ✅ | 2026-01-09 |
 
 ### Implementation Phase 16: Beta - Frontend Billing
 
@@ -798,7 +799,7 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 - **ASSUMPTION-009**: System will be deployed on Linux-based servers
 - **ASSUMPTION-010**: OAuth2/SAML integration not required for MVP
 - **ASSUMPTION-011**: Mobile app not required (responsive web app sufficient)
-- **ASSUMPTION-012**: Multi-language support (i18n) not required for MVP
+- **ASSUMPTION-012**: Multi-language support (i18n) required for BETA (French default, English support)
 
 ## 8. Related Specifications / Further Reading
 
