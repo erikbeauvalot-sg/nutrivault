@@ -1,22 +1,31 @@
 /**
  * Patients Page Component
- * Wrapper for existing POC patient management components with new layout
+ * Wrapper for patient management with table view and modal-based CRUD
  */
 
 import { useState, useEffect } from 'react';
-import { Container } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
+import { Container, Button, Row, Col } from 'react-bootstrap';
+import { useTranslation } from 'react-i18next';
+import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
-import PatientForm from '../components/PatientForm';
 import PatientList from '../components/PatientList';
 import PatientDetailModal from '../components/PatientDetailModal';
+import CreatePatientModal from '../components/CreatePatientModal';
+import EditPatientModal from '../components/EditPatientModal';
 import api from '../services/api';
 
 const PatientsPage = () => {
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingPatient, setEditingPatient] = useState(null);
   const [viewingPatientId, setViewingPatientId] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     fetchPatients();
@@ -81,25 +90,59 @@ const PatientsPage = () => {
 
   const handleEditPatient = (patient) => {
     setEditingPatient(patient);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setShowEditModal(true);
   };
 
   const handleViewPatient = (patient) => {
-    setViewingPatientId(patient.id);
+    navigate(`/patients/${patient.id}`);
   };
 
   const handleCloseViewModal = () => {
     setViewingPatientId(null);
   };
 
-  const handleCancelEdit = () => {
+  const handleShowCreateModal = () => {
+    setShowCreateModal(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    setShowCreateModal(false);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
     setEditingPatient(null);
   };
+
+  // Check if user can create patients (ADMIN, DIETITIAN)
+  const canCreatePatients = user?.role === 'ADMIN' || user?.role === 'DIETITIAN';
+
+  // Check if user can edit patients (ADMIN, DIETITIAN)
+  const canEditPatients = user?.role === 'ADMIN' || user?.role === 'DIETITIAN';
+
+  // Check if user can delete patients (ADMIN, DIETITIAN)
+  const canDeletePatients = user?.role === 'ADMIN' || user?.role === 'DIETITIAN';
 
   return (
     <Layout>
       <Container fluid>
-        <h1 className="mb-4">Patient Management</h1>
+        <Row className="mb-4">
+          <Col>
+            <h1 className="mb-0">Patient Management</h1>
+          </Col>
+          <Col xs="auto">
+            {canCreatePatients && (
+              <Button
+                variant="primary"
+                onClick={handleShowCreateModal}
+                className="d-flex align-items-center"
+              >
+                <i className="bi bi-plus-circle me-2"></i>
+                Create Patient
+              </Button>
+            )}
+          </Col>
+        </Row>
 
         {error && (
           <div className="alert alert-danger alert-dismissible fade show" role="alert">
@@ -113,29 +156,29 @@ const PatientsPage = () => {
           </div>
         )}
 
-        <div className="bg-white p-4 rounded shadow-sm mb-4">
-          <PatientForm
-            onSubmit={editingPatient ? handleUpdatePatient : handleCreatePatient}
-            editingPatient={editingPatient}
-            onCancel={handleCancelEdit}
-          />
-        </div>
-
         <div className="bg-white p-4 rounded shadow-sm">
           <PatientList
             patients={patients}
             loading={loading}
-            onEdit={handleEditPatient}
-            onDelete={handleDeletePatient}
+            onEdit={canEditPatients ? handleEditPatient : null}
+            onDelete={canDeletePatients ? handleDeletePatient : null}
             onView={handleViewPatient}
           />
         </div>
       </Container>
 
-      <PatientDetailModal
-        patientId={viewingPatientId}
-        show={!!viewingPatientId}
-        onHide={handleCloseViewModal}
+      {/* Modals */}
+      <CreatePatientModal
+        show={showCreateModal}
+        onHide={handleCloseCreateModal}
+        onSubmit={handleCreatePatient}
+      />
+
+      <EditPatientModal
+        show={showEditModal}
+        onHide={handleCloseEditModal}
+        onSubmit={handleUpdatePatient}
+        patient={editingPatient}
       />
     </Layout>
   );

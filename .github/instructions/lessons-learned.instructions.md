@@ -1204,7 +1204,102 @@ sqlite3 backend/data/nutrivault.db "SELECT username, is_active FROM users WHERE 
 
 ---
 
-**Last Updated**: January 9, 2026  
+### Issue 19: Frontend Form Validation Misalignment with Business Requirements
+
+**Problem**: Medical Record Number was marked as required in frontend validation, but business requirements made it optional. Users couldn't create patients without providing a medical record number, even though it wasn't actually required.
+
+**Root Cause**: Frontend validation rules were set based on initial assumptions rather than actual business requirements. The validation was overly strict, preventing legitimate use cases.
+
+**Solution**: Remove the medical record number validation from both CreatePatientModal and EditPatientModal:
+
+```javascript
+// Before (too restrictive)
+case 2: // Medical Information
+  if (!formData.medical_record_number.trim()) {
+    setError('Medical record number is required');
+    return false;
+  }
+  break;
+
+// After (aligned with business requirements)
+case 2: // Medical Information
+  // Medical record number is now optional
+  break;
+```
+
+**Prevention**:
+- **Always verify validation rules** against actual business requirements before implementation
+- **Document field requirements** clearly in specifications or user stories
+- **Test edge cases** including optional fields during development
+- **Make validation configurable** where business rules might change
+- **Use consistent validation** across create and edit forms for the same entity
+
+**Lesson**: Frontend validation should reflect business requirements, not developer assumptions. Overly strict validation creates poor user experience and prevents legitimate workflows.
+
+**Files Fixed**:
+- `/frontend/src/components/CreatePatientModal.jsx` - Removed medical record number validation
+- `/frontend/src/components/EditPatientModal.jsx` - Removed medical record number validation
+
+---
+
+### Issue 20: Poor User Experience with Foreign Key Input Fields
+
+**Problem**: "Assigned Dietitian ID" field was a number input requiring manual entry of user IDs. This was confusing for users and prone to errors.
+
+**Root Cause**: Technical implementation prioritized database structure over user experience. Foreign key fields were exposed as raw IDs instead of user-friendly selections.
+
+**Solution**: Replace number inputs with dropdown selections populated with actual data:
+
+```jsx
+// Before (poor UX)
+<Form.Control
+  type="number"
+  name="assigned_dietitian_id"
+  placeholder="Enter dietitian user ID"
+/>
+
+// After (good UX)
+<Form.Select name="assigned_dietitian_id">
+  <option value="">Select a dietitian (optional)</option>
+  {dietitians.map(dietitian => (
+    <option key={dietitian.id} value={dietitian.id}>
+      {dietitian.first_name} {dietitian.last_name}
+      {dietitian.email && ` (${dietitian.email})`}
+    </option>
+  ))}
+</Form.Select>
+```
+
+**Implementation Steps**:
+1. Add state for related data: `const [dietitians, setDietitians] = useState([])`
+2. Fetch data when modal opens: `useEffect(() => { if (show) fetchDietitians(); }, [show])`
+3. Create fetch function with error handling
+4. Replace input with select dropdown
+5. Update labels to be user-friendly: "Assigned Dietitian" instead of "Assigned Dietitian ID"
+
+**Prevention**:
+- **Never expose raw IDs** to end users in forms
+- **Use dropdowns for foreign keys** whenever possible
+- **Show meaningful labels** in dropdown options (name + identifier)
+- **Handle loading states** for dynamic dropdown data
+- **Provide fallback options** (empty selection for optional fields)
+- **Test with real data** to ensure dropdowns populate correctly
+
+**Benefits**:
+- **Error Prevention**: Eliminates manual ID entry errors
+- **Better UX**: Users see actual names instead of cryptic numbers
+- **Accessibility**: Screen readers can announce meaningful options
+- **Consistency**: Matches standard web application patterns
+
+**Files Fixed**:
+- `/frontend/src/components/CreatePatientModal.jsx` - Added dietitians dropdown
+- `/frontend/src/components/EditPatientModal.jsx` - Added dietitians dropdown
+
+**Reference**: This follows the same pattern established in Issue 7 (API Response Structure) and Issue 8 (Authorization Barriers) for creating user-friendly dropdowns.
+
+---
+
+**Last Updated**: January 10, 2026  
 **Next Review**: After completing Phase 1
 
 **Last Updated**: January 9, 2026  

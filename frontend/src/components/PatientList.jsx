@@ -1,122 +1,267 @@
+import { useState } from 'react';
+import { Table, Button, Badge, Form, InputGroup, Pagination } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 
 function PatientList({ patients, loading, onEdit, onDelete, onView }) {
   const { t } = useTranslation();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState('last_name');
+  const [sortDirection, setSortDirection] = useState('asc');
+  const itemsPerPage = 10;
+
+  // Filter and sort patients
+  const filteredAndSortedPatients = patients
+    .filter(patient => {
+      const matchesSearch = !searchTerm ||
+        `${patient.first_name} ${patient.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (patient.email && patient.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (patient.phone && patient.phone.includes(searchTerm));
+
+      const matchesStatus = statusFilter === 'all' ||
+        (statusFilter === 'active' && patient.is_active) ||
+        (statusFilter === 'inactive' && !patient.is_active);
+
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+
+      // Handle null/undefined values
+      if (aValue == null && bValue == null) return 0;
+      if (aValue == null) return sortDirection === 'asc' ? -1 : 1;
+      if (bValue == null) return sortDirection === 'asc' ? 1 : -1;
+
+      // Handle string sorting
+      if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (sortDirection === 'asc') {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      }
+    });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredAndSortedPatients.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedPatients = filteredAndSortedPatients.slice(startIndex, startIndex + itemsPerPage);
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIcon = (field) => {
+    if (sortField !== field) return '↕️';
+    return sortDirection === 'asc' ? '↑' : '↓';
+  };
 
   if (loading) {
     return (
-      <div className="patients-list">
-        <div className="loading">{t('common.loading')}</div>
-      </div>
-    )
-  }
-
-  if (patients.length === 0) {
-    return (
-      <div className="patients-list">
-        <h2>👥 {t('patients.title')}</h2>
-        <div className="empty-state">
-          <h3>{t('patients.noPatients')}</h3>
-          <p>{t('patients.createFirstPatient')}</p>
+      <div className="text-center py-4">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">{t('common.loading')}</span>
         </div>
+        <div className="mt-2">{t('common.loading')}</div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="patients-list">
-      <h2>👥 {t('patients.title')}</h2>
-      <div className="patient-count">
-        {t('patients.totalPatients', {
-          count: patients.length,
-          plural: patients.length !== 1 ? 's' : ''
-        })}
+    <div>
+      {/* Search and Filter Controls */}
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <div className="d-flex gap-3">
+          <InputGroup style={{ width: '300px' }}>
+            <InputGroup.Text>🔍</InputGroup.Text>
+            <Form.Control
+              type="text"
+              placeholder={t('patients.searchPlaceholder', 'Search by name, email, or phone')}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </InputGroup>
+
+          <Form.Select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{ width: '150px' }}
+          >
+            <option value="all">{t('common.all', 'All')}</option>
+            <option value="active">{t('common.active', 'Active')}</option>
+            <option value="inactive">{t('common.inactive', 'Inactive')}</option>
+          </Form.Select>
+        </div>
+
+        <div className="text-muted">
+          {t('patients.showingResults', {
+            count: paginatedPatients.length,
+            total: filteredAndSortedPatients.length,
+            defaultValue: 'Showing {{count}} of {{total}} patients'
+          })}
+        </div>
       </div>
 
-      {patients.map(patient => (
-        <div key={patient.id} className="patient-card">
-          <div className="patient-header">
-            <div>
-              <div className="patient-name">
-                {patient.first_name} {patient.last_name}
-              </div>
-              <span className={`status-badge ${patient.is_active ? 'status-active' : 'status-inactive'}`}>
-                {patient.is_active ? t('common.active') : t('common.inactive')}
-              </span>
-            </div>
-            <div className="patient-actions">
-              <button
-                className="btn btn-info btn-sm me-1"
-                onClick={() => onView(patient)}
-                title={t('patients.viewPatient')}
-              >
-                👁️ {t('common.view')}
-              </button>
-              <button
-                className="btn btn-primary btn-sm me-1"
-                onClick={() => onEdit(patient)}
-              >
-                ✏️ {t('common.edit')}
-              </button>
-              <button
-                className="btn btn-danger btn-sm"
-                onClick={() => onDelete(patient.id)}
-              >
-                🗑️ {t('common.delete')}
-              </button>
-            </div>
-          </div>
-
-          <div className="patient-info">
-            {patient.email && (
-              <div className="patient-info-item">
-                <strong>📧 Email:</strong> {patient.email}
-              </div>
+      {/* Patients Table */}
+      <div className="table-responsive">
+        <Table striped bordered hover>
+          <thead className="table-dark">
+            <tr>
+              <th onClick={() => handleSort('last_name')} style={{ cursor: 'pointer' }}>
+                {t('patients.name', 'Name')} {getSortIcon('last_name')}
+              </th>
+              <th onClick={() => handleSort('email')} style={{ cursor: 'pointer' }}>
+                {t('patients.email', 'Email')} {getSortIcon('email')}
+              </th>
+              <th onClick={() => handleSort('phone')} style={{ cursor: 'pointer' }}>
+                {t('patients.phone', 'Phone')} {getSortIcon('phone')}
+              </th>
+              <th onClick={() => handleSort('date_of_birth')} style={{ cursor: 'pointer' }}>
+                {t('patients.dateOfBirth', 'Date of Birth')} {getSortIcon('date_of_birth')}
+              </th>
+              <th onClick={() => handleSort('is_active')} style={{ cursor: 'pointer' }}>
+                {t('patients.status', 'Status')} {getSortIcon('is_active')}
+              </th>
+              <th>{t('common.actions', 'Actions')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedPatients.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="text-center py-4">
+                  <div className="text-muted">
+                    {filteredAndSortedPatients.length === 0 && patients.length > 0 ? (
+                      <div>
+                        <strong>{t('patients.noResults', 'No patients match your search criteria')}</strong>
+                        <br />
+                        <small>{t('patients.tryDifferentSearch', 'Try adjusting your search or filters')}</small>
+                      </div>
+                    ) : (
+                      <div>
+                        <strong>{t('patients.noPatients', 'No patients found')}</strong>
+                        <br />
+                        <small>{t('patients.createFirstPatient', 'Create your first patient to get started')}</small>
+                      </div>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              paginatedPatients.map(patient => (
+                <tr key={patient.id}>
+                  <td>
+                    <div>
+                      <strong>{patient.first_name} {patient.last_name}</strong>
+                      {patient.assigned_dietitian && (
+                        <div className="text-muted small">
+                          👨‍⚕️ {patient.assigned_dietitian.first_name} {patient.assigned_dietitian.last_name}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td>{patient.email || '-'}</td>
+                  <td>{patient.phone || '-'}</td>
+                  <td>
+                    {patient.date_of_birth
+                      ? new Date(patient.date_of_birth).toLocaleDateString()
+                      : '-'
+                    }
+                  </td>
+                  <td>
+                    <Badge bg={patient.is_active ? 'success' : 'secondary'}>
+                      {patient.is_active ? t('common.active') : t('common.inactive')}
+                    </Badge>
+                  </td>
+                  <td>
+                    <div className="d-flex gap-1">
+                      <Button
+                        variant="outline-info"
+                        size="sm"
+                        onClick={() => onView(patient)}
+                        title={t('patients.viewPatient')}
+                      >
+                        👁️
+                      </Button>
+                      {onEdit && (
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          onClick={() => onEdit(patient)}
+                          title={t('common.edit')}
+                        >
+                          ✏️
+                        </Button>
+                      )}
+                      {onDelete && (
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          onClick={() => onDelete(patient.id)}
+                          title={t('common.delete')}
+                        >
+                          🗑️
+                        </Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
             )}
-            {patient.phone && (
-              <div className="patient-info-item">
-                <strong>📱 Phone:</strong> {patient.phone}
-              </div>
-            )}
-            {patient.date_of_birth && (
-              <div className="patient-info-item">
-                <strong>🎂 DOB:</strong> {new Date(patient.date_of_birth).toLocaleDateString()}
-              </div>
-            )}
-            {patient.gender && (
-              <div className="patient-info-item">
-                <strong>Gender:</strong> {patient.gender}
-              </div>
-            )}
-          </div>
+          </tbody>
+        </Table>
+      </div>
 
-          {patient.address && (
-            <div className="patient-info-item" style={{ marginTop: '10px' }}>
-              <strong>📍 Address:</strong> {patient.address}
-            </div>
-          )}
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="d-flex justify-content-center mt-3">
+          <Pagination>
+            <Pagination.First
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+            />
+            <Pagination.Prev
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+            />
 
-          {patient.allergies && (
-            <div className="patient-info-item" style={{ marginTop: '10px' }}>
-              <strong>⚠️ Allergies:</strong> {patient.allergies}
-            </div>
-          )}
+            {[...Array(Math.min(5, totalPages))].map((_, index) => {
+              const pageNumber = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + index;
+              if (pageNumber > totalPages) return null;
 
-          {patient.dietary_preferences && (
-            <div className="patient-info-item" style={{ marginTop: '10px' }}>
-              <strong>🥗 Dietary Preferences:</strong> {patient.dietary_preferences}
-            </div>
-          )}
+              return (
+                <Pagination.Item
+                  key={pageNumber}
+                  active={pageNumber === currentPage}
+                  onClick={() => setCurrentPage(pageNumber)}
+                >
+                  {pageNumber}
+                </Pagination.Item>
+              );
+            })}
 
-          {patient.medical_notes && (
-            <div className="patient-info-item" style={{ marginTop: '10px' }}>
-              <strong>📋 Medical Notes:</strong> {patient.medical_notes}
-            </div>
-          )}
+            <Pagination.Next
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+            />
+            <Pagination.Last
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+            />
+          </Pagination>
         </div>
-      ))}
+      )}
     </div>
-  )
+  );
 }
 
-export default PatientList
+export default PatientList;

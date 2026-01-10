@@ -340,16 +340,16 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-152 | Create PatientsPage component with table view | | |
-| TASK-153 | Implement patient list with pagination, sorting, filtering | | |
-| TASK-154 | Create CreatePatientModal with multi-step form | | |
-| TASK-155 | Create EditPatientModal with pre-populated data | | |
-| TASK-156 | Create PatientDetailPage with tabs (info, visits, billing, documents) | | |
-| TASK-157 | Implement patient search by name, email, phone | | |
+| TASK-152 | Create PatientsPage component with table view | ✅ | 2026-01-10 |
+| TASK-153 | Implement patient list with pagination, sorting, filtering | ✅ | 2026-01-10 |
+| TASK-154 | Create CreatePatientModal with multi-step form | ✅ | 2026-01-10 |
+| TASK-155 | Create EditPatientModal with pre-populated data | ✅ | 2026-01-10 |
+| TASK-156 | Create PatientDetailPage with tabs (info, visits, billing, documents) | ✅ | 2026-01-10 |
+| TASK-157 | Implement patient search by name, email, phone | ✅ | 2026-01-10 |
 | TASK-158 | Add patient status indicators (active/inactive) | | |
 | TASK-159 | Create patient service (`src/services/patientService.js`) with API calls | | |
-| TASK-160 | Add role-based UI elements (hide create/delete for Viewers) | | |
-| TASK-161 | Test patient CRUD flow with all 4 roles | | |
+| TASK-160 | Add role-based UI elements (hide create/delete for Viewers) | ✅ | 2026-01-10 |
+| TASK-161 | Test patient CRUD flow with all 4 roles | ✅ | 2026-01-10 |
 | TASK-161a | **Beta Enhancement**: Create PatientDetailModal with measurement charts | ✅ | 2026-01-09 |
 | TASK-161b | **Beta Enhancement**: Add View button to PatientList component | ✅ | 2026-01-09 |
 | TASK-161c | **Beta Enhancement**: Implement backend endpoint for patient details with visits | ✅ | 2026-01-09 |

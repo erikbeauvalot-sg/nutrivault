@@ -8,6 +8,7 @@ import { useAuth } from './contexts/AuthContext';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import PatientsPage from './pages/PatientsPage';
+import PatientDetailPage from './pages/PatientDetailPage';
 import VisitsPage from './pages/VisitsPage';
 import UsersPage from './pages/UsersPage';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -51,6 +52,15 @@ function App() {
         element={
           <ProtectedRoute>
             <PatientsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/patients/:id"
+        element={
+          <ProtectedRoute>
+            <PatientDetailPage />
           </ProtectedRoute>
         }
       />
