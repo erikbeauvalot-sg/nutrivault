@@ -8,48 +8,50 @@ import { Modal, Button, Form, Row, Col, Alert, Spinner, Badge } from 'react-boot
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { useTranslation } from 'react-i18next';
 import userService from '../services/userService';
 
 // Password strength validation
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
 
-// Validation schemas
-const createUserSchema = yup.object().shape({
+// Validation schemas - will be created dynamically with translations
+const createUserSchema = (t) => yup.object().shape({
   username: yup.string()
-    .required('Username is required')
-    .min(3, 'Username must be at least 3 characters')
-    .max(100, 'Username must be at most 100 characters')
-    .matches(/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, underscore, and hyphen'),
+    .required(t('forms.required'))
+    .min(3, t('forms.minLength', { count: 3 }))
+    .max(100, t('forms.maxLength', { count: 100 }))
+    .matches(/^[a-zA-Z0-9_-]+$/, t('users.usernameInvalid')),
   email: yup.string()
-    .required('Email is required')
-    .email('Must be a valid email'),
+    .required(t('forms.required'))
+    .email(t('forms.invalidEmail')),
   password: yup.string()
-    .required('Password is required')
-    .min(8, 'Password must be at least 8 characters')
-    .matches(passwordRegex, 'Password must contain uppercase, lowercase, number, and special character'),
+    .required(t('forms.required'))
+    .min(8, t('forms.minLength', { count: 8 }))
+    .matches(passwordRegex, t('users.passwordRequirements')),
   confirmPassword: yup.string()
-    .oneOf([yup.ref('password'), null], 'Passwords must match')
-    .required('Confirm password is required'),
-  role_id: yup.string().required('Role is required'),
-  first_name: yup.string().required('First name is required').max(100),
-  last_name: yup.string().required('Last name is required').max(100),
+    .oneOf([yup.ref('password'), null], t('users.passwordsMustMatch'))
+    .required(t('forms.required')),
+  role_id: yup.string().required(t('forms.required')),
+  first_name: yup.string().required(t('forms.required')).max(100, t('forms.maxLength', { count: 100 })),
+  last_name: yup.string().required(t('forms.required')).max(100, t('forms.maxLength', { count: 100 })),
   phone: yup.string().max(20),
-  language_preference: yup.string().oneOf(['fr', 'en'], 'Language must be either French or English').default('fr')
+  language_preference: yup.string().oneOf(['fr', 'en'], t('users.languageInvalid')).default('fr')
 });
 
-const editUserSchema = yup.object().shape({
+const editUserSchema = (t) => yup.object().shape({
   email: yup.string()
-    .required('Email is required')
-    .email('Must be a valid email'),
-  role_id: yup.string().required('Role is required'),
-  first_name: yup.string().required('First name is required').max(100),
-  last_name: yup.string().required('Last name is required').max(100),
+    .required(t('forms.required'))
+    .email(t('forms.invalidEmail')),
+  role_id: yup.string().required(t('forms.required')),
+  first_name: yup.string().required(t('forms.required')).max(100, t('forms.maxLength', { count: 100 })),
+  last_name: yup.string().required(t('forms.required')).max(100, t('forms.maxLength', { count: 100 })),
   phone: yup.string().max(20),
   is_active: yup.boolean(),
-  language_preference: yup.string().oneOf(['fr', 'en'], 'Language must be either French or English')
+  language_preference: yup.string().oneOf(['fr', 'en'], t('users.languageInvalid'))
 });
 
 const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [passwordStrength, setPasswordStrength] = useState(null);
@@ -64,7 +66,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
     reset,
     watch
   } = useForm({
-    resolver: yupResolver(isCreateMode ? createUserSchema : editUserSchema)
+    resolver: yupResolver(isCreateMode ? createUserSchema(t) : editUserSchema(t))
   });
 
   const password = watch('password');
@@ -170,7 +172,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
     <Modal show={show} onHide={onHide} size="lg">
       <Modal.Header closeButton>
         <Modal.Title>
-          {isCreateMode ? '👤 Create User' : '👤 Edit User'}
+          {isCreateMode ? `👤 ${t('users.createUser')}` : `👤 ${t('users.editUser')}`}
         </Modal.Title>
       </Modal.Header>
 
@@ -178,12 +180,12 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
         <Modal.Body>
           {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
 
-          <h5 className="mb-3">Account Information</h5>
+          <h5 className="mb-3">{t('users.accountInfo')}</h5>
           <Row>
             {isCreateMode && (
               <Col md={12}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Username *</Form.Label>
+                  <Form.Label>{t('users.username')} *</Form.Label>
                   <Form.Control
                     type="text"
                     {...register('username')}
@@ -201,21 +203,21 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
             {isEditMode && user && (
               <Col md={12}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Username</Form.Label>
+                  <Form.Label>{t('users.username')}</Form.Label>
                   <Form.Control
                     type="text"
                     value={user.username}
                     disabled
                     readOnly
                   />
-                  <Form.Text className="text-muted">Username cannot be changed</Form.Text>
+                  <Form.Text className="text-muted">{t('users.usernameCannotBeChanged')}</Form.Text>
                 </Form.Group>
               </Col>
             )}
 
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Email *</Form.Label>
+                <Form.Label>{t('users.email')} *</Form.Label>
                 <Form.Control
                   type="email"
                   {...register('email')}
@@ -228,12 +230,12 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
 
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Role *</Form.Label>
+                <Form.Label>{t('users.role')} *</Form.Label>
                 <Form.Select
                   {...register('role_id')}
                   isInvalid={!!errors.role_id}
                 >
-                  <option value="">Select role...</option>
+                  <option value="">{t('users.selectRole')}</option>
                   {roles.map(role => (
                     <option key={role.id} value={role.id}>
                       {role.name} - {role.description}
@@ -252,11 +254,11 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
 
           {isCreateMode && (
             <>
-              <h5 className="mb-3 mt-3">Password</h5>
+              <h5 className="mb-3 mt-3">{t('common.password')}</h5>
               <Row>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Password *</Form.Label>
+                    <Form.Label>{t('common.password')} *</Form.Label>
                     <Form.Control
                       type="password"
                       {...register('password')}
@@ -266,7 +268,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
                     <Form.Control.Feedback type="invalid">{errors.password?.message}</Form.Control.Feedback>
                     {passwordStrength && (
                       <div className="mt-2">
-                        <Badge bg={passwordStrength.variant}>Strength: {passwordStrength.label}</Badge>
+                        <Badge bg={passwordStrength.variant}>{t('users.passwordStrength')}: {passwordStrength.label}</Badge>
                       </div>
                     )}
                   </Form.Group>
@@ -274,7 +276,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
 
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Confirm Password *</Form.Label>
+                    <Form.Label>{t('users.confirmPassword')} *</Form.Label>
                     <Form.Control
                       type="password"
                       {...register('confirmPassword')}
@@ -287,23 +289,23 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
               </Row>
 
               <Alert variant="info" className="mb-3">
-                <strong>Password Requirements:</strong>
+                <strong>{t('users.passwordRequirementsTitle')}:</strong>
                 <ul className="mb-0 mt-2">
-                  <li>At least 8 characters long</li>
-                  <li>Contains at least one uppercase letter (A-Z)</li>
-                  <li>Contains at least one lowercase letter (a-z)</li>
-                  <li>Contains at least one number (0-9)</li>
-                  <li>Contains at least one special character (@$!%*?&#)</li>
+                  <li>{t('users.passwordReqLength')}</li>
+                  <li>{t('users.passwordReqUppercase')}</li>
+                  <li>{t('users.passwordReqLowercase')}</li>
+                  <li>{t('users.passwordReqNumber')}</li>
+                  <li>{t('users.passwordReqSpecial')}</li>
                 </ul>
               </Alert>
             </>
           )}
 
-          <h5 className="mb-3 mt-3">Personal Information</h5>
+          <h5 className="mb-3 mt-3">{t('users.personalInfo')}</h5>
           <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>First Name *</Form.Label>
+                <Form.Label>{t('users.firstName')} *</Form.Label>
                 <Form.Control
                   type="text"
                   {...register('first_name')}
@@ -316,7 +318,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
 
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Last Name *</Form.Label>
+                <Form.Label>{t('users.lastName')} *</Form.Label>
                 <Form.Control
                   type="text"
                   {...register('last_name')}
@@ -329,7 +331,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
 
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Phone</Form.Label>
+                <Form.Label>{t('users.phone')}</Form.Label>
                 <Form.Control
                   type="tel"
                   {...register('phone')}
@@ -342,7 +344,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
 
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Language Preference *</Form.Label>
+                <Form.Label>{t('users.languagePreference')} *</Form.Label>
                 <Form.Select
                   {...register('language_preference')}
                   isInvalid={!!errors.language_preference}
@@ -361,7 +363,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
             {isEditMode && (
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Account Status</Form.Label>
+                  <Form.Label>{t('users.accountStatus')}</Form.Label>
                   <Form.Check
                     type="switch"
                     id="is_active"
@@ -378,14 +380,14 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
 
           {isEditMode && user && (
             <>
-              <h5 className="mb-3 mt-3">Activity</h5>
+              <h5 className="mb-3 mt-3">{t('users.activity')}</h5>
               <Row>
                 <Col md={4}>
-                  <strong>Last Login:</strong>
-                  <p>{user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</p>
+                  <strong>{t('users.lastLogin')}:</strong>
+                  <p>{user.last_login ? new Date(user.last_login).toLocaleString() : t('users.never')}</p>
                 </Col>
                 <Col md={4}>
-                  <strong>Failed Attempts:</strong>
+                  <strong>{t('users.failedAttempts')}:</strong>
                   <p>
                     {user.failed_login_attempts > 0 ? (
                       <Badge bg="warning">{user.failed_login_attempts}</Badge>
@@ -395,12 +397,12 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
                   </p>
                 </Col>
                 <Col md={4}>
-                  <strong>Locked Until:</strong>
+                  <strong>{t('users.lockedUntil')}:</strong>
                   <p>
                     {user.locked_until && new Date(user.locked_until) > new Date() ? (
                       <Badge bg="danger">{new Date(user.locked_until).toLocaleString()}</Badge>
                     ) : (
-                      'Not locked'
+                      t('users.notLocked')
                     )}
                   </p>
                 </Col>
@@ -411,10 +413,10 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
 
         <Modal.Footer>
           <Button variant="secondary" onClick={onHide} disabled={loading}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button variant="primary" type="submit" disabled={loading}>
-            {loading ? <Spinner animation="border" size="sm" /> : (isCreateMode ? 'Create User' : 'Update User')}
+            {loading ? <Spinner animation="border" size="sm" /> : (isCreateMode ? t('users.createUser') : t('users.editUser'))}
           </Button>
         </Modal.Footer>
       </Form>

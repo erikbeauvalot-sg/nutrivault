@@ -336,7 +336,7 @@ async function updateVisit(user, visitId, updateData, requestMetadata = {}) {
       throw error;
     }
 
-    // RBAC: Only assigned dietitian or admin can update
+    // RBAC: Only assigned dietitian, admin, or assistant can update
     if (user.role.name === 'DIETITIAN' && visit.dietitian_id !== user.id) {
       const error = new Error('Access denied: You can only update your own visits');
       error.statusCode = 403;
@@ -416,7 +416,7 @@ async function deleteVisit(user, visitId, requestMetadata = {}) {
       throw error;
     }
 
-    // RBAC: Only admin or assigned dietitian can delete
+    // RBAC: Only admin, assistant, or assigned dietitian can delete
     if (user.role.name === 'DIETITIAN' && visit.dietitian_id !== user.id) {
       const error = new Error('Access denied: You can only delete your own visits');
       error.statusCode = 403;

@@ -57,7 +57,7 @@ const VisitsPage = () => {
       setError(null);
     } catch (err) {
       console.error('Error fetching visits:', err);
-      setError(err.response?.data?.error || 'Failed to load visits');
+      setError(err.response?.data?.error || t('visits.failedToLoad'));
       setVisits([]);
     } finally {
       setLoading(false);
@@ -159,7 +159,7 @@ const VisitsPage = () => {
   };
 
   const canEdit = (visit) => {
-    const canEditResult = user.role === 'ADMIN' || (user.role === 'DIETITIAN' && visit.dietitian_id === user.id);
+    const canEditResult = user.role === 'ADMIN' || user.role === 'ASSISTANT' || (user.role === 'DIETITIAN' && visit.dietitian_id === user.id);
     console.log('🔒 CAN EDIT CHECK:', { visitId: visit.id, dietitianId: visit.dietitian_id, userId: user.id, userRole: user.role, canEdit: canEditResult });
     return canEditResult;
   };

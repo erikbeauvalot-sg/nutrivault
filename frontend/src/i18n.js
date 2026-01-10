@@ -19,7 +19,8 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    fallbackLng: 'fr', // French as default
+    // lng: 'fr', // Remove forced initial language - let detector handle it
+    fallbackLng: 'fr', // French as fallback if no language detected
     debug: process.env.NODE_ENV === 'development',
 
     interpolation: {
@@ -29,7 +30,17 @@ i18n
     detection: {
       order: ['localStorage', 'navigator', 'htmlTag'],
       caches: ['localStorage'],
+      lookupLocalStorage: 'i18nextLng',
+      checkWhitelist: true,
     },
+
+    supportedLngs: ['en', 'fr'], // Only support English and French
   });
+
+// Debug logging
+console.log('🌐 i18n initialized');
+console.log('🌐 Detected language:', i18n.language);
+console.log('🌐 localStorage value:', localStorage.getItem('i18nextLng'));
+console.log('🌐 Available languages:', i18n.languages);
 
 export default i18n;

@@ -350,7 +350,7 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 | TASK-159 | Create patient service (`src/services/patientService.js`) with API calls | | |
 | TASK-160 | Add role-based UI elements (hide create/delete for Viewers) | ✅ | 2026-01-10 |
 | TASK-161 | Test patient CRUD flow with all 4 roles | ✅ | 2026-01-10 |
-| TASK-161a | **Beta Enhancement**: Create PatientDetailModal with measurement charts | ✅ | 2026-01-09 |
+| TASK-161a | **Beta Enhancement**: Create PatientDetailModal with measurement charts | ✅ | 2026-01-10 |
 | TASK-161b | **Beta Enhancement**: Add View button to PatientList component | ✅ | 2026-01-09 |
 | TASK-161c | **Beta Enhancement**: Implement backend endpoint for patient details with visits | ✅ | 2026-01-09 |
 

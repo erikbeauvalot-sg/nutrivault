@@ -36,6 +36,10 @@ app.use('/api/visits', visitRoutes);
 const userRoutes = require('./routes/users');
 app.use('/api/users', userRoutes);
 
+// Billing routes (protected - RBAC enforced in routes file)
+const billingRoutes = require('./routes/billing');
+app.use('/api/billing', billingRoutes);
+
 // Basic error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);
@@ -88,6 +92,7 @@ db.sequelize.sync()
       console.log(`👥 Patients API: http://localhost:${PORT}/api/patients`);
       console.log(`📅 Visits API: http://localhost:${PORT}/api/visits`);
       console.log(`👤 Users API: http://localhost:${PORT}/api/users`);
+      console.log(`💰 Billing API: http://localhost:${PORT}/api/billing`);
     });
   })
   .catch(err => {

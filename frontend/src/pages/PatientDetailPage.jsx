@@ -38,7 +38,7 @@ const PatientDetailPage = () => {
       setVisits(patientData.visits || []);
       setError(null);
     } catch (err) {
-      setError('Failed to load patient details: ' + (err.response?.data?.error || err.message));
+      setError(t('patients.failedToLoad') + ': ' + (err.response?.data?.error || err.message));
       console.error('Error fetching patient details:', err);
     } finally {
       setLoading(false);

@@ -17,6 +17,7 @@ import {
   Legend,
 } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
+import { useTranslation } from 'react-i18next';
 import { getPatientDetails } from '../services/patientService';
 
 // Register Chart.js components
@@ -32,6 +33,7 @@ ChartJS.register(
 );
 
 const PatientDetailModal = ({ patientId, show, onHide }) => {
+  const { t } = useTranslation();
   const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -50,7 +52,7 @@ const PatientDetailModal = ({ patientId, show, onHide }) => {
       const patientData = response.data || response;
       setPatient(patientData);
     } catch (err) {
-      setError('Failed to load patient details: ' + (err.response?.data?.error || err.message));
+      setError(t('patients.failedToLoad') + ': ' + (err.response?.data?.error || err.message));
       console.error('Error fetching patient details:', err);
     } finally {
       setLoading(false);

@@ -178,8 +178,9 @@ exports.toggleUserStatus = async (req, res, next) => {
   }
 };
 /**
- * GET /api/users/list/dietitians - Get all active dietitians
- * Accessible to authenticated users (for visit assignment)
+ * GET /api/users/list/dietitians - Get all active dietitians (DIETITIAN role only)
+ * Used for patient assignment dropdowns - excludes ADMIN users
+ * Accessible to authenticated users
  */
 exports.getDietitians = async (req, res, next) => {
   try {

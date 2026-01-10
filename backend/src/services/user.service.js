@@ -45,9 +45,19 @@ async function getUsers(user, filters = {}, requestMetadata = {}) {
     }
 
     // Filter by is_active status
-    // If not explicitly specified, default to showing only active users
-    if (filters.is_active !== undefined && filters.is_active !== '') {
-      whereClause.is_active = filters.is_active === 'true' || filters.is_active === true;
+    // Empty string means "All Status" - show both active and inactive users
+    // 'true' means active only, 'false' means inactive only
+    // undefined means default to active only
+    if (filters.is_active === 'true') {
+      whereClause.is_active = true;
+    } else if (filters.is_active === 'false') {
+      whereClause.is_active = false;
+    } else if (filters.is_active === '') {
+      // All Status selected - don't filter by is_active (show both active and inactive)
+      // No whereClause.is_active filter applied
+    } else if (filters.is_active !== undefined) {
+      // Handle boolean values or other truthy/falsy values
+      whereClause.is_active = filters.is_active === true || filters.is_active === 'true';
     } else {
       // Default: only show active users unless explicitly filtering for inactive
       whereClause.is_active = true;
@@ -562,13 +572,14 @@ async function toggleUserStatus(user, userId, requestMetadata = {}) {
 }
 
 /**
- * Get all active dietitians (for visit assignment)
- * 
+ * Get all active dietitians (DIETITIAN role only)
+ * Used for patient assignment dropdowns - excludes ADMIN users
+ *
  * @returns {Promise<Array>} Array of dietitian users with their roles
  */
 async function getDietitians() {
   try {
-    console.log('🔍 getDietitians() - Querying for active users with DIETITIAN or ADMIN roles...');
+    console.log('🔍 getDietitians() - Querying for active users with DIETITIAN role only...');
     
     // First, let's see all active users
     const allActiveUsers = await User.findAll({
@@ -586,7 +597,7 @@ async function getDietitians() {
       console.log(`   - ${u.username}: role_id=${u.role_id}, role.name=${u.role?.name}`);
     });
 
-    // Now fetch only dietitians and admins
+    // Now fetch only dietitians (not admins)
     const dietitians = await User.findAll({
       where: {
         is_active: true
@@ -598,7 +609,7 @@ async function getDietitians() {
           as: 'role',
           attributes: ['id', 'name', 'description'],
           where: {
-            name: { [Op.in]: ['DIETITIAN', 'ADMIN'] }
+            name: 'DIETITIAN'  // Only DIETITIAN role, not ADMIN
           },
           required: true,  // Explicit INNER JOIN
           include: [
@@ -613,7 +624,7 @@ async function getDietitians() {
       order: [['first_name', 'ASC'], ['last_name', 'ASC']]
     });
 
-    console.log(`✅ getDietitians() - Found ${dietitians.length} dietitians/admins:`);
+    console.log(`✅ getDietitians() - Found ${dietitians.length} dietitians:`);
     dietitians.forEach(u => {
       console.log(`   - ${u.username}: role=${u.role?.name}, is_active=${u.is_active}`);
     });

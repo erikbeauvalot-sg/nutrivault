@@ -206,8 +206,13 @@ const queryValidation = [
   
   query('is_active')
     .optional()
-    .isBoolean()
-    .withMessage('is_active must be a boolean')
+    .custom((value) => {
+      // Allow empty string for "All Status" filter
+      if (value === '') return true;
+      // Otherwise, must be a boolean
+      if (value === 'true' || value === 'false' || value === true || value === false) return true;
+      throw new Error('is_active must be a boolean or empty string');
+    })
 ];
 
 /**

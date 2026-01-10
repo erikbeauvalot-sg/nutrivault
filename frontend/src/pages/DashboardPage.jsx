@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import api from '../services/api';
@@ -14,6 +15,7 @@ import userService from '../services/userService';
 
 const DashboardPage = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [stats, setStats] = useState({
     totalPatients: 0,
     totalVisits: 0,
@@ -77,17 +79,17 @@ const DashboardPage = () => {
   return (
     <Layout>
       <Container fluid>
-        <h1 className="mb-4">Welcome back, {user?.username}! 👋</h1>
+        <h1 className="mb-4">{t('dashboard.welcomeBack', { username: user?.username })} 👋</h1>
 
         <Row className="g-4 mb-4">
           <Col md={4}>
             <Card className="text-center h-100 shadow-sm">
               <Card.Body>
                 <div className="display-4 mb-3">👥</div>
-                <h3 className="mb-2">Patients</h3>
-                <p className="text-muted mb-3">Manage patient records</p>
+                <h3 className="mb-2">{t('navigation.patients')}</h3>
+                <p className="text-muted mb-3">{t('dashboard.managePatientRecords')}</p>
                 <Link to="/patients" className="btn btn-primary">
-                  View Patients
+                  {t('dashboard.viewPatients')}
                 </Link>
               </Card.Body>
             </Card>
@@ -97,10 +99,10 @@ const DashboardPage = () => {
             <Card className="text-center h-100 shadow-sm">
               <Card.Body>
                 <div className="display-4 mb-3">📅</div>
-                <h3 className="mb-2">Visits</h3>
-                <p className="text-muted mb-3">Schedule and track visits</p>
+                <h3 className="mb-2">{t('navigation.visits')}</h3>
+                <p className="text-muted mb-3">{t('dashboard.scheduleAndTrackVisits')}</p>
                 <Link to="/visits" className="btn btn-primary">
-                  View Visits
+                  {t('dashboard.viewVisits')}
                 </Link>
               </Card.Body>
             </Card>
@@ -110,10 +112,10 @@ const DashboardPage = () => {
             <Card className="text-center h-100 shadow-sm">
               <Card.Body>
                 <div className="display-4 mb-3">💰</div>
-                <h3 className="mb-2">Billing</h3>
-                <p className="text-muted mb-3">Manage invoices and payments</p>
+                <h3 className="mb-2">{t('navigation.billing')}</h3>
+                <p className="text-muted mb-3">{t('dashboard.manageInvoicesAndPayments')}</p>
                 <button className="btn btn-secondary" disabled>
-                  Coming Soon
+                  {t('dashboard.comingSoon')}
                 </button>
               </Card.Body>
             </Card>
@@ -124,7 +126,7 @@ const DashboardPage = () => {
           <Col md={12}>
             <Card className="shadow-sm">
               <Card.Body>
-                <h4 className="mb-3">Quick Stats</h4>
+                <h4 className="mb-3">{t('dashboard.quickStats')}</h4>
                 <Row className="text-center">
                   <Col md={3}>
                     <div className="h2 text-primary mb-1">
@@ -134,7 +136,7 @@ const DashboardPage = () => {
                         stats.totalPatients
                       )}
                     </div>
-                    <div className="text-muted">Total Patients</div>
+                    <div className="text-muted">{t('dashboard.totalPatients')}</div>
                   </Col>
                   <Col md={3}>
                     <div className="h2 text-success mb-1">
@@ -144,7 +146,7 @@ const DashboardPage = () => {
                         stats.scheduledVisits
                       )}
                     </div>
-                    <div className="text-muted">Scheduled Visits</div>
+                    <div className="text-muted">{t('dashboard.scheduledVisits')}</div>
                   </Col>
                   <Col md={3}>
                     <div className="h2 text-info mb-1">
@@ -154,7 +156,7 @@ const DashboardPage = () => {
                         stats.totalVisits
                       )}
                     </div>
-                    <div className="text-muted">Total Visits</div>
+                    <div className="text-muted">{t('dashboard.totalVisits')}</div>
                   </Col>
                   <Col md={3}>
                     <div className="h2 text-warning mb-1">
@@ -164,7 +166,7 @@ const DashboardPage = () => {
                         user?.role === 'ADMIN' ? stats.totalUsers : user?.role || 'N/A'
                       )}
                     </div>
-                    <div className="text-muted">{user?.role === 'ADMIN' ? 'Total Users' : 'Your Role'}</div>
+                    <div className="text-muted">{user?.role === 'ADMIN' ? t('dashboard.totalUsers') : t('dashboard.yourRole')}</div>
                   </Col>
                 </Row>
               </Card.Body>

@@ -8,19 +8,20 @@ import { Modal, Button, Form, Row, Col, Alert, Spinner, Accordion } from 'react-
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { useTranslation } from 'react-i18next';
 import visitService from '../services/visitService';
 import { getPatients } from '../services/patientService';
 import userService from '../services/userService';
 import { useAuth } from '../contexts/AuthContext';
 
-// Validation schema
-const visitSchema = yup.object().shape({
-  patient_id: yup.string().required('Patient is required'),
-  dietitian_id: yup.string().required('Dietitian is required'),
-  visit_date: yup.string().required('Visit date is required'),
-  visit_type: yup.string().max(50, 'Visit type must be at most 50 characters'),
+// Validation schema - will be created dynamically with translations
+const visitSchema = (t) => yup.object().shape({
+  patient_id: yup.string().required(t('forms.required')),
+  dietitian_id: yup.string().required(t('forms.required')),
+  visit_date: yup.string().required(t('forms.required')),
+  visit_type: yup.string().max(50, t('forms.maxLength', { count: 50 })),
   status: yup.string().oneOf(['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW']),
-  duration_minutes: yup.number().min(1, 'Duration must be at least 1 minute').max(480, 'Duration must be at most 480 minutes').nullable(),
+  duration_minutes: yup.number().min(1, t('visits.durationMin')).max(480, t('visits.durationMax')).nullable(),
   chief_complaint: yup.string(),
   assessment: yup.string(),
   recommendations: yup.string(),
@@ -28,7 +29,7 @@ const visitSchema = yup.object().shape({
   next_visit_date: yup.string().nullable()
 });
 
-const measurementSchema = yup.object().shape({
+const measurementSchema = (t) => yup.object().shape({
   weight_kg: yup.number().min(1).max(500).nullable(),
   height_cm: yup.number().min(30).max(300).nullable(),
   bp_systolic: yup.number().min(50).max(300).nullable(),
@@ -45,6 +46,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
     console.log('🔧 VisitModal visit object:', visit);
   }
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [patients, setPatients] = useState([]);
   const [dietitians, setDietitians] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -59,7 +61,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
     setValue,
     watch
   } = useForm({
-    resolver: yupResolver(visitSchema),
+    resolver: yupResolver(visitSchema(t)),
     defaultValues: {
       status: 'SCHEDULED'
     }
@@ -72,7 +74,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
     reset: resetMeasurement,
     watch: watchMeasurement
   } = useForm({
-    resolver: yupResolver(measurementSchema)
+    resolver: yupResolver(measurementSchema(t))
   });
 
   const isViewMode = mode === 'view';
@@ -241,9 +243,9 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
     <Modal show={show} onHide={onHide} size="lg">
       <Modal.Header closeButton>
         <Modal.Title>
-          {isCreateMode && '📅 Create Visit'}
-          {isViewMode && '📅 View Visit'}
-          {isEditMode && '📅 Edit Visit'}
+          {isCreateMode && `📅 ${t('visits.createVisit')}`}
+          {isViewMode && `📅 ${t('visits.viewVisit')}`}
+          {isEditMode && `📅 ${t('visits.editVisit')}`}
         </Modal.Title>
       </Modal.Header>
 
@@ -251,17 +253,17 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
         {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
 
         <Form onSubmit={handleSubmit(onSubmit)}>
-          <h5 className="mb-3">Visit Information</h5>
+          <h5 className="mb-3">{t('visits.visitInfo')}</h5>
           <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Patient *</Form.Label>
+                <Form.Label>{t('visits.patient')} *</Form.Label>
                 <Form.Select
                   {...register('patient_id')}
                   isInvalid={!!errors.patient_id}
                   disabled={isViewMode || isEditMode}
                 >
-                  <option value="">Select patient...</option>
+                  <option value="">{t('visits.selectPatient')}</option>
                   {patients.map(patient => (
                     <option key={patient.id} value={patient.id}>
                       {patient.first_name} {patient.last_name}
@@ -279,13 +281,13 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
 
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Dietitian *</Form.Label>
+                <Form.Label>{t('visits.dietitian')} *</Form.Label>
                 <Form.Select
                   {...register('dietitian_id')}
                   isInvalid={!!errors.dietitian_id}
                   disabled={isViewMode || isEditMode}
                 >
-                  <option value="">Select dietitian...</option>
+                  <option value="">{t('visits.selectDietitian')}</option>
                   {dietitians.map(dietitian => {
                     const displayName = dietitian.first_name || dietitian.last_name 
                       ? `${dietitian.first_name || ''} ${dietitian.last_name || ''}`.trim()
@@ -310,7 +312,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
           <Row>
             <Col md={4}>
               <Form.Group className="mb-3">
-                <Form.Label>Visit Date & Time *</Form.Label>
+                <Form.Label>{t('visits.visitDateTime')} *</Form.Label>
                 <Form.Control
                   type="datetime-local"
                   {...register('visit_date')}
@@ -323,14 +325,14 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
 
             <Col md={4}>
               <Form.Group className="mb-3">
-                <Form.Label>Visit Type</Form.Label>
+                <Form.Label>{t('visits.visitType')}</Form.Label>
                 <Form.Select {...register('visit_type')} disabled={isViewMode}>
-                  <option value="">Select type...</option>
-                  <option value="Initial Consultation">Initial Consultation</option>
-                  <option value="Follow-up">Follow-up</option>
-                  <option value="Final Assessment">Final Assessment</option>
-                  <option value="Nutrition Counseling">Nutrition Counseling</option>
-                  <option value="Other">Other</option>
+                  <option value="">{t('visits.selectType')}</option>
+                  <option value="Initial Consultation">{t('visits.initialConsultation')}</option>
+                  <option value="Follow-up">{t('visits.followUp')}</option>
+                  <option value="Final Assessment">{t('visits.finalAssessment')}</option>
+                  <option value="Nutrition Counseling">{t('visits.nutritionCounseling')}</option>
+                  <option value="Other">{t('visits.other')}</option>
                 </Form.Select>
                 <Form.Control.Feedback type="invalid">{errors.visit_type?.message}</Form.Control.Feedback>
               </Form.Group>
@@ -338,7 +340,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
 
             <Col md={4}>
               <Form.Group className="mb-3">
-                <Form.Label>Duration (minutes)</Form.Label>
+                <Form.Label>{t('visits.duration')}</Form.Label>
                 <Form.Control
                   type="number"
                   {...register('duration_minutes')}
@@ -355,19 +357,19 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Status</Form.Label>
+                  <Form.Label>{t('visits.status')}</Form.Label>
                   <Form.Select {...register('status')} disabled={isViewMode}>
-                    <option value="SCHEDULED">Scheduled</option>
-                    <option value="COMPLETED">Completed</option>
-                    <option value="CANCELLED">Cancelled</option>
-                    <option value="NO_SHOW">No Show</option>
+                    <option value="SCHEDULED">{t('visits.scheduled')}</option>
+                    <option value="COMPLETED">{t('visits.completed')}</option>
+                    <option value="CANCELLED">{t('visits.cancelled')}</option>
+                    <option value="NO_SHOW">{t('visits.noShow')}</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
 
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Next Visit Date</Form.Label>
+                  <Form.Label>{t('visits.nextVisitDate')}</Form.Label>
                   <Form.Control
                     type="datetime-local"
                     {...register('next_visit_date')}
@@ -378,9 +380,9 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
             </Row>
           )}
 
-          <h5 className="mb-3 mt-4">Clinical Information</h5>
+          <h5 className="mb-3 mt-4">{t('visits.clinicalInfo')}</h5>
           <Form.Group className="mb-3">
-            <Form.Label>Chief Complaint</Form.Label>
+            <Form.Label>{t('visits.chiefComplaint')}</Form.Label>
             <Form.Control
               as="textarea"
               rows={2}
@@ -391,7 +393,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label>Assessment</Form.Label>
+            <Form.Label>{t('visits.assessment')}</Form.Label>
             <Form.Control
               as="textarea"
               rows={3}
@@ -402,7 +404,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label>Recommendations</Form.Label>
+            <Form.Label>{t('visits.recommendations')}</Form.Label>
             <Form.Control
               as="textarea"
               rows={3}
@@ -413,7 +415,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label>Notes</Form.Label>
+            <Form.Label>{t('visits.notes')}</Form.Label>
             <Form.Control
               as="textarea"
               rows={2}
@@ -428,13 +430,13 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
           <Accordion className="mt-4">
             <Accordion.Item eventKey="0">
               <Accordion.Header>
-                📏 Measurements {visit?.measurements?.length > 0 && `(${visit.measurements.length} recorded)`}
+                📏 {t('visits.measurements')} {visit?.measurements?.length > 0 && `(${visit.measurements.length} recorded)`}
               </Accordion.Header>
               <Accordion.Body>
                 {/* Measurement History - Beta Feature */}
                 {visit?.measurements && visit.measurements.length > 0 && (
                   <div className="mb-4">
-                    <h6>Measurement History</h6>
+                    <h6>{t('visits.measurementHistory')}</h6>
                     <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                       {visit.measurements
                         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -448,31 +450,31 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
                             </div>
                             <Row className="small">
                               {measurement.weight_kg && (
-                                <Col md={3}><strong>Weight:</strong> {measurement.weight_kg} kg</Col>
+                                <Col md={3}><strong>{t('visits.weightLabel')}</strong> {measurement.weight_kg} kg</Col>
                               )}
                               {measurement.height_cm && (
-                                <Col md={3}><strong>Height:</strong> {measurement.height_cm} cm</Col>
+                                <Col md={3}><strong>{t('visits.heightLabel')}</strong> {measurement.height_cm} cm</Col>
                               )}
                               {measurement.bmi && (
-                                <Col md={3}><strong>BMI:</strong> {measurement.bmi}</Col>
+                                <Col md={3}><strong>{t('visits.bmiLabel')}</strong> {measurement.bmi}</Col>
                               )}
                               {measurement.blood_pressure_systolic && measurement.blood_pressure_diastolic && (
                                 <Col md={3}>
-                                  <strong>BP:</strong> {measurement.blood_pressure_systolic}/{measurement.blood_pressure_diastolic}
+                                  <strong>{t('visits.bpLabel')}</strong> {measurement.blood_pressure_systolic}/{measurement.blood_pressure_diastolic}
                                 </Col>
                               )}
                               {measurement.waist_circumference_cm && (
-                                <Col md={4}><strong>Waist:</strong> {measurement.waist_circumference_cm} cm</Col>
+                                <Col md={4}><strong>{t('visits.waistLabel')}</strong> {measurement.waist_circumference_cm} cm</Col>
                               )}
                               {measurement.body_fat_percentage && (
-                                <Col md={4}><strong>Body Fat:</strong> {measurement.body_fat_percentage}%</Col>
+                                <Col md={4}><strong>{t('visits.bodyFatLabel')}</strong> {measurement.body_fat_percentage}%</Col>
                               )}
                               {measurement.muscle_mass_percentage && (
-                                <Col md={4}><strong>Muscle:</strong> {measurement.muscle_mass_percentage}%</Col>
+                                <Col md={4}><strong>{t('visits.muscleLabel')}</strong> {measurement.muscle_mass_percentage}%</Col>
                               )}
                             </Row>
                             {measurement.notes && (
-                              <div className="mt-2 small"><strong>Notes:</strong> {measurement.notes}</div>
+                              <div className="mt-2 small"><strong>{t('visits.notesLabel')}</strong> {measurement.notes}</div>
                             )}
                           </div>
                         ))}
@@ -484,13 +486,13 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
                 {/* Add New Measurement Form - Only in Edit Mode */}
                 {isEditMode && (
                   <>
-                    <h6>Add New Measurement</h6>
-                    <p className="text-muted small">All fields are optional - record what's available</p>
+                    <h6>{t('visits.addNewMeasurement')}</h6>
+                    <p className="text-muted small">{t('visits.allFieldsOptional')}</p>
                     <Form onSubmit={handleSubmitMeasurement(onSubmitMeasurements)}>
                       <Row>
                         <Col md={4}>
                           <Form.Group className="mb-3">
-                            <Form.Label>Weight (kg)</Form.Label>
+                            <Form.Label>{t('visits.weight')}</Form.Label>
                             <Form.Control
                               type="number"
                               step="0.1"
@@ -505,7 +507,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
 
                         <Col md={4}>
                           <Form.Group className="mb-3">
-                            <Form.Label>Height (cm)</Form.Label>
+                            <Form.Label>{t('visits.height')}</Form.Label>
                             <Form.Control
                               type="number"
                               step="0.1"
@@ -535,7 +537,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
                       <Row>
                         <Col md={6}>
                           <Form.Group className="mb-3">
-                            <Form.Label>Blood Pressure (Systolic)</Form.Label>
+                            <Form.Label>{t('visits.bloodPressureSystolic')}</Form.Label>
                             <Form.Control
                               type="number"
                               {...registerMeasurement('bp_systolic')}
@@ -546,7 +548,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
 
                         <Col md={6}>
                           <Form.Group className="mb-3">
-                            <Form.Label>Blood Pressure (Diastolic)</Form.Label>
+                            <Form.Label>{t('visits.bloodPressureDiastolic')}</Form.Label>
                             <Form.Control
                               type="number"
                               {...registerMeasurement('bp_diastolic')}
@@ -559,7 +561,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
                       <Row>
                         <Col md={4}>
                           <Form.Group className="mb-3">
-                            <Form.Label>Waist Circumference (cm)</Form.Label>
+                            <Form.Label>{t('visits.waistCircumference')}</Form.Label>
                             <Form.Control
                               type="number"
                               step="0.1"
@@ -570,7 +572,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
 
                         <Col md={4}>
                           <Form.Group className="mb-3">
-                            <Form.Label>Body Fat %</Form.Label>
+                            <Form.Label>{t('visits.bodyFat')}</Form.Label>
                             <Form.Control
                               type="number"
                               step="0.1"
@@ -581,7 +583,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
 
                         <Col md={4}>
                           <Form.Group className="mb-3">
-                            <Form.Label>Muscle Mass %</Form.Label>
+                            <Form.Label>{t('visits.muscleMass')}</Form.Label>
                             <Form.Control
                               type="number"
                               step="0.1"
@@ -592,7 +594,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
                       </Row>
 
                       <Form.Group className="mb-3">
-                        <Form.Label>Measurement Notes</Form.Label>
+                        <Form.Label>{t('visits.measurementNotes')}</Form.Label>
                         <Form.Control
                           as="textarea"
                           rows={2}
@@ -602,7 +604,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
                       </Form.Group>
 
                       <Button variant="info" type="submit" disabled={loading}>
-                        {loading ? <Spinner animation="border" size="sm" /> : 'Add Measurement'}
+                        {loading ? <Spinner animation="border" size="sm" /> : t('visits.addMeasurement')}
                       </Button>
                     </Form>
                   </>
@@ -615,11 +617,11 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
 
       <Modal.Footer>
         <Button variant="secondary" onClick={onHide} disabled={loading}>
-          {isViewMode ? 'Close' : 'Cancel'}
+          {isViewMode ? t('common.close') : t('common.cancel')}
         </Button>
         {!isViewMode && (
           <Button variant="primary" onClick={handleSubmit(onSubmit)} disabled={loading}>
-            {loading ? <Spinner animation="border" size="sm" /> : (isCreateMode ? 'Create Visit' : 'Update Visit')}
+            {loading ? <Spinner animation="border" size="sm" /> : (isCreateMode ? t('visits.createVisit') : t('visits.editVisit'))}
           </Button>
         )}
       </Modal.Footer>

@@ -13,8 +13,11 @@ import api from './api';
 export const getUsers = async (filters = {}) => {
   const params = new URLSearchParams();
   Object.keys(filters).forEach(key => {
-    if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
-      params.append(key, filters[key]);
+    if (filters[key] !== undefined && filters[key] !== null) {
+      // Allow empty string for is_active (needed for "All Status" filter)
+      if (key === 'is_active' || filters[key] !== '') {
+        params.append(key, filters[key]);
+      }
     }
   });
   

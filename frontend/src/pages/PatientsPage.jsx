@@ -26,6 +26,7 @@ const PatientsPage = () => {
   const [viewingPatientId, setViewingPatientId] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
 
   useEffect(() => {
     fetchPatients();
@@ -94,11 +95,13 @@ const PatientsPage = () => {
   };
 
   const handleViewPatient = (patient) => {
-    navigate(`/patients/${patient.id}`);
+    setViewingPatientId(patient.id);
+    setShowViewModal(true);
   };
 
   const handleCloseViewModal = () => {
     setViewingPatientId(null);
+    setShowViewModal(false);
   };
 
   const handleShowCreateModal = () => {
@@ -179,6 +182,12 @@ const PatientsPage = () => {
         onHide={handleCloseEditModal}
         onSubmit={handleUpdatePatient}
         patient={editingPatient}
+      />
+
+      <PatientDetailModal
+        patientId={viewingPatientId}
+        show={showViewModal}
+        onHide={handleCloseViewModal}
       />
     </Layout>
   );

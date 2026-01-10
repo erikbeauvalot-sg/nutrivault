@@ -8,30 +8,32 @@ import { Modal, Button, Form, Alert, Spinner, Badge } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { useTranslation } from 'react-i18next';
 import userService from '../services/userService';
 import { useAuth } from '../contexts/AuthContext';
 
 // Password strength validation
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
 
-// Validation schema
-const changePasswordSchema = yup.object().shape({
+// Validation schema - will be created dynamically with translations
+const changePasswordSchema = (t, isAdmin) => yup.object().shape({
   oldPassword: yup.string().when('$isAdmin', {
     is: false,
-    then: (schema) => schema.required('Current password is required'),
+    then: (schema) => schema.required(t('users.currentPasswordRequired')),
     otherwise: (schema) => schema.notRequired()
   }),
   newPassword: yup.string()
-    .required('New password is required')
-    .min(8, 'Password must be at least 8 characters')
-    .matches(passwordRegex, 'Password must contain uppercase, lowercase, number, and special character'),
+    .required(t('forms.required'))
+    .min(8, t('forms.minLength', { count: 8 }))
+    .matches(passwordRegex, t('users.passwordRequirements')),
   confirmPassword: yup.string()
-    .oneOf([yup.ref('newPassword'), null], 'Passwords must match')
-    .required('Confirm password is required')
+    .oneOf([yup.ref('newPassword'), null], t('users.passwordsMustMatch'))
+    .required(t('forms.required'))
 });
 
 const ChangePasswordModal = ({ show, onHide, userId, username, isAdmin, onSuccess }) => {
   const { user: currentUser } = useAuth();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -47,7 +49,7 @@ const ChangePasswordModal = ({ show, onHide, userId, username, isAdmin, onSucces
     reset,
     watch
   } = useForm({
-    resolver: yupResolver(changePasswordSchema),
+    resolver: yupResolver(changePasswordSchema(t, canBypassOldPassword)),
     context: { isAdmin: canBypassOldPassword }
   });
 

@@ -1339,7 +1339,7 @@ if (user.role.name !== 'ADMIN' && dietitian.role.name !== 'DIETITIAN') {
 **Additional Fixes**:
 - Created `/api/users/roles` endpoint to fetch all available roles
 - Updated frontend to use dedicated roles endpoint instead of extracting from users
-- This ensures ASSISTANT role appears in user creation dropdown even when no users have that role
+- **Fixed dietitians endpoint** to return only DIETITIAN role users (not ADMIN users) for patient assignment dropdowns
 
 **Files Fixed**:
 - `/backend/src/services/patient.service.js` - Updated createPatient() and updatePatient() validation
@@ -1362,8 +1362,644 @@ if (user.role.name !== 'ADMIN' && dietitian.role.name !== 'DIETITIAN') {
 
 ---
 
-**Last Updated**: January 10, 2026  
-**Next Review**: After completing Phase 1
+### Issue 22: ASSISTANT Role Missing Visit Update/Delete Permissions
 
-**Last Updated**: January 9, 2026  
-**Next Review**: After completing Phase 4 implementation
+**Problem**: ASSISTANT users could create and read visits but were blocked from updating or deleting visits with "Missing required permission: visits.update/visits.delete" errors, despite business requirements specifying full visits CRUD permissions.
+
+**Root Cause**: Two-layer permission issue:
+1. **Service-level RBAC restrictions**: Visit service had overly restrictive checks that only allowed ADMIN or assigned DIETITIAN to modify/delete visits
+2. **Database permission gaps**: Role permissions seeder was missing `visits.update` and `visits.delete` for ASSISTANT role despite filter logic intending to include all `visits.*` permissions
+
+**Solution**: 
+
+**Service-Level Fix** (`/backend/src/services/visit.service.js`):
+```javascript
+// Before (restrictive - only ADMIN or assigned DIETITIAN)
+if (user.role.name === 'DIETITIAN' && visit.dietitian_id !== user.id) {
+  // Block access
+}
+
+// After (allows ADMIN and ASSISTANT full access, DIETITIANS restricted to own visits)
+// DIETITIANS still restricted to their assigned visits
+// ADMIN and ASSISTANT have full access to all visits
+```
+
+**Database Permission Fix**:
+```bash
+# Added missing permissions manually (seeder should be updated for future)
+INSERT INTO role_permissions (id, role_id, permission_id) 
+SELECT 'assistant-visits-update', r.id, p.id 
+FROM roles r, permissions p 
+WHERE r.name = 'ASSISTANT' AND p.code = 'visits.update';
+
+INSERT INTO role_permissions (id, role_id, permission_id) 
+SELECT 'assistant-visits-delete', r.id, p.id 
+FROM roles r, permissions p 
+WHERE r.name = 'ASSISTANT' AND p.code = 'visits.delete';
+```
+
+**Prevention**:
+- **Test all CRUD operations** for each role during permission changes
+- **Verify both route-level AND service-level permissions** - route middleware can be bypassed by service logic
+- **Check database permissions directly** when API calls fail with permission errors
+- **Update seeders immediately** when role requirements change, don't rely on manual database fixes
+- **Document permission layer interactions** - note that service logic can override route permissions
+
+**Diagnostic Steps**:
+1. Check route permissions: Verify user has required permission in database
+2. Check service restrictions: Look for role-based logic in service methods
+3. Test incrementally: Start with read operations, then create, update, delete
+4. Use API testing: Create automated tests for each role's permissions
+
+**Lesson**: RBAC systems have multiple enforcement layers (routes, services, database). When permissions don't work as expected, check all layers systematically. Service-level restrictions can override route-level permissions, creating confusing access patterns.
+
+**Files Modified**:
+- `/backend/src/services/visit.service.js` - Updated RBAC checks for getVisitById, updateVisit, deleteVisit
+- Database role_permissions table - Added visits.update and visits.delete for ASSISTANT role
+
+**Testing Verification**:
+- ✅ ASSISTANT can create visits (was working)
+- ✅ ASSISTANT can read visits (was working)  
+- ✅ ASSISTANT can update visits (fixed)
+- ✅ ASSISTANT can delete visits (fixed)
+- ✅ DIETITIANS still restricted to own visits (unchanged)
+- ✅ ADMIN maintains full access (unchanged)
+
+**Reference**: This completes the ASSISTANT role permissions as specified in business requirements: "Patient read, visits CRUD, billing create/read, documents".
+
+---
+
+### Issue 23: Frontend/Backend Permission Synchronization
+
+**Problem**: ASSISTANT users could perform all visit CRUD operations in the backend API but couldn't see Edit/Delete buttons in the frontend UI, despite having correct permissions.
+
+**Root Cause**: Permission systems have multiple enforcement layers that weren't synchronized:
+1. **Backend API permissions**: Route middleware + service-level RBAC checks (working correctly)
+2. **Frontend UI restrictions**: Role-based element visibility using `canEdit()` function (missing ASSISTANT role)
+
+The backend allowed ASSISTANT users full visit access, but the frontend `canEdit` function only granted edit permissions to ADMIN and DIETITIANS (restricted to own visits), causing UI buttons to be hidden despite API permissions working.
+
+**Solution**: Updated frontend permission check to include ASSISTANT role:
+
+```javascript
+// Before (restrictive frontend)
+const canEdit = (visit) => {
+  if (user.role.name === 'ADMIN') return true;
+  if (user.role.name === 'DIETITIAN' && visit.dietitian_id === user.id) return true;
+  return false; // ← ASSISTANT blocked here despite backend permissions
+};
+
+// After (synchronized with backend)
+const canEdit = (visit) => {
+  if (user.role.name === 'ADMIN') return true;
+  if (user.role.name === 'ASSISTANT') return true; // ← Added ASSISTANT
+  if (user.role.name === 'DIETITIAN' && visit.dietitian_id === user.id) return true;
+  return false;
+};
+```
+
+**Prevention**:
+- **Test permission changes end-to-end**: When updating role permissions, verify both backend API access AND frontend UI visibility
+- **Synchronize permission layers**: Ensure frontend permission checks match backend RBAC logic
+- **Document permission enforcement points**: Track where permissions are enforced (routes, services, UI)
+- **Test with non-admin roles**: Always verify permission changes work for all affected user types
+- **Use consistent role checking**: Centralize permission logic to avoid mismatches between layers
+
+**Diagnostic Steps**:
+1. **Test backend API directly**: Use curl/Postman to verify API permissions work
+2. **Check frontend permission functions**: Look for `canEdit`, `canDelete`, role-based conditionals
+3. **Compare permission layers**: Ensure frontend checks match backend middleware/service logic
+4. **Test with affected user roles**: Login as the role being modified and verify UI behavior
+
+**Common Pattern**: Backend permissions work but frontend hides UI elements due to restrictive role checks.
+
+**Files Fixed**:
+- `/frontend/src/pages/VisitsPage.jsx` - Updated `canEdit` function to include ASSISTANT role
+
+**Testing Checklist**:
+- ✅ Backend API allows ASSISTANT visit CRUD operations
+- ✅ Frontend shows Edit/Delete buttons for ASSISTANT users
+- ✅ ASSISTANT can successfully edit visits through UI
+- ✅ DIETITIAN restrictions still apply appropriately
+- ✅ ADMIN maintains full access
+
+**Lesson**: Permission systems are multi-layered. Always test both API access and UI visibility when making permission changes. Silent failures occur when backend allows actions but frontend hides the controls.
+
+**Reference**: This affected ASSISTANT role visit management workflow. Frontend permission checks must match backend RBAC capabilities.
+
+---
+
+### Issue 24: Frontend Filter Parameter Handling - Empty String vs Undefined
+
+**Problem**: Users page 'All Status' filter only showed active users instead of both active and inactive users. Frontend sent empty string `""` for 'All Status' but backend treated empty string as "default to active only" instead of "show all users".
+
+**Root Cause**: Three-part issue:
+1. **Validation middleware rejection**: Backend validation required `is_active` to be a boolean, rejecting empty strings before they reached service logic
+2. **Service logic misinterpretation**: Even if validation passed, service treated empty string as "default to active only" instead of "show all users"
+3. **Frontend service filtering**: Frontend `userService.getUsers()` filtered out empty strings before sending to API, so `is_active=""` never reached the backend
+
+**Example of Wrong Frontend Filtering**:
+```javascript
+// ❌ WRONG - Filters out empty strings
+Object.keys(filters).forEach(key => {
+  if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
+    params.append(key, filters[key]);  // Empty strings never sent!
+  }
+});
+
+// ❌ WRONG - "All Status" sends no is_active parameter at all
+// Frontend sends: /api/users (no is_active parameter)
+// Backend treats as: default active-only
+```
+
+**Solution**: 
+
+**Validation Fix** - Allow empty strings:
+```javascript
+// ✅ CORRECT - Allow empty string for "All Status"
+query('is_active')
+  .optional()
+  .custom((value) => {
+    // Allow empty string for "All Status" filter
+    if (value === '') return true;
+    // Otherwise, must be a boolean
+    if (value === 'true' || value === 'false' || value === true || value === false) return true;
+    throw new Error('is_active must be a boolean or empty string');
+  })
+```
+
+**Service Logic Fix** - Handle empty string correctly:
+```javascript
+// ✅ CORRECT - Empty string means "show all users"
+if (filters.is_active === 'true') {
+  whereClause.is_active = true;
+} else if (filters.is_active === 'false') {
+  whereClause.is_active = false;
+} else if (filters.is_active === '') {
+  // All Status selected - don't filter by is_active (show both active and inactive)
+  // No whereClause.is_active filter applied
+} else if (filters.is_active !== undefined) {
+  // Handle boolean values or other truthy/falsy values
+  whereClause.is_active = filters.is_active === true || filters.is_active === 'true';
+} else {
+  // Default: only show active users unless explicitly filtering for inactive
+  whereClause.is_active = true;
+}
+```
+
+**Frontend Service Fix** - Allow empty strings for is_active:
+```javascript
+// ✅ CORRECT - Allow empty string for is_active parameter
+Object.keys(filters).forEach(key => {
+  if (filters[key] !== undefined && filters[key] !== null) {
+    // Allow empty string for is_active (needed for "All Status" filter)
+    if (key === 'is_active' || filters[key] !== '') {
+      params.append(key, filters[key]);
+    }
+  }
+});
+// Frontend sends: /api/users?is_active= (empty string sent)
+// Backend treats as: show all users
+```
+
+**Prevention**:
+- **Document filter parameter contracts**: Specify what values frontend sends for each filter option
+- **Handle all possible parameter states**: undefined, null, empty string, "true", "false", etc.
+- **Test filter combinations**: Verify each filter option works as expected
+- **Use consistent parameter handling**: Apply same logic across all filter endpoints
+- **Log filter parameters during development**: Add `console.log('Filters:', filters)` to debug parameter handling
+
+**Common Filter Parameter Patterns**:
+```javascript
+// Status filters: empty string = "all", undefined = "default active"
+if (filters.status !== undefined && filters.status !== '') {
+  whereClause.status = filters.status;
+} else {
+  whereClause.status = 'active';  // Default behavior
+}
+
+// Boolean filters: string to boolean conversion
+if (filters.is_active !== undefined && filters.is_active !== '') {
+  whereClause.is_active = filters.is_active === 'true' || filters.is_active === true;
+}
+
+// Search filters: empty string = "no search", undefined = "no search"
+if (filters.search && filters.search.trim()) {
+  whereClause.name = { [Op.like]: `%${filters.search}%` };
+}
+```
+
+**Testing Checklist**:
+- ✅ 'All Status' shows both active and inactive users
+- ✅ 'Active' shows only active users
+- ✅ 'Inactive' shows only inactive users
+- ✅ Default (no filter) shows only active users
+- ✅ Frontend dropdown correctly sends empty string for 'All Status'
+
+**Lesson**: Filter parameters have multiple possible states (undefined, null, empty string, specific values). Always handle each state explicitly and document the expected behavior. Frontend and backend must agree on parameter contracts.
+
+**Files Fixed**:
+- `/backend/src/routes/users.js` - Updated query validation to allow empty strings for is_active parameter
+- `/backend/src/services/user.service.js` - Updated getUsers() filtering logic
+- `/frontend/src/services/userService.js` - Updated getUsers() to send empty strings for is_active parameter
+
+**Reference**: This affects any endpoint with optional filters. Similar issues likely exist in patient and visit filtering.
+
+---
+
+## Internationalization (i18n) Issues
+
+### Issue 25: Hardcoded Strings in Components Prevent Translation
+
+**Problem**: Dashboard displayed English text ("Welcome back", "Manage patient records", "Quick Stats") even when French language was selected, despite proper i18n setup.
+
+**Root Cause**: Components contained hardcoded English strings instead of using translation keys. The i18n system was properly configured, but components weren't utilizing it.
+
+**Example of Wrong Code**:
+```jsx
+// ❌ WRONG - Hardcoded English strings
+<h1>Welcome back, {user?.username}!</h1>
+<p>Manage patient records</p>
+<h4>Quick Stats</h4>
+```
+
+**Solution**: Replace all hardcoded strings with translation keys:
+
+```jsx
+// ✅ CORRECT - Using translation keys
+const { t } = useTranslation();
+
+<h1>{t('dashboard.welcomeBack', { username: user?.username })}</h1>
+<p>{t('dashboard.managePatientRecords')}</p>
+<h4>{t('dashboard.quickStats')}</h4>
+```
+
+**Prevention**:
+- **Never hardcode user-facing text** in components - always use translation keys
+- **Audit components for hardcoded strings** during i18n implementation
+- **Use ESLint rules** to detect hardcoded strings in JSX (if available)
+- **Create translation keys immediately** when adding new UI text
+- **Test with different languages** to catch untranslated strings
+
+**Diagnostic Technique**:
+```bash
+# Find hardcoded strings in React components
+grep -r ">[A-Z][a-z].*<" src/components/ | grep -v "t("
+
+# Check for missing translation keys
+grep -r "t('" src/components/ | sed 's/.*t('\''\([^'\'']*\)'.*/\1/' | sort | uniq
+```
+
+**Files Fixed**:
+- `/frontend/src/pages/DashboardPage.jsx` - Replaced all hardcoded strings with t() calls
+- `/frontend/src/locales/en.json` - Added missing dashboard translation keys
+- `/frontend/src/locales/fr.json` - Added missing dashboard translation keys
+
+**Reference**: This commonly occurs when developers add UI text without considering internationalization.
+
+---
+
+### Issue 26: Incorrect Interpolation Syntax in Translation Keys
+
+**Problem**: Dashboard showed "Bienvenue, {username} !" instead of "Bienvenue, admin !" despite proper translation setup.
+
+**Root Cause**: Translation keys used single curly braces `{username}` instead of the correct double curly braces `{{username}}` required by react-i18next for variable interpolation.
+
+**Example of Wrong Code**:
+```json
+// ❌ WRONG - Single curly braces don't interpolate
+"welcomeBack": "Bienvenue, {username} !"
+```
+
+```jsx
+// Component code was correct
+{t('dashboard.welcomeBack', { username: user?.username })}
+```
+
+**Solution**: Use double curly braces for interpolation:
+
+```json
+// ✅ CORRECT - Double curly braces enable interpolation
+"welcomeBack": "Bienvenue, {{username}} !"
+```
+
+**Prevention**:
+- **Always use double curly braces** `{{variable}}` for interpolation in translation keys
+- **Test interpolation** with actual data to verify variables are replaced
+- **Follow react-i18next documentation** for interpolation syntax
+- **Check existing patterns** in translation files for consistency
+- **Use meaningful variable names** in translation keys (e.g., `{{username}}` not `{{name}}`)
+
+**Common Interpolation Patterns**:
+```json
+// Simple variable
+"welcome": "Hello {{name}}!"
+
+// Count-based pluralization
+"items": "{{count}} item",
+"items_plural": "{{count}} items"
+
+// Multiple variables
+"range": "From {{start}} to {{end}}"
+```
+
+**Diagnostic Technique**:
+```javascript
+// Test interpolation in browser console
+i18n.t('dashboard.welcomeBack', { username: 'test' });
+// Should return: "Bienvenue, test !" (not "Bienvenue, {username} !")
+```
+
+**Files Fixed**:
+- `/frontend/src/locales/fr.json` - Fixed interpolation syntax: `{username}` → `{{username}}`
+- `/frontend/src/locales/en.json` - Fixed interpolation syntax: `{username}` → `{{username}}`
+
+**Reference**: react-i18next uses ICU MessageFormat syntax with double curly braces for interpolation.
+
+---
+
+### Issue 27: Systematic Internationalization Implementation
+
+**Problem**: Multiple pages contained hardcoded English strings despite proper i18n setup, preventing full French translation support.
+
+**Root Cause**: Development workflow didn't include proactive translation key creation. Components were built with hardcoded strings first, then translated later, leading to incomplete coverage and inconsistent patterns.
+
+**Solution**: Implement systematic i18n workflow:
+
+**Phase 1: Proactive Translation Key Creation**
+```javascript
+// ✅ CORRECT - Create translation keys immediately during development
+// 1. Add keys to both en.json and fr.json simultaneously
+{
+  "dashboard": {
+    "welcomeBack": "Welcome back, {{username}}!",
+    "managePatientRecords": "Manage patient records"
+  }
+}
+
+// 2. Use translation keys in components from the start
+const { t } = useTranslation();
+<h1>{t('dashboard.welcomeBack', { username: user?.username })}</h1>
+```
+
+**Phase 2: Comprehensive Component Audit**
+- **Search Pattern**: Use grep to find hardcoded strings: `grep -r ">[A-Z][a-z].*<" src/components/`
+- **Systematic Replacement**: Replace all user-facing text with `t()` calls
+- **Consistent Key Structure**: Use nested objects (e.g., `users.title`, `users.createUser`)
+
+**Phase 3: Translation Key Organization**
+```json
+// ✅ GOOD - Organized by feature/page
+{
+  "users": {
+    "title": "User Management",
+    "createUser": "Create User",
+    "username": "Username",
+    "fullName": "Full Name"
+  }
+}
+
+// ❌ AVOID - Flat structure becomes unmanageable
+{
+  "userTitle": "User Management",
+  "userCreate": "Create User",
+  "userUsername": "Username"
+}
+```
+
+**Prevention**:
+- **Proactive Translation**: Add translation keys during initial component development, not as an afterthought
+- **Consistent Patterns**: Use feature-based key organization (`users.*`, `patients.*`, `visits.*`)
+- **Complete Coverage**: Audit all user-facing text including buttons, labels, placeholders, alerts, and pagination
+- **ICU Syntax**: Always use double curly braces `{{variable}}` for interpolation
+- **Fallback Strategy**: Provide meaningful English fallbacks for missing translations
+- **Build Verification**: Run `npm run build` after translation changes to catch syntax errors
+
+**Common Pitfalls**:
+- **Hardcoded Strings**: "Create User" instead of `t('users.createUser')`
+- **Wrong Interpolation**: `{username}` instead of `{{username}}`
+- **Missing Keys**: Translation keys exist in en.json but not fr.json
+- **Inconsistent Structure**: Some pages use `user.*`, others use `users.*`
+
+**Diagnostic Techniques**:
+```bash
+# Find hardcoded strings in components
+grep -r ">[A-Z][a-z].*<" src/components/ | grep -v "t("
+
+# Check for missing translation keys
+grep -r "t('" src/components/ | sed 's/.*t('\''\([^'\'']*\)'.*/\1/' | sort | uniq
+
+# Verify interpolation syntax
+grep -r "{{" src/locales/  # Should find double braces
+grep -r "{[a-zA-Z]}" src/locales/  # Should find NO single braces
+```
+
+**Files Affected**:
+- `/frontend/src/locales/en.json` - Added comprehensive translation keys for all pages
+- `/frontend/src/locales/fr.json` - Added corresponding French translations
+- `/frontend/src/pages/DashboardPage.jsx` - Replaced all hardcoded strings
+- `/frontend/src/pages/UsersPage.jsx` - Complete internationalization
+- `/frontend/src/pages/PatientsPage.jsx` - Modal accessibility fixes
+
+**Lesson**: Internationalization should be built into the development workflow from the start, not added as a final step. Systematic auditing and consistent key organization prevent incomplete translations and maintenance issues.
+
+**Reference**: This affected Dashboard, Users, and Patients pages. Complete i18n coverage enables proper French language support across the entire application.
+
+---
+
+### Issue 28: Comprehensive Application Internationalization
+
+**Problem**: Multiple components throughout the NutriVault application contained hardcoded English strings, preventing full French language support despite having comprehensive translation infrastructure.
+
+**Root Cause**: Systematic issue across the entire codebase where components were developed with hardcoded strings first, then translation was added inconsistently. Key areas affected:
+- LoginPage: Form labels, validation messages, button text
+- VisitsPage: Error messages and loading states
+- PatientDetailPage: Error handling messages
+- UserModal: Validation schemas with hardcoded messages
+- VisitModal: Form validation and measurement validation
+- PatientDetailModal: Error messages for data loading
+- ChangePasswordModal: Password validation and form requirements
+
+**Solution**: Implemented systematic internationalization across all application components:
+
+**Phase 1: Component-by-Component Translation**
+- **LoginPage**: Added `useTranslation` import, replaced all form labels, placeholders, validation messages, and button text with `t()` calls
+- **VisitsPage**: Fixed hardcoded error message "Failed to load visits" → `t('visits.failedToLoad')`
+- **PatientDetailPage**: Replaced "Failed to load patient details" → `t('patients.failedToLoad')`
+
+**Phase 2: Modal Component Translation**
+- **UserModal**: Added `useTranslation`, converted static validation schemas to dynamic functions that accept translation function, updated all validation messages
+- **VisitModal**: Added `useTranslation`, converted validation schemas to dynamic functions, updated form and measurement validation messages
+- **PatientDetailModal**: Added `useTranslation`, replaced error messages
+- **ChangePasswordModal**: Added `useTranslation`, converted validation schema to dynamic function
+
+**Phase 3: Translation Key Expansion**
+Added comprehensive translation keys to both `en.json` and `fr.json`:
+```json
+// Added to users section
+"usernameInvalid": "Username can only contain letters, numbers, underscore, and hyphen",
+"passwordRequirements": "Password must contain uppercase, lowercase, number, and special character",
+"passwordsMustMatch": "Passwords must match",
+"currentPasswordRequired": "Current password is required"
+
+// Added to visits section  
+"durationMin": "Duration must be at least 1 minute",
+"durationMax": "Duration must be at most 480 minutes",
+"failedToLoad": "Failed to load visits"
+```
+
+**Phase 4: Dynamic Validation Schema Pattern**
+Established pattern for components with complex validation:
+```javascript
+// Before: Static schema with hardcoded messages
+const schema = yup.object().shape({
+  field: yup.string().required('Hardcoded message')
+});
+
+// After: Dynamic schema with translation support
+const schema = (t) => yup.object().shape({
+  field: yup.string().required(t('translation.key'))
+});
+
+// Usage in component
+const { t } = useTranslation();
+useForm({
+  resolver: yupResolver(schema(t))
+});
+```
+
+**Prevention**:
+- **Proactive Translation**: Always import `useTranslation` and use `t()` calls during initial component development
+- **Dynamic Validation**: For components with yup validation, create schema functions that accept translation function
+- **Comprehensive Auditing**: Use grep patterns to find hardcoded strings: `grep -r ">[A-Z][a-z].*<" src/components/`
+- **Translation Key Organization**: Maintain consistent nested structure (`component.action`, `component.field`)
+- **Build Verification**: Always run `npm run build` after translation changes to catch missing keys
+- **Fallback Strategy**: Ensure meaningful English fallbacks for all translation keys
+
+**Diagnostic Techniques**:
+```bash
+# Find hardcoded user-facing strings
+grep -r ">[A-Z][a-z].*<" src/components/ | grep -v "t("
+
+# Find validation messages that need translation
+grep -r "required('" src/components/
+
+# Check for missing useTranslation imports
+grep -r "useForm" src/components/ | xargs grep -L "useTranslation"
+```
+
+**Files Affected**:
+- `/frontend/src/pages/LoginPage.jsx` - Complete internationalization
+- `/frontend/src/pages/VisitsPage.jsx` - Error message translation
+- `/frontend/src/pages/PatientDetailPage.jsx` - Error message translation
+- `/frontend/src/components/UserModal.jsx` - Dynamic validation schema
+- `/frontend/src/components/VisitModal.jsx` - Dynamic validation schema
+- `/frontend/src/components/PatientDetailModal.jsx` - Error message translation
+- `/frontend/src/components/ChangePasswordModal.jsx` - Dynamic validation schema
+- `/frontend/src/locales/en.json` - Added 10+ new translation keys
+- `/frontend/src/locales/fr.json` - Added corresponding French translations
+
+**Testing Results**:
+- ✅ Frontend builds successfully without missing translation key errors
+- ✅ All major components now support French language switching
+- ✅ Validation messages display in selected language
+- ✅ Form labels and placeholders translate correctly
+- ✅ Error messages and loading states are localized
+
+**Lesson**: Comprehensive internationalization requires systematic auditing of all user-facing text across the entire application. The pattern of dynamic validation schemas provides a robust solution for complex forms while maintaining clean, maintainable code. Proactive translation during development prevents the accumulation of hardcoded strings that become expensive to fix later.
+
+**Reference**: This completes full application internationalization, enabling proper French language support across all user interfaces, forms, validation messages, and error states.
+
+---
+
+### Issue 29: i18n Language Persistence Not Working
+
+**Problem**: Language selection worked during the session but reverted to default (French) on page refresh. Users expected their language preference to persist across browser sessions.
+
+**Root Cause**: Two critical issues in i18n configuration:
+1. **Forced initial language**: `lng: 'fr'` in i18n.init() forced French as initial language, overriding localStorage detection
+2. **Debug code clearing localStorage**: `localStorage.removeItem('i18nextLng')` was clearing saved language preferences on every app initialization
+
+**Solution**: 
+
+**Remove Forced Initial Language**:
+```javascript
+// ❌ WRONG - Forces French, ignores localStorage
+i18n.init({
+  lng: 'fr', // ← This overrides localStorage!
+  fallbackLng: 'fr',
+  // ...
+});
+
+// ✅ CORRECT - Let detector handle initial language
+i18n.init({
+  // lng: 'fr', // ← Remove this line
+  fallbackLng: 'fr', // Still fallback if no preference saved
+  // ...
+});
+```
+
+**Remove Debug Code Clearing localStorage**:
+```javascript
+// ❌ WRONG - Clears user preferences on every load
+localStorage.removeItem('i18nextLng');
+
+// ✅ CORRECT - Remove debug code in production
+// (No localStorage manipulation)
+```
+
+**Enhanced Detection Configuration**:
+```javascript
+detection: {
+  order: ['localStorage', 'navigator', 'htmlTag'], // Include navigator fallback
+  caches: ['localStorage'],
+  lookupLocalStorage: 'i18nextLng',
+  checkWhitelist: true, // Ensure only supported languages
+},
+```
+
+**Prevention**:
+- **Never force initial language** when using language detection - let the detector check localStorage first
+- **Remove debug code** that manipulates localStorage before production deployment
+- **Test language persistence** by changing language, refreshing page, and verifying it sticks
+- **Include navigator in detection order** for better fallback behavior
+- **Add debugging during development** but remove it before committing:
+  ```javascript
+  console.log('🌐 i18n initialized');
+  console.log('🌐 Detected language:', i18n.language);
+  console.log('🌐 localStorage value:', localStorage.getItem('i18nextLng'));
+  ```
+
+**Diagnostic Steps**:
+1. **Check localStorage**: Open DevTools → Application → Local Storage → look for `i18nextLng` key
+2. **Add debug logging**: Log i18n.language and localStorage values during initialization
+3. **Test language change**: Verify `i18n.changeLanguage()` is called and localStorage is updated
+4. **Check detection order**: Ensure localStorage is checked before forced defaults
+5. **Clear localStorage**: Test with `localStorage.clear()` to ensure proper fallback behavior
+
+**Common Mistakes**:
+- Setting `lng` property when using LanguageDetector (conflicts with detection)
+- Leaving debug code that clears localStorage in production
+- Not including proper fallbacks in detection order
+- Assuming language change is synchronous (it's a Promise)
+
+**Testing Checklist**:
+- ✅ Change language using UI selector
+- ✅ Refresh page - language should persist
+- ✅ Clear localStorage - should fallback to default
+- ✅ Check browser DevTools console for proper initialization logs
+- ✅ Test with different browsers/devices
+
+**Files Fixed**:
+- `/frontend/src/i18n.js` - Removed forced `lng: 'fr'` and debug localStorage clearing
+- `/frontend/src/components/LanguageSelector.jsx` - Added debug logging for language changes
+
+**Lesson**: i18n language persistence requires careful configuration. The LanguageDetector should be allowed to check localStorage first without interference from forced initial languages or debug code. Always test persistence by refreshing the page, not just checking during the same session.
+
+**Reference**: This affects all i18n implementations using react-i18next with browser language detection.
+
+---
+
+**Last Updated**: January 10, 2026
+
+```</xai:function_call">**Last Updated**: January 10, 2026

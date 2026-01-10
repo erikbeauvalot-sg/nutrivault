@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Button, Badge, Form, InputGroup, Spinner, Alert } from 'react-bootstrap';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
@@ -13,6 +14,7 @@ import UserModal from '../components/UserModal';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 
 const UsersPage = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
@@ -60,7 +62,7 @@ const UsersPage = () => {
       setError(null);
     } catch (err) {
       console.error('Error fetching users:', err);
-      setError(err.response?.data?.error || 'Failed to load users');
+      setError(err.response?.data?.error || t('users.failedToLoad'));
       setUsers([]);
     } finally {
       setLoading(false);
@@ -89,24 +91,24 @@ const UsersPage = () => {
       fetchUsers();
     } catch (err) {
       console.error('Error toggling user status:', err);
-      alert(err.response?.data?.error || 'Failed to toggle user status');
+      alert(err.response?.data?.error || t('users.failedToToggleStatus'));
     }
   };
 
   const handleDelete = async (userId) => {
     if (userId === user.id) {
-      alert('Cannot delete your own account');
+      alert(t('users.cannotDeleteOwnAccount'));
       return;
     }
 
-    if (!window.confirm('Are you sure you want to deactivate this user?')) return;
+    if (!window.confirm(t('users.confirmDeactivate'))) return;
 
     try {
       await userService.deleteUser(userId);
       fetchUsers();
     } catch (err) {
       console.error('Error deleting user:', err);
-      alert(err.response?.data?.error || 'Failed to delete user');
+      alert(err.response?.data?.error || t('users.failedToDelete'));
     }
   };
 
@@ -125,7 +127,7 @@ const UsersPage = () => {
       setShowUserModal(true);
     } catch (err) {
       console.error('Error fetching user:', err);
-      alert(err.response?.data?.error || 'Failed to load user');
+      alert(err.response?.data?.error || t('users.failedToLoad'));
     }
   };
 
@@ -154,9 +156,9 @@ const UsersPage = () => {
 
   const getStatusBadge = (isActive, lockedUntil) => {
     if (lockedUntil && new Date(lockedUntil) > new Date()) {
-      return <Badge bg="warning">🔒 Locked</Badge>;
+      return <Badge bg="warning">{t('users.locked')}</Badge>;
     }
-    return isActive ? <Badge bg="success">Active</Badge> : <Badge bg="secondary">Inactive</Badge>;
+    return isActive ? <Badge bg="success">{t('users.active')}</Badge> : <Badge bg="secondary">{t('users.inactive')}</Badge>;
   };
 
   const formatDate = (dateString) => {
@@ -174,9 +176,9 @@ const UsersPage = () => {
     <Layout>
       <Container fluid>
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h1>👤 User Management</h1>
+          <h1>👤 {t('users.title')}</h1>
           <Button variant="primary" size="lg" onClick={handleCreateClick}>
-            Create User
+            {t('users.createUser')}
           </Button>
         </div>
 
@@ -188,12 +190,12 @@ const UsersPage = () => {
             <Row>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Search</Form.Label>
+                  <Form.Label>{t('users.search')}</Form.Label>
                   <InputGroup>
                     <InputGroup.Text>🔍</InputGroup.Text>
                     <Form.Control
                       type="text"
-                      placeholder="Username, email, or name..."
+                      placeholder={t('users.searchPlaceholder')}
                       value={filters.search}
                       onChange={(e) => handleFilterChange('search', e.target.value)}
                     />
@@ -203,12 +205,12 @@ const UsersPage = () => {
 
               <Col md={3}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Role</Form.Label>
+                  <Form.Label>{t('users.role')}</Form.Label>
                   <Form.Select
                     value={filters.role_id}
                     onChange={(e) => handleFilterChange('role_id', e.target.value)}
                   >
-                    <option value="">All Roles</option>
+                    <option value="">{t('users.allRoles')}</option>
                     {roles.map(role => (
                       <option key={role.id} value={role.id}>{role.name}</option>
                     ))}
@@ -218,14 +220,14 @@ const UsersPage = () => {
 
               <Col md={3}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Status</Form.Label>
+                  <Form.Label>{t('users.status')}</Form.Label>
                   <Form.Select
                     value={filters.is_active}
                     onChange={(e) => handleFilterChange('is_active', e.target.value)}
                   >
-                    <option value="">All Status</option>
-                    <option value="true">Active</option>
-                    <option value="false">Inactive</option>
+                    <option value="">{t('users.allStatus')}</option>
+                    <option value="true">{t('users.active')}</option>
+                    <option value="false">{t('users.inactive')}</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
@@ -236,7 +238,7 @@ const UsersPage = () => {
                   className="mb-3 w-100"
                   onClick={() => setFilters({ search: '', role_id: '', is_active: '', page: 1, limit: 20 })}
                 >
-                  Clear Filters
+                  {t('users.clearFilters')}
                 </Button>
               </Col>
             </Row>
@@ -249,12 +251,12 @@ const UsersPage = () => {
             {loading ? (
               <div className="text-center py-5">
                 <Spinner animation="border" variant="primary" />
-                <p className="mt-3">Loading users...</p>
+                <p className="mt-3">{t('users.loading')}</p>
               </div>
             ) : users.length === 0 ? (
               <div className="text-center py-5">
-                <h3>No users found</h3>
-                <p className="text-muted">Try adjusting your filters</p>
+                <h3>{t('users.noUsersFound')}</h3>
+                <p className="text-muted">{t('users.tryAdjustingFilters')}</p>
               </div>
             ) : (
               <>
@@ -262,13 +264,13 @@ const UsersPage = () => {
                   <Table striped bordered hover>
                     <thead>
                       <tr>
-                        <th>Username</th>
-                        <th>Full Name</th>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>Status</th>
-                        <th>Last Login</th>
-                        <th>Actions</th>
+                        <th>{t('users.username')}</th>
+                        <th>{t('users.fullName')}</th>
+                        <th>{t('users.email')}</th>
+                        <th>{t('users.role')}</th>
+                        <th>{t('users.status')}</th>
+                        <th>{t('users.lastLogin')}</th>
+                        <th>{t('users.actions')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -295,32 +297,32 @@ const UsersPage = () => {
                                 size="sm"
                                 onClick={() => handleEditClick(usr.id)}
                               >
-                                View/Edit
+                                {t('users.viewEdit')}
                               </Button>
                               <Button
                                 variant={usr.is_active ? 'outline-warning' : 'outline-success'}
                                 size="sm"
                                 onClick={() => handleToggleStatus(usr.id)}
                                 disabled={usr.id === user.id}
-                                title={usr.id === user.id ? 'Cannot toggle own status' : ''}
+                                title={usr.id === user.id ? t('users.cannotToggleOwnStatus') : ''}
                               >
-                                {usr.is_active ? '🔒 Deactivate' : '✅ Activate'}
+                                {usr.is_active ? t('users.deactivate') : t('users.activate')}
                               </Button>
                               <Button
                                 variant="outline-info"
                                 size="sm"
                                 onClick={() => handlePasswordClick(usr)}
                               >
-                                🔑 Reset Password
+                                {t('users.resetPassword')}
                               </Button>
                               <Button
                                 variant="outline-danger"
                                 size="sm"
                                 onClick={() => handleDelete(usr.id)}
                                 disabled={usr.id === user.id}
-                                title={usr.id === user.id ? 'Cannot delete own account' : ''}
+                                title={usr.id === user.id ? t('users.cannotDeleteOwnAccount') : ''}
                               >
-                                Delete
+                                {t('users.delete')}
                               </Button>
                             </div>
                           </td>
@@ -334,7 +336,11 @@ const UsersPage = () => {
                 {pagination.totalPages > 1 && (
                   <div className="d-flex justify-content-between align-items-center mt-3">
                     <div>
-                      Showing page {filters.page} of {pagination.totalPages} ({pagination.total} total users)
+                      {t('users.showingPage', { 
+                        current: filters.page, 
+                        total: pagination.totalPages, 
+                        count: pagination.total 
+                      })}
                     </div>
                     <div>
                       <Button
@@ -344,7 +350,7 @@ const UsersPage = () => {
                         disabled={filters.page === 1}
                         onClick={() => handleFilterChange('page', filters.page - 1)}
                       >
-                        Previous
+                        {t('users.previous')}
                       </Button>
                       <Button
                         variant="outline-primary"
@@ -352,7 +358,7 @@ const UsersPage = () => {
                         disabled={filters.page >= pagination.totalPages}
                         onClick={() => handleFilterChange('page', filters.page + 1)}
                       >
-                        Next
+                        {t('users.next')}
                       </Button>
                     </div>
                   </div>

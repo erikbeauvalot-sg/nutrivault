@@ -9,10 +9,14 @@ import { useState, useEffect } from 'react';
 
 const LanguageSelector = () => {
   const { i18n, t } = useTranslation();
-  const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
+  const [currentLanguage, setCurrentLanguage] = useState(() => i18n.language || 'fr');
 
   useEffect(() => {
+    // Set initial language from i18n
+    setCurrentLanguage(i18n.language);
+
     const handleLanguageChange = (lng) => {
+      console.log('🌐 Language changed event:', lng);
       setCurrentLanguage(lng);
     };
 
@@ -24,7 +28,11 @@ const LanguageSelector = () => {
   }, [i18n]);
 
   const changeLanguage = (language) => {
-    i18n.changeLanguage(language);
+    console.log('🌐 Changing language to:', language);
+    i18n.changeLanguage(language).then(() => {
+      console.log('🌐 Language changed to:', i18n.language);
+      console.log('🌐 localStorage after change:', localStorage.getItem('i18nextLng'));
+    });
   };
 
   const languages = [

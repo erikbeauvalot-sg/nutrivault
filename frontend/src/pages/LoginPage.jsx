@@ -8,11 +8,13 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Container, Card, Form, Button, Alert } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 import './LoginPage.css';
 
 const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -30,7 +32,7 @@ const LoginPage = () => {
       await login(data.username, data.password, data.rememberMe);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.error || 'Invalid username or password');
+      setError(err.error || t('auth.invalidCredentials'));
     } finally {
       setLoading(false);
     }
@@ -56,15 +58,15 @@ const LoginPage = () => {
 
               <Form onSubmit={handleSubmit(onSubmit)}>
                 <Form.Group className="mb-3" controlId="username">
-                  <Form.Label>Username</Form.Label>
+                  <Form.Label>{t('auth.username')}</Form.Label>
                   <Form.Control
                     type="text"
-                    placeholder="Enter username"
+                    placeholder={t('auth.username')}
                     {...register('username', {
-                      required: 'Username is required',
+                      required: t('forms.required'),
                       minLength: {
                         value: 3,
-                        message: 'Username must be at least 3 characters',
+                        message: t('forms.minLength', { count: 3 }),
                       },
                     })}
                     isInvalid={!!errors.username}
@@ -76,15 +78,15 @@ const LoginPage = () => {
                 </Form.Group>
 
                 <Form.Group className="mb-3" controlId="password">
-                  <Form.Label>Password</Form.Label>
+                  <Form.Label>{t('auth.password')}</Form.Label>
                   <Form.Control
                     type="password"
-                    placeholder="Enter password"
+                    placeholder={t('auth.password')}
                     {...register('password', {
-                      required: 'Password is required',
+                      required: t('forms.required'),
                       minLength: {
                         value: 8,
-                        message: 'Password must be at least 8 characters',
+                        message: t('forms.minLength', { count: 8 }),
                       },
                     })}
                     isInvalid={!!errors.password}
@@ -98,7 +100,7 @@ const LoginPage = () => {
                 <Form.Group className="mb-4" controlId="rememberMe">
                   <Form.Check
                     type="checkbox"
-                    label="Remember me"
+                    label={t('auth.rememberMe')}
                     {...register('rememberMe')}
                     disabled={loading}
                   />
@@ -114,10 +116,10 @@ const LoginPage = () => {
                   {loading ? (
                     <>
                       <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                      Signing in...
+                      {t('auth.loginButton')}
                     </>
                   ) : (
-                    'Sign In'
+                    t('auth.loginButton')
                   )}
                 </Button>
               </Form>
