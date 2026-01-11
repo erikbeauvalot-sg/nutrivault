@@ -99,6 +99,11 @@ const PatientsPage = () => {
     setShowViewModal(true);
   };
 
+  const handleScheduleVisit = (patient) => {
+    // Navigate to visits page with patient pre-selected
+    navigate('/visits', { state: { selectedPatient: patient } });
+  };
+
   const handleCloseViewModal = () => {
     setViewingPatientId(null);
     setShowViewModal(false);
@@ -166,6 +171,7 @@ const PatientsPage = () => {
             onEdit={canEditPatients ? handleEditPatient : null}
             onDelete={canDeletePatients ? handleDeletePatient : null}
             onView={handleViewPatient}
+            onScheduleVisit={handleScheduleVisit}
           />
         </div>
       </Container>
@@ -188,6 +194,7 @@ const PatientsPage = () => {
         patientId={viewingPatientId}
         show={showViewModal}
         onHide={handleCloseViewModal}
+        onScheduleVisit={handleScheduleVisit}
       />
     </Layout>
   );

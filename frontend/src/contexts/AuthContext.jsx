@@ -67,17 +67,35 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
-   * Refresh user data from token
+   * Check if user has a specific permission
+   * @param {string} permission - Permission code to check
+   * @returns {boolean} True if user has the permission
    */
-  const refreshUser = () => {
-    if (authService.isAuthenticated()) {
-      const currentUser = authService.getCurrentUser();
-      setUser(currentUser);
-      setIsAuthenticated(true);
-    } else {
-      setUser(null);
-      setIsAuthenticated(false);
+  const hasPermission = (permission) => {
+    if (!user || !user.permissions) {
+      return false;
     }
+    return user.permissions.includes(permission);
+  };
+
+  /**
+   * Check if user has a specific role
+   * @param {string} roleName - Role name to check
+   * @returns {boolean} True if user has the role
+   */
+  const hasRole = (roleName) => {
+    if (!user || !user.role) {
+      return false;
+    }
+    return user.role.name === roleName;
+  };
+
+  /**
+   * Check if user is admin
+   * @returns {boolean} True if user has ADMIN role
+   */
+  const isAdmin = () => {
+    return hasRole('ADMIN');
   };
 
   const value = {
@@ -86,7 +104,9 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     login,
     logout,
-    refreshUser,
+    hasPermission,
+    hasRole,
+    isAdmin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

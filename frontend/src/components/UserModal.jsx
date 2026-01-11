@@ -129,18 +129,12 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
       setLoading(true);
       setError(null);
 
-      console.log('📝 Submitting user data:', data);
-
       if (isCreateMode) {
         const { confirmPassword, ...userData } = data;
-        console.log('🆕 Creating user with:', userData);
         const response = await userService.createUser(userData);
-        console.log('✅ User created:', response.data);
         onSave(response.data);
       } else {
-        console.log('✏️ Updating user with:', data);
         const response = await userService.updateUser(user.id, data);
-        console.log('✅ User updated:', response.data);
         onSave(response.data);
       }
 

@@ -16,7 +16,6 @@ const LanguageSelector = () => {
     setCurrentLanguage(i18n.language);
 
     const handleLanguageChange = (lng) => {
-      console.log('🌐 Language changed event:', lng);
       setCurrentLanguage(lng);
     };
 
@@ -28,11 +27,7 @@ const LanguageSelector = () => {
   }, [i18n]);
 
   const changeLanguage = (language) => {
-    console.log('🌐 Changing language to:', language);
-    i18n.changeLanguage(language).then(() => {
-      console.log('🌐 Language changed to:', i18n.language);
-      console.log('🌐 localStorage after change:', localStorage.getItem('i18nextLng'));
-    });
+    i18n.changeLanguage(language);
   };
 
   const languages = [

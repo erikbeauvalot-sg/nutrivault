@@ -11,6 +11,8 @@ import PatientsPage from './pages/PatientsPage';
 import PatientDetailPage from './pages/PatientDetailPage';
 import VisitsPage from './pages/VisitsPage';
 import UsersPage from './pages/UsersPage';
+import BillingPage from './pages/BillingPage';
+import InvoiceDetailPage from './pages/InvoiceDetailPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -79,6 +81,24 @@ function App() {
         element={
           <ProtectedRoute>
             <UsersPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/billing"
+        element={
+          <ProtectedRoute>
+            <BillingPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/billing/:id"
+        element={
+          <ProtectedRoute>
+            <InvoiceDetailPage />
           </ProtectedRoute>
         }
       />

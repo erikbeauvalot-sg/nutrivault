@@ -13,6 +13,7 @@ import visitService from '../services/visitService';
 import { getPatients } from '../services/patientService';
 import userService from '../services/userService';
 import { useAuth } from '../contexts/AuthContext';
+import CreatePatientModal from './CreatePatientModal';
 
 // Validation schema - will be created dynamically with translations
 const visitSchema = (t) => yup.object().shape({
@@ -40,11 +41,7 @@ const measurementSchema = (t) => yup.object().shape({
   notes: yup.string()
 });
 
-const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
-  console.log('🔧 VisitModal rendered with props:', { show, mode, visit: visit ? 'present' : 'null' });
-  if (visit) {
-    console.log('🔧 VisitModal visit object:', visit);
-  }
+const VisitModal = ({ show, onHide, mode, visit, onSave, preSelectedPatient }) => {
   const { user } = useAuth();
   const { t } = useTranslation();
   const [patients, setPatients] = useState([]);
@@ -52,6 +49,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showMeasurements, setShowMeasurements] = useState(false);
+  const [showCreatePatientModal, setShowCreatePatientModal] = useState(false);
 
   const {
     register,
@@ -67,6 +65,21 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
     }
   });
 
+  // Watch visit_type to set default duration
+  const watchedVisitType = watch('visit_type');
+
+  // Default duration mapping based on visit type
+  const getDefaultDuration = (visitType) => {
+    const durationMap = {
+      'Initial Consultation': 60,
+      'Follow-up': 30,
+      'Final Assessment': 30,
+      'Nutrition Counseling': 45,
+      'Other': 60
+    };
+    return durationMap[visitType] || null;
+  };
+
   const {
     register: registerMeasurement,
     handleSubmit: handleSubmitMeasurement,
@@ -81,22 +94,24 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
   const isEditMode = mode === 'edit';
   const isCreateMode = mode === 'create';
 
+  // Effect to set default duration when visit type changes (only in create mode)
   useEffect(() => {
-    console.log('🔧 VisitModal useEffect triggered:', { show, mode, visit: visit ? 'present' : 'null' });
-    if (visit) {
-      console.log('🔧 VisitModal visit data:', visit);
+    if (isCreateMode && watchedVisitType) {
+      const defaultDuration = getDefaultDuration(watchedVisitType);
+      if (defaultDuration) {
+        setValue('duration_minutes', defaultDuration);
+      }
     }
-    
+  }, [watchedVisitType, isCreateMode, setValue]);
+
+  useEffect(() => {
     if (show) {
+      console.log('🔥 VisitModal opened:', { mode, preSelectedPatient: !!preSelectedPatient, visit: !!visit });
       fetchPatients();
       fetchDietitians();
       
       if (visit) {
-        console.log('🔧 VisitModal setting form values with visit data');
-        console.log('🔧 VisitModal visit_date raw:', visit.visit_date);
         const formattedVisitDate = visit.visit_date ? new Date(visit.visit_date).toISOString().slice(0, 16) : '';
-        console.log('🔧 VisitModal patient_id:', visit.patient_id, 'type:', typeof visit.patient_id);
-        console.log('🔧 VisitModal dietitian_id:', visit.dietitian_id, 'type:', typeof visit.dietitian_id);
         setValue('patient_id', visit.patient_id);
         setValue('dietitian_id', visit.dietitian_id);
         setValue('visit_date', formattedVisitDate);
@@ -108,7 +123,6 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
         setValue('recommendations', visit.recommendations || '');
         setValue('notes', visit.notes || '');
         const formattedNextVisitDate = visit.next_visit_date ? new Date(visit.next_visit_date).toISOString().slice(0, 16) : '';
-        console.log('🔧 VisitModal next_visit_date formatted:', formattedNextVisitDate);
         setValue('next_visit_date', formattedNextVisitDate);
 
         if (visit.measurements) {
@@ -125,17 +139,42 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
           });
         }
       } else if (mode === 'create') {
-        console.log('🔧 VisitModal resetting form for create mode');
         reset({ status: 'SCHEDULED' });
         resetMeasurement({});
       }
     }
   }, [show, visit, reset, resetMeasurement]);
 
+  // Separate effect for pre-selecting patient and dietitian when both data is available
+  useEffect(() => {
+    if (show && mode === 'create' && preSelectedPatient && patients.length > 0 && dietitians.length > 0) {
+      console.log('🎯 Pre-selecting patient:', {
+        patientId: preSelectedPatient.id,
+        patientName: `${preSelectedPatient.first_name} ${preSelectedPatient.last_name}`,
+        assignedDietitian: preSelectedPatient.assigned_dietitian,
+        patientsLoaded: patients.length > 0,
+        dietitiansLoaded: dietitians.length > 0
+      });
+
+      // Always set the patient
+      setValue('patient_id', preSelectedPatient.id);
+      console.log('✅ Patient pre-selected:', preSelectedPatient.id);
+
+      // Set dietitian if available
+      if (preSelectedPatient.assigned_dietitian?.id) {
+        setValue('dietitian_id', preSelectedPatient.assigned_dietitian.id);
+        console.log('✅ Dietitian auto-selected:', preSelectedPatient.assigned_dietitian.id);
+      } else {
+        console.log('⚠️ No assigned dietitian found for patient');
+      }
+    }
+  }, [show, mode, preSelectedPatient, patients, dietitians, setValue]);
+
   const fetchPatients = async () => {
     try {
       const response = await getPatients({ limit: 1000 });
-      const data = response.data || response;
+      // Handle both POC format and new API format
+      const data = response.data?.data || response.data || response;
       setPatients(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching patients:', err);
@@ -149,8 +188,6 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
       // API response structure: { success: true, data: [...] }
       const data = response.data?.data || response.data || [];
       
-      console.log('👥 Dietitians from API:', data);
-      
       // The endpoint already filters for active dietitians, so use directly
       setDietitians(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -162,6 +199,47 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
         first_name: user.first_name || user.username,
         last_name: user.last_name || ''
       }]);
+    }
+  };
+
+  const handleCreatePatient = async (patientData) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Create the patient via API
+      const response = await fetch('/api/patients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('nutrivault_access_token')}`
+        },
+        body: JSON.stringify(patientData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create patient');
+      }
+
+      const result = await response.json();
+      const newPatient = result.data || result;
+
+      // Add the new patient to the patients list
+      setPatients(prevPatients => [newPatient, ...prevPatients]);
+
+      // Automatically select the newly created patient
+      setValue('patient_id', newPatient.id);
+
+      // Close the create patient modal
+      setShowCreatePatientModal(false);
+
+      return true;
+    } catch (err) {
+      console.error('Error creating patient:', err);
+      setError('Failed to create patient: ' + (err.message || 'Unknown error'));
+      return false;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -179,20 +257,15 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
         duration_minutes: data.duration_minutes ? parseInt(data.duration_minutes) : null
       };
 
-      console.log('📝 Submitting visit data:', visitData);
-
       let savedVisit;
       if (isCreateMode) {
-        console.log('🆕 Creating new visit...');
         const response = await visitService.createVisit(visitData);
         savedVisit = response.data;
       } else if (isEditMode) {
-        console.log('✏️ Updating visit...');
         const response = await visitService.updateVisit(visit.id, visitData);
         savedVisit = response.data;
       }
 
-      console.log('✅ Visit saved successfully:', savedVisit);
       onSave(savedVisit);
       onHide();
     } catch (err) {
@@ -240,7 +313,8 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
   const calculatedBMI = weight && height ? (weight / Math.pow(height / 100, 2)).toFixed(1) : null;
 
   return (
-    <Modal show={show} onHide={onHide} size="lg">
+    <>
+      <Modal show={show} onHide={onHide} size="lg">
       <Modal.Header closeButton>
         <Modal.Title>
           {isCreateMode && `📅 ${t('visits.createVisit')}`}
@@ -258,18 +332,32 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>{t('visits.patient')} *</Form.Label>
-                <Form.Select
-                  {...register('patient_id')}
-                  isInvalid={!!errors.patient_id}
-                  disabled={isViewMode || isEditMode}
-                >
-                  <option value="">{t('visits.selectPatient')}</option>
-                  {patients.map(patient => (
-                    <option key={patient.id} value={patient.id}>
-                      {patient.first_name} {patient.last_name}
-                    </option>
-                  ))}
-                </Form.Select>
+                <div className="d-flex gap-2">
+                  <Form.Select
+                    {...register('patient_id')}
+                    isInvalid={!!errors.patient_id}
+                    disabled={isViewMode || isEditMode}
+                    className="flex-grow-1"
+                  >
+                    <option value="">{t('visits.selectPatient')}</option>
+                    {patients.map(patient => (
+                      <option key={patient.id} value={patient.id}>
+                        {patient.first_name} {patient.last_name}
+                      </option>
+                    ))}
+                  </Form.Select>
+                  {isCreateMode && (
+                    <Button
+                      variant="outline-primary"
+                      size="sm"
+                      onClick={() => setShowCreatePatientModal(true)}
+                      disabled={loading}
+                      title={t('patients.createPatient')}
+                    >
+                      ➕
+                    </Button>
+                  )}
+                </div>
                 {isViewMode && visit?.patient && (
                   <Form.Text className="text-muted">
                     {visit.patient.first_name} {visit.patient.last_name}
@@ -626,6 +714,14 @@ const VisitModal = ({ show, onHide, mode, visit, onSave }) => {
         )}
       </Modal.Footer>
     </Modal>
+
+    {/* Inline Patient Creation Modal */}
+    <CreatePatientModal
+      show={showCreatePatientModal}
+      onHide={() => setShowCreatePatientModal(false)}
+      onSubmit={handleCreatePatient}
+    />
+  </>
   );
 };
 

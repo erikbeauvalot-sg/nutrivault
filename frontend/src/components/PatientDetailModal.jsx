@@ -32,7 +32,7 @@ ChartJS.register(
   Legend
 );
 
-const PatientDetailModal = ({ patientId, show, onHide }) => {
+const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
   const { t } = useTranslation();
   const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -511,6 +511,14 @@ const PatientDetailModal = ({ patientId, show, onHide }) => {
       </Modal.Body>
 
       <Modal.Footer>
+        {onScheduleVisit && patient && (
+          <button
+            className="btn btn-success me-2"
+            onClick={() => onScheduleVisit(patient)}
+          >
+            📅 Schedule Visit
+          </button>
+        )}
         <button className="btn btn-secondary" onClick={onHide}>
           Close
         </button>

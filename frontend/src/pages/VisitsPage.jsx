@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Button, Badge, Form, InputGroup, Spinner, Alert } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import visitService from '../services/visitService';
@@ -15,6 +16,7 @@ import VisitModal from '../components/VisitModal';
 const VisitsPage = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const location = useLocation();
   const [visits, setVisits] = useState([]);
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,11 +33,33 @@ const VisitsPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('create');
   const [selectedVisit, setSelectedVisit] = useState(null);
+  const [preSelectedPatient, setPreSelectedPatient] = useState(null);
 
   useEffect(() => {
     fetchPatients();
     fetchVisits();
   }, [filters]);
+
+  // Handle patient selection from navigation state (from patients page)
+  useEffect(() => {
+    if (location.state?.selectedPatient) {
+      console.log('🎯 VisitsPage received patient from navigation:', {
+        patientId: location.state.selectedPatient.id,
+        patientName: `${location.state.selectedPatient.first_name} ${location.state.selectedPatient.last_name}`,
+        assignedDietitian: location.state.selectedPatient.assigned_dietitian,
+        hasAssignedDietitian: !!location.state.selectedPatient.assigned_dietitian?.id
+      });
+
+      // Pre-select the patient and open create visit modal
+      setFilters(prev => ({ ...prev, patient_id: location.state.selectedPatient.id }));
+      setPreSelectedPatient(location.state.selectedPatient);
+      setModalMode('create');
+      setSelectedVisit(null);
+      setShowModal(true);
+      // Clear the state to prevent re-triggering
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const fetchPatients = async () => {
     try {
@@ -82,17 +106,15 @@ const VisitsPage = () => {
 
   const handleCreateClick = () => {
     setSelectedVisit(null);
+    setPreSelectedPatient(null);
     setModalMode('create');
     setShowModal(true);
   };
 
   const handleViewClick = async (visitId) => {
     try {
-      console.log('👁️ VIEW VISIT:', visitId);
       const response = await visitService.getVisitById(visitId);
-      console.log('👁️ VISIT RESPONSE:', response);
       const visitData = response.data.data || response.data;
-      console.log('👁️ VISIT DATA EXTRACTED:', visitData);
       setSelectedVisit(visitData);
       setModalMode('view');
       setShowModal(true);
@@ -104,12 +126,8 @@ const VisitsPage = () => {
 
   const handleEditClick = async (visitId) => {
     try {
-      console.log('✏️ EDIT VISIT:', visitId);
       const response = await visitService.getVisitById(visitId);
-      console.log('✏️ EDIT RESPONSE:', response);
       const visitData = response.data.data || response.data;
-      console.log('✏️ EDIT VISIT DATA:', visitData);
-      console.log('✏️ SETTING selectedVisit to:', visitData);
       
       // Set the visit data first
       setSelectedVisit(visitData);
@@ -118,7 +136,6 @@ const VisitsPage = () => {
       // Use setTimeout to ensure state updates before opening modal
       setTimeout(() => {
         setShowModal(true);
-        console.log('✏️ MODAL SHOULD OPEN NOW');
       }, 0);
       
     } catch (err) {
@@ -160,7 +177,6 @@ const VisitsPage = () => {
 
   const canEdit = (visit) => {
     const canEditResult = user.role === 'ADMIN' || user.role === 'ASSISTANT' || (user.role === 'DIETITIAN' && visit.dietitian_id === user.id);
-    console.log('🔒 CAN EDIT CHECK:', { visitId: visit.id, dietitianId: visit.dietitian_id, userId: user.id, userRole: user.role, canEdit: canEditResult });
     return canEditResult;
   };
 
@@ -487,6 +503,7 @@ const VisitsPage = () => {
           mode={modalMode}
           visit={selectedVisit}
           onSave={handleModalSave}
+          preSelectedPatient={preSelectedPatient}
         />
       </Container>
     </Layout>

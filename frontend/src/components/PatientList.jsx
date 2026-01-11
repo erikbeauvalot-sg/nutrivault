@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Table, Button, Badge, Form, InputGroup, Pagination } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 
-function PatientList({ patients, loading, onEdit, onDelete, onView }) {
+function PatientList({ patients, loading, onEdit, onDelete, onView, onScheduleVisit }) {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -192,6 +192,16 @@ function PatientList({ patients, loading, onEdit, onDelete, onView }) {
                       >
                         👁️
                       </Button>
+                      {onScheduleVisit && (
+                        <Button
+                          variant="outline-success"
+                          size="sm"
+                          onClick={() => onScheduleVisit(patient)}
+                          title={t('visits.scheduleVisit')}
+                        >
+                          📅
+                        </Button>
+                      )}
                       {onEdit && (
                         <Button
                           variant="outline-primary"
