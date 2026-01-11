@@ -45,8 +45,9 @@ async function getPatients(user, filters = {}, requestMetadata = {}) {
       ];
     }
 
-    if (filters.is_active !== undefined) {
-      whereClause.is_active = filters.is_active;
+    if (filters.is_active !== undefined && filters.is_active !== '') {
+      // Convert string to boolean for database query
+      whereClause.is_active = filters.is_active === 'true' || filters.is_active === true;
     }
 
     if (filters.assigned_dietitian_id) {

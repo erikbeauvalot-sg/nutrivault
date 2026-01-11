@@ -89,7 +89,7 @@ const RecordPaymentModal = ({ show, onHide, onSubmit, invoice }) => {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'EUR'
     }).format(amount || 0);
   };
 

@@ -96,6 +96,61 @@ grep -r "belongsTo\|hasMany\|belongsToMany" models/
 
 ---
 
+### Issue 3: Incorrect Column References in Sequelize Queries
+
+**Problem**: "SQLITE_ERROR: no such column: Visit.is_active" when creating invoices, despite the visits table not having an `is_active` column.
+
+**Root Cause**: Service code assumed all tables follow the same soft-delete pattern with `is_active` boolean columns. The visits table uses a `status` column (SCHEDULED, COMPLETED, CANCELLED, NO_SHOW) instead of `is_active`.
+
+**Solution**: Check table schema before writing queries. For visits, use status filtering instead of is_active:
+
+```javascript
+// ❌ WRONG - Assumes is_active column exists
+const visit = await Visit.findOne({
+  where: { id: visitId, is_active: true }
+});
+
+// ✅ CORRECT - Use appropriate column for each table
+const visit = await Visit.findOne({
+  where: { 
+    id: visitId,
+    status: { [Op.notIn]: ['CANCELLED', 'NO_SHOW'] }
+  }
+});
+```
+
+**Prevention**:
+- **Always check table migrations** before writing queries: `migrations/20240101000006-create-visits.js`
+- **Don't assume column patterns** - each table may have different status/flag columns
+- **Use database schema inspection** during development:
+  ```bash
+  sqlite3 backend/data/nutrivault.db ".schema visits"
+  ```
+- **Document table-specific filtering logic** in service comments
+- **Test queries with actual data** before deploying
+
+**Common Table Patterns**:
+- **Users/Patients**: `is_active` (boolean soft delete)
+- **Visits**: `status` (SCHEDULED, COMPLETED, CANCELLED, NO_SHOW)
+- **Invoices**: `is_active` (boolean soft delete) + `status` (DRAFT, SENT, PAID, OVERDUE, CANCELLED)
+- **Documents**: `is_active` (boolean soft delete)
+
+**Diagnostic Technique**:
+```bash
+# Check table schema
+sqlite3 backend/data/nutrivault.db ".schema visits"
+
+# Test query manually
+sqlite3 backend/data/nutrivault.db "SELECT id, status FROM visits WHERE id = 'some-id';"
+```
+
+**Files Fixed**:
+- `backend/src/services/billing.service.js` line 227 in createInvoice()
+
+**Reference**: This affected invoice creation when associating visits. Always verify table schema before implementing filtering logic.
+
+---
+
 ## Authentication & Security
 
 ### Issue 3: Debugging Authentication Failures
@@ -2000,6 +2055,76 @@ detection: {
 
 ---
 
-**Last Updated**: January 10, 2026
+## React & Frontend Issues
+
+### Issue 30: React Hook Form setValue Timing with Select Dropdowns
+
+**Problem**: Form fields showed as empty despite `setValue()` calls working correctly and console logs showing values were set. Patient and dietitian dropdowns appeared unselected even though the correct IDs were being assigned.
+
+**Root Cause**: `setValue` from React Hook Form was called before the dropdown options were loaded from async API calls. While the form state was updated internally, the UI couldn't display the selected values because the corresponding `<option>` elements didn't exist yet.
+
+**Example of Wrong Code**:
+```javascript
+// ❌ WRONG - setValue called before options loaded
+useEffect(() => {
+  if (preSelectedPatient) {
+    setValue('patient_id', preSelectedPatient.id);        // Called immediately
+    setValue('dietitian_id', preSelectedPatient.assigned_dietitian.id);
+  }
+}, [preSelectedPatient, setValue]);
+
+// fetchPatients() and fetchDietitians() called asynchronously elsewhere
+// Result: setValue works internally but UI shows empty selections
+```
+
+**Solution**: Wait for dependent data to load before calling `setValue` on select elements:
+
+```javascript
+// ✅ CORRECT - Wait for options to be available
+useEffect(() => {
+  if (preSelectedPatient && patients.length > 0 && dietitians.length > 0) {
+    setValue('patient_id', preSelectedPatient.id);        // Now options exist
+    setValue('dietitian_id', preSelectedPatient.assigned_dietitian.id);
+  }
+}, [preSelectedPatient, patients, dietitians, setValue]);
+```
+
+**Prevention**:
+- **Always check data availability** before calling `setValue` on select elements
+- **Include data arrays in useEffect dependencies** when pre-populating selects
+- **Test with slow networks** - async data loading can cause timing issues
+- **Add loading states** for dropdowns to prevent premature form interactions
+- **Use form reset with defaultValues** instead of setValue when possible
+- **Debug with console logs** to verify both setValue calls and UI state
+
+**Common Symptoms**:
+- Console shows `setValue` working but dropdowns appear empty
+- Form validation passes but UI shows no selection
+- Values exist in form state but not displayed in select elements
+
+**Diagnostic Technique**:
+```javascript
+// Add logging to verify timing
+useEffect(() => {
+  console.log('Data loaded - Patients:', patients.length, 'Dietitians:', dietitians.length);
+  if (preSelectedPatient && patients.length > 0 && dietitians.length > 0) {
+    console.log('Setting form values now...');
+    setValue('patient_id', preSelectedPatient.id);
+    // Verify the value was set
+    console.log('Form state after setValue:', watch('patient_id'));
+  }
+}, [preSelectedPatient, patients, dietitians, setValue, watch]);
+```
+
+**Files Fixed**:
+- `/frontend/src/components/VisitModal.jsx` - Updated useEffect to wait for data loading
+
+**Lesson**: React Hook Form's `setValue` updates internal state but requires the UI options to be present for visual feedback. Always ensure dependent data is loaded before pre-populating select elements.
+
+**Reference**: This affects any form using React Hook Form with async-loaded select options, common in CRUD modals and data-driven forms.
+
+---
+
+**Last Updated**: January 11, 2026
 
 ```</xai:function_call">**Last Updated**: January 10, 2026

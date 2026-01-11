@@ -703,6 +703,22 @@ RefreshToken ─> User (many-to-one)
 ApiKey ────> User (many-to-one)
 ```
 
+### Visit Types and Default Durations
+
+**Visit Type Options:**
+- **Initial Consultation** - First visit with new patient (60 minutes default)
+- **Follow-up** - Regular check-in visits (30 minutes default)
+- **Final Assessment** - Last visit, discharge planning (30 minutes default)
+- **Nutrition Counseling** - Focused counseling sessions (45 minutes default)
+- **Other** - Miscellaneous visit types (60 minutes default)
+
+**Duration Behavior:**
+- Duration field is pre-populated based on visit type selection
+- Users can modify the duration during visit creation/editing
+- Duration is stored in `duration_minutes` field (integer, nullable)
+- Default durations are applied automatically when visit type is selected
+- Duration remains editable and can be customized per visit
+
 ### SQLite vs PostgreSQL Compatibility
 
 **Migration Requirements:**

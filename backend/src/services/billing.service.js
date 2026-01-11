@@ -224,11 +224,14 @@ async function createInvoice(invoiceData, user, requestMetadata = {}) {
     // Validate visit if provided
     if (invoiceData.visit_id) {
       const visit = await Visit.findOne({
-        where: { id: invoiceData.visit_id, is_active: true }
+        where: { 
+          id: invoiceData.visit_id,
+          status: { [Op.notIn]: ['CANCELLED', 'NO_SHOW'] }
+        }
       });
 
       if (!visit) {
-        const error = new Error('Visit not found');
+        const error = new Error('Visit not found or not eligible for billing');
         error.statusCode = 404;
         throw error;
       }
@@ -255,12 +258,15 @@ async function createInvoice(invoiceData, user, requestMetadata = {}) {
     const amountTotal = parseFloat(invoiceData.amount_total) || 0;
     const amountDue = amountTotal; // Initially, due amount equals total
 
+    // Set default due date to 30 days from now if not provided
+    const dueDate = invoiceData.due_date ? new Date(invoiceData.due_date) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
     const invoice = await Billing.create({
       patient_id: invoiceData.patient_id,
       visit_id: invoiceData.visit_id || null,
       invoice_number: invoiceNumber,
       invoice_date: new Date(),
-      due_date: invoiceData.due_date,
+      due_date: dueDate,
       service_description: invoiceData.service_description,
       amount_total: amountTotal,
       amount_paid: 0,

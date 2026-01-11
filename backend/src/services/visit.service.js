@@ -12,6 +12,7 @@ const Patient = db.Patient;
 const User = db.User;
 const Role = db.Role;
 const auditService = require('./audit.service');
+const billingService = require('./billing.service');
 const { Op } = db.Sequelize;
 
 /**
@@ -359,6 +360,38 @@ async function updateVisit(user, visitId, updateData, requestMetadata = {}) {
 
     await visit.save();
 
+    // Auto-create invoice when visit status changes to COMPLETED
+    if (changes.status && changes.status.new === 'COMPLETED' && changes.status.old !== 'COMPLETED') {
+      try {
+        // Check if invoice already exists for this visit
+        const existingInvoice = await db.Billing.findOne({
+          where: { visit_id: visitId, is_active: true }
+        });
+
+        if (!existingInvoice) {
+          // Create invoice automatically
+          const invoiceData = {
+            patient_id: visit.patient_id,
+            visit_id: visitId,
+            service_description: `Consultation - ${visit.visit_type || 'General Visit'}`,
+            amount_total: calculateVisitAmount(visit), // Helper function for pricing
+            due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+          };
+
+          await billingService.createInvoice(invoiceData, user, {
+            ...requestMetadata,
+            note: 'Auto-generated invoice for completed visit'
+          });
+
+          console.log(`✅ Auto-created invoice for completed visit ${visitId}`);
+        }
+      } catch (billingError) {
+        console.error('❌ Failed to auto-create invoice:', billingError);
+        // Don't fail the visit update if billing creation fails
+        // Log the error but continue
+      }
+    }
+
     // Fetch with associations
     const updatedVisit = await Visit.findByPk(visitId, {
       include: [
@@ -523,6 +556,35 @@ async function addMeasurements(user, visitId, measurementData, requestMetadata =
     console.error('Error in addMeasurements:', error);
     throw error;
   }
+}
+
+/**
+ * Calculate the amount to charge for a visit based on visit type and duration
+ * 
+ * @param {Object} visit - Visit object
+ * @returns {number} Amount in euros
+ */
+function calculateVisitAmount(visit) {
+  // Base pricing by visit type
+  const basePrices = {
+    'Initial Consultation': 150,
+    'Follow-up': 100,
+    'Final Assessment': 120,
+    'Nutrition Counseling': 80,
+    'Other': 100
+  };
+
+  const basePrice = basePrices[visit.visit_type] || basePrices['Other'];
+  
+  // Adjust based on duration (if longer than 60 minutes, add €50 per additional 30 minutes)
+  const duration = visit.duration_minutes || 60;
+  if (duration > 60) {
+    const extraMinutes = duration - 60;
+    const extraHalfHours = Math.ceil(extraMinutes / 30);
+    return basePrice + (extraHalfHours * 50);
+  }
+
+  return basePrice;
 }
 
 module.exports = {

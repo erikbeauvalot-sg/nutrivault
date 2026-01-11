@@ -45,11 +45,11 @@ const createInvoiceValidation = [
     .withMessage('Patient ID must be a valid UUID'),
 
   body('visit_id')
-    .optional()
+    .optional({ nullable: true })
     .isUUID()
     .withMessage('Visit ID must be a valid UUID'),
 
-  body('description')
+  body('service_description')
     .trim()
     .notEmpty()
     .withMessage('Description is required')
@@ -61,12 +61,12 @@ const createInvoiceValidation = [
     .withMessage('Total amount must be greater than 0'),
 
   body('due_date')
-    .optional()
+    .optional({ nullable: true })
     .isISO8601()
     .withMessage('Due date must be a valid ISO 8601 date'),
 
   body('items')
-    .optional()
+    .optional({ nullable: true })
     .isArray()
     .withMessage('Items must be an array'),
 
@@ -86,7 +86,7 @@ const createInvoiceValidation = [
  * Validation rules for updating an invoice
  */
 const updateInvoiceValidation = [
-  body('description')
+  body('service_description')
     .optional()
     .trim()
     .isLength({ max: 500 })
@@ -98,7 +98,7 @@ const updateInvoiceValidation = [
     .withMessage('Total amount must be greater than 0'),
 
   body('due_date')
-    .optional()
+    .optional({ nullable: true })
     .isISO8601()
     .withMessage('Due date must be a valid ISO 8601 date'),
 
@@ -108,7 +108,7 @@ const updateInvoiceValidation = [
     .withMessage('Invalid status value'),
 
   body('items')
-    .optional()
+    .optional({ nullable: true })
     .isArray()
     .withMessage('Items must be an array'),
 
@@ -158,12 +158,12 @@ const queryValidation = [
     .withMessage('Patient ID must be a valid UUID'),
 
   query('status')
-    .optional()
+    .optional({ checkFalsy: true })  // Allow empty strings to be treated as optional
     .isIn(['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED'])
     .withMessage('Invalid status filter'),
 
   query('search')
-    .optional()
+    .optional({ checkFalsy: true })  // Allow empty strings to be treated as optional
     .trim()
     .isLength({ max: 100 })
     .withMessage('Search term must be less than 100 characters'),

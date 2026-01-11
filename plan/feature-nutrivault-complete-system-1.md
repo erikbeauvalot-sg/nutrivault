@@ -2,7 +2,7 @@
 goal: 'Complete NutriVault Nutrition Practice Management System Implementation'
 version: '1.0'
 date_created: '2026-01-09'
-last_updated: '2026-01-09'
+last_updated: '2026-01-10'
 owner: 'NutriVault Development Team'
 status: 'In progress'
 tags: ['feature', 'architecture', 'full-stack', 'healthcare']
@@ -29,6 +29,10 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 - **REQ-008**: System must export data in multiple formats (CSV, Excel, PDF)
 - **REQ-009**: System must work with SQLite (development) and PostgreSQL (production)
 - **REQ-010**: Frontend must be responsive (desktop, tablet, mobile)
+- **REQ-011**: When creating a visit, if patient doesn't exist, system must provide inline patient creation
+- **REQ-012**: Patient list and detail views must include direct visit creation functionality
+- **REQ-013**: When marking a visit as completed, system must automatically generate billing invoice
+- **REQ-014**: Billing detail view must include payment processing button (matching list view functionality)
 
 ### Security Requirements
 
@@ -237,16 +241,16 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-091 | Create billing service (`backend/src/services/billing.service.js`) | | |
-| TASK-092 | Implement `getInvoices()` with filtering by patient, status | | |
-| TASK-093 | Implement `getInvoiceById()` | | |
-| TASK-094 | Implement `createInvoice()` with line items, tax calculation | | |
-| TASK-095 | Implement `updateInvoice()` with status tracking | | |
-| TASK-096 | Implement `recordPayment()` with payment method, amount validation | | |
+| TASK-091 | Create billing service (`backend/src/services/billing.service.js`) | ✅ | 2026-01-09 |
+| TASK-092 | Implement `getInvoices()` with filtering by patient, status | ✅ | 2026-01-09 |
+| TASK-093 | Implement `getInvoiceById()` | ✅ | 2026-01-09 |
+| TASK-094 | Implement `createInvoice()` with line items, tax calculation | ✅ | 2026-01-09 |
+| TASK-095 | Implement `updateInvoice()` with status tracking | ✅ | 2026-01-09 |
+| TASK-096 | Implement `recordPayment()` with payment method, amount validation | ✅ | 2026-01-09 |
 | TASK-097 | Implement invoice PDF generation | | |
-| TASK-098 | Create billing controller (`backend/src/controllers/billing.controller.js`) | | |
-| TASK-099 | Create billing routes with RBAC (`backend/src/routes/billing.js`) | | |
-| TASK-100 | Test invoice creation, payment recording, status updates | | |
+| TASK-098 | Create billing controller (`backend/src/controllers/billing.controller.js`) | ✅ | 2026-01-09 |
+| TASK-099 | Create billing routes with RBAC (`backend/src/routes/billing.js`) | ✅ | 2026-01-09 |
+| TASK-100 | Test invoice creation, payment recording, status updates | ✅ | 2026-01-09 |
 
 ### Implementation Phase 9: Beta - File Upload System
 
@@ -373,6 +377,10 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 | TASK-169 | Create visit service (`src/services/visitService.js`) | ✅ | 2026-01-09 |
 | TASK-170 | Test visit scheduling and documentation flow | ✅ | 2026-01-09 |
 | TASK-171 | **Beta Enhancement**: Implement internationalization (i18n) with French/English support | ✅ | 2026-01-09 |
+| TASK-172 | **Enhancement**: Add default visit durations based on visit type (Initial: 60min, Follow-up: 30min, Final: 30min, Counseling: 45min, Other: 60min) | ✅ | 2026-01-11 |
+| TASK-173 | **Feature**: Add inline patient creation when creating visits (if patient doesn't exist) | | |
+| TASK-174 | **Feature**: Add direct visit creation buttons to PatientList and PatientDetailPage | ✅ | 2026-01-11 |
+| TASK-175 | **Feature**: Implement automatic billing creation when visit status changes to 'COMPLETED' | | |
 
 ### Implementation Phase 16: Beta - Frontend Billing
 
@@ -380,31 +388,25 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-171 | Create BillingPage component with invoice list | | |
-| TASK-172 | Implement invoice filters (patient, status, date range, amount) | | |
-| TASK-173 | Create CreateInvoiceModal with line items editor | | |
+| TASK-171 | Create BillingPage component with invoice list | ✅ | 2026-01-10 |
+| TASK-172 | Implement invoice filters (patient, status, date range, amount) | ✅ | 2026-01-10 |
+| TASK-173 | Inline patient creation during visit scheduling | ✅ | 2026-01-11 |
 | TASK-174 | Create InvoiceDetailPage with printable view | | |
-| TASK-175 | Implement RecordPaymentModal with payment method selection | | |
-| TASK-176 | Add invoice status badges (draft, sent, paid, overdue) | | |
+| TASK-175 | **Feature**: Automatic billing creation when visits are completed | ✅ | 2026-01-11 |
+| TASK-176 | Add invoice status badges (draft, sent, paid, overdue) | ✅ | 2026-01-10 |
 | TASK-177 | Create invoice PDF preview and download | | |
-| TASK-178 | Create billing service (`src/services/billingService.js`) | | |
-| TASK-179 | Test invoice creation, payment recording, PDF generation | | |
-
-### Implementation Phase 17: Beta - Frontend Document Management
-
-**GOAL-017**: Create file upload UI for patients, visits, users
-
-| Task | Description | Completed | Date |
-|------|-------------|-----------|------|
-| TASK-180 | Create DocumentUploadModal with drag-and-drop support | | |
-| TASK-181 | Implement file preview for images and PDFs | | |
-| TASK-182 | Create DocumentListComponent with filtering by type | | |
-| TASK-183 | Implement document download functionality | | |
-| TASK-184 | Add document metadata editor (title, description, type) | | |
-| TASK-185 | Create document statistics widget (count, total size) | | |
-| TASK-186 | Add file type icons and size formatting | | |
-| TASK-187 | Create document service (`src/services/documentService.js`) | | |
-| TASK-188 | Test document upload, download, update, delete | | |
+| TASK-178 | Create billing service (`src/services/billingService.js`) | ✅ | 2026-01-10 |
+| TASK-179 | Test invoice creation, payment recording, PDF generation | ✅ | 2026-01-10 |
+| TASK-180 | **Feature**: Add payment processing button to InvoiceDetailPage (matching BillingPage functionality) | | |
+| TASK-181 | Create DocumentUploadModal with drag-and-drop support | | |
+| TASK-182 | Implement file preview for images and PDFs | | |
+| TASK-183 | Create DocumentListComponent with filtering by type | | |
+| TASK-184 | Implement document download functionality | | |
+| TASK-185 | Add document metadata editor (title, description, type) | | |
+| TASK-186 | Create document statistics widget (count, total size) | | |
+| TASK-187 | Add file type icons and size formatting | | |
+| TASK-188 | Create document service (`src/services/documentService.js`) | | |
+| TASK-189 | Test document upload, download, update, delete | | |
 
 ### Implementation Phase 18: Beta - Frontend User Management
 
@@ -412,14 +414,14 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-189 | Create UsersPage component (Admin only) | ✅ | 2026-01-09 |
-| TASK-190 | Implement user list with role badges | ✅ | 2026-01-09 |
-| TASK-191 | Create CreateUserModal with role selector | ✅ | 2026-01-09 |
-| TASK-192 | Create EditUserModal with password change option | ✅ | 2026-01-09 |
-| TASK-193 | Implement user activation/deactivation toggle | ✅ | 2026-01-09 |
-| TASK-194 | Add account status indicators (active, locked, inactive) | ✅ | 2026-01-09 |
-| TASK-195 | Create user service (`src/services/userService.js`) | ✅ | 2026-01-09 |
-| TASK-196 | Test user CRUD with Admin role | ✅ | 2026-01-09 |
+| TASK-190 | Create UsersPage component (Admin only) | ✅ | 2026-01-09 |
+| TASK-191 | Implement user list with role badges | ✅ | 2026-01-09 |
+| TASK-192 | Create CreateUserModal with role selector | ✅ | 2026-01-09 |
+| TASK-193 | Create EditUserModal with password change option | ✅ | 2026-01-09 |
+| TASK-194 | Implement user activation/deactivation toggle | ✅ | 2026-01-09 |
+| TASK-195 | Add account status indicators (active, locked, inactive) | ✅ | 2026-01-09 |
+| TASK-196 | Create user service (`src/services/userService.js`) | ✅ | 2026-01-09 |
+| TASK-197 | Test user CRUD with Admin role | ✅ | 2026-01-09 |
 
 ### Implementation Phase 19: Beta - Frontend Reports & Export
 
@@ -427,14 +429,14 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 
 | Task | Description | Completed | Date |
 |------|-------------|-----------|------|
-| TASK-197 | Create ReportsPage component with dashboard layout | | |
-| TASK-198 | Implement patient statistics cards (total, active, new this month) | | |
-| TASK-199 | Implement revenue charts with date range selector | | |
-| TASK-200 | Create ExportModal with format selector (CSV, Excel, PDF) | | |
-| TASK-201 | Add export buttons on patient, visit, billing list pages | | |
-| TASK-202 | Implement download progress indicator | | |
-| TASK-203 | Create export service (`src/services/exportService.js`) | | |
-| TASK-204 | Test data export with all formats | | |
+| TASK-198 | Create ReportsPage component with dashboard layout | | |
+| TASK-199 | Implement patient statistics cards (total, active, new this month) | | |
+| TASK-200 | Implement revenue charts with date range selector | | |
+| TASK-201 | Create ExportModal with format selector (CSV, Excel, PDF) | | |
+| TASK-202 | Add export buttons on patient, visit, billing list pages | | |
+| TASK-203 | Implement download progress indicator | | |
+| TASK-204 | Create export service (`src/services/exportService.js`) | | |
+| TASK-205 | Test data export with all formats | | |
 
 ### Implementation Phase 20: Beta - E2E Testing
 

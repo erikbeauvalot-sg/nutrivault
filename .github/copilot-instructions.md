@@ -58,7 +58,9 @@ The following instructions are only to be applied when performing a code review.
 
 
 ## Plan file guide
-- Follow any plan file specific instructions stored in the /plan directory.
-- for now the plan file that is being used is : /plan/feature-nutrivault-complete-system-1.md
-- Make sure you update the status of the plan file if needed.
+- [ ] always translate all string on the frontend using the i18n system.
+- [ ] The plan has markdown front matter.
+- [ ] Follow any plan file specific instructions stored in the /plan directory.
+- [ ] for now the plan file that is being used is : /plan/feature-nutrivault-complete-system-1.md
+- [ ] Make sure you update the status of the plan file if needed.
 

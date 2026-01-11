@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Git Pre-commit Hook for Translation Agent
+# This hook runs the translation agent before commits to ensure
+# all user-facing strings are properly translated
+
+# Get the list of staged files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep "frontend/src.*\.\(jsx\|tsx\|js\|ts\)$" || true)
+
+if [ -n "$STAGED_FILES" ]; then
+    echo "🔍 Checking staged frontend files for translation needs..."
+
+    # Run the translation agent check
+    if command -v bash >/dev/null 2>&1; then
+        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+        if [ -f "$SCRIPT_DIR/run-translation-agent.sh" ]; then
+            echo "Running translation check..."
+            bash "$SCRIPT_DIR/run-translation-agent.sh" $STAGED_FILES
+
+            if [ $? -ne 0 ]; then
+                echo ""
+                echo "❌ Translation check failed. Please fix translation issues before committing."
+                echo "   Run: ./run-translation-agent.sh"
+                echo "   Or use the translation agent: .github/prompts/frontend-translation-agent.prompt.md"
+                exit 1
+            fi
+        else
+            echo "⚠️  Translation agent script not found. Skipping translation check."
+        fi
+    else
+        echo "⚠️  Bash not available. Skipping translation check."
+    fi
+fi
+
+exit 0
