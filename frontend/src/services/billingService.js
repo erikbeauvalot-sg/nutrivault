@@ -12,7 +12,7 @@ import api from './api';
  */
 export const getInvoices = async (filters = {}) => {
   const response = await api.get('/api/billing', { params: filters });
-  return response.data;
+  return response;
 };
 
 /**
@@ -22,7 +22,7 @@ export const getInvoices = async (filters = {}) => {
  */
 export const getInvoiceById = async (id) => {
   const response = await api.get(`/api/billing/${id}`);
-  return response.data;
+  return response;
 };
 
 /**

@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import RecordPaymentModal from '../components/RecordPaymentModal';
+import EditInvoiceModal from '../components/EditInvoiceModal';
 import * as billingService from '../services/billingService';
 
 const InvoiceDetailPage = () => {
@@ -23,6 +24,7 @@ const InvoiceDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     if (id && hasPermission('billing.read')) {
@@ -34,7 +36,7 @@ const InvoiceDetailPage = () => {
     try {
       setLoading(true);
       const response = await billingService.getInvoiceById(id);
-      const invoiceData = response.data.data || response.data;
+      const invoiceData = response.data;
       setInvoice(invoiceData);
       setPayments(invoiceData.payments || []);
       setError(null);
@@ -54,6 +56,157 @@ const InvoiceDetailPage = () => {
     } catch (err) {
       throw new Error('Failed to record payment: ' + (err.response?.data?.error || err.message));
     }
+  };
+
+  const handleEditInvoice = async (invoiceData) => {
+    try {
+      await billingService.updateInvoice(id, invoiceData);
+      setShowEditModal(false);
+      fetchInvoiceDetails(); // Refresh data
+    } catch (err) {
+      throw new Error('Failed to update invoice: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    // Create a clean HTML version for PDF generation
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const invoiceHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Invoice ${invoice.invoice_number}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+          .invoice-details { margin: 20px 0; }
+          .invoice-details table { width: 100%; border-collapse: collapse; }
+          .invoice-details td { padding: 8px; border: 1px solid #ddd; }
+          .invoice-details .label { font-weight: bold; background-color: #f5f5f5; }
+          .items { margin: 30px 0; }
+          .items table { width: 100%; border-collapse: collapse; }
+          .items th, .items td { padding: 10px; text-align: left; border: 1px solid #ddd; }
+          .items th { background-color: #f5f5f5; font-weight: bold; }
+          .totals { text-align: right; margin-top: 20px; }
+          .totals table { margin-left: auto; }
+          .totals td { padding: 5px 20px; }
+          .status { text-align: center; margin: 20px 0; font-size: 18px; font-weight: bold; }
+          .status.PAID { color: green; }
+          .status.SENT { color: blue; }
+          .status.OVERDUE { color: red; }
+          .status.DRAFT { color: gray; }
+          .status.CANCELLED { color: orange; }
+          @media print { body { margin: 0; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>INVOICE</h1>
+          <h2>${invoice.invoice_number}</h2>
+        </div>
+
+        <div class="invoice-details">
+          <table>
+            <tr>
+              <td class="label">Invoice Number:</td>
+              <td>${invoice.invoice_number}</td>
+              <td class="label">Date:</td>
+              <td>${formatDate(invoice.created_at)}</td>
+            </tr>
+            <tr>
+              <td class="label">Patient:</td>
+              <td>${invoice.patient?.first_name} ${invoice.patient?.last_name}</td>
+              <td class="label">Due Date:</td>
+              <td>${formatDate(invoice.due_date)}</td>
+            </tr>
+            <tr>
+              <td class="label">Status:</td>
+              <td class="status ${invoice.status}">${invoice.status}</td>
+              <td class="label">Total Amount:</td>
+              <td>${formatCurrency(invoice.total_amount)}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="items">
+          <h3>Invoice Items</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${invoice.items?.map(item => `
+                <tr>
+                  <td>${item.description}</td>
+                  <td>${item.quantity}</td>
+                  <td>${formatCurrency(item.unit_price)}</td>
+                  <td>${formatCurrency(item.total)}</td>
+                </tr>
+              `).join('') || '<tr><td colspan="4">No items found</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="totals">
+          <table>
+            <tr>
+              <td>Subtotal:</td>
+              <td>${formatCurrency(invoice.subtotal)}</td>
+            </tr>
+            <tr>
+              <td>Tax (${invoice.tax_rate}%):</td>
+              <td>${formatCurrency(invoice.tax_amount)}</td>
+            </tr>
+            <tr style="font-weight: bold; font-size: 16px;">
+              <td>Total:</td>
+              <td>${formatCurrency(invoice.total_amount)}</td>
+            </tr>
+          </table>
+        </div>
+
+        ${payments.length > 0 ? `
+          <div class="payments" style="margin-top: 30px;">
+            <h3>Payment History</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background-color: #f5f5f5;">
+                  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Date</th>
+                  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Amount</th>
+                  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Method</th>
+                  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Reference</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${payments.map(payment => `
+                  <tr>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${formatDate(payment.payment_date)}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${formatCurrency(payment.amount)}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${payment.payment_method}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd;">${payment.reference || '-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : ''}
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(invoiceHTML);
+    printWindow.document.close();
+
+    // Wait for content to load, then trigger print dialog
+    printWindow.onload = () => {
+      printWindow.print();
+    };
   };
 
   const handleBack = () => {
@@ -221,11 +374,19 @@ const InvoiceDetailPage = () => {
                   <Button
                     variant="outline-primary"
                     className="w-100 mb-2"
-                    onClick={() => navigate(`/billing/edit/${invoice.id}`)}
+                    onClick={() => setShowEditModal(true)}
                   >
                     ✏️ {t('common.edit')}
                   </Button>
                 )}
+
+                <Button
+                  variant="outline-secondary"
+                  className="w-100 mb-2"
+                  onClick={handleDownloadPDF}
+                >
+                  📄 {t('billing.downloadPDF')}
+                </Button>
 
                 <Button
                   variant="outline-secondary"
@@ -277,6 +438,14 @@ const InvoiceDetailPage = () => {
           show={showPaymentModal}
           onHide={() => setShowPaymentModal(false)}
           onSubmit={handleRecordPayment}
+          invoice={invoice}
+        />
+
+        {/* Edit Invoice Modal */}
+        <EditInvoiceModal
+          show={showEditModal}
+          onHide={() => setShowEditModal(false)}
+          onSubmit={handleEditInvoice}
           invoice={invoice}
         />
       </Container>

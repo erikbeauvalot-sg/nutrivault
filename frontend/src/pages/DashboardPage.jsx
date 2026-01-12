@@ -114,9 +114,9 @@ const DashboardPage = () => {
                 <div className="display-4 mb-3">💰</div>
                 <h3 className="mb-2">{t('navigation.billing')}</h3>
                 <p className="text-muted mb-3">{t('dashboard.manageInvoicesAndPayments')}</p>
-                <button className="btn btn-secondary" disabled>
-                  {t('dashboard.comingSoon')}
-                </button>
+                <Link to="/billing" className="btn btn-primary">
+                  {t('dashboard.viewBilling')}
+                </Link>
               </Card.Body>
             </Card>
           </Col>

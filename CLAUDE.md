@@ -6,10 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 NutriVault is a secure nutrition practice management system for dietitians to manage patients, visits, billing, and audit logging with role-based access control. Built with Node.js/Express backend, React frontend (scaffold only), and Sequelize ORM supporting both SQLite (development) and PostgreSQL (production).
 
-**Current Status**: Phase 2 in progress (13% complete)
-- **Phase 1 Complete**: Database schema, migrations, seeders, authentication (JWT + API keys), RBAC system, audit logging, error handling
-- **Phase 2 In Progress**: API endpoints for users, patients, visits (partial), billing (planned)
-- **Frontend**: Directory structure exists but not yet implemented
+**Current Status**: Phase 16 In Progress - Beta Release Ready
+- **Phase 1-15 Complete**: Full system implementation including database schema, migrations, seeders, authentication (JWT + API keys), RBAC system, audit logging, error handling, complete API endpoints, and comprehensive React frontend
+- **Phase 16 In Progress**: Frontend billing management UI with invoice generation and document management features
+  - ⚠️ **Document Upload Feature Not Working:** The document upload functionality is not working - button does nothing when clicked. Feature disabled in navigation menu until fixed.
+- **Frontend**: Fully implemented with patient management, visit scheduling, billing system, document management, and internationalization
+- **Features**: Complete nutrition practice management with secure user authentication, role-based permissions, patient tracking, visit management, automated billing, document storage, and audit trails
 
 ## Common Commands
 

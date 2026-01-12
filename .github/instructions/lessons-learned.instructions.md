@@ -2125,6 +2125,252 @@ useEffect(() => {
 
 ---
 
+### Issue 31: Query Parameter Validation with Empty Strings in API Routes
+
+**Problem**: 400 Bad Request error when accessing documents page with `GET /api/documents?search=&page=1&limit=10`. Frontend was sending empty search parameter that backend validation rejected.
+
+**Root Cause**: Express-validator query parameter validation was rejecting empty strings `""` for optional search parameters. Unlike form body validation where `.optional({ checkFalsy: true })` works, query parameters need custom validation logic to explicitly allow empty strings.
+
+**Wrong Code**:
+```javascript
+// ❌ WRONG - Rejects empty strings for query parameters
+query('search')
+  .optional()
+  .isLength({ min: 1 })
+  .withMessage('Search must be at least 1 character')
+// When URL contains: ?search=
+// Result: 400 Bad Request - "Search must be at least 1 character"
+```
+
+**Solution**: Use custom validation function to explicitly allow empty strings for optional query parameters:
+
+```javascript
+// ✅ CORRECT - Allows empty strings for optional search
+query('search')
+  .optional()
+  .custom((value) => {
+    // Allow empty string for "no search" filter
+    if (value === '') return true;
+    // Otherwise, validate as string with minimum length
+    if (typeof value === 'string' && value.length >= 1) return true;
+    throw new Error('Search must be a string with at least 1 character or empty');
+  })
+  .withMessage('Search must be a valid string or empty')
+// When URL contains: ?search=
+// Result: Validation passes, treated as "no search filter"
+```
+
+**Prevention**:
+- **Use custom validation for query parameters that can be empty strings**
+- **Don't rely on `.optional()` alone** - it doesn't handle empty strings for query params
+- **Test API endpoints with empty parameters** during development
+- **Document parameter contracts** - specify what values (including empty) are acceptable
+- **Frontend should filter empty parameters** to avoid unnecessary API calls:
+  ```javascript
+  // Filter out empty parameters before sending
+  Object.keys(filters).forEach(key => {
+    if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
+      params.append(key, filters[key]);
+    }
+  });
+  ```
+
+**Common Query Parameter Patterns**:
+```javascript
+// Search parameters (allow empty)
+query('search')
+  .optional()
+  .custom((value) => {
+    if (value === '') return true;  // Allow empty for "no filter"
+    if (typeof value === 'string' && value.length >= 1) return true;
+    throw new Error('Search must be a string or empty');
+  })
+
+// Status filters (allow empty for "all")
+query('status')
+  .optional()
+  .custom((value) => {
+    const validStatuses = ['', 'active', 'inactive', 'pending'];
+    if (validStatuses.includes(value)) return true;
+    throw new Error('Status must be one of: ' + validStatuses.join(', '));
+  })
+
+// Boolean filters (allow empty for "no filter")
+query('is_active')
+  .optional()
+  .custom((value) => {
+    if (value === '') return true;  // Allow empty
+    if (value === 'true' || value === 'false') return true;
+    throw new Error('is_active must be true, false, or empty');
+  })
+```
+
+**Diagnostic Steps**:
+1. **Check browser Network tab** for 400 errors on API calls
+2. **Look for empty query parameters** in the failing URL
+3. **Test API directly** with curl: `curl "http://localhost:3001/api/endpoint?param="`
+4. **Check validation middleware** for `.optional()` without custom handling
+5. **Verify frontend parameter filtering** logic
+
+**Lesson**: Query parameter validation behaves differently than form body validation. Empty strings from query parameters are not automatically skipped by `.optional()` - they require explicit custom validation. Always test API endpoints with empty parameters and implement proper validation logic.
+
+**Files Fixed**:
+- `/backend/src/routes/documents.js` - Added custom validation for search parameter
+- `/frontend/src/components/DocumentListComponent.jsx` - Added parameter filtering logic
+
+**Reference**: This affects any API endpoint with optional query parameters that can be empty strings, common in search and filtering functionality.
+
+---
+
+### Issue 32: Navigation vs Modal Pattern Inconsistency
+
+**Problem**: Edit buttons in detail pages navigate to non-existent routes instead of opening edit modals, causing users to be redirected to dashboard. Both InvoiceDetailPage and PatientDetailPage had this issue.
+
+**Root Cause**: Inconsistent UI patterns across the application:
+- Some pages (VisitsPage) use modal-based editing with `VisitModal` in different modes ('create', 'edit', 'view')
+- Other pages (InvoiceDetailPage, PatientDetailPage) attempted navigation to `/resource/edit/:id` routes that don't exist in App.jsx routing
+- Missing routes caused fallback to catch-all route that redirects to dashboard
+
+**Wrong Pattern** (Navigation-based):
+```jsx
+// ❌ WRONG - Navigates to non-existent route
+<Button onClick={() => navigate(`/billing/edit/${invoice.id}`)}>
+  Edit
+</Button>
+
+// App.jsx missing route for /billing/edit/:id
+// Result: Redirects to dashboard via catch-all route
+```
+
+**Correct Pattern** (Modal-based):
+```jsx
+// ✅ CORRECT - Opens modal for editing
+const [showEditModal, setShowEditModal] = useState(false);
+
+<Button onClick={() => setShowEditModal(true)}>
+  Edit
+</Button>
+
+// Modal component handles editing
+<EditInvoiceModal
+  show={showEditModal}
+  onHide={() => setShowEditModal(false)}
+  onSubmit={handleEditInvoice}
+  invoice={invoice}
+/>
+```
+
+**Prevention**:
+- **Establish consistent editing patterns**: Use modals for editing within detail views, navigation for separate edit pages only when necessary
+- **Audit all edit buttons**: Check that navigation targets exist in App.jsx routing
+- **Follow existing patterns**: VisitsPage uses modals successfully - replicate this pattern
+- **Test edit functionality**: Click edit buttons in detail pages to ensure they work
+- **Document UI patterns**: Establish guidelines for when to use modals vs navigation
+
+**Common Issues**:
+- Edit buttons navigating to `/resource/edit/:id` without corresponding routes
+- Missing modal imports in detail pages
+- Inconsistent state management for modal visibility
+- Missing submit handlers for modal forms
+
+**Files Fixed**:
+- `/frontend/src/pages/InvoiceDetailPage.jsx` - Changed from navigation to modal
+- `/frontend/src/pages/PatientDetailPage.jsx` - Changed from navigation to modal
+- Both pages now use `EditInvoiceModal` and `EditPatientModal` respectively
+
+**Lesson**: Detail pages should use modal-based editing to avoid navigation complexity. Always verify that navigation targets exist in routing configuration before implementing edit buttons.
+
+**Reference**: This affected InvoiceDetailPage and PatientDetailPage edit functionality. Modal-based editing provides better UX and avoids routing issues.
+
+---
+
+## Internationalization (i18n) Issues
+
+### Issue 33: i18next Object Access Error
+
+**Problem**: "i18next::translator: accessing an object - but returnObjects options is not enabled!" error when displaying billing status labels in InvoiceList.jsx.
+
+**Root Cause**: Component tried to access nested translation object directly using `t('billing.status')`, which would return the entire status object instead of a string. i18next's `returnObjects` option is disabled for security, preventing object access.
+
+**Solution**: 
+1. Added dedicated translation keys for labels: `"statusLabel": "Status"` in both English and French locale files
+2. Updated component to use `t('billing.statusLabel', 'Status')` instead of `t('billing.status')`
+
+**Prevention**:
+- **Never access nested translation objects directly** - always access specific leaf node strings
+- **Add dedicated label keys** for UI elements that need translation (statusLabel, paymentMethodLabel, etc.)
+- **Test translations in both languages** after adding new keys
+- **Use specific keys** like `billing.status.draft` for individual values, not `billing.status` for the whole object
+- **Verify translation file structure** matches component usage patterns before deployment
+
+**Diagnostic Technique**:
+```javascript
+// Check what t() actually returns
+console.log('Translation result:', t('billing.status')); // Returns object, causes error
+console.log('Translation result:', t('billing.status.draft')); // Returns string, works fine
+```
+
+**Common Mistakes**:
+- Using `t('section.object')` when you need `t('section.objectLabel')`
+- Assuming nested objects can be accessed like JavaScript objects
+- Forgetting that i18next returns strings, not objects, by default
+
+**Files Fixed**:
+- `/frontend/src/components/InvoiceList.jsx` - Changed `t('billing.status')` to `t('billing.statusLabel')`
+- `/frontend/src/locales/en.json` - Added `"statusLabel": "Status"`
+- `/frontend/src/locales/fr.json` - Added `"statusLabel": "Statut"`
+
+**Reference**: This affected billing status column headers. Always use specific translation keys for UI labels.
+
+---
+
+## React Router Issues
+
+### Issue 34: React Router v7 Future Flag Warnings
+
+**Problem**: Browser console warning: "React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early."
+
+**Root Cause**: React Router v6 application using catch-all routes (`path="*"`) without future flags enabled. The warning indicates breaking changes in v7 that affect how splat routes handle relative path resolution.
+
+**Solution**: Added future flags to BrowserRouter component:
+```jsx
+<BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
+```
+
+**Prevention**:
+- **Enable future flags early** when React Router warnings appear
+- **Monitor console warnings** during development for deprecation notices
+- **Test routing behavior** after adding future flags to ensure no regressions
+- **Keep React Router updated** to latest stable version
+- **Document future flag usage** in project setup for team awareness
+
+**Common Future Flags**:
+- `v7_relativeSplatPath: true` - Fixes splat route relative resolution (most common)
+- `v7_startTransition: true` - Enables React 18 concurrent features
+- `v7_fetcherPersist: true` - Changes fetcher persistence behavior
+- `v7_normalizeFormMethod: true` - Normalizes form method handling
+- `v7_partialHydration: true` - Enables partial hydration
+- `v7_skipActionErrorRevalidation: true` - Changes action error handling
+
+**Diagnostic Technique**:
+```javascript
+// Check current React Router version
+npm list react-router-dom
+
+// Look for catch-all routes in routing
+grep -r 'path="\*"' src/
+
+// Verify future flags are applied
+grep -r 'future=' src/
+```
+
+**Files Fixed**:
+- `/frontend/src/main.jsx` - Added future flags to BrowserRouter
+
+**Lesson**: React Router provides future flags to opt into v7 behavior early. Enable them when warnings appear to prevent future breaking changes and ensure compatibility.
+
+---
+
 **Last Updated**: January 11, 2026
 
 ```</xai:function_call">**Last Updated**: January 10, 2026

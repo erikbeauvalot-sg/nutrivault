@@ -177,7 +177,7 @@ function InvoiceList({
               <th>{t('billing.amount', 'Amount')}</th>
               <th>{t('billing.paid', 'Paid')}</th>
               <th>{t('billing.balance', 'Balance')}</th>
-              <th>{t('billing.status', 'Status')}</th>
+              <th>{t('billing.statusLabel', 'Status')}</th>
               <th>{t('common.actions', 'Actions')}</th>
             </tr>
           </thead>

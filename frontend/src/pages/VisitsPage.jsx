@@ -12,6 +12,7 @@ import Layout from '../components/layout/Layout';
 import visitService from '../services/visitService';
 import { getPatients } from '../services/patientService';
 import VisitModal from '../components/VisitModal';
+import ExportModal from '../components/ExportModal';
 
 const VisitsPage = () => {
   const { user } = useAuth();
@@ -34,6 +35,7 @@ const VisitsPage = () => {
   const [modalMode, setModalMode] = useState('create');
   const [selectedVisit, setSelectedVisit] = useState(null);
   const [preSelectedPatient, setPreSelectedPatient] = useState(null);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   useEffect(() => {
     fetchPatients();
@@ -201,6 +203,15 @@ const VisitsPage = () => {
               onClick={() => setViewMode('timeline')}
             >
               ⏱️ {t('visits.timelineView')}
+            </Button>
+            <Button
+              variant="outline-secondary"
+              size="lg"
+              className="me-2"
+              onClick={() => setShowExportModal(true)}
+            >
+              <i className="bi bi-download me-2"></i>
+              {t('common.export', 'Export')}
             </Button>
             <Button variant="primary" size="lg" onClick={handleCreateClick}>
               {t('visits.createVisit')}
@@ -504,6 +515,12 @@ const VisitsPage = () => {
           visit={selectedVisit}
           onSave={handleModalSave}
           preSelectedPatient={preSelectedPatient}
+        />
+
+        <ExportModal
+          show={showExportModal}
+          onHide={() => setShowExportModal(false)}
+          dataType="visits"
         />
       </Container>
     </Layout>

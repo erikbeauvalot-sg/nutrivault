@@ -294,6 +294,38 @@ async function createVisit(user, visitData, requestMetadata = {}) {
       ]
     });
 
+    // Auto-create invoice when visit is created as COMPLETED
+    let createdInvoice = null;
+    if (visit.status === 'COMPLETED') {
+      try {
+        // Check if invoice already exists for this visit (shouldn't happen for new visits)
+        const existingInvoice = await db.Billing.findOne({
+          where: { visit_id: visit.id, is_active: true }
+        });
+
+        if (!existingInvoice) {
+          // Create invoice automatically
+          const invoiceData = {
+            patient_id: visit.patient_id,
+            visit_id: visit.id,
+            service_description: `Consultation - ${visit.visit_type || 'General Visit'}`,
+            amount_total: calculateVisitAmount(visit), // Helper function for pricing
+            due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+          };
+
+          createdInvoice = await billingService.createInvoice(invoiceData, user, {
+            ...requestMetadata,
+            note: 'Auto-generated invoice for immediately completed visit'
+          });
+
+          console.log(`✅ Auto-created invoice for immediately completed visit ${visit.id}: ${createdInvoice.id}`);
+        }
+      } catch (billingError) {
+        console.error('❌ Failed to auto-create invoice for new completed visit:', billingError);
+        // Don't fail the visit creation if billing creation fails
+      }
+    }
+
     // Audit log
     await auditService.log({
       user_id: user.id,
@@ -311,7 +343,13 @@ async function createVisit(user, visitData, requestMetadata = {}) {
       user_agent: requestMetadata.userAgent
     });
 
-    return createdVisit;
+    return {
+      ...createdVisit.toJSON(),
+      created_invoice: createdInvoice ? {
+        id: createdInvoice.id,
+        invoice_number: createdInvoice.invoice_number
+      } : null
+    };
   } catch (error) {
     console.error('Error in createVisit:', error);
     throw error;

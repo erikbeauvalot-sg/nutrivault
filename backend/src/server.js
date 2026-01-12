@@ -40,6 +40,14 @@ app.use('/api/users', userRoutes);
 const billingRoutes = require('./routes/billing');
 app.use('/api/billing', billingRoutes);
 
+// Document routes (protected - RBAC enforced in routes file)
+const documentRoutes = require('./routes/documents');
+app.use('/api/documents', documentRoutes);
+
+// Export routes (protected - RBAC enforced in routes file)
+const exportRoutes = require('./routes/export');
+app.use('/api/export', exportRoutes);
+
 // Basic error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);

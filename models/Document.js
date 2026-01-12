@@ -8,13 +8,13 @@ module.exports = (sequelize, DataTypes) => {
     },
     resource_type: {
       type: DataTypes.STRING(50),
-      allowNull: false,
-      comment: 'patient, visit, user - polymorphic association'
+      allowNull: true,
+      comment: 'patient, visit, user - polymorphic association (optional for general uploads)'
     },
     resource_id: {
       type: DataTypes.UUID,
-      allowNull: false,
-      comment: 'ID of associated resource - polymorphic association'
+      allowNull: true,
+      comment: 'ID of associated resource - polymorphic association (optional for general uploads)'
     },
     file_name: {
       type: DataTypes.STRING(255),

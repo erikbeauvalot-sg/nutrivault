@@ -9,6 +9,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import visitService from '../services/visitService';
 import { getPatients } from '../services/patientService';
 import userService from '../services/userService';
@@ -44,12 +45,14 @@ const measurementSchema = (t) => yup.object().shape({
 const VisitModal = ({ show, onHide, mode, visit, onSave, preSelectedPatient }) => {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [patients, setPatients] = useState([]);
   const [dietitians, setDietitians] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showMeasurements, setShowMeasurements] = useState(false);
   const [showCreatePatientModal, setShowCreatePatientModal] = useState(false);
+  const [completeImmediately, setCompleteImmediately] = useState(false);
 
   const {
     register,
@@ -254,7 +257,9 @@ const VisitModal = ({ show, onHide, mode, visit, onSave, preSelectedPatient }) =
         visit_date: new Date(data.visit_date).toISOString(),
         // Handle next_visit_date: only send if it has a value
         next_visit_date: data.next_visit_date && data.next_visit_date.trim() ? new Date(data.next_visit_date).toISOString() : null,
-        duration_minutes: data.duration_minutes ? parseInt(data.duration_minutes) : null
+        duration_minutes: data.duration_minutes ? parseInt(data.duration_minutes) : null,
+        // Set status to COMPLETED if complete immediately is checked
+        status: completeImmediately ? 'COMPLETED' : (data.status || 'SCHEDULED')
       };
 
       let savedVisit;
@@ -267,7 +272,25 @@ const VisitModal = ({ show, onHide, mode, visit, onSave, preSelectedPatient }) =
       }
 
       onSave(savedVisit);
-      onHide();
+      
+      // If completed immediately, navigate to billing page after a short delay to allow invoice creation
+      if (completeImmediately && savedVisit) {
+        console.log('🎯 Visit completed immediately, navigating to billing page...');
+        onHide();
+        // Small delay to allow backend invoice creation to complete
+        setTimeout(() => {
+          // If an invoice was created, navigate directly to it
+          if (savedVisit.created_invoice) {
+            console.log('🚀 Navigating to specific invoice:', savedVisit.created_invoice.id);
+            navigate(`/billing/${savedVisit.created_invoice.id}`);
+          } else {
+            console.log('🚀 Navigating to billing page (no invoice created)');
+            navigate('/billing', { state: { refreshFromVisit: true, visitId: savedVisit.id } });
+          }
+        }, 1000);
+      } else {
+        onHide();
+      }
     } catch (err) {
       console.error('🔥 Error saving visit:', err);
       console.error('🔥 Full error response:', err.response?.data);
@@ -401,12 +424,30 @@ const VisitModal = ({ show, onHide, mode, visit, onSave, preSelectedPatient }) =
             <Col md={4}>
               <Form.Group className="mb-3">
                 <Form.Label>{t('visits.visitDateTime')} *</Form.Label>
-                <Form.Control
-                  type="datetime-local"
-                  {...register('visit_date')}
-                  isInvalid={!!errors.visit_date}
-                  disabled={isViewMode}
-                />
+                <div className="d-flex gap-2">
+                  <Form.Control
+                    type="datetime-local"
+                    {...register('visit_date')}
+                    isInvalid={!!errors.visit_date}
+                    disabled={isViewMode}
+                    className="flex-grow-1"
+                  />
+                  {isCreateMode && (
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      onClick={() => {
+                        const now = new Date();
+                        const formattedNow = now.toISOString().slice(0, 16);
+                        setValue('visit_date', formattedNow);
+                      }}
+                      disabled={loading}
+                      title={t('visits.setToNow', 'Set to current time')}
+                    >
+                      🕐 {t('visits.now', 'Now')}
+                    </Button>
+                  )}
+                </div>
                 <Form.Control.Feedback type="invalid">{errors.visit_date?.message}</Form.Control.Feedback>
               </Form.Group>
             </Col>
@@ -463,6 +504,25 @@ const VisitModal = ({ show, onHide, mode, visit, onSave, preSelectedPatient }) =
                     {...register('next_visit_date')}
                     disabled={isViewMode}
                   />
+                </Form.Group>
+              </Col>
+            </Row>
+          )}
+
+          {isCreateMode && (
+            <Row>
+              <Col md={12}>
+                <Form.Group className="mb-3">
+                  <Form.Check
+                    type="checkbox"
+                    label={t('visits.completeImmediately', 'Complete visit immediately and create billing')}
+                    checked={completeImmediately}
+                    onChange={(e) => setCompleteImmediately(e.target.checked)}
+                    disabled={loading}
+                  />
+                  <Form.Text className="text-muted">
+                    {t('visits.completeImmediatelyHelp', 'Check this to mark the visit as completed and automatically generate a billing invoice')}
+                  </Form.Text>
                 </Form.Group>
               </Col>
             </Row>

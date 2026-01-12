@@ -11,8 +11,18 @@ import api from './api';
  * @returns {Promise<object>} Patients array and pagination info
  */
 export const getPatients = async (filters = {}) => {
-  const response = await api.get('/api/patients', { params: filters });
-  return response.data;
+  const params = new URLSearchParams();
+  Object.keys(filters).forEach(key => {
+    if (filters[key] !== undefined && filters[key] !== null) {
+      // Allow empty string for is_active (needed for "All Status" filter)
+      if (key === 'is_active' || filters[key] !== '') {
+        params.append(key, filters[key]);
+      }
+    }
+  });
+  
+  const response = await api.get(`/api/patients?${params.toString()}`);
+  return response;
 };
 
 /**
@@ -22,7 +32,7 @@ export const getPatients = async (filters = {}) => {
  */
 export const getPatientById = async (id) => {
   const response = await api.get(`/api/patients/${id}`);
-  return response.data;
+  return response;
 };
 
 /**
@@ -32,7 +42,7 @@ export const getPatientById = async (id) => {
  */
 export const getPatientDetails = async (id) => {
   const response = await api.get(`/api/patients/${id}/details`);
-  return response.data;
+  return response;
 };
 
 /**

@@ -13,6 +13,8 @@ import VisitsPage from './pages/VisitsPage';
 import UsersPage from './pages/UsersPage';
 import BillingPage from './pages/BillingPage';
 import InvoiceDetailPage from './pages/InvoiceDetailPage';
+import ReportsPage from './pages/ReportsPage';
+import DocumentsPage from './pages/DocumentsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -99,6 +101,24 @@ function App() {
         element={
           <ProtectedRoute>
             <InvoiceDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/reports"
+        element={
+          <ProtectedRoute>
+            <ReportsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/documents"
+        element={
+          <ProtectedRoute>
+            <DocumentsPage />
           </ProtectedRoute>
         }
       />

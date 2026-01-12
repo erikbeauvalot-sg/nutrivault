@@ -9,6 +9,9 @@ import { Container, Row, Col, Card, Tab, Tabs, Button, Badge, Alert, Spinner } f
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
+import DocumentListComponent from '../components/DocumentListComponent';
+import DocumentUploadModal from '../components/DocumentUploadModal';
+import EditPatientModal from '../components/EditPatientModal';
 import api from '../services/api';
 
 const PatientDetailPage = () => {
@@ -19,13 +22,17 @@ const PatientDetailPage = () => {
 
   const [patient, setPatient] = useState(null);
   const [visits, setVisits] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('info');
+  const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchPatientDetails();
+      fetchPatientDocuments();
     }
   }, [id]);
 
@@ -45,8 +52,29 @@ const PatientDetailPage = () => {
     }
   };
 
+  const fetchPatientDocuments = async () => {
+    try {
+      const response = await api.get(`/api/documents?resource_type=patients&resource_id=${id}`);
+      const documentsData = response.data?.data || response.data || [];
+      setDocuments(Array.isArray(documentsData) ? documentsData : []);
+    } catch (err) {
+      console.error('Error fetching patient documents:', err);
+      // Don't set error for documents failure
+    }
+  };
+
   const handleBack = () => {
     navigate('/patients');
+  };
+
+  const handleEditPatient = async (patientData) => {
+    try {
+      await api.put(`/api/patients/${id}`, patientData);
+      setShowEditModal(false);
+      fetchPatientDetails(); // Refresh data
+    } catch (err) {
+      throw new Error('Failed to update patient: ' + (err.response?.data?.error || err.message));
+    }
   };
 
   const formatDate = (dateString) => {
@@ -135,7 +163,7 @@ const PatientDetailPage = () => {
             {canEditPatient && (
               <Button
                 variant="primary"
-                onClick={() => navigate(`/patients/${id}/edit`)}
+                onClick={() => setShowEditModal(true)}
               >
                 Edit Patient
               </Button>
@@ -444,9 +472,48 @@ const PatientDetailPage = () => {
                   </Card>
                 </Tab>
               )}
+
+              {/* Documents Tab */}
+              <Tab eventKey="documents" title={`📄 Documents (${documents.length})`}>
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h5 className="mb-0">Patient Documents</h5>
+                  <Button
+                    variant="outline-primary"
+                    size="sm"
+                    onClick={() => setShowDocumentUploadModal(true)}
+                  >
+                    <i className="fas fa-upload me-1"></i>
+                    Upload Document
+                  </Button>
+                </div>
+                <DocumentListComponent
+                  documents={documents}
+                  onDocumentDeleted={fetchPatientDocuments}
+                  showResourceColumn={false}
+                />
+              </Tab>
             </Tabs>
           </Card.Body>
         </Card>
+
+        {/* Document Upload Modal */}
+        <DocumentUploadModal
+          show={showDocumentUploadModal}
+          onHide={() => setShowDocumentUploadModal(false)}
+          onUploadSuccess={() => {
+            setShowDocumentUploadModal(false);
+            fetchPatientDocuments();
+          }}
+          selectedResource={{ resourceType: 'patients', resourceId: id }}
+        />
+
+        {/* Edit Patient Modal */}
+        <EditPatientModal
+          show={showEditModal}
+          onHide={() => setShowEditModal(false)}
+          onSubmit={handleEditPatient}
+          patient={patient}
+        />
       </Container>
     </Layout>
   );

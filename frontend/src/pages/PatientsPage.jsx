@@ -13,6 +13,7 @@ import PatientList from '../components/PatientList';
 import PatientDetailModal from '../components/PatientDetailModal';
 import CreatePatientModal from '../components/CreatePatientModal';
 import EditPatientModal from '../components/EditPatientModal';
+import ExportModal from '../components/ExportModal';
 import api from '../services/api';
 
 const PatientsPage = () => {
@@ -27,6 +28,7 @@ const PatientsPage = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   useEffect(() => {
     fetchPatients();
@@ -139,6 +141,14 @@ const PatientsPage = () => {
             <h1 className="mb-0">Patient Management</h1>
           </Col>
           <Col xs="auto">
+            <Button
+              variant="outline-secondary"
+              onClick={() => setShowExportModal(true)}
+              className="d-flex align-items-center me-2"
+            >
+              <i className="bi bi-download me-2"></i>
+              {t('common.export', 'Export')}
+            </Button>
             {canCreatePatients && (
               <Button
                 variant="primary"
@@ -195,6 +205,12 @@ const PatientsPage = () => {
         show={showViewModal}
         onHide={handleCloseViewModal}
         onScheduleVisit={handleScheduleVisit}
+      />
+
+      <ExportModal
+        show={showExportModal}
+        onHide={() => setShowExportModal(false)}
+        dataType="patients"
       />
     </Layout>
   );

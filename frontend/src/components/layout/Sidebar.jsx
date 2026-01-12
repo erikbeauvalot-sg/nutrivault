@@ -17,7 +17,8 @@ const Sidebar = () => {
     { path: '/patients', icon: '👥', label: t('navigation.patients') },
     { path: '/visits', icon: '📅', label: t('navigation.visits') },
     { path: '/billing', icon: '💰', label: t('navigation.billing') },
-    { path: '/reports', icon: '📈', label: t('navigation.reports'), disabled: true },
+    { path: '/documents', icon: '📄', label: t('documents.title'), disabled: true },
+    { path: '/reports', icon: '📈', label: t('navigation.reports') },
     { path: '/users', icon: '👤', label: t('navigation.users') },
   ];
 

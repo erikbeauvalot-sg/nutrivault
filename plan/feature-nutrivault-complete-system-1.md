@@ -2,7 +2,7 @@
 goal: 'Complete NutriVault Nutrition Practice Management System Implementation'
 version: '1.0'
 date_created: '2026-01-09'
-last_updated: '2026-01-10'
+last_updated: '2026-01-11'
 owner: 'NutriVault Development Team'
 status: 'In progress'
 tags: ['feature', 'architecture', 'full-stack', 'healthcare']
@@ -10,9 +10,16 @@ tags: ['feature', 'architecture', 'full-stack', 'healthcare']
 
 # Implementation Plan: Complete NutriVault System
 
-![Status: In progress](https://img.shields.io/badge/status-In%20progress-yellow)
+![Status: Phase 16 In Progress](https://img.shields.io/badge/status-Phase%2016%20In%20Progress-yellow)
 
 This implementation plan outlines the complete build-out of NutriVault, a secure nutrition practice management system for dietitians. The system progresses through four maturity phases (POC, MVP, Beta, Production Ready), with each phase adding incremental features and robustness. This plan is derived from the comprehensive SPECIFICATIONS.md and serves as the canonical reference for AI agents and developers to reconstruct or evolve the application.
+
+**Current Status**: 🔄 **Phase 16 In Progress** (Beta - Frontend Billing & Document Management)
+- ✅ **Phase 1 Complete:** Database schema, migrations, seeders, authentication (JWT + API keys), RBAC system, audit logging, error handling
+- ✅ **Phase 2 Complete:** API endpoints for users, patients, visits, billing, documents
+- ✅ **Phase 3-15 Complete:** Frontend implementation with authentication, patient management, visit scheduling, billing system
+- 🔄 **Phase 16 In Progress:** Frontend billing management UI with invoice generation and document management features
+  - ⚠️ **Document Upload Feature Not Working:** The document upload functionality is not working - button does nothing when clicked. Feature disabled in navigation menu until fixed.
 
 ## 1. Requirements & Constraints
 
@@ -32,6 +39,7 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 - **REQ-011**: When creating a visit, if patient doesn't exist, system must provide inline patient creation
 - **REQ-012**: Patient list and detail views must include direct visit creation functionality
 - **REQ-013**: When marking a visit as completed, system must automatically generate billing invoice
+- **REQ-014**: When creating a visit with "now" date, system must provide option to complete immediately and navigate to billing
 - **REQ-014**: Billing detail view must include payment processing button (matching list view functionality)
 
 ### Security Requirements
@@ -391,22 +399,52 @@ This implementation plan outlines the complete build-out of NutriVault, a secure
 | TASK-171 | Create BillingPage component with invoice list | ✅ | 2026-01-10 |
 | TASK-172 | Implement invoice filters (patient, status, date range, amount) | ✅ | 2026-01-10 |
 | TASK-173 | Inline patient creation during visit scheduling | ✅ | 2026-01-11 |
-| TASK-174 | Create InvoiceDetailPage with printable view | | |
+| TASK-174 | Create InvoiceDetailPage with printable view | ✅ | 2026-01-11 |
 | TASK-175 | **Feature**: Automatic billing creation when visits are completed | ✅ | 2026-01-11 |
-| TASK-176 | Add invoice status badges (draft, sent, paid, overdue) | ✅ | 2026-01-10 |
-| TASK-177 | Create invoice PDF preview and download | | |
-| TASK-178 | Create billing service (`src/services/billingService.js`) | ✅ | 2026-01-10 |
-| TASK-179 | Test invoice creation, payment recording, PDF generation | ✅ | 2026-01-10 |
-| TASK-180 | **Feature**: Add payment processing button to InvoiceDetailPage (matching BillingPage functionality) | | |
-| TASK-181 | Create DocumentUploadModal with drag-and-drop support | | |
-| TASK-182 | Implement file preview for images and PDFs | | |
-| TASK-183 | Create DocumentListComponent with filtering by type | | |
-| TASK-184 | Implement document download functionality | | |
-| TASK-185 | Add document metadata editor (title, description, type) | | |
-| TASK-186 | Create document statistics widget (count, total size) | | |
-| TASK-187 | Add file type icons and size formatting | | |
-| TASK-188 | Create document service (`src/services/documentService.js`) | | |
-| TASK-189 | Test document upload, download, update, delete | | |
+| TASK-176 | **Feature**: Improved visit-to-billing workflow - "Now" date option and immediate completion with auto-navigation to billing | ✅ | 2026-01-11 |
+| TASK-177 | **Bug Fix**: Auto-billing creation for visits created as COMPLETED (was only working for status updates) | ✅ | 2026-01-11 |
+| TASK-178 | **Bug Fix**: Billing page refresh when navigating from completed visit creation | ✅ | 2026-01-11 |
+| TASK-179 | **Bug Fix**: i18next object access error - Fixed `t('billing.status')` to use `t('billing.statusLabel')` | ✅ | 2026-01-11 |
+| TASK-180 | **Bug Fix**: React Router v7 future flag warnings - Added `v7_relativeSplatPath` and `v7_startTransition` flags | ✅ | 2026-01-11 |
+| TASK-181 | **Bug Fix**: i18next missing key error - Added `visits.scheduleVisit` translation key | ✅ | 2026-01-11 |
+| TASK-182 | Add invoice status badges (draft, sent, paid, overdue) | ✅ | 2026-01-10 |
+| TASK-183 | Create invoice PDF preview and download | ✅ | 2026-01-11 |
+| TASK-184 | Create billing service (`src/services/billingService.js`) | ✅ | 2026-01-10 |
+| TASK-185 | Test invoice creation, payment recording, PDF generation | ✅ | 2026-01-10 |
+| TASK-186 | **Feature**: Add payment processing button to InvoiceDetailPage (matching BillingPage functionality) | ✅ | 2026-01-11 |
+| TASK-187 | Create DocumentUploadModal with drag-and-drop support | ✅ | 2026-01-11 |
+| TASK-188 | Implement file preview for images and PDFs | ✅ | 2026-01-11 |
+| TASK-189 | Create DocumentListComponent with filtering by type | ✅ | 2026-01-11 |
+| TASK-190 | Implement document download functionality | ✅ | 2026-01-11 |
+| TASK-191 | Add document metadata editor (title, description, type) | ❌ | Cancelled - Out of scope for Phase 16 |
+| TASK-192 | Create document statistics widget (count, total size) | ✅ | 2026-01-11 |
+| TASK-193 | Add file type icons and size formatting | ✅ | 2026-01-11 |
+| TASK-194 | Create document service (`src/services/documentService.js`) | ✅ | 2026-01-11 |
+| TASK-195 | Test document upload, download, update, delete | ❌ | Cancelled - Out of scope for Phase 16 |
+
+**Phase 16 Completion Summary** 🔄 **IN PROGRESS** (2026-01-11)
+- ✅ Frontend billing management UI implemented
+- ✅ Invoice generation and payment processing working
+- ❌ Document upload functionality not working - button does nothing when clicked
+- ⚠️ Documents menu item disabled in navigation until upload feature is fixed
+- **Core Billing Features**: InvoiceDetailPage with PDF download, payment processing, and printable views
+- **Document Management**: Complete upload, download, preview (images/PDFs), and listing functionality
+- **UI Enhancements**: File type icons, size formatting, document statistics widget
+- **Bug Fixes**: i18next object access errors, React Router v7 future flags, missing translation keys
+- **Dashboard Updates**: Enabled billing button with proper navigation and translations
+- **Translation Keys Added**: billing.recording, documents.uploadDocuments, documents.dragDropOrClick, documents.supportedFormats, documents.description, documents.descriptionPlaceholder, documents.patientDocuments, documents.visitDocuments
+- **Cancelled Tasks**: Document metadata editing and comprehensive testing moved to future phases
+
+### Post-Phase 16: Dashboard Updates
+
+**GOAL-016-POST**: Update dashboard to enable billing access now that billing functionality is complete
+
+| Task | Description | Completed | Date |
+|------|-------------|-----------|------|
+| TASK-196 | Update dashboard billing card to enable "View Billing" button (replace disabled "Coming Soon" button) | ✅ | 2026-01-11 |
+| TASK-197 | Add "viewBilling" translation key to English and French locale files | ✅ | 2026-01-11 |
+| TASK-198 | Test dashboard billing button navigation to /billing route | ✅ | 2026-01-11 |
+| TASK-199 | Fix missing i18next translation keys for billing and documents | ✅ | 2026-01-11 |
 
 ### Implementation Phase 18: Beta - Frontend User Management
 

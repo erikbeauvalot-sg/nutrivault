@@ -4,6 +4,13 @@
 
 NutriVault is a nutrition management platform for dietitians, assistants, and patients. It provides secure user authentication, patient and visit management, billing, and document storage. The system is built as a monorepo with a Node.js/Express backend and a React (Vite) frontend. SQLite is used for development; PostgreSQL is supported for production. Internationalization (i18n) is implemented for English and French.
 
+**Current Status:** Phase 16 in progress (Beta - Frontend Billing & Document Management)
+- ✅ **Phase 1 Complete:** Database schema, migrations, seeders, authentication (JWT + API keys), RBAC system, audit logging, error handling
+- ✅ **Phase 2 Complete:** API endpoints for users, patients, visits, billing, documents
+- ✅ **Phase 3-15 Complete:** Frontend implementation with authentication, patient management, visit scheduling, billing system
+- 🔄 **Phase 16 In Progress:** Frontend billing management UI with invoice generation and document management features
+  - ⚠️ **Document Upload Feature Not Working:** The document upload functionality is not working - button does nothing when clicked. Feature disabled in navigation menu until fixed.
+
 **Key Technologies:**
 - Node.js (Express)
 - React (Vite)
