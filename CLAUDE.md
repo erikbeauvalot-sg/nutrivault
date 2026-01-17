@@ -10,6 +10,8 @@ NutriVault is a secure nutrition practice management system for dietitians to ma
 - **Phase 1-15 Complete**: Full system implementation including database schema, migrations, seeders, authentication (JWT + API keys), RBAC system, audit logging, error handling, complete API endpoints, and comprehensive React frontend
 - **Phase 16 In Progress**: Frontend billing management UI with invoice generation and document management features
   - ⚠️ **Document Upload Feature Not Working:** The document upload functionality is not working - button does nothing when clicked. Feature disabled in navigation menu until fixed.
+  - ✅ **i18n Improvements Complete**: Fixed missing French translations in PatientDetailModal, PatientsPage, and added comprehensive visit translations
+  - ⚠️ **Visit Workflow Enhancement Needed**: See `VISIT_WORKFLOW_IMPROVEMENTS.md` for detailed requirements and implementation plan
 - **Frontend**: Fully implemented with patient management, visit scheduling, billing system, document management, and internationalization
 - **Features**: Complete nutrition practice management with secure user authentication, role-based permissions, patient tracking, visit management, automated billing, document storage, and audit trails
 
@@ -1043,12 +1045,42 @@ npm run db:seed
 ## Documentation
 
 - **Full specification**: `/NUTRIVAULT_SPECIFICATION.md`
+- **Visit workflow improvements**: `/VISIT_WORKFLOW_IMPROVEMENTS.md` - Detailed plan for improving visit creation workflow
 <!-- - **Database setup**: `/DATABASE_SETUP_SUMMARY.md`
 - **DevOps setup**: `/PHASE1_DEVOPS_COMPLETE.md`
 - **Authentication**: `/AUTHENTICATION_COMPLETE.md`
 - **RBAC system**: `/RBAC_COMPLETE.md`
 - **Backend progress**: `/PHASE2_BACKEND_STARTED.md`
 - **Project tracker**: `/PROJECT_TODO.md` (auto-updated via `npm run update-todo`) -->
+
+## Internationalization (i18n)
+
+The application supports both English and French through react-i18next:
+
+**Configuration**: `frontend/src/i18n.js`
+- Language detection via localStorage (`i18nextLng` key)
+- Fallback language: French
+- Supported languages: `en`, `fr`
+
+**Locale Files**:
+- English: `frontend/src/locales/en.json`
+- French: `frontend/src/locales/fr.json`
+
+**Usage in Components**:
+```javascript
+import { useTranslation } from 'react-i18next';
+
+const Component = () => {
+  const { t } = useTranslation();
+  return <h1>{t('patients.title')}</h1>;
+};
+```
+
+**Recent Updates**:
+- ✅ Fixed missing French translations in PatientDetailModal (all hardcoded English strings replaced)
+- ✅ Fixed missing French translations in PatientsPage
+- ✅ Added comprehensive visit translations for both languages
+- ⚠️ Note: Some older components may still have hardcoded English strings - use grep to find and replace them
 
 ## Important Notes
 
