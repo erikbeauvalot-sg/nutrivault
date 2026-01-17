@@ -319,33 +319,36 @@ const VisitsPage = () => {
                             <td>{getStatusBadge(visit.status)}</td>
                             <td>{visit.duration_minutes ? `${visit.duration_minutes} min` : '-'}</td>
                             <td>
-                              <Button
-                                variant="outline-primary"
-                                size="sm"
-                                className="me-2"
-                                onClick={() => handleViewClick(visit.id)}
-                              >
-                                View
-                              </Button>
-                              {canEdit(visit) && (
-                                <>
-                                  <Button
-                                    variant="outline-warning"
-                                    size="sm"
-                                    className="me-2"
-                                    onClick={() => handleEditClick(visit.id)}
-                                  >
-                                    Edit
-                                  </Button>
-                                  <Button
-                                    variant="outline-danger"
-                                    size="sm"
-                                    onClick={() => handleDelete(visit.id)}
-                                  >
-                                    Delete
-                                  </Button>
-                                </>
-                              )}
+                              <div className="d-flex gap-1">
+                                <Button
+                                  variant="outline-info"
+                                  size="sm"
+                                  onClick={() => handleViewClick(visit.id)}
+                                  title={t('visits.viewVisit', 'View Details')}
+                                >
+                                  👁️
+                                </Button>
+                                {canEdit(visit) && (
+                                  <>
+                                    <Button
+                                      variant="outline-primary"
+                                      size="sm"
+                                      onClick={() => handleEditClick(visit.id)}
+                                      title={t('common.edit', 'Edit')}
+                                    >
+                                      ✏️
+                                    </Button>
+                                    <Button
+                                      variant="outline-danger"
+                                      size="sm"
+                                      onClick={() => handleDelete(visit.id)}
+                                      title={t('common.delete', 'Delete')}
+                                    >
+                                      🗑️
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -437,31 +440,32 @@ const VisitsPage = () => {
                                   )}
                                 </Col>
                                 <Col md={4} className="text-end">
-                                  <div className="timeline-actions">
+                                  <div className="timeline-actions d-flex gap-1 justify-content-end">
                                     <Button
-                                      variant="outline-primary"
+                                      variant="outline-info"
                                       size="sm"
-                                      className="me-2"
                                       onClick={() => handleViewClick(visit.id)}
+                                      title={t('visits.viewVisit', 'View Details')}
                                     >
-                                      👁️ View Details
+                                      👁️
                                     </Button>
                                     {canEdit(visit) && (
                                       <>
                                         <Button
-                                          variant="outline-warning"
+                                          variant="outline-primary"
                                           size="sm"
-                                          className="me-2"
                                           onClick={() => handleEditClick(visit.id)}
+                                          title={t('common.edit', 'Edit')}
                                         >
-                                          ✏️ Edit
+                                          ✏️
                                         </Button>
                                         <Button
                                           variant="outline-danger"
                                           size="sm"
                                           onClick={() => handleDelete(visit.id)}
+                                          title={t('common.delete', 'Delete')}
                                         >
-                                          🗑️ Delete
+                                          🗑️
                                         </Button>
                                       </>
                                     )}
