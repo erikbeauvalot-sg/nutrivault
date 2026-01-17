@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Button, Badge, Form, InputGroup, Spinner, Alert } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import visitService from '../services/visitService';
@@ -18,6 +18,7 @@ const VisitsPage = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
   const location = useLocation();
+  const navigate = useNavigate();
   const [visits, setVisits] = useState([]);
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,16 +53,10 @@ const VisitsPage = () => {
         hasAssignedDietitian: !!location.state.selectedPatient.assigned_dietitian?.id
       });
 
-      // Pre-select the patient and open create visit modal
-      setFilters(prev => ({ ...prev, patient_id: location.state.selectedPatient.id }));
-      setPreSelectedPatient(location.state.selectedPatient);
-      setModalMode('create');
-      setSelectedVisit(null);
-      setShowModal(true);
-      // Clear the state to prevent re-triggering
-      window.history.replaceState({}, document.title);
+      // Navigate to create visit page with pre-selected patient
+      navigate('/visits/create', { state: { selectedPatient: location.state.selectedPatient } });
     }
-  }, [location.state]);
+  }, [location.state, navigate]);
 
   const fetchPatients = async () => {
     try {
@@ -107,10 +102,7 @@ const VisitsPage = () => {
   };
 
   const handleCreateClick = () => {
-    setSelectedVisit(null);
-    setPreSelectedPatient(null);
-    setModalMode('create');
-    setShowModal(true);
+    navigate('/visits/create');
   };
 
   const handleViewClick = async (visitId) => {
@@ -126,24 +118,8 @@ const VisitsPage = () => {
     }
   };
 
-  const handleEditClick = async (visitId) => {
-    try {
-      const response = await visitService.getVisitById(visitId);
-      const visitData = response.data.data || response.data;
-      
-      // Set the visit data first
-      setSelectedVisit(visitData);
-      setModalMode('edit');
-      
-      // Use setTimeout to ensure state updates before opening modal
-      setTimeout(() => {
-        setShowModal(true);
-      }, 0);
-      
-    } catch (err) {
-      console.error('❌ Error fetching visit for edit:', err);
-      alert(err.response?.data?.error || 'Failed to load visit');
-    }
+  const handleEditClick = (visitId) => {
+    navigate(`/visits/${visitId}/edit`);
   };
 
   const handleModalSave = () => {

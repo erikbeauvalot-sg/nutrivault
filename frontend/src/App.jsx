@@ -12,6 +12,8 @@ import CreatePatientPage from './pages/CreatePatientPage';
 import EditPatientPage from './pages/EditPatientPage';
 import PatientDetailPage from './pages/PatientDetailPage';
 import VisitsPage from './pages/VisitsPage';
+import CreateVisitPage from './pages/CreateVisitPage';
+import EditVisitPage from './pages/EditVisitPage';
 import UsersPage from './pages/UsersPage';
 import BillingPage from './pages/BillingPage';
 import InvoiceDetailPage from './pages/InvoiceDetailPage';
@@ -94,6 +96,24 @@ function App() {
         element={
           <ProtectedRoute>
             <VisitsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/visits/create"
+        element={
+          <ProtectedRoute>
+            <CreateVisitPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/visits/:id/edit"
+        element={
+          <ProtectedRoute>
+            <EditVisitPage />
           </ProtectedRoute>
         }
       />
