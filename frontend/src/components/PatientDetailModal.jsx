@@ -49,7 +49,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
       setLoading(true);
       setError(null);
       const response = await getPatientDetails(patientId);
-      const patientData = response.data || response;
+      const patientData = response.data?.data || response.data || response;
       setPatient(patientData);
     } catch (err) {
       setError(t('patients.failedToLoad') + ': ' + (err.response?.data?.error || err.message));
@@ -106,13 +106,13 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
     return (
       <Modal show={show} onHide={onHide} size="xl">
         <Modal.Header closeButton>
-          <Modal.Title>Loading Patient Details...</Modal.Title>
+          <Modal.Title>{t('patients.loadingDetails')}</Modal.Title>
         </Modal.Header>
         <Modal.Body className="text-center py-5">
           <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
+            <span className="visually-hidden">{t('common.loading')}</span>
           </div>
-          <p className="mt-3">Loading patient information and measurements...</p>
+          <p className="mt-3">{t('patients.loadingInfo')}</p>
         </Modal.Body>
       </Modal>
     );
@@ -122,16 +122,16 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
     return (
       <Modal show={show} onHide={onHide} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>Error</Modal.Title>
+          <Modal.Title>{t('patients.error')}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Alert variant="danger">
-            <strong>Error loading patient details:</strong> {error}
+            <strong>{t('patients.error')}:</strong> {error}
           </Alert>
         </Modal.Body>
         <Modal.Footer>
           <button className="btn btn-secondary" onClick={onHide}>
-            Close
+            {t('common.close')}
           </button>
         </Modal.Footer>
       </Modal>
@@ -155,7 +155,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
         <Modal.Title>
           👤 {patient.first_name} {patient.last_name}
           <Badge bg={patient.is_active ? 'success' : 'secondary'} className="ms-2">
-            {patient.is_active ? 'Active' : 'Inactive'}
+            {patient.is_active ? t('common.active') : t('common.inactive')}
           </Badge>
         </Modal.Title>
       </Modal.Header>
@@ -163,63 +163,63 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
       <Modal.Body>
         <Tabs defaultActiveKey="overview" className="mb-4">
           {/* Overview Tab */}
-          <Tab eventKey="overview" title="📋 Overview">
+          <Tab eventKey="overview" title={`📋 ${t('patients.overview')}`}>
             <Row>
               <Col md={6}>
                 <Card className="mb-3">
                   <Card.Header>
-                    <h5 className="mb-0">👤 Patient Information</h5>
+                    <h5 className="mb-0">👤 {t('patients.patientInfo')}</h5>
                   </Card.Header>
                   <Card.Body>
                     <Row>
                       <Col sm={6}>
-                        <strong>Name:</strong><br />
+                        <strong>{t('patients.name')}:</strong><br />
                         {patient.first_name} {patient.last_name}
                       </Col>
                       <Col sm={6}>
-                        <strong>Status:</strong><br />
+                        <strong>{t('patients.status')}:</strong><br />
                         <Badge bg={patient.is_active ? 'success' : 'secondary'}>
-                          {patient.is_active ? 'Active' : 'Inactive'}
+                          {patient.is_active ? t('common.active') : t('common.inactive')}
                         </Badge>
                       </Col>
                     </Row>
                     {patient.email && (
                       <Row className="mt-2">
                         <Col>
-                          <strong>📧 Email:</strong> {patient.email}
+                          <strong>📧 {t('patients.email')}:</strong> {patient.email}
                         </Col>
                       </Row>
                     )}
                     {patient.phone && (
                       <Row className="mt-2">
                         <Col>
-                          <strong>📱 Phone:</strong> {patient.phone}
+                          <strong>📱 {t('patients.phone')}:</strong> {patient.phone}
                         </Col>
                       </Row>
                     )}
                     {patient.date_of_birth && (
                       <Row className="mt-2">
                         <Col sm={6}>
-                          <strong>🎂 Date of Birth:</strong><br />
+                          <strong>🎂 {t('patients.dateOfBirth')}:</strong><br />
                           {new Date(patient.date_of_birth).toLocaleDateString()}
                         </Col>
                         <Col sm={6}>
-                          <strong>Age:</strong><br />
-                          {Math.floor((new Date() - new Date(patient.date_of_birth)) / (365.25 * 24 * 60 * 60 * 1000))} years
+                          <strong>{t('patients.age')}:</strong><br />
+                          {Math.floor((new Date() - new Date(patient.date_of_birth)) / (365.25 * 24 * 60 * 60 * 1000))} {t('patients.years')}
                         </Col>
                       </Row>
                     )}
                     {patient.gender && (
                       <Row className="mt-2">
                         <Col>
-                          <strong>Gender:</strong> {patient.gender}
+                          <strong>{t('patients.gender')}:</strong> {patient.gender}
                         </Col>
                       </Row>
                     )}
                     {patient.address && (
                       <Row className="mt-2">
                         <Col>
-                          <strong>📍 Address:</strong> {patient.address}
+                          <strong>📍 {t('patients.address')}:</strong> {patient.address}
                         </Col>
                       </Row>
                     )}
@@ -230,34 +230,34 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
               <Col md={6}>
                 <Card className="mb-3">
                   <Card.Header>
-                    <h5 className="mb-0">🏥 Medical Information</h5>
+                    <h5 className="mb-0">🏥 {t('patients.medicalInfo')}</h5>
                   </Card.Header>
                   <Card.Body>
                     {patient.allergies && (
                       <Row className="mb-2">
                         <Col>
-                          <strong>⚠️ Allergies:</strong> {patient.allergies}
+                          <strong>⚠️ {t('patients.allergies')}:</strong> {patient.allergies}
                         </Col>
                       </Row>
                     )}
                     {patient.dietary_preferences && (
                       <Row className="mb-2">
                         <Col>
-                          <strong>🥗 Dietary Preferences:</strong> {patient.dietary_preferences}
+                          <strong>🥗 {t('patients.dietaryPreferences')}:</strong> {patient.dietary_preferences}
                         </Col>
                       </Row>
                     )}
                     {patient.medical_notes && (
                       <Row className="mb-2">
                         <Col>
-                          <strong>📋 Medical Notes:</strong> {patient.medical_notes}
+                          <strong>📋 {t('patients.medicalNotes')}:</strong> {patient.medical_notes}
                         </Col>
                       </Row>
                     )}
                     {patient.assigned_dietitian && (
                       <Row className="mb-2">
                         <Col>
-                          <strong>👨‍⚕️ Assigned Dietitian:</strong><br />
+                          <strong>👨‍⚕️ {t('patients.assignedDietitian')}:</strong><br />
                           {patient.assigned_dietitian.first_name} {patient.assigned_dietitian.last_name}
                         </Col>
                       </Row>
@@ -267,29 +267,29 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
 
                 <Card>
                   <Card.Header>
-                    <h5 className="mb-0">📊 Visit Summary</h5>
+                    <h5 className="mb-0">📊 {t('patients.visitSummary')}</h5>
                   </Card.Header>
                   <Card.Body>
                     <Row>
                       <Col sm={6}>
-                        <strong>Total Visits:</strong><br />
+                        <strong>{t('patients.totalVisits')}:</strong><br />
                         {patient.visits?.length || 0}
                       </Col>
                       <Col sm={6}>
-                        <strong>Completed Visits:</strong><br />
+                        <strong>{t('patients.completedVisits')}:</strong><br />
                         {patient.visits?.filter(v => v.status === 'COMPLETED').length || 0}
                       </Col>
                     </Row>
                     <Row className="mt-2">
                       <Col sm={6}>
-                        <strong>Measurements:</strong><br />
+                        <strong>{t('patients.measurements')}:</strong><br />
                         {allMeasurements.length}
                       </Col>
                       <Col sm={6}>
-                        <strong>Last Visit:</strong><br />
+                        <strong>{t('patients.lastVisit')}:</strong><br />
                         {patient.visits?.length > 0
                           ? new Date(Math.max(...patient.visits.map(v => new Date(v.visit_date)))).toLocaleDateString()
-                          : 'None'
+                          : t('patients.none')
                         }
                       </Col>
                     </Row>
@@ -300,23 +300,23 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
           </Tab>
 
           {/* Measurements Tab */}
-          <Tab eventKey="measurements" title="📈 Measurements">
+          <Tab eventKey="measurements" title={`📈 ${t('patients.measurementsTab')}`}>
             <div className="measurements-charts">
               <Row>
                 <Col md={6} className="mb-4">
                   <Card>
                     <Card.Header>
-                      <h6>⚖️ Weight Tracking (kg)</h6>
+                      <h6>⚖️ {t('patients.weightTracking')}</h6>
                     </Card.Header>
                     <Card.Body>
                       {prepareChartData(allMeasurements, 'weight_kg') ? (
                         <Line
                           data={prepareChartData(allMeasurements, 'weight_kg')}
-                          options={chartOptions('Weight Over Time', 'Weight (kg)')}
+                          options={chartOptions(t('patients.weightTracking'), t('visits.weight'))}
                         />
                       ) : (
                         <div className="text-center text-muted py-4">
-                          No weight measurements available
+                          {t('patients.noWeightData')}
                         </div>
                       )}
                     </Card.Body>
@@ -326,17 +326,17 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                 <Col md={6} className="mb-4">
                   <Card>
                     <Card.Header>
-                      <h6>📏 BMI Tracking</h6>
+                      <h6>📏 {t('patients.bmiTracking')}</h6>
                     </Card.Header>
                     <Card.Body>
                       {prepareChartData(allMeasurements, 'bmi') ? (
                         <Line
                           data={prepareChartData(allMeasurements, 'bmi')}
-                          options={chartOptions('BMI Over Time', 'BMI')}
+                          options={chartOptions(t('patients.bmiTracking'), 'BMI')}
                         />
                       ) : (
                         <div className="text-center text-muted py-4">
-                          No BMI measurements available
+                          {t('patients.noBmiData')}
                         </div>
                       )}
                     </Card.Body>
@@ -348,7 +348,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                 <Col md={6} className="mb-4">
                   <Card>
                     <Card.Header>
-                      <h6>🩸 Blood Pressure</h6>
+                      <h6>🩸 {t('patients.bloodPressure')}</h6>
                     </Card.Header>
                     <Card.Body>
                       {prepareChartData(allMeasurements, 'blood_pressure_systolic') ? (
@@ -359,7 +359,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                               .map(m => new Date(m.created_at).toLocaleDateString()),
                             datasets: [
                               {
-                                label: 'Systolic',
+                                label: t('patients.systolic'),
                                 data: allMeasurements
                                   .filter(m => m.blood_pressure_systolic)
                                   .map(m => m.blood_pressure_systolic),
@@ -367,7 +367,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                                 backgroundColor: 'rgba(255, 99, 132, 0.2)',
                               },
                               {
-                                label: 'Diastolic',
+                                label: t('patients.diastolic'),
                                 data: allMeasurements
                                   .filter(m => m.blood_pressure_diastolic)
                                   .map(m => m.blood_pressure_diastolic),
@@ -376,11 +376,11 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                               }
                             ]
                           }}
-                          options={chartOptions('Blood Pressure Over Time', 'Pressure (mmHg)')}
+                          options={chartOptions(t('patients.bloodPressure'), 'Pressure (mmHg)')}
                         />
                       ) : (
                         <div className="text-center text-muted py-4">
-                          No blood pressure measurements available
+                          {t('patients.noBloodPressureData')}
                         </div>
                       )}
                     </Card.Body>
@@ -390,7 +390,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                 <Col md={6} className="mb-4">
                   <Card>
                     <Card.Header>
-                      <h6>📏 Body Composition</h6>
+                      <h6>📏 {t('patients.bodyComposition')}</h6>
                     </Card.Header>
                     <Card.Body>
                       {prepareChartData(allMeasurements, 'body_fat_percentage') ? (
@@ -401,7 +401,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                               .map(m => new Date(m.created_at).toLocaleDateString()),
                             datasets: [
                               {
-                                label: 'Body Fat %',
+                                label: t('patients.bodyFatPercentage'),
                                 data: allMeasurements
                                   .filter(m => m.body_fat_percentage)
                                   .map(m => m.body_fat_percentage),
@@ -410,7 +410,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                                 borderWidth: 1,
                               },
                               {
-                                label: 'Muscle Mass %',
+                                label: t('patients.muscleMassPercentage'),
                                 data: allMeasurements
                                   .filter(m => m.muscle_mass_percentage)
                                   .map(m => m.muscle_mass_percentage),
@@ -420,11 +420,11 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                               }
                             ]
                           }}
-                          options={chartOptions('Body Composition Over Time', 'Percentage (%)')}
+                          options={chartOptions(t('patients.bodyComposition'), 'Percentage (%)')}
                         />
                       ) : (
                         <div className="text-center text-muted py-4">
-                          No body composition measurements available
+                          {t('patients.noBodyCompositionData')}
                         </div>
                       )}
                     </Card.Body>
@@ -435,7 +435,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
           </Tab>
 
           {/* Visits Tab */}
-          <Tab eventKey="visits" title="🏥 Visit History">
+          <Tab eventKey="visits" title={`🏥 ${t('patients.visitHistory')}`}>
             <div className="visits-history">
               {patient.visits && patient.visits.length > 0 ? (
                 patient.visits.map(visit => (
@@ -444,7 +444,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                       <Row>
                         <Col>
                           <h6 className="mb-0">
-                            📅 {new Date(visit.visit_date).toLocaleDateString()} - {visit.visit_type || 'Visit'}
+                            📅 {new Date(visit.visit_date).toLocaleDateString()} - {visit.visit_type || t('visits.visit')}
                           </h6>
                         </Col>
                         <Col xs="auto">
@@ -463,30 +463,30 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                         <Col md={6}>
                           {visit.chief_complaint && (
                             <div className="mb-2">
-                              <strong>Chief Complaint:</strong> {visit.chief_complaint}
+                              <strong>{t('patients.chiefComplaint')}:</strong> {visit.chief_complaint}
                             </div>
                           )}
                           {visit.assessment && (
                             <div className="mb-2">
-                              <strong>Assessment:</strong> {visit.assessment}
+                              <strong>{t('patients.assessment')}:</strong> {visit.assessment}
                             </div>
                           )}
                           {visit.recommendations && (
                             <div className="mb-2">
-                              <strong>Recommendations:</strong> {visit.recommendations}
+                              <strong>{t('patients.recommendations')}:</strong> {visit.recommendations}
                             </div>
                           )}
                         </Col>
                         <Col md={6}>
                           {visit.measurements && visit.measurements.length > 0 && (
                             <div>
-                              <strong>📊 Measurements:</strong>
+                              <strong>📊 {t('patients.measurements')}:</strong>
                               <ul className="list-unstyled mt-2">
                                 {visit.measurements.map(measurement => (
                                   <li key={measurement.id} className="small">
-                                    {measurement.weight_kg && `Weight: ${measurement.weight_kg}kg `}
+                                    {measurement.weight_kg && `${t('visits.weight')}: ${measurement.weight_kg}kg `}
                                     {measurement.bmi && `BMI: ${measurement.bmi} `}
-                                    {measurement.blood_pressure_systolic && `BP: ${measurement.blood_pressure_systolic}/${measurement.blood_pressure_diastolic} `}
+                                    {measurement.blood_pressure_systolic && `${t('visits.bloodPressure')}: ${measurement.blood_pressure_systolic}/${measurement.blood_pressure_diastolic} `}
                                     <span className="text-muted">
                                       ({new Date(measurement.created_at).toLocaleDateString()})
                                     </span>
@@ -502,7 +502,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                 ))
               ) : (
                 <Alert variant="info">
-                  <strong>No visits found</strong> - This patient hasn't had any completed visits yet.
+                  <strong>{t('patients.noVisitsYet')}</strong> - {t('patients.noVisitsMessage')}
                 </Alert>
               )}
             </div>
@@ -516,11 +516,11 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
             className="btn btn-success me-2"
             onClick={() => onScheduleVisit(patient)}
           >
-            📅 Schedule Visit
+            📅 {t('patients.scheduleVisit')}
           </button>
         )}
         <button className="btn btn-secondary" onClick={onHide}>
-          Close
+          {t('common.close')}
         </button>
       </Modal.Footer>
     </Modal>

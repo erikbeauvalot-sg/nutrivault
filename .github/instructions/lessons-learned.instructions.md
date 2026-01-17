@@ -2371,6 +2371,71 @@ grep -r 'future=' src/
 
 ---
 
-**Last Updated**: January 11, 2026
+### Issue 34: API Response Structure Inconsistency in Patient Detail Modal
+
+**Problem**: Patient detail modal showed no data when clicking "View" on patients in the patient list. Modal opened but displayed empty content despite backend API returning patient data successfully.
+
+**Root Cause**: Inconsistent API response data extraction in `PatientDetailModal.jsx`. The component used `response.data || response` but the API returns `{ success: true, data: patient }`, so the actual patient object is in `response.data.data`. Other components correctly used `response.data?.data || response.data` pattern.
+
+**Wrong Code**:
+```javascript
+// ❌ WRONG - Extracts wrong level from API response
+const fetchPatientDetails = async () => {
+  const response = await getPatientDetails(patientId);
+  const patientData = response.data || response;  // Gets { success: true, data: patient }
+  setPatient(patientData);  // Sets entire response object instead of patient
+};
+```
+
+**Solution**: Use consistent response data extraction pattern:
+
+```javascript
+// ✅ CORRECT - Extracts nested data correctly
+const fetchPatientDetails = async () => {
+  const response = await getPatientDetails(patientId);
+  const patientData = response.data?.data || response.data || response;
+  setPatient(patientData);  // Now gets actual patient object
+};
+```
+
+**Prevention**:
+- **Use consistent API response extraction** across all components: `response.data?.data || response.data`
+- **Audit API response handling** when components show empty data despite successful API calls
+- **Document API response contracts** - specify exact structure returned by each endpoint
+- **Test data extraction** by logging `response.data` during development
+- **Follow established patterns** - check how similar components handle the same API endpoints
+
+**Common API Response Patterns**:
+```javascript
+// List endpoints: { success: true, data: [...], pagination: {...} }
+const items = response.data?.data || response.data || [];
+
+// Single item endpoints: { success: true, data: {...} }
+const item = response.data?.data || response.data || response;
+
+// Error responses: { success: false, error: "message" }
+const error = response.data?.error || response.error;
+```
+
+**Diagnostic Technique**:
+```javascript
+// Add logging to verify response structure
+const response = await getPatientDetails(patientId);
+console.log('API Response:', response);
+console.log('response.data:', response.data);
+console.log('response.data.data:', response.data?.data);
+console.log('Patient data type:', typeof (response.data?.data || response.data));
+```
+
+**Files Fixed**:
+- `/frontend/src/components/PatientDetailModal.jsx` - Fixed API response data extraction
+
+**Lesson**: API response structure inconsistency causes silent failures where data loads successfully but isn't displayed. Always verify response extraction matches actual API response format, and use consistent patterns across the application.
+
+**Reference**: This affected patient detail modal functionality. Similar issues may exist in other detail modals or components using single-resource API endpoints.
+
+---
+
+**Last Updated**: January 17, 2026
 
 ```</xai:function_call">**Last Updated**: January 10, 2026

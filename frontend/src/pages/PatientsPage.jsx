@@ -138,7 +138,7 @@ const PatientsPage = () => {
       <Container fluid>
         <Row className="mb-4">
           <Col>
-            <h1 className="mb-0">Patient Management</h1>
+            <h1 className="mb-0">{t('patients.management')}</h1>
           </Col>
           <Col xs="auto">
             <Button
@@ -156,7 +156,7 @@ const PatientsPage = () => {
                 className="d-flex align-items-center"
               >
                 <i className="bi bi-plus-circle me-2"></i>
-                Create Patient
+                {t('patients.createPatient')}
               </Button>
             )}
           </Col>
