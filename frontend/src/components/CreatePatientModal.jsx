@@ -260,10 +260,10 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
                     onChange={handleInputChange}
                   >
                     <option value="">Select Gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                    <option value="prefer_not_to_say">Prefer not to say</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                    <option value="Prefer not to say">Prefer not to say</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
@@ -527,9 +527,9 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
                     onChange={handleInputChange}
                   >
                     <option value="">Select Status</option>
-                    <option value="never">Never</option>
-                    <option value="former">Former</option>
-                    <option value="current">Current</option>
+                    <option value="Never">Never</option>
+                    <option value="Former">Former</option>
+                    <option value="Current">Current</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
@@ -542,10 +542,10 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
                     onChange={handleInputChange}
                   >
                     <option value="">Select Frequency</option>
-                    <option value="none">None</option>
-                    <option value="occasional">Occasional</option>
-                    <option value="moderate">Moderate</option>
-                    <option value="heavy">Heavy</option>
+                    <option value="None">None</option>
+                    <option value="Occasional">Occasional</option>
+                    <option value="Moderate">Moderate</option>
+                    <option value="Heavy">Heavy</option>
                   </Form.Select>
                 </Form.Group>
               </Col>

@@ -289,10 +289,10 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
                     onChange={handleInputChange}
                   >
                     <option value="">{t('patients.selectGender')}</option>
-                    <option value="male">{t('patients.male')}</option>
-                    <option value="female">{t('patients.female')}</option>
-                    <option value="other">{t('patients.other')}</option>
-                    <option value="prefer_not_to_say">{t('patients.preferNotToSay')}</option>
+                    <option value="Male">{t('patients.male')}</option>
+                    <option value="Female">{t('patients.female')}</option>
+                    <option value="Other">{t('patients.other')}</option>
+                    <option value="Prefer not to say">{t('patients.preferNotToSay')}</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
@@ -552,9 +552,9 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
                     onChange={handleInputChange}
                   >
                     <option value="">{t('patients.selectStatus')}</option>
-                    <option value="never">{t('patients.never')}</option>
-                    <option value="former">{t('patients.former')}</option>
-                    <option value="current">{t('patients.current')}</option>
+                    <option value="Never">{t('patients.never')}</option>
+                    <option value="Former">{t('patients.former')}</option>
+                    <option value="Current">{t('patients.current')}</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
@@ -567,10 +567,10 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
                     onChange={handleInputChange}
                   >
                     <option value="">{t('patients.selectFrequency')}</option>
-                    <option value="none">{t('patients.none')}</option>
-                    <option value="occasional">{t('patients.occasional')}</option>
-                    <option value="moderate">{t('patients.moderate')}</option>
-                    <option value="heavy">{t('patients.heavy')}</option>
+                    <option value="None">{t('patients.none')}</option>
+                    <option value="Occasional">{t('patients.occasional')}</option>
+                    <option value="Moderate">{t('patients.moderate')}</option>
+                    <option value="Heavy">{t('patients.heavy')}</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
