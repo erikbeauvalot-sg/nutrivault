@@ -105,17 +105,8 @@ const VisitsPage = () => {
     navigate('/visits/create');
   };
 
-  const handleViewClick = async (visitId) => {
-    try {
-      const response = await visitService.getVisitById(visitId);
-      const visitData = response.data.data || response.data;
-      setSelectedVisit(visitData);
-      setModalMode('view');
-      setShowModal(true);
-    } catch (err) {
-      console.error('❌ Error fetching visit:', err);
-      alert(err.response?.data?.error || 'Failed to load visit');
-    }
+  const handleViewClick = (visitId) => {
+    navigate(`/visits/${visitId}`);
   };
 
   const handleEditClick = (visitId) => {

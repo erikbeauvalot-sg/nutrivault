@@ -14,6 +14,7 @@ import PatientDetailPage from './pages/PatientDetailPage';
 import VisitsPage from './pages/VisitsPage';
 import CreateVisitPage from './pages/CreateVisitPage';
 import EditVisitPage from './pages/EditVisitPage';
+import VisitDetailPage from './pages/VisitDetailPage';
 import UsersPage from './pages/UsersPage';
 import BillingPage from './pages/BillingPage';
 import InvoiceDetailPage from './pages/InvoiceDetailPage';
@@ -114,6 +115,15 @@ function App() {
         element={
           <ProtectedRoute>
             <EditVisitPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/visits/:id"
+        element={
+          <ProtectedRoute>
+            <VisitDetailPage />
           </ProtectedRoute>
         }
       />
