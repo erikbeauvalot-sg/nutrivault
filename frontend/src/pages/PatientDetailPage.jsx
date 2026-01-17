@@ -25,7 +25,7 @@ const PatientDetailPage = () => {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('info');
+  const [activeTab, setActiveTab] = useState('complete');
   const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
@@ -175,6 +175,174 @@ const PatientDetailPage = () => {
         <Card>
           <Card.Body>
             <Tabs activeKey={activeTab} onSelect={setActiveTab} className="mb-3">
+              {/* Complete Profile Tab */}
+              <Tab eventKey="complete" title="📋 Complete Profile">
+                <Row>
+                  {/* Personal Information */}
+                  <Col md={6}>
+                    <Card className="mb-3">
+                      <Card.Header className="bg-primary text-white">
+                        <h6 className="mb-0">👤 Personal Information</h6>
+                      </Card.Header>
+                      <Card.Body>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>Full Name:</strong></Col>
+                          <Col sm={7}>{patient.first_name} {patient.last_name}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>Email:</strong></Col>
+                          <Col sm={7}>{patient.email || '-'}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>Phone:</strong></Col>
+                          <Col sm={7}>{patient.phone || '-'}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>Date of Birth:</strong></Col>
+                          <Col sm={7}>{formatDate(patient.date_of_birth)}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>Age:</strong></Col>
+                          <Col sm={7}>
+                            {patient.date_of_birth
+                              ? Math.floor((new Date() - new Date(patient.date_of_birth)) / (365.25 * 24 * 60 * 60 * 1000))
+                              : '-'
+                            } years
+                          </Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>Gender:</strong></Col>
+                          <Col sm={7}>{patient.gender || '-'}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>Status:</strong></Col>
+                          <Col sm={7}>
+                            <Badge bg={patient.is_active ? 'success' : 'secondary'}>
+                              {patient.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </Col>
+                        </Row>
+                      </Card.Body>
+                    </Card>
+
+                    {/* Contact & Address */}
+                    <Card className="mb-3">
+                      <Card.Header className="bg-info text-white">
+                        <h6 className="mb-0">📍 Address & Contact</h6>
+                      </Card.Header>
+                      <Card.Body>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>Address:</strong></Col>
+                          <Col sm={7}>{patient.address || '-'}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>City:</strong></Col>
+                          <Col sm={7}>{patient.city || '-'}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>State:</strong></Col>
+                          <Col sm={7}>{patient.state || '-'}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>ZIP Code:</strong></Col>
+                          <Col sm={7}>{patient.zip_code || '-'}</Col>
+                        </Row>
+                        <hr />
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>Emergency Contact:</strong></Col>
+                          <Col sm={7}>{patient.emergency_contact_name || '-'}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>Emergency Phone:</strong></Col>
+                          <Col sm={7}>{patient.emergency_contact_phone || '-'}</Col>
+                        </Row>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+
+                  {/* Medical & Dietary */}
+                  <Col md={6}>
+                    <Card className="mb-3">
+                      <Card.Header className="bg-danger text-white">
+                        <h6 className="mb-0">🏥 Medical Information</h6>
+                      </Card.Header>
+                      <Card.Body>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>Allergies:</strong></Col>
+                          <Col sm={7}>
+                            {patient.allergies ? (
+                              <div style={{ whiteSpace: 'pre-wrap' }}>{patient.allergies}</div>
+                            ) : '-'}
+                          </Col>
+                        </Row>
+                        <hr />
+                        <Row className="mb-2">
+                          <Col><strong>Medical Notes:</strong></Col>
+                        </Row>
+                        <Row>
+                          <Col>
+                            {patient.medical_notes ? (
+                              <div style={{ whiteSpace: 'pre-wrap', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
+                                {patient.medical_notes}
+                              </div>
+                            ) : (
+                              <div className="text-muted fst-italic">No medical notes recorded</div>
+                            )}
+                          </Col>
+                        </Row>
+                      </Card.Body>
+                    </Card>
+
+                    <Card className="mb-3">
+                      <Card.Header className="bg-success text-white">
+                        <h6 className="mb-0">🥗 Dietary Information</h6>
+                      </Card.Header>
+                      <Card.Body>
+                        <Row className="mb-2">
+                          <Col><strong>Dietary Preferences:</strong></Col>
+                        </Row>
+                        <Row className="mb-3">
+                          <Col>
+                            {patient.dietary_preferences ? (
+                              <div style={{ whiteSpace: 'pre-wrap', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
+                                {patient.dietary_preferences}
+                              </div>
+                            ) : (
+                              <div className="text-muted fst-italic">No dietary preferences recorded</div>
+                            )}
+                          </Col>
+                        </Row>
+                      </Card.Body>
+                    </Card>
+
+                    <Card className="mb-3">
+                      <Card.Header className="bg-warning">
+                        <h6 className="mb-0">👨‍⚕️ Care Team</h6>
+                      </Card.Header>
+                      <Card.Body>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>Assigned Dietitian:</strong></Col>
+                          <Col sm={7}>
+                            {patient.assigned_dietitian
+                              ? `${patient.assigned_dietitian.first_name} ${patient.assigned_dietitian.last_name}`
+                              : 'Not assigned'
+                            }
+                          </Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>Created:</strong></Col>
+                          <Col sm={7}>{formatDateTime(patient.created_at)}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>Last Updated:</strong></Col>
+                          <Col sm={7}>{formatDateTime(patient.updated_at)}</Col>
+                        </Row>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                </Row>
+              </Tab>
+
               {/* Personal Information Tab */}
               <Tab eventKey="info" title="Personal Information">
                 <Row>
