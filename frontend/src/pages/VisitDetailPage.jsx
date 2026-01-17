@@ -80,7 +80,7 @@ const VisitDetailPage = () => {
         <Container fluid>
           <div className="text-center py-5">
             <Spinner animation="border" variant="primary" />
-            <div className="mt-2">Loading visit details...</div>
+            <div className="mt-2">{t('visits.loadingDetails')}</div>
           </div>
         </Container>
       </Layout>
@@ -92,10 +92,10 @@ const VisitDetailPage = () => {
       <Layout>
         <Container fluid>
           <Alert variant="danger">
-            <Alert.Heading>Error Loading Visit</Alert.Heading>
+            <Alert.Heading>{t('visits.errorLoadingVisit')}</Alert.Heading>
             <p>{error}</p>
             <Button variant="outline-danger" onClick={handleBack}>
-              Back to Visits
+              {t('visits.backToVisits')}
             </Button>
           </Alert>
         </Container>
@@ -108,10 +108,10 @@ const VisitDetailPage = () => {
       <Layout>
         <Container fluid>
           <Alert variant="warning">
-            <Alert.Heading>Visit Not Found</Alert.Heading>
-            <p>The requested visit could not be found.</p>
+            <Alert.Heading>{t('visits.visitNotFound')}</Alert.Heading>
+            <p>{t('visits.visitNotFoundMessage')}</p>
             <Button variant="outline-warning" onClick={handleBack}>
-              Back to Visits
+              {t('visits.backToVisits')}
             </Button>
           </Alert>
         </Container>
@@ -126,10 +126,10 @@ const VisitDetailPage = () => {
         <Row className="mb-4">
           <Col>
             <Button variant="outline-secondary" onClick={handleBack} className="mb-3">
-              ← Back to Visits
+              ← {t('visits.backToVisits')}
             </Button>
             <h1 className="mb-0">
-              Visit Details
+              {t('visits.visitDetails')}
             </h1>
             <div className="d-flex align-items-center gap-2 mt-2">
               {getStatusBadge(visit.status)}
@@ -141,7 +141,7 @@ const VisitDetailPage = () => {
           <Col xs="auto">
             {canEditVisit && (
               <Button variant="primary" onClick={handleEdit}>
-                Edit Visit
+                {t('visits.editVisit')}
               </Button>
             )}
           </Col>
@@ -152,16 +152,16 @@ const VisitDetailPage = () => {
           <Card.Body>
             <Tabs activeKey={activeTab} onSelect={setActiveTab} className="mb-3">
               {/* Overview Tab */}
-              <Tab eventKey="overview" title="📋 Overview">
+              <Tab eventKey="overview" title={`📋 ${t('visits.overviewTab')}`}>
                 <Row>
                   <Col md={6}>
                     <Card className="mb-3">
                       <Card.Header className="bg-primary text-white">
-                        <h6 className="mb-0">👤 Patient & Dietitian</h6>
+                        <h6 className="mb-0">👤 {t('visits.patientDietitian')}</h6>
                       </Card.Header>
                       <Card.Body>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Patient:</strong></Col>
+                          <Col sm={5}><strong>{t('visits.patient')}:</strong></Col>
                           <Col sm={7}>
                             {visit.patient
                               ? `${visit.patient.first_name} ${visit.patient.last_name}`
@@ -171,19 +171,19 @@ const VisitDetailPage = () => {
                         </Row>
                         {visit.patient?.email && (
                           <Row className="mb-2">
-                            <Col sm={5}><strong>Email:</strong></Col>
+                            <Col sm={5}><strong>{t('patients.email')}:</strong></Col>
                             <Col sm={7}>{visit.patient.email}</Col>
                           </Row>
                         )}
                         {visit.patient?.phone && (
                           <Row className="mb-2">
-                            <Col sm={5}><strong>Phone:</strong></Col>
+                            <Col sm={5}><strong>{t('patients.phone')}:</strong></Col>
                             <Col sm={7}>{visit.patient.phone}</Col>
                           </Row>
                         )}
                         <hr />
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Dietitian:</strong></Col>
+                          <Col sm={5}><strong>{t('visits.dietitian')}:</strong></Col>
                           <Col sm={7}>
                             {visit.dietitian
                               ? `${visit.dietitian.first_name || ''} ${visit.dietitian.last_name || ''}`.trim() || visit.dietitian.username
@@ -198,30 +198,30 @@ const VisitDetailPage = () => {
                   <Col md={6}>
                     <Card className="mb-3">
                       <Card.Header className="bg-info text-white">
-                        <h6 className="mb-0">📅 Visit Information</h6>
+                        <h6 className="mb-0">📅 {t('visits.visitInfo')}</h6>
                       </Card.Header>
                       <Card.Body>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Date & Time:</strong></Col>
+                          <Col sm={5}><strong>{t('visits.dateAndTime')}:</strong></Col>
                           <Col sm={7}>{formatDateTime(visit.visit_date)}</Col>
                         </Row>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Type:</strong></Col>
+                          <Col sm={5}><strong>{t('visits.type')}:</strong></Col>
                           <Col sm={7}>{visit.visit_type || '-'}</Col>
                         </Row>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Duration:</strong></Col>
+                          <Col sm={5}><strong>{t('visits.duration')}:</strong></Col>
                           <Col sm={7}>
-                            {visit.duration_minutes ? `${visit.duration_minutes} minutes` : '-'}
+                            {visit.duration_minutes ? `${visit.duration_minutes} ${t('visits.min')}` : '-'}
                           </Col>
                         </Row>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Status:</strong></Col>
+                          <Col sm={5}><strong>{t('visits.status')}:</strong></Col>
                           <Col sm={7}>{getStatusBadge(visit.status)}</Col>
                         </Row>
                         {visit.next_visit_date && (
                           <Row className="mb-2">
-                            <Col sm={5}><strong>Next Visit:</strong></Col>
+                            <Col sm={5}><strong>{t('visits.nextVisitDate')}:</strong></Col>
                             <Col sm={7}>{formatDateTime(visit.next_visit_date)}</Col>
                           </Row>
                         )}
@@ -232,17 +232,17 @@ const VisitDetailPage = () => {
               </Tab>
 
               {/* Clinical Information Tab */}
-              <Tab eventKey="clinical" title="🏥 Clinical Information">
+              <Tab eventKey="clinical" title={`🏥 ${t('visits.clinicalInformationTab')}`}>
                 <Row>
                   <Col md={12}>
                     <Card className="mb-3">
                       <Card.Header className="bg-success text-white">
-                        <h6 className="mb-0">Clinical Details</h6>
+                        <h6 className="mb-0">{t('visits.clinicalDetails')}</h6>
                       </Card.Header>
                       <Card.Body>
                         {visit.chief_complaint && (
                           <div className="mb-3">
-                            <strong>Chief Complaint:</strong>
+                            <strong>{t('visits.chiefComplaint')}:</strong>
                             <div className="mt-2" style={{ whiteSpace: 'pre-wrap', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
                               {visit.chief_complaint}
                             </div>
@@ -251,7 +251,7 @@ const VisitDetailPage = () => {
 
                         {visit.assessment && (
                           <div className="mb-3">
-                            <strong>Assessment:</strong>
+                            <strong>{t('visits.assessment')}:</strong>
                             <div className="mt-2" style={{ whiteSpace: 'pre-wrap', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
                               {visit.assessment}
                             </div>
@@ -260,7 +260,7 @@ const VisitDetailPage = () => {
 
                         {visit.recommendations && (
                           <div className="mb-3">
-                            <strong>Recommendations:</strong>
+                            <strong>{t('visits.recommendations')}:</strong>
                             <div className="mt-2" style={{ whiteSpace: 'pre-wrap', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
                               {visit.recommendations}
                             </div>
@@ -269,7 +269,7 @@ const VisitDetailPage = () => {
 
                         {visit.notes && (
                           <div className="mb-3">
-                            <strong>Additional Notes:</strong>
+                            <strong>{t('visits.notes')}:</strong>
                             <div className="mt-2" style={{ whiteSpace: 'pre-wrap', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
                               {visit.notes}
                             </div>
@@ -277,7 +277,7 @@ const VisitDetailPage = () => {
                         )}
 
                         {!visit.chief_complaint && !visit.assessment && !visit.recommendations && !visit.notes && (
-                          <div className="text-muted fst-italic">No clinical information recorded</div>
+                          <div className="text-muted fst-italic">{t('visits.noClinicalInfo')}</div>
                         )}
                       </Card.Body>
                     </Card>
@@ -286,12 +286,12 @@ const VisitDetailPage = () => {
               </Tab>
 
               {/* Measurements Tab */}
-              <Tab eventKey="measurements" title={`📏 Measurements (${visit.measurements?.length || 0})`}>
+              <Tab eventKey="measurements" title={`📏 ${t('visits.measurementsTab')} (${visit.measurements?.length || 0})`}>
                 <Row>
                   <Col md={12}>
                     {visit.measurements && visit.measurements.length > 0 ? (
                       <div>
-                        <h6 className="mb-3">Measurement History</h6>
+                        <h6 className="mb-3">{t('visits.measurementsHistory')}</h6>
                         {visit.measurements
                           .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
                           .map((measurement, index) => (
@@ -299,7 +299,7 @@ const VisitDetailPage = () => {
                               <Card.Header className={index === 0 ? 'bg-primary text-white' : 'bg-secondary text-white'}>
                                 <div className="d-flex justify-content-between align-items-center">
                                   <span>
-                                    {index === 0 && '🔵 Latest - '}
+                                    {index === 0 && `🔵 ${t('visits.latestMeasurement')} - `}
                                     {formatDateTime(measurement.created_at)}
                                   </span>
                                 </div>
@@ -308,12 +308,12 @@ const VisitDetailPage = () => {
                                 <Row>
                                   {measurement.weight_kg && (
                                     <Col md={3} className="mb-2">
-                                      <strong>Weight:</strong> {measurement.weight_kg} kg
+                                      <strong>{t('visits.weight')}:</strong> {measurement.weight_kg} kg
                                     </Col>
                                   )}
                                   {measurement.height_cm && (
                                     <Col md={3} className="mb-2">
-                                      <strong>Height:</strong> {measurement.height_cm} cm
+                                      <strong>{t('visits.height')}:</strong> {measurement.height_cm} cm
                                     </Col>
                                   )}
                                   {measurement.bmi && (
@@ -323,28 +323,28 @@ const VisitDetailPage = () => {
                                   )}
                                   {measurement.blood_pressure_systolic && measurement.blood_pressure_diastolic && (
                                     <Col md={3} className="mb-2">
-                                      <strong>Blood Pressure:</strong> {measurement.blood_pressure_systolic}/{measurement.blood_pressure_diastolic} mmHg
+                                      <strong>{t('visits.bloodPressure')}:</strong> {measurement.blood_pressure_systolic}/{measurement.blood_pressure_diastolic} mmHg
                                     </Col>
                                   )}
                                   {measurement.waist_circumference_cm && (
                                     <Col md={4} className="mb-2">
-                                      <strong>Waist Circumference:</strong> {measurement.waist_circumference_cm} cm
+                                      <strong>{t('visits.waistCircumference')}:</strong> {measurement.waist_circumference_cm} cm
                                     </Col>
                                   )}
                                   {measurement.body_fat_percentage && (
                                     <Col md={4} className="mb-2">
-                                      <strong>Body Fat:</strong> {measurement.body_fat_percentage}%
+                                      <strong>{t('visits.bodyFat')}:</strong> {measurement.body_fat_percentage}%
                                     </Col>
                                   )}
                                   {measurement.muscle_mass_percentage && (
                                     <Col md={4} className="mb-2">
-                                      <strong>Muscle Mass:</strong> {measurement.muscle_mass_percentage}%
+                                      <strong>{t('visits.muscleMass')}:</strong> {measurement.muscle_mass_percentage}%
                                     </Col>
                                   )}
                                 </Row>
                                 {measurement.notes && (
                                   <div className="mt-2">
-                                    <strong>Notes:</strong>
+                                    <strong>{t('visits.notes')}:</strong>
                                     <div style={{ whiteSpace: 'pre-wrap' }}>{measurement.notes}</div>
                                   </div>
                                 )}
@@ -354,11 +354,11 @@ const VisitDetailPage = () => {
                       </div>
                     ) : (
                       <div className="text-center py-5">
-                        <h5 className="text-muted">No measurements recorded</h5>
-                        <p className="text-muted">Measurements can be added when editing the visit</p>
+                        <h5 className="text-muted">{t('visits.noMeasurementsRecorded')}</h5>
+                        <p className="text-muted">{t('visits.measurementsCanBeAdded')}</p>
                         {canEditVisit && (
                           <Button variant="primary" onClick={handleEdit}>
-                            Edit Visit to Add Measurements
+                            {t('visits.editVisitToAddMeasurements')}
                           </Button>
                         )}
                       </div>
@@ -368,20 +368,20 @@ const VisitDetailPage = () => {
               </Tab>
 
               {/* Administrative Tab */}
-              <Tab eventKey="admin" title="⚙️ Administrative">
+              <Tab eventKey="admin" title={`⚙️ ${t('visits.administrativeTab')}`}>
                 <Row>
                   <Col md={6}>
                     <Card className="mb-3">
                       <Card.Header className="bg-warning">
-                        <h6 className="mb-0">Timestamps</h6>
+                        <h6 className="mb-0">{t('visits.timestamps')}</h6>
                       </Card.Header>
                       <Card.Body>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Created:</strong></Col>
+                          <Col sm={5}><strong>{t('visits.created')}:</strong></Col>
                           <Col sm={7}>{formatDateTime(visit.created_at)}</Col>
                         </Row>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Last Updated:</strong></Col>
+                          <Col sm={5}><strong>{t('visits.lastUpdated')}:</strong></Col>
                           <Col sm={7}>{formatDateTime(visit.updated_at)}</Col>
                         </Row>
                       </Card.Body>
@@ -390,11 +390,11 @@ const VisitDetailPage = () => {
                   <Col md={6}>
                     <Card className="mb-3">
                       <Card.Header className="bg-warning">
-                        <h6 className="mb-0">Visit ID</h6>
+                        <h6 className="mb-0">{t('visits.visitId')}</h6>
                       </Card.Header>
                       <Card.Body>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Visit ID:</strong></Col>
+                          <Col sm={5}><strong>{t('visits.visitId')}:</strong></Col>
                           <Col sm={7}>
                             <code>{visit.id}</code>
                           </Col>
