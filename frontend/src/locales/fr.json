@@ -82,6 +82,7 @@
     "editPatient": "Modifier le patient",
     "deletePatient": "Supprimer le patient",
     "viewPatient": "Voir les détails du patient",
+    "viewCompleteProfile": "Voir le profil complet",
     "patientDetails": "Détails du patient",
     "patientCreated": "Patient créé avec succès",
     "patientUpdated": "Patient mis à jour avec succès",

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Table, Button, Badge, Form, InputGroup, Pagination } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 
-function PatientList({ patients, loading, onEdit, onDelete, onView, onScheduleVisit }) {
+function PatientList({ patients, loading, onEdit, onDelete, onView, onViewDetails, onScheduleVisit }) {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -184,6 +184,16 @@ function PatientList({ patients, loading, onEdit, onDelete, onView, onScheduleVi
                   </td>
                   <td>
                     <div className="d-flex gap-1">
+                      {onViewDetails && (
+                        <Button
+                          variant="outline-secondary"
+                          size="sm"
+                          onClick={() => onViewDetails(patient)}
+                          title={t('patients.viewCompleteProfile', 'View Complete Profile')}
+                        >
+                          📋
+                        </Button>
+                      )}
                       <Button
                         variant="outline-info"
                         size="sm"

@@ -106,6 +106,11 @@ const PatientsPage = () => {
     navigate('/visits', { state: { selectedPatient: patient } });
   };
 
+  const handleViewDetails = (patient) => {
+    // Navigate to patient detail page
+    navigate(`/patients/${patient.id}`);
+  };
+
   const handleCloseViewModal = () => {
     setViewingPatientId(null);
     setShowViewModal(false);
@@ -181,6 +186,7 @@ const PatientsPage = () => {
             onEdit={canEditPatients ? handleEditPatient : null}
             onDelete={canDeletePatients ? handleDeletePatient : null}
             onView={handleViewPatient}
+            onViewDetails={handleViewDetails}
             onScheduleVisit={handleScheduleVisit}
           />
         </div>

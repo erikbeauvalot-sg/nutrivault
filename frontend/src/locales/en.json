@@ -79,6 +79,7 @@
     "editPatient": "Edit Patient",
     "deletePatient": "Delete Patient",
     "viewPatient": "View Patient Details",
+    "viewCompleteProfile": "View Complete Profile",
     "patientDetails": "Patient Details",
     "patientCreated": "Patient created successfully",
     "patientUpdated": "Patient updated successfully",
