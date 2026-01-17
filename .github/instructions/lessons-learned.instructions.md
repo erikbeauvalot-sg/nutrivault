@@ -2436,6 +2436,64 @@ console.log('Patient data type:', typeof (response.data?.data || response.data))
 
 ---
 
+---
+
+## Frontend Development & UX Issues
+
+### Issue 27: Browser Cache Masking Frontend Changes
+
+**Problem**: User reported not seeing the new "Complete Profile" tab on PatientDetailPage, despite the code being correctly implemented and committed. The feature was working in the code but invisible in the browser.
+
+**Root Cause**: Browser cache storing the old JavaScript bundle from Vite dev server. After React component updates, browsers may continue serving cached versions of the JavaScript, making new features invisible to users.
+
+**Solution**:
+- **Immediate**: Hard refresh the browser (Cmd+Shift+R on Mac, Ctrl+Shift+R on Windows/Linux)
+- **Development**: Clear browser cache and reload
+- **Production**: Implement cache-busting strategies (Vite does this automatically with hashed filenames)
+
+**Prevention**:
+- **Always recommend hard refresh** when users report missing features that exist in code
+- **Test in incognito/private window** to verify changes without cache interference
+- **Add multiple entry points** for important features (e.g., both direct navigation + modal access)
+- **Check browser DevTools Network tab** to verify new bundle is loaded
+- **Document cache troubleshooting** in project README for end users
+
+**Diagnostic Checklist** when "feature not visible":
+```bash
+# 1. Verify code is correct and committed
+git log --oneline -1
+git show HEAD --stat
+
+# 2. Verify dev server is running latest code
+ps aux | grep vite
+
+# 3. Check browser console for errors
+# Open DevTools (F12) → Console tab → Look for red errors
+
+# 4. Verify bundle reload
+# Open DevTools → Network tab → Hard refresh → Check if .js files reload
+
+# 5. Test in incognito mode (guaranteed no cache)
+```
+
+**UX Improvement**: Added dedicated navigation button (📋 icon) in patient list actions to provide multiple ways to access the Complete Profile feature:
+- **Primary access**: Default tab when navigating to patient detail page
+- **Secondary access**: Direct button in patient actions list
+- **Tertiary access**: Quick view modal for basic info
+
+**Best Practice**: Critical features should have **multiple entry points** to improve discoverability and provide fallback access methods.
+
+**Files Involved**:
+- `/frontend/src/pages/PatientDetailPage.jsx` - Complete Profile tab (primary)
+- `/frontend/src/components/PatientList.jsx` - Navigation button (secondary)
+- `/frontend/src/pages/PatientsPage.jsx` - Navigation handler
+
+**Lesson**: Browser caching can make correctly implemented features invisible to users. Always verify with hard refresh before assuming code issues. Provide multiple ways to access important features for better UX and discoverability.
+
+**Reference**: This is a common development issue with hot-reload dev servers (Vite, Webpack dev server, etc.). Cache issues are the #1 cause of "feature not working" reports that disappear after refresh.
+
+---
+
 **Last Updated**: January 17, 2026
 
 ```</xai:function_call">**Last Updated**: January 10, 2026
