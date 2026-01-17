@@ -123,11 +123,11 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
 
   const validateForm = () => {
     if (!formData.first_name.trim() || !formData.last_name.trim() || !formData.email.trim()) {
-      setError('First name, last name, and email are required');
+      setError(t('patients.requiredFields'));
       return false;
     }
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      setError('Please enter a valid email address');
+      setError(t('patients.validEmail'));
       return false;
     }
     // Medical record number is now optional
@@ -156,7 +156,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
         handleClose();
       }
     } catch (err) {
-      setError('Failed to update patient: ' + (err.message || 'Unknown error'));
+      setError(t('patients.failedToUpdate') + ': ' + (err.message || t('errors.generic')));
     } finally {
       setLoading(false);
     }
@@ -204,7 +204,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
   return (
     <Modal show={show} onHide={handleClose} size="lg" centered>
       <Modal.Header closeButton>
-        <Modal.Title>Edit Patient: {patient.first_name} {patient.last_name}</Modal.Title>
+        <Modal.Title>{t('patients.editPatient')}: {patient.first_name} {patient.last_name}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         {error && (
@@ -216,11 +216,11 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
         <Form onSubmit={handleSubmit}>
           {/* Personal Information Section */}
           <div className="mb-4">
-            <h5 className="mb-3">Personal Information</h5>
+            <h5 className="mb-3">{t('patients.personalInfo')}</h5>
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>First Name *</Form.Label>
+                  <Form.Label>{t('patients.firstName')} *</Form.Label>
                   <Form.Control
                     type="text"
                     name="first_name"
@@ -232,7 +232,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Last Name *</Form.Label>
+                  <Form.Label>{t('patients.lastName')} *</Form.Label>
                   <Form.Control
                     type="text"
                     name="last_name"
@@ -246,7 +246,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Email *</Form.Label>
+                  <Form.Label>{t('patients.email')} *</Form.Label>
                   <Form.Control
                     type="email"
                     name="email"
@@ -258,7 +258,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Phone</Form.Label>
+                  <Form.Label>{t('patients.phone')}</Form.Label>
                   <Form.Control
                     type="tel"
                     name="phone"
@@ -271,7 +271,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Date of Birth</Form.Label>
+                  <Form.Label>{t('patients.dateOfBirth')}</Form.Label>
                   <Form.Control
                     type="date"
                     name="date_of_birth"
@@ -282,35 +282,35 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Gender</Form.Label>
+                  <Form.Label>{t('patients.gender')}</Form.Label>
                   <Form.Select
                     name="gender"
                     value={formData.gender}
                     onChange={handleInputChange}
                   >
-                    <option value="">Select Gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                    <option value="prefer_not_to_say">Prefer not to say</option>
+                    <option value="">{t('patients.selectGender')}</option>
+                    <option value="male">{t('patients.male')}</option>
+                    <option value="female">{t('patients.female')}</option>
+                    <option value="other">{t('patients.other')}</option>
+                    <option value="prefer_not_to_say">{t('patients.preferNotToSay')}</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
             </Row>
             <Form.Group className="mb-3">
-              <Form.Label>Address</Form.Label>
+              <Form.Label>{t('patients.streetAddress')}</Form.Label>
               <Form.Control
                 type="text"
                 name="address"
                 value={formData.address}
                 onChange={handleInputChange}
-                placeholder="Street address"
+                placeholder={t('patients.streetAddressPlaceholder')}
               />
             </Form.Group>
             <Row>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>City</Form.Label>
+                  <Form.Label>{t('patients.city')}</Form.Label>
                   <Form.Control
                     type="text"
                     name="city"
@@ -321,7 +321,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
               </Col>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>State</Form.Label>
+                  <Form.Label>{t('patients.state')}</Form.Label>
                   <Form.Control
                     type="text"
                     name="state"
@@ -332,7 +332,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
               </Col>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>ZIP Code</Form.Label>
+                  <Form.Label>{t('patients.zipCode')}</Form.Label>
                   <Form.Control
                     type="text"
                     name="zip_code"
@@ -345,7 +345,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Emergency Contact Name</Form.Label>
+                  <Form.Label>{t('patients.emergencyContactName')}</Form.Label>
                   <Form.Control
                     type="text"
                     name="emergency_contact_name"
@@ -356,7 +356,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Emergency Contact Phone</Form.Label>
+                  <Form.Label>{t('patients.emergencyContactPhone')}</Form.Label>
                   <Form.Control
                     type="tel"
                     name="emergency_contact_phone"
@@ -370,11 +370,11 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
 
           {/* Medical Information Section */}
           <div className="mb-4">
-            <h5 className="mb-3">Medical Information</h5>
+            <h5 className="mb-3">{t('patients.medicalInfo')}</h5>
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Medical Record Number *</Form.Label>
+                  <Form.Label>{t('patients.medicalRecordNumber')} *</Form.Label>
                   <Form.Control
                     type="text"
                     name="medical_record_number"
@@ -386,13 +386,13 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Blood Type</Form.Label>
+                  <Form.Label>{t('patients.bloodType')}</Form.Label>
                   <Form.Select
                     name="blood_type"
                     value={formData.blood_type}
                     onChange={handleInputChange}
                   >
-                    <option value="">Select Blood Type</option>
+                    <option value="">{t('patients.selectBloodType')}</option>
                     <option value="A+">A+</option>
                     <option value="A-">A-</option>
                     <option value="B+">B+</option>
@@ -408,7 +408,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Height (cm)</Form.Label>
+                  <Form.Label>{t('patients.heightCm')}</Form.Label>
                   <Form.Control
                     type="number"
                     name="height_cm"
@@ -421,7 +421,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Weight (kg)</Form.Label>
+                  <Form.Label>{t('patients.weightKg')}</Form.Label>
                   <Form.Control
                     type="number"
                     name="weight_kg"
@@ -434,7 +434,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
               </Col>
             </Row>
             <Form.Group className="mb-3">
-              <Form.Label>Insurance Provider</Form.Label>
+              <Form.Label>{t('patients.insuranceProvider')}</Form.Label>
               <Form.Control
                 type="text"
                 name="insurance_provider"
@@ -443,7 +443,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Insurance Policy Number</Form.Label>
+              <Form.Label>{t('patients.insurancePolicyNumber')}</Form.Label>
               <Form.Control
                 type="text"
                 name="insurance_policy_number"
@@ -452,7 +452,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Primary Care Physician</Form.Label>
+              <Form.Label>{t('patients.primaryCarePhysician')}</Form.Label>
               <Form.Control
                 type="text"
                 name="primary_care_physician"
@@ -461,116 +461,116 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Allergies</Form.Label>
+              <Form.Label>{t('patients.allergies')}</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={2}
                 name="allergies"
                 value={formData.allergies}
                 onChange={handleInputChange}
-                placeholder="List any allergies..."
+                placeholder={t('patients.listAllergies')}
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Current Medications</Form.Label>
+              <Form.Label>{t('patients.currentMedications')}</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={2}
                 name="current_medications"
                 value={formData.current_medications}
                 onChange={handleInputChange}
-                placeholder="List current medications..."
+                placeholder={t('patients.listMedications')}
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Medical Conditions</Form.Label>
+              <Form.Label>{t('patients.medicalConditions')}</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={2}
                 name="medical_conditions"
                 value={formData.medical_conditions}
                 onChange={handleInputChange}
-                placeholder="List medical conditions..."
+                placeholder={t('patients.listConditions')}
               />
             </Form.Group>
           </div>
 
           {/* Dietary Information Section */}
           <div className="mb-4">
-            <h5 className="mb-3">Dietary Information</h5>
+            <h5 className="mb-3">{t('patients.dietaryInfo')}</h5>
             <Form.Group className="mb-3">
-              <Form.Label>Dietary Restrictions</Form.Label>
+              <Form.Label>{t('patients.dietaryRestrictions')}</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={2}
                 name="dietary_restrictions"
                 value={formData.dietary_restrictions}
                 onChange={handleInputChange}
-                placeholder="e.g., vegetarian, gluten-free, dairy-free..."
+                placeholder={t('patients.dietaryRestrictionsPlaceholder')}
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Food Preferences</Form.Label>
+              <Form.Label>{t('patients.foodPreferences')}</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={2}
                 name="food_preferences"
                 value={formData.food_preferences}
                 onChange={handleInputChange}
-                placeholder="e.g., likes spicy food, prefers organic..."
+                placeholder={t('patients.foodPreferencesPlaceholder')}
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Nutritional Goals</Form.Label>
+              <Form.Label>{t('patients.nutritionalGoals')}</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={2}
                 name="nutritional_goals"
                 value={formData.nutritional_goals}
                 onChange={handleInputChange}
-                placeholder="e.g., weight loss, muscle gain, diabetes management..."
+                placeholder={t('patients.nutritionalGoalsPlaceholder')}
               />
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Exercise Habits</Form.Label>
+              <Form.Label>{t('patients.exerciseHabits')}</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={2}
                 name="exercise_habits"
                 value={formData.exercise_habits}
                 onChange={handleInputChange}
-                placeholder="Describe exercise routine..."
+                placeholder={t('patients.exerciseHabitsPlaceholder')}
               />
             </Form.Group>
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Smoking Status</Form.Label>
+                  <Form.Label>{t('patients.smokingStatus')}</Form.Label>
                   <Form.Select
                     name="smoking_status"
                     value={formData.smoking_status}
                     onChange={handleInputChange}
                   >
-                    <option value="">Select Status</option>
-                    <option value="never">Never</option>
-                    <option value="former">Former</option>
-                    <option value="current">Current</option>
+                    <option value="">{t('patients.selectStatus')}</option>
+                    <option value="never">{t('patients.never')}</option>
+                    <option value="former">{t('patients.former')}</option>
+                    <option value="current">{t('patients.current')}</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Alcohol Consumption</Form.Label>
+                  <Form.Label>{t('patients.alcoholConsumption')}</Form.Label>
                   <Form.Select
                     name="alcohol_consumption"
                     value={formData.alcohol_consumption}
                     onChange={handleInputChange}
                   >
-                    <option value="">Select Frequency</option>
-                    <option value="none">None</option>
-                    <option value="occasional">Occasional</option>
-                    <option value="moderate">Moderate</option>
-                    <option value="heavy">Heavy</option>
+                    <option value="">{t('patients.selectFrequency')}</option>
+                    <option value="none">{t('patients.none')}</option>
+                    <option value="occasional">{t('patients.occasional')}</option>
+                    <option value="moderate">{t('patients.moderate')}</option>
+                    <option value="heavy">{t('patients.heavy')}</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
@@ -579,15 +579,15 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
 
           {/* Administrative Information Section */}
           <div className="mb-4">
-            <h5 className="mb-3">Administrative Information</h5>
+            <h5 className="mb-3">{t('patients.administrativeInfo')}</h5>
             <Form.Group className="mb-3">
-              <Form.Label>Assigned Dietitian</Form.Label>
+              <Form.Label>{t('patients.assignedDietitian')}</Form.Label>
               <Form.Select
                 name="assigned_dietitian_id"
                 value={formData.assigned_dietitian_id}
                 onChange={handleInputChange}
               >
-                <option value="">Select a dietitian (optional)</option>
+                <option value="">{t('patients.selectDietitianOptional')}</option>
                 {dietitians.map(dietitian => (
                   <option key={dietitian.id} value={dietitian.id}>
                     {dietitian.first_name} {dietitian.last_name}
@@ -596,18 +596,18 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
                 ))}
               </Form.Select>
               <Form.Text className="text-muted">
-                Leave empty to assign later or for automatic assignment
+                {t('patients.assignLaterHelp')}
               </Form.Text>
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Additional Notes</Form.Label>
+              <Form.Label>{t('patients.additionalNotes')}</Form.Label>
               <Form.Control
                 as="textarea"
                 rows={3}
                 name="notes"
                 value={formData.notes}
                 onChange={handleInputChange}
-                placeholder="Any additional notes about the patient..."
+                placeholder={t('patients.additionalNotesPlaceholder')}
               />
             </Form.Group>
           </div>
@@ -615,10 +615,10 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={handleClose} disabled={loading}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button variant="primary" onClick={handleSubmit} disabled={loading}>
-          {loading ? 'Updating...' : 'Update Patient'}
+          {loading ? t('patients.updating') : t('patients.updatePatient')}
         </Button>
       </Modal.Footer>
     </Modal>
