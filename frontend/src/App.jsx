@@ -8,6 +8,8 @@ import { useAuth } from './contexts/AuthContext';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import PatientsPage from './pages/PatientsPage';
+import CreatePatientPage from './pages/CreatePatientPage';
+import EditPatientPage from './pages/EditPatientPage';
 import PatientDetailPage from './pages/PatientDetailPage';
 import VisitsPage from './pages/VisitsPage';
 import UsersPage from './pages/UsersPage';
@@ -56,6 +58,24 @@ function App() {
         element={
           <ProtectedRoute>
             <PatientsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/patients/create"
+        element={
+          <ProtectedRoute>
+            <CreatePatientPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/patients/:id/edit"
+        element={
+          <ProtectedRoute>
+            <EditPatientPage />
           </ProtectedRoute>
         }
       />

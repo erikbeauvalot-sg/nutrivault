@@ -10,9 +10,6 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import PatientList from '../components/PatientList';
-import PatientDetailModal from '../components/PatientDetailModal';
-import CreatePatientModal from '../components/CreatePatientModal';
-import EditPatientModal from '../components/EditPatientModal';
 import ExportModal from '../components/ExportModal';
 import api from '../services/api';
 
@@ -23,11 +20,6 @@ const PatientsPage = () => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [editingPatient, setEditingPatient] = useState(null);
-  const [viewingPatientId, setViewingPatientId] = useState(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
 
   useEffect(() => {
@@ -50,32 +42,6 @@ const PatientsPage = () => {
     }
   };
 
-  const handleCreatePatient = async (patientData) => {
-    try {
-      const response = await api.post('/api/patients', patientData);
-      const newPatient = response.data.data || response.data;
-      setPatients([newPatient, ...patients]);
-      setError(null);
-      return true;
-    } catch (err) {
-      setError('Failed to create patient: ' + (err.response?.data?.error || err.message));
-      return false;
-    }
-  };
-
-  const handleUpdatePatient = async (id, patientData) => {
-    try {
-      const response = await api.put(`/api/patients/${id}`, patientData);
-      const updatedPatient = response.data.data || response.data;
-      setPatients(patients.map(p => p.id === id ? updatedPatient : p));
-      setEditingPatient(null);
-      setError(null);
-      return true;
-    } catch (err) {
-      setError('Failed to update patient: ' + (err.response?.data?.error || err.message));
-      return false;
-    }
-  };
 
   const handleDeletePatient = async (id) => {
     if (!window.confirm('Are you sure you want to delete this patient?')) {
@@ -91,14 +57,12 @@ const PatientsPage = () => {
     }
   };
 
-  const handleEditPatient = (patient) => {
-    setEditingPatient(patient);
-    setShowEditModal(true);
+  const handleCreatePatient = () => {
+    navigate('/patients/create');
   };
 
-  const handleViewPatient = (patient) => {
-    setViewingPatientId(patient.id);
-    setShowViewModal(true);
+  const handleEditPatient = (patient) => {
+    navigate(`/patients/${patient.id}/edit`);
   };
 
   const handleScheduleVisit = (patient) => {
@@ -109,24 +73,6 @@ const PatientsPage = () => {
   const handleViewDetails = (patient) => {
     // Navigate to patient detail page
     navigate(`/patients/${patient.id}`);
-  };
-
-  const handleCloseViewModal = () => {
-    setViewingPatientId(null);
-    setShowViewModal(false);
-  };
-
-  const handleShowCreateModal = () => {
-    setShowCreateModal(true);
-  };
-
-  const handleCloseCreateModal = () => {
-    setShowCreateModal(false);
-  };
-
-  const handleCloseEditModal = () => {
-    setShowEditModal(false);
-    setEditingPatient(null);
   };
 
   // Check if user can create patients (ADMIN, DIETITIAN)
@@ -157,7 +103,7 @@ const PatientsPage = () => {
             {canCreatePatients && (
               <Button
                 variant="primary"
-                onClick={handleShowCreateModal}
+                onClick={handleCreatePatient}
                 className="d-flex align-items-center"
               >
                 <i className="bi bi-plus-circle me-2"></i>
@@ -185,7 +131,6 @@ const PatientsPage = () => {
             loading={loading}
             onEdit={canEditPatients ? handleEditPatient : null}
             onDelete={canDeletePatients ? handleDeletePatient : null}
-            onView={handleViewPatient}
             onViewDetails={handleViewDetails}
             onScheduleVisit={handleScheduleVisit}
           />
@@ -193,26 +138,6 @@ const PatientsPage = () => {
       </Container>
 
       {/* Modals */}
-      <CreatePatientModal
-        show={showCreateModal}
-        onHide={handleCloseCreateModal}
-        onSubmit={handleCreatePatient}
-      />
-
-      <EditPatientModal
-        show={showEditModal}
-        onHide={handleCloseEditModal}
-        onSubmit={handleUpdatePatient}
-        patient={editingPatient}
-      />
-
-      <PatientDetailModal
-        patientId={viewingPatientId}
-        show={showViewModal}
-        onHide={handleCloseViewModal}
-        onScheduleVisit={handleScheduleVisit}
-      />
-
       <ExportModal
         show={showExportModal}
         onHide={() => setShowExportModal(false)}

@@ -11,7 +11,6 @@ import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import DocumentListComponent from '../components/DocumentListComponent';
 import DocumentUploadModal from '../components/DocumentUploadModal';
-import EditPatientModal from '../components/EditPatientModal';
 import api from '../services/api';
 
 const PatientDetailPage = () => {
@@ -27,7 +26,6 @@ const PatientDetailPage = () => {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('complete');
   const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -67,14 +65,8 @@ const PatientDetailPage = () => {
     navigate('/patients');
   };
 
-  const handleEditPatient = async (patientData) => {
-    try {
-      await api.put(`/api/patients/${id}`, patientData);
-      setShowEditModal(false);
-      fetchPatientDetails(); // Refresh data
-    } catch (err) {
-      throw new Error('Failed to update patient: ' + (err.response?.data?.error || err.message));
-    }
+  const handleEditPatient = () => {
+    navigate(`/patients/${id}/edit`);
   };
 
   const formatDate = (dateString) => {
@@ -163,7 +155,7 @@ const PatientDetailPage = () => {
             {canEditPatient && (
               <Button
                 variant="primary"
-                onClick={() => setShowEditModal(true)}
+                onClick={handleEditPatient}
               >
                 Edit Patient
               </Button>
@@ -673,14 +665,6 @@ const PatientDetailPage = () => {
             fetchPatientDocuments();
           }}
           selectedResource={{ resourceType: 'patients', resourceId: id }}
-        />
-
-        {/* Edit Patient Modal */}
-        <EditPatientModal
-          show={showEditModal}
-          onHide={() => setShowEditModal(false)}
-          onSubmit={handleEditPatient}
-          patient={patient}
         />
       </Container>
     </Layout>
