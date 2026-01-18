@@ -201,7 +201,7 @@ async function getPatientById(patientId, user, requestMetadata = {}) {
 async function getPatientDetails(patientId, user, requestMetadata = {}) {
   try {
     const patient = await Patient.findOne({
-      where: { 
+      where: {
         id: patientId,
         is_active: true
       },
@@ -214,7 +214,6 @@ async function getPatientDetails(patientId, user, requestMetadata = {}) {
         {
           model: db.Visit,
           as: 'visits',
-          where: { status: 'COMPLETED' },
           required: false,
           include: [
             {
@@ -227,9 +226,12 @@ async function getPatientDetails(patientId, user, requestMetadata = {}) {
               as: 'dietitian',
               attributes: ['id', 'username', 'first_name', 'last_name']
             }
-          ],
-          order: [['visit_date', 'ASC']]
+          ]
         }
+      ],
+      order: [
+        [{ model: db.Visit, as: 'visits' }, 'visit_date', 'ASC'],
+        [{ model: db.Visit, as: 'visits' }, { model: db.VisitMeasurement, as: 'measurements' }, 'created_at', 'ASC']
       ]
     });
 

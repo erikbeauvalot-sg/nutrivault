@@ -17,9 +17,14 @@ const MeasurementCharts = ({ visits }) => {
     visits.forEach(visit => {
       if (visit.measurements && visit.measurements.length > 0) {
         visit.measurements.forEach(measurement => {
+          // Use measurement's created_at or fall back to visit_date
+          const measurementDate = measurement.created_at || visit.visit_date;
+          const date = new Date(measurementDate);
+
           data.push({
-            date: new Date(visit.visit_date),
-            visitDate: new Date(visit.visit_date).toLocaleDateString(),
+            date: date,
+            visitDate: date.toLocaleDateString(),
+            visitTime: date.toLocaleString(),
             weight_kg: measurement.weight_kg || null,
             height_cm: measurement.height_cm || null,
             bmi: measurement.bmi || null,
@@ -39,12 +44,21 @@ const MeasurementCharts = ({ visits }) => {
 
   const measurementData = extractMeasurementData();
 
+  // Debug log to verify data extraction
+  console.log('📊 Measurement data extracted:', {
+    totalVisits: visits.length,
+    visitsWithMeasurements: visits.filter(v => v.measurements?.length > 0).length,
+    totalMeasurements: measurementData.length,
+    measurements: measurementData
+  });
+
   if (measurementData.length === 0) {
     return (
       <Card>
         <Card.Body className="text-center py-5">
           <h5 className="text-muted">No measurement data available</h5>
           <p className="text-muted">Measurements will appear here once recorded during visits</p>
+          <p className="text-muted small">Total visits: {visits.length}</p>
         </Card.Body>
       </Card>
     );
@@ -53,6 +67,23 @@ const MeasurementCharts = ({ visits }) => {
   const formatTooltip = (value, name) => {
     if (value === null) return ['-', name];
     return [value.toFixed(2), name];
+  };
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      const dataPoint = payload[0].payload;
+      return (
+        <div className="bg-white border rounded p-2 shadow-sm">
+          <p className="mb-1 small fw-bold">{dataPoint.visitTime}</p>
+          {payload.map((entry, index) => (
+            <p key={index} className="mb-0 small" style={{ color: entry.color }}>
+              {entry.name}: {entry.value !== null ? entry.value.toFixed(2) : '-'}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
   };
 
   const hasData = (field) => measurementData.some(d => d[field] !== null);
@@ -73,7 +104,7 @@ const MeasurementCharts = ({ visits }) => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="visitDate" />
                     <YAxis />
-                    <Tooltip formatter={formatTooltip} />
+                    <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     <Line
                       type="monotone"
@@ -103,7 +134,7 @@ const MeasurementCharts = ({ visits }) => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="visitDate" />
                     <YAxis />
-                    <Tooltip formatter={formatTooltip} />
+                    <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     <Line
                       type="monotone"
@@ -133,7 +164,7 @@ const MeasurementCharts = ({ visits }) => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="visitDate" />
                     <YAxis />
-                    <Tooltip formatter={formatTooltip} />
+                    <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     <Line
                       type="monotone"
@@ -163,7 +194,7 @@ const MeasurementCharts = ({ visits }) => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="visitDate" />
                     <YAxis />
-                    <Tooltip formatter={formatTooltip} />
+                    <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     {hasData('bp_systolic') && (
                       <Line
@@ -205,7 +236,7 @@ const MeasurementCharts = ({ visits }) => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="visitDate" />
                     <YAxis />
-                    <Tooltip formatter={formatTooltip} />
+                    <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     <Line
                       type="monotone"
@@ -235,7 +266,7 @@ const MeasurementCharts = ({ visits }) => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="visitDate" />
                     <YAxis />
-                    <Tooltip formatter={formatTooltip} />
+                    <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     <Line
                       type="monotone"
@@ -265,7 +296,7 @@ const MeasurementCharts = ({ visits }) => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="visitDate" />
                     <YAxis />
-                    <Tooltip formatter={formatTooltip} />
+                    <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     <Line
                       type="monotone"
