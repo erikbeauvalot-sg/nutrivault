@@ -122,7 +122,7 @@ const EditPatientPage = () => {
 
       setError(null);
     } catch (err) {
-      setError('Failed to load patient: ' + (err.response?.data?.error || err.message));
+      setError(t('patients.failedToUpdate') + ': ' + (err.response?.data?.error || err.message));
       console.error('Error fetching patient:', err);
     } finally {
       setLoading(false);
@@ -155,12 +155,12 @@ const EditPatientPage = () => {
 
   const validateForm = () => {
     if (!formData.first_name.trim() || !formData.last_name.trim() || !formData.email.trim()) {
-      setError('First name, last name, and email are required');
+      setError(t('patients.requiredFields'));
       setActiveTab('personal');
       return false;
     }
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      setError('Please enter a valid email address');
+      setError(t('patients.validEmail'));
       setActiveTab('personal');
       return false;
     }
@@ -189,7 +189,7 @@ const EditPatientPage = () => {
       // Navigate to the patient's detail page
       navigate(`/patients/${id}`);
     } catch (err) {
-      setError('Failed to update patient: ' + (err.response?.data?.error || err.message));
+      setError(t('patients.failedToUpdate') + ': ' + (err.response?.data?.error || err.message));
       console.error('Error updating patient:', err);
     } finally {
       setSaving(false);
@@ -205,7 +205,7 @@ const EditPatientPage = () => {
         <Container fluid>
           <div className="text-center py-5">
             <Spinner animation="border" variant="primary" />
-            <div className="mt-2">Loading patient data...</div>
+            <div className="mt-2">{t('patients.loadingPatientData')}</div>
           </div>
         </Container>
       </Layout>
@@ -217,10 +217,10 @@ const EditPatientPage = () => {
       <Layout>
         <Container fluid>
           <Alert variant="danger">
-            <Alert.Heading>Access Denied</Alert.Heading>
-            <p>You do not have permission to edit patients.</p>
+            <Alert.Heading>{t('patients.accessDenied')}</Alert.Heading>
+            <p>{t('patients.noPermissionEdit')}</p>
             <Button variant="outline-danger" onClick={handleBack}>
-              Back to Patient Details
+              {t('patients.viewPatient')}
             </Button>
           </Alert>
         </Container>
@@ -233,10 +233,10 @@ const EditPatientPage = () => {
       <Layout>
         <Container fluid>
           <Alert variant="danger">
-            <Alert.Heading>Error Loading Patient</Alert.Heading>
+            <Alert.Heading>{t('patients.error')}</Alert.Heading>
             <p>{error}</p>
             <Button variant="outline-danger" onClick={() => navigate('/patients')}>
-              Back to Patients
+              {t('patients.backToPatients')}
             </Button>
           </Alert>
         </Container>
@@ -251,12 +251,12 @@ const EditPatientPage = () => {
         <Row className="mb-4">
           <Col>
             <Button variant="outline-secondary" onClick={handleBack} className="mb-3">
-              ← Back to Patient Details
+              ← {t('patients.viewPatient')}
             </Button>
             <h1 className="mb-0">
-              Edit Patient: {patient?.first_name} {patient?.last_name}
+              {t('patients.editPatientTitle')}: {patient?.first_name} {patient?.last_name}
             </h1>
-            <p className="text-muted">Update patient information in the tabs below</p>
+            <p className="text-muted">{t('patients.enterPatientInfo')}</p>
           </Col>
         </Row>
 
@@ -272,16 +272,16 @@ const EditPatientPage = () => {
             <Card.Body>
               <Tabs activeKey={activeTab} onSelect={setActiveTab} className="mb-3">
                 {/* Personal Information Tab */}
-                <Tab eventKey="personal" title="👤 Personal Information">
+                <Tab eventKey="personal" title={`👤 ${t('patients.personalInformationTab')}`}>
                   <Row>
                     <Col md={6}>
                       <Card className="mb-3">
                         <Card.Header className="bg-primary text-white">
-                          <h6 className="mb-0">Basic Information</h6>
+                          <h6 className="mb-0">{t('patients.basicInformation')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">
-                            <Form.Label>First Name *</Form.Label>
+                            <Form.Label>{t('patients.firstName')} *</Form.Label>
                             <Form.Control
                               type="text"
                               name="first_name"
@@ -292,7 +292,7 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Last Name *</Form.Label>
+                            <Form.Label>{t('patients.lastName')} *</Form.Label>
                             <Form.Control
                               type="text"
                               name="last_name"
@@ -303,7 +303,7 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Email *</Form.Label>
+                            <Form.Label>{t('patients.email')} *</Form.Label>
                             <Form.Control
                               type="email"
                               name="email"
@@ -314,7 +314,7 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Phone</Form.Label>
+                            <Form.Label>{t('patients.phone')}</Form.Label>
                             <Form.Control
                               type="tel"
                               name="phone"
@@ -324,7 +324,7 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Date of Birth</Form.Label>
+                            <Form.Label>{t('patients.dateOfBirth')}</Form.Label>
                             <Form.Control
                               type="date"
                               name="date_of_birth"
@@ -334,17 +334,17 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Gender</Form.Label>
+                            <Form.Label>{t('patients.gender')}</Form.Label>
                             <Form.Select
                               name="gender"
                               value={formData.gender}
                               onChange={handleInputChange}
                             >
-                              <option value="">Select Gender</option>
-                              <option value="Male">Male</option>
-                              <option value="Female">Female</option>
-                              <option value="Other">Other</option>
-                              <option value="Prefer not to say">Prefer not to say</option>
+                              <option value="">{t('patients.selectGender')}</option>
+                              <option value="Male">{t('patients.male')}</option>
+                              <option value="Female">{t('patients.female')}</option>
+                              <option value="Other">{t('patients.other')}</option>
+                              <option value="Prefer not to say">{t('patients.preferNotToSay')}</option>
                             </Form.Select>
                           </Form.Group>
                         </Card.Body>
@@ -354,22 +354,22 @@ const EditPatientPage = () => {
                     <Col md={6}>
                       <Card className="mb-3">
                         <Card.Header className="bg-info text-white">
-                          <h6 className="mb-0">Address & Contact</h6>
+                          <h6 className="mb-0">{t('patients.addressContact')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">
-                            <Form.Label>Address</Form.Label>
+                            <Form.Label>{t('patients.address')}</Form.Label>
                             <Form.Control
                               type="text"
                               name="address"
                               value={formData.address}
                               onChange={handleInputChange}
-                              placeholder="Street address"
+                              placeholder={t('patients.streetAddressPlaceholder')}
                             />
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>City</Form.Label>
+                            <Form.Label>{t('patients.city')}</Form.Label>
                             <Form.Control
                               type="text"
                               name="city"
@@ -379,7 +379,7 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>State</Form.Label>
+                            <Form.Label>{t('patients.state')}</Form.Label>
                             <Form.Control
                               type="text"
                               name="state"
@@ -389,7 +389,7 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>ZIP Code</Form.Label>
+                            <Form.Label>{t('patients.zipCode')}</Form.Label>
                             <Form.Control
                               type="text"
                               name="zip_code"
@@ -401,7 +401,7 @@ const EditPatientPage = () => {
                           <hr />
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Emergency Contact Name</Form.Label>
+                            <Form.Label>{t('patients.emergencyContactName')}</Form.Label>
                             <Form.Control
                               type="text"
                               name="emergency_contact_name"
@@ -411,7 +411,7 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Emergency Contact Phone</Form.Label>
+                            <Form.Label>{t('patients.emergencyContactPhone')}</Form.Label>
                             <Form.Control
                               type="tel"
                               name="emergency_contact_phone"
@@ -426,16 +426,16 @@ const EditPatientPage = () => {
                 </Tab>
 
                 {/* Medical Information Tab */}
-                <Tab eventKey="medical" title="🏥 Medical Information">
+                <Tab eventKey="medical" title={`🏥 ${t('patients.medicalInformationTab')}`}>
                   <Row>
                     <Col md={6}>
                       <Card className="mb-3">
                         <Card.Header className="bg-danger text-white">
-                          <h6 className="mb-0">Medical Details</h6>
+                          <h6 className="mb-0">{t('patients.medicalDetails')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">
-                            <Form.Label>Medical Record Number</Form.Label>
+                            <Form.Label>{t('patients.medicalRecordNumber')}</Form.Label>
                             <Form.Control
                               type="text"
                               name="medical_record_number"
@@ -445,13 +445,13 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Blood Type</Form.Label>
+                            <Form.Label>{t('patients.bloodType')}</Form.Label>
                             <Form.Select
                               name="blood_type"
                               value={formData.blood_type}
                               onChange={handleInputChange}
                             >
-                              <option value="">Select Blood Type</option>
+                              <option value="">{t('patients.selectBloodType')}</option>
                               <option value="A+">A+</option>
                               <option value="A-">A-</option>
                               <option value="B+">B+</option>
@@ -464,7 +464,7 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Height (cm)</Form.Label>
+                            <Form.Label>{t('patients.heightCm')}</Form.Label>
                             <Form.Control
                               type="number"
                               name="height_cm"
@@ -476,7 +476,7 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Weight (kg)</Form.Label>
+                            <Form.Label>{t('patients.weightKg')}</Form.Label>
                             <Form.Control
                               type="number"
                               name="weight_kg"
@@ -488,7 +488,7 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Insurance Provider</Form.Label>
+                            <Form.Label>{t('patients.insuranceProvider')}</Form.Label>
                             <Form.Control
                               type="text"
                               name="insurance_provider"
@@ -498,7 +498,7 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Insurance Policy Number</Form.Label>
+                            <Form.Label>{t('patients.insurancePolicyNumber')}</Form.Label>
                             <Form.Control
                               type="text"
                               name="insurance_policy_number"
@@ -508,7 +508,7 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Primary Care Physician</Form.Label>
+                            <Form.Label>{t('patients.primaryCarePhysician')}</Form.Label>
                             <Form.Control
                               type="text"
                               name="primary_care_physician"
@@ -523,54 +523,54 @@ const EditPatientPage = () => {
                     <Col md={6}>
                       <Card className="mb-3">
                         <Card.Header className="bg-danger text-white">
-                          <h6 className="mb-0">Medical History</h6>
+                          <h6 className="mb-0">{t('patients.medicalHistory')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">
-                            <Form.Label>Allergies</Form.Label>
+                            <Form.Label>{t('patients.allergies')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={3}
                               name="allergies"
                               value={formData.allergies}
                               onChange={handleInputChange}
-                              placeholder="List any allergies..."
+                              placeholder={t('patients.listAllergies')}
                             />
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Current Medications</Form.Label>
+                            <Form.Label>{t('patients.currentMedications')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={3}
                               name="current_medications"
                               value={formData.current_medications}
                               onChange={handleInputChange}
-                              placeholder="List current medications..."
+                              placeholder={t('patients.listMedications')}
                             />
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Medical Conditions</Form.Label>
+                            <Form.Label>{t('patients.medicalConditions')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={3}
                               name="medical_conditions"
                               value={formData.medical_conditions}
                               onChange={handleInputChange}
-                              placeholder="List medical conditions..."
+                              placeholder={t('patients.listConditions')}
                             />
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Medical Notes</Form.Label>
+                            <Form.Label>{t('patients.medicalNotes')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={3}
                               name="medical_notes"
                               value={formData.medical_notes}
                               onChange={handleInputChange}
-                              placeholder="Additional medical notes..."
+                              placeholder={t('patients.additionalMedicalNotesPlaceholder')}
                             />
                           </Form.Group>
                         </Card.Body>
@@ -580,59 +580,59 @@ const EditPatientPage = () => {
                 </Tab>
 
                 {/* Dietary Information Tab */}
-                <Tab eventKey="dietary" title="🥗 Dietary Information">
+                <Tab eventKey="dietary" title={`🥗 ${t('patients.dietaryInformationTab')}`}>
                   <Row>
                     <Col md={6}>
                       <Card className="mb-3">
                         <Card.Header className="bg-success text-white">
-                          <h6 className="mb-0">Dietary Preferences</h6>
+                          <h6 className="mb-0">{t('patients.dietaryPreferences')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">
-                            <Form.Label>Dietary Restrictions</Form.Label>
+                            <Form.Label>{t('patients.dietaryRestrictions')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={3}
                               name="dietary_restrictions"
                               value={formData.dietary_restrictions}
                               onChange={handleInputChange}
-                              placeholder="e.g., vegetarian, gluten-free, dairy-free..."
+                              placeholder={t('patients.dietaryRestrictionsPlaceholder')}
                             />
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Dietary Preferences</Form.Label>
+                            <Form.Label>{t('patients.dietaryPreferences')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={3}
                               name="dietary_preferences"
                               value={formData.dietary_preferences}
                               onChange={handleInputChange}
-                              placeholder="General dietary preferences..."
+                              placeholder={t('patients.generalDietaryPreferences')}
                             />
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Food Preferences</Form.Label>
+                            <Form.Label>{t('patients.foodPreferences')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={3}
                               name="food_preferences"
                               value={formData.food_preferences}
                               onChange={handleInputChange}
-                              placeholder="e.g., likes spicy food, prefers organic..."
+                              placeholder={t('patients.foodPreferencesPlaceholder')}
                             />
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Nutritional Goals</Form.Label>
+                            <Form.Label>{t('patients.nutritionalGoals')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={3}
                               name="nutritional_goals"
                               value={formData.nutritional_goals}
                               onChange={handleInputChange}
-                              placeholder="e.g., weight loss, muscle gain, diabetes management..."
+                              placeholder={t('patients.nutritionalGoalsPlaceholder')}
                             />
                           </Form.Group>
                         </Card.Body>
@@ -642,47 +642,47 @@ const EditPatientPage = () => {
                     <Col md={6}>
                       <Card className="mb-3">
                         <Card.Header className="bg-success text-white">
-                          <h6 className="mb-0">Lifestyle</h6>
+                          <h6 className="mb-0">{t('patients.lifestyle')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">
-                            <Form.Label>Exercise Habits</Form.Label>
+                            <Form.Label>{t('patients.exerciseHabits')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={3}
                               name="exercise_habits"
                               value={formData.exercise_habits}
                               onChange={handleInputChange}
-                              placeholder="Describe exercise routine..."
+                              placeholder={t('patients.exerciseHabitsPlaceholder')}
                             />
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Smoking Status</Form.Label>
+                            <Form.Label>{t('patients.smokingStatus')}</Form.Label>
                             <Form.Select
                               name="smoking_status"
                               value={formData.smoking_status}
                               onChange={handleInputChange}
                             >
-                              <option value="">Select Status</option>
-                              <option value="Never">Never</option>
-                              <option value="Former">Former</option>
-                              <option value="Current">Current</option>
+                              <option value="">{t('patients.selectStatus')}</option>
+                              <option value="Never">{t('patients.never')}</option>
+                              <option value="Former">{t('patients.former')}</option>
+                              <option value="Current">{t('patients.current')}</option>
                             </Form.Select>
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Alcohol Consumption</Form.Label>
+                            <Form.Label>{t('patients.alcoholConsumption')}</Form.Label>
                             <Form.Select
                               name="alcohol_consumption"
                               value={formData.alcohol_consumption}
                               onChange={handleInputChange}
                             >
-                              <option value="">Select Frequency</option>
-                              <option value="None">None</option>
-                              <option value="Occasional">Occasional</option>
-                              <option value="Moderate">Moderate</option>
-                              <option value="Heavy">Heavy</option>
+                              <option value="">{t('patients.selectFrequency')}</option>
+                              <option value="None">{t('patients.none')}</option>
+                              <option value="Occasional">{t('patients.occasional')}</option>
+                              <option value="Moderate">{t('patients.moderate')}</option>
+                              <option value="Heavy">{t('patients.heavy')}</option>
                             </Form.Select>
                           </Form.Group>
                         </Card.Body>
@@ -692,22 +692,22 @@ const EditPatientPage = () => {
                 </Tab>
 
                 {/* Administrative Tab */}
-                <Tab eventKey="admin" title="⚙️ Administrative">
+                <Tab eventKey="admin" title={`⚙️ ${t('patients.administrativeTab')}`}>
                   <Row>
                     <Col md={6}>
                       <Card className="mb-3">
                         <Card.Header className="bg-warning">
-                          <h6 className="mb-0">Care Team</h6>
+                          <h6 className="mb-0">{t('patients.careTeam')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">
-                            <Form.Label>Assigned Dietitian</Form.Label>
+                            <Form.Label>{t('patients.assignedDietitian')}</Form.Label>
                             <Form.Select
                               name="assigned_dietitian_id"
                               value={formData.assigned_dietitian_id}
                               onChange={handleInputChange}
                             >
-                              <option value="">Select a dietitian (optional)</option>
+                              <option value="">{t('patients.selectDietitianOptional')}</option>
                               {dietitians.map(dietitian => (
                                 <option key={dietitian.id} value={dietitian.id}>
                                   {dietitian.first_name} {dietitian.last_name}
@@ -716,7 +716,7 @@ const EditPatientPage = () => {
                               ))}
                             </Form.Select>
                             <Form.Text className="text-muted">
-                              Leave empty to assign later or for automatic assignment
+                              {t('patients.assignLaterHelp')}
                             </Form.Text>
                           </Form.Group>
 
@@ -724,12 +724,12 @@ const EditPatientPage = () => {
                             <Form.Check
                               type="checkbox"
                               name="is_active"
-                              label="Active Patient"
+                              label={t('patients.activePatient')}
                               checked={formData.is_active}
                               onChange={handleInputChange}
                             />
                             <Form.Text className="text-muted">
-                              Inactive patients won't appear in active patient lists
+                              {t('patients.inactivePatientsNote')}
                             </Form.Text>
                           </Form.Group>
                         </Card.Body>
@@ -739,18 +739,18 @@ const EditPatientPage = () => {
                     <Col md={6}>
                       <Card className="mb-3">
                         <Card.Header className="bg-warning">
-                          <h6 className="mb-0">Additional Notes</h6>
+                          <h6 className="mb-0">{t('patients.additionalNotes')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">
-                            <Form.Label>Administrative Notes</Form.Label>
+                            <Form.Label>{t('patients.administrativeNotes')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={5}
                               name="notes"
                               value={formData.notes}
                               onChange={handleInputChange}
-                              placeholder="Any additional notes about the patient..."
+                              placeholder={t('patients.additionalNotesPlaceholder')}
                             />
                           </Form.Group>
                         </Card.Body>
@@ -763,10 +763,10 @@ const EditPatientPage = () => {
               {/* Action Buttons */}
               <div className="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
                 <Button variant="outline-secondary" onClick={handleBack} disabled={saving}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button variant="primary" type="submit" disabled={saving}>
-                  {saving ? 'Saving Changes...' : 'Save Changes'}
+                  {saving ? t('patients.updating') : t('visits.saveChanges')}
                 </Button>
               </div>
             </Card.Body>
