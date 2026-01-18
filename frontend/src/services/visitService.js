@@ -74,11 +74,36 @@ export const addMeasurements = async (id, measurements) => {
   return response;
 };
 
+/**
+ * Update measurement
+ * @param {string} visitId - Visit UUID
+ * @param {string} measurementId - Measurement UUID
+ * @param {Object} measurements - Measurement data
+ * @returns {Promise} API response
+ */
+export const updateMeasurement = async (visitId, measurementId, measurements) => {
+  const response = await api.put(`/api/visits/${visitId}/measurements/${measurementId}`, measurements);
+  return response;
+};
+
+/**
+ * Delete measurement
+ * @param {string} visitId - Visit UUID
+ * @param {string} measurementId - Measurement UUID
+ * @returns {Promise} API response
+ */
+export const deleteMeasurement = async (visitId, measurementId) => {
+  const response = await api.delete(`/api/visits/${visitId}/measurements/${measurementId}`);
+  return response;
+};
+
 export default {
   getVisits,
   getVisitById,
   createVisit,
   updateVisit,
   deleteVisit,
-  addMeasurements
+  addMeasurements,
+  updateMeasurement,
+  deleteMeasurement
 };

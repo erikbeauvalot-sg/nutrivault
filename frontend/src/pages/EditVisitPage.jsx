@@ -48,6 +48,8 @@ const EditVisitPage = () => {
     notes: ''
   });
 
+  const [editingMeasurement, setEditingMeasurement] = useState(null);
+
   useEffect(() => {
     fetchVisitData();
   }, [id]);
@@ -175,9 +177,16 @@ const EditVisitPage = () => {
         notes: measurementData.notes || ''
       };
 
-      await visitService.addMeasurements(id, submitData);
+      if (editingMeasurement) {
+        // Update existing measurement
+        await visitService.updateMeasurement(id, editingMeasurement.id, submitData);
+        setEditingMeasurement(null);
+      } else {
+        // Add new measurement
+        await visitService.addMeasurements(id, submitData);
+      }
 
-      // Refresh visit data to show new measurement
+      // Refresh visit data to show updated measurement
       await fetchVisitData();
 
       // Reset measurement form
@@ -198,6 +207,49 @@ const EditVisitPage = () => {
       console.error('Error saving measurements:', err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleEditMeasurement = (measurement) => {
+    setMeasurementData({
+      weight_kg: measurement.weight_kg || '',
+      height_cm: measurement.height_cm || '',
+      bp_systolic: measurement.blood_pressure_systolic || '',
+      bp_diastolic: measurement.blood_pressure_diastolic || '',
+      waist_circumference_cm: measurement.waist_circumference_cm || '',
+      body_fat_percentage: measurement.body_fat_percentage || '',
+      muscle_mass_percentage: measurement.muscle_mass_percentage || '',
+      notes: measurement.notes || ''
+    });
+    setEditingMeasurement(measurement);
+    setActiveTab('clinical'); // Switch to the measurement form tab
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMeasurement(null);
+    setMeasurementData({
+      weight_kg: '',
+      height_cm: '',
+      bp_systolic: '',
+      bp_diastolic: '',
+      waist_circumference_cm: '',
+      body_fat_percentage: '',
+      muscle_mass_percentage: '',
+      notes: ''
+    });
+  };
+
+  const handleDeleteMeasurement = async (measurementId) => {
+    if (!window.confirm('Are you sure you want to delete this measurement?')) {
+      return;
+    }
+
+    try {
+      await visitService.deleteMeasurement(id, measurementId);
+      await fetchVisitData();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to delete measurement');
+      console.error('Error deleting measurement:', err);
     }
   };
 
@@ -488,6 +540,24 @@ const EditVisitPage = () => {
                                       {index === 0 && '🔵 Latest: '}
                                       {new Date(measurement.created_at).toLocaleString()}
                                     </strong>
+                                    <div className="d-flex gap-1">
+                                      <Button
+                                        variant="outline-primary"
+                                        size="sm"
+                                        onClick={() => handleEditMeasurement(measurement)}
+                                        title="Edit Measurement"
+                                      >
+                                        ✏️
+                                      </Button>
+                                      <Button
+                                        variant="outline-danger"
+                                        size="sm"
+                                        onClick={() => handleDeleteMeasurement(measurement.id)}
+                                        title="Delete Measurement"
+                                      >
+                                        🗑️
+                                      </Button>
+                                    </div>
                                   </div>
                                   <Row className="small">
                                     {measurement.weight_kg && (
@@ -525,8 +595,10 @@ const EditVisitPage = () => {
 
                       {/* {t('visits.addMeasurementSection')} */}
                       <Card className="mb-3">
-                        <Card.Header className="bg-warning">
-                          <h6 className="mb-0">{t('visits.addMeasurementSection')}</h6>
+                        <Card.Header className={editingMeasurement ? "bg-primary text-white" : "bg-warning"}>
+                          <h6 className="mb-0">
+                            {editingMeasurement ? '✏️ Edit Measurement' : t('visits.addMeasurementSection')}
+                          </h6>
                         </Card.Header>
                         <Card.Body>
                           <p className="text-muted small">All fields are optional</p>
@@ -666,13 +738,27 @@ const EditVisitPage = () => {
                             />
                           </Form.Group>
 
-                          <Button
-                            variant="info"
-                            onClick={handleAddMeasurement}
-                            disabled={saving}
-                          >
-                            {saving ? 'Adding Measurement...' : 'Add Measurement'}
-                          </Button>
+                          <div className="d-flex gap-2">
+                            {editingMeasurement && (
+                              <Button
+                                variant="outline-secondary"
+                                onClick={handleCancelEdit}
+                                disabled={saving}
+                              >
+                                Cancel Edit
+                              </Button>
+                            )}
+                            <Button
+                              variant="info"
+                              onClick={handleAddMeasurement}
+                              disabled={saving}
+                            >
+                              {saving
+                                ? (editingMeasurement ? 'Updating...' : 'Adding...')
+                                : (editingMeasurement ? 'Update Measurement' : 'Add Measurement')
+                              }
+                            </Button>
+                          </div>
                         </Card.Body>
                       </Card>
                     </Col>

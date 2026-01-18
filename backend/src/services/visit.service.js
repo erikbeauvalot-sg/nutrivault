@@ -625,11 +625,178 @@ function calculateVisitAmount(visit) {
   return basePrice;
 }
 
+/**
+ * Update measurement
+ *
+ * @param {Object} user - Authenticated user object
+ * @param {string} visitId - Visit UUID
+ * @param {string} measurementId - Measurement UUID
+ * @param {Object} measurementData - Measurement update data
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated measurement
+ */
+async function updateMeasurement(user, visitId, measurementId, measurementData, requestMetadata = {}) {
+  try {
+    const visit = await Visit.findByPk(visitId);
+
+    if (!visit) {
+      const error = new Error('Visit not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // RBAC: Only assigned dietitian can update measurements
+    if (user.role.name === 'DIETITIAN' && visit.dietitian_id !== user.id) {
+      const error = new Error('Access denied: You can only update measurements for your own visits');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const measurement = await VisitMeasurement.findOne({
+      where: {
+        id: measurementId,
+        visit_id: visitId
+      }
+    });
+
+    if (!measurement) {
+      const error = new Error('Measurement not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Store old values for audit
+    const oldValues = measurement.toJSON();
+
+    // Auto-calculate BMI if weight and height provided
+    let bmi = measurementData.bmi;
+    if (measurementData.weight_kg && measurementData.height_cm && !bmi) {
+      const heightInMeters = measurementData.height_cm / 100;
+      bmi = (measurementData.weight_kg / (heightInMeters * heightInMeters)).toFixed(2);
+    }
+
+    // Update measurement
+    await measurement.update({
+      weight_kg: measurementData.weight_kg !== undefined ? measurementData.weight_kg : measurement.weight_kg,
+      height_cm: measurementData.height_cm !== undefined ? measurementData.height_cm : measurement.height_cm,
+      bmi: bmi !== undefined ? bmi : measurement.bmi,
+      blood_pressure_systolic: measurementData.blood_pressure_systolic !== undefined
+        ? measurementData.blood_pressure_systolic
+        : measurement.blood_pressure_systolic,
+      blood_pressure_diastolic: measurementData.blood_pressure_diastolic !== undefined
+        ? measurementData.blood_pressure_diastolic
+        : measurement.blood_pressure_diastolic,
+      waist_circumference_cm: measurementData.waist_circumference_cm !== undefined
+        ? measurementData.waist_circumference_cm
+        : measurement.waist_circumference_cm,
+      body_fat_percentage: measurementData.body_fat_percentage !== undefined
+        ? measurementData.body_fat_percentage
+        : measurement.body_fat_percentage,
+      muscle_mass_percentage: measurementData.muscle_mass_percentage !== undefined
+        ? measurementData.muscle_mass_percentage
+        : measurement.muscle_mass_percentage,
+      notes: measurementData.notes !== undefined ? measurementData.notes : measurement.notes
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'UPDATE',
+      resource_type: 'visit_measurements',
+      resource_id: measurementId,
+      status: 'SUCCESS',
+      severity: 'INFO',
+      changes: {
+        before: oldValues,
+        after: measurement.toJSON()
+      },
+      ip_address: requestMetadata.ip,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return measurement;
+  } catch (error) {
+    console.error('Error in updateMeasurement:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete measurement
+ *
+ * @param {Object} user - Authenticated user object
+ * @param {string} visitId - Visit UUID
+ * @param {string} measurementId - Measurement UUID
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<void>}
+ */
+async function deleteMeasurement(user, visitId, measurementId, requestMetadata = {}) {
+  try {
+    const visit = await Visit.findByPk(visitId);
+
+    if (!visit) {
+      const error = new Error('Visit not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // RBAC: Only assigned dietitian can delete measurements
+    if (user.role.name === 'DIETITIAN' && visit.dietitian_id !== user.id) {
+      const error = new Error('Access denied: You can only delete measurements from your own visits');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const measurement = await VisitMeasurement.findOne({
+      where: {
+        id: measurementId,
+        visit_id: visitId
+      }
+    });
+
+    if (!measurement) {
+      const error = new Error('Measurement not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Store values for audit before deletion
+    const deletedValues = measurement.toJSON();
+
+    // Delete measurement
+    await measurement.destroy();
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'DELETE',
+      resource_type: 'visit_measurements',
+      resource_id: measurementId,
+      status: 'SUCCESS',
+      severity: 'WARNING',
+      changes: { before: deletedValues },
+      ip_address: requestMetadata.ip,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      user_agent: requestMetadata.userAgent
+    });
+  } catch (error) {
+    console.error('Error in deleteMeasurement:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getVisits,
   getVisitById,
   createVisit,
   updateVisit,
   deleteVisit,
-  addMeasurements
+  addMeasurements,
+  updateMeasurement,
+  deleteMeasurement
 };

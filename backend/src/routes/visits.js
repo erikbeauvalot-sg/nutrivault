@@ -310,4 +310,31 @@ router.post(
   visitController.addMeasurements
 );
 
+// PUT /api/visits/:visitId/measurements/:measurementId - Update measurement
+router.put(
+  '/:visitId/measurements/:measurementId',
+  authenticate,
+  requirePermission('visits.update'),
+  [
+    param('visitId').isUUID().withMessage('Visit ID must be a valid UUID'),
+    param('measurementId').isUUID().withMessage('Measurement ID must be a valid UUID')
+  ],
+  addMeasurementsValidation,
+  validate,
+  visitController.updateMeasurement
+);
+
+// DELETE /api/visits/:visitId/measurements/:measurementId - Delete measurement
+router.delete(
+  '/:visitId/measurements/:measurementId',
+  authenticate,
+  requirePermission('visits.update'),
+  [
+    param('visitId').isUUID().withMessage('Visit ID must be a valid UUID'),
+    param('measurementId').isUUID().withMessage('Measurement ID must be a valid UUID')
+  ],
+  validate,
+  visitController.deleteMeasurement
+);
+
 module.exports = router;

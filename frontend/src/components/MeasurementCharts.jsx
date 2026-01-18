@@ -121,36 +121,6 @@ const MeasurementCharts = ({ visits }) => {
           </Col>
         )}
 
-        {/* Height Chart */}
-        {hasData('height_cm') && (
-          <Col md={6} className="mb-4">
-            <Card>
-              <Card.Header className="bg-info text-white">
-                <h6 className="mb-0">📏 {t('visits.height')} (cm)</h6>
-              </Card.Header>
-              <Card.Body>
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={measurementData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="visitDate" />
-                    <YAxis />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="height_cm"
-                      stroke="#0dcaf0"
-                      strokeWidth={2}
-                      name="Height (cm)"
-                      connectNulls
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </Card.Body>
-            </Card>
-          </Col>
-        )}
-
         {/* BMI Chart */}
         {hasData('bmi') && (
           <Col md={6} className="mb-4">

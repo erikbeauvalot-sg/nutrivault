@@ -165,3 +165,53 @@ exports.addMeasurements = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * PUT /api/visits/:visitId/measurements/:measurementId - Update measurement
+ */
+exports.updateMeasurement = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const visitId = req.params.visitId;
+    const measurementId = req.params.measurementId;
+    const measurementData = req.body;
+    const requestMetadata = getRequestMetadata(req);
+
+    const measurement = await visitService.updateMeasurement(
+      user,
+      visitId,
+      measurementId,
+      measurementData,
+      requestMetadata
+    );
+
+    res.json({
+      success: true,
+      data: measurement,
+      message: 'Measurement updated successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/visits/:visitId/measurements/:measurementId - Delete measurement
+ */
+exports.deleteMeasurement = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const visitId = req.params.visitId;
+    const measurementId = req.params.measurementId;
+    const requestMetadata = getRequestMetadata(req);
+
+    await visitService.deleteMeasurement(user, visitId, measurementId, requestMetadata);
+
+    res.json({
+      success: true,
+      message: 'Measurement deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
