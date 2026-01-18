@@ -8,7 +8,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import './Sidebar.css';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const { t } = useTranslation();
 
@@ -22,8 +22,15 @@ const Sidebar = () => {
     { path: '/users', icon: '👤', label: t('navigation.users') },
   ];
 
+  const handleNavClick = () => {
+    // Close sidebar on mobile after navigation
+    if (window.innerWidth < 992) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="sidebar bg-light border-end">
+    <div className={`sidebar bg-light border-end ${isOpen ? 'show' : ''}`}>
       <Nav className="flex-column">
         {menuItems.map((item) => (
           <Nav.Link
@@ -32,6 +39,7 @@ const Sidebar = () => {
             to={item.disabled ? undefined : item.path}
             className={`sidebar-item ${location.pathname === item.path ? 'active' : ''} ${item.disabled ? 'disabled' : ''}`}
             disabled={item.disabled}
+            onClick={item.disabled ? undefined : handleNavClick}
           >
             <span className="sidebar-icon">{item.icon}</span>
             <span className="sidebar-label">{item.label}</span>

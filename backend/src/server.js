@@ -120,8 +120,9 @@ app.use((req, res) => {
 db.sequelize.sync()
   .then(() => {
     console.log('Database synchronized');
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`✅ NutriVault POC server running on http://localhost:${PORT}`);
+      console.log(`🌐 Accessible on network at http://0.0.0.0:${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/health`);
       console.log(`👥 Patients API: http://localhost:${PORT}/api/patients`);
       console.log(`📅 Visits API: http://localhost:${PORT}/api/visits`);

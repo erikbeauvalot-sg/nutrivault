@@ -661,6 +661,94 @@ const PatientDetailPage = () => {
                 </Card>
               </Tab>
 
+              {/* Raw Measurements Tab (Development Only) */}
+              {import.meta.env.DEV && (
+                <Tab eventKey="raw-measurements" title={`🔧 Raw Data`}>
+                  <Card>
+                    <Card.Header className="bg-dark text-white">
+                      <h5 className="mb-0">Raw Measurement Data (Development Only)</h5>
+                      <p className="text-muted mb-0 small">
+                        All measurements from completed visits
+                      </p>
+                    </Card.Header>
+                    <Card.Body>
+                      {(() => {
+                        // Filter completed visits and extract measurements
+                        const completedVisits = visits.filter(v => v.status === 'COMPLETED');
+                        const allMeasurements = [];
+
+                        completedVisits.forEach(visit => {
+                          if (visit.measurements && Array.isArray(visit.measurements)) {
+                            visit.measurements.forEach(measurement => {
+                              allMeasurements.push({
+                                ...measurement,
+                                visit_date: visit.visit_date,
+                                visit_type: visit.visit_type,
+                                visit_id: visit.id
+                              });
+                            });
+                          }
+                        });
+
+                        if (allMeasurements.length === 0) {
+                          return (
+                            <Alert variant="info">
+                              No measurements found in completed visits.
+                            </Alert>
+                          );
+                        }
+
+                        return (
+                          <div className="table-responsive">
+                            <table className="table table-sm table-bordered">
+                              <thead className="table-dark">
+                                <tr>
+                                  <th>Visit Date</th>
+                                  <th>Visit Type</th>
+                                  <th>Weight (kg)</th>
+                                  <th>Height (cm)</th>
+                                  <th>BMI</th>
+                                  <th>BP Systolic</th>
+                                  <th>BP Diastolic</th>
+                                  <th>Heart Rate</th>
+                                  <th>Waist (cm)</th>
+                                  <th>Hip (cm)</th>
+                                  <th>Body Fat %</th>
+                                  <th>Muscle Mass (kg)</th>
+                                  <th>Notes</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {allMeasurements.map((m, idx) => (
+                                  <tr key={idx}>
+                                    <td>{formatDateTime(m.visit_date)}</td>
+                                    <td>{m.visit_type || 'General'}</td>
+                                    <td>{m.weight_kg || '-'}</td>
+                                    <td>{m.height_cm || '-'}</td>
+                                    <td>{m.bmi ? m.bmi.toFixed(1) : '-'}</td>
+                                    <td>{m.blood_pressure_systolic || '-'}</td>
+                                    <td>{m.blood_pressure_diastolic || '-'}</td>
+                                    <td>{m.heart_rate_bpm || '-'}</td>
+                                    <td>{m.waist_circumference_cm || '-'}</td>
+                                    <td>{m.hip_circumference_cm || '-'}</td>
+                                    <td>{m.body_fat_percentage || '-'}</td>
+                                    <td>{m.muscle_mass_kg || '-'}</td>
+                                    <td>{m.notes || '-'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            <div className="mt-3">
+                              <strong>Total Measurements:</strong> {allMeasurements.length} records from {completedVisits.length} completed visits
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </Card.Body>
+                  </Card>
+                </Tab>
+              )}
+
               {/* Administrative Tab */}
               {canEditPatient && (
                 <Tab eventKey="admin" title="Administrative">
