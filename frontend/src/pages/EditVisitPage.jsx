@@ -126,6 +126,7 @@ const EditVisitPage = () => {
     setError(null);
 
     try {
+      // Step 1: Update visit data
       const submitData = {
         ...formData,
         visit_date: new Date(formData.visit_date).toISOString(),
@@ -141,6 +142,46 @@ const EditVisitPage = () => {
       });
 
       await visitService.updateVisit(id, submitData);
+
+      // Step 2: Check if there's any measurement data to save
+      const hasMeasurementData =
+        measurementData.weight_kg ||
+        measurementData.height_cm ||
+        measurementData.bp_systolic ||
+        measurementData.bp_diastolic ||
+        measurementData.waist_circumference_cm ||
+        measurementData.body_fat_percentage ||
+        measurementData.muscle_mass_percentage ||
+        measurementData.notes;
+
+      if (hasMeasurementData) {
+        // Auto-save measurement if any data is filled in
+        const measurementSubmitData = {
+          weight_kg: measurementData.weight_kg ? parseFloat(measurementData.weight_kg) : null,
+          height_cm: measurementData.height_cm ? parseFloat(measurementData.height_cm) : null,
+          blood_pressure_systolic: measurementData.bp_systolic ? parseInt(measurementData.bp_systolic) : null,
+          blood_pressure_diastolic: measurementData.bp_diastolic ? parseInt(measurementData.bp_diastolic) : null,
+          waist_circumference_cm: measurementData.waist_circumference_cm
+            ? parseFloat(measurementData.waist_circumference_cm)
+            : null,
+          body_fat_percentage: measurementData.body_fat_percentage
+            ? parseFloat(measurementData.body_fat_percentage)
+            : null,
+          muscle_mass_percentage: measurementData.muscle_mass_percentage
+            ? parseFloat(measurementData.muscle_mass_percentage)
+            : null,
+          notes: measurementData.notes || ''
+        };
+
+        if (editingMeasurement) {
+          // Update existing measurement
+          await visitService.updateMeasurement(id, editingMeasurement.id, measurementSubmitData);
+        } else {
+          // Add new measurement
+          await visitService.addMeasurements(id, measurementSubmitData);
+        }
+      }
+
       navigate('/visits');
     } catch (err) {
       const errorMsg = err.response?.data?.details
@@ -601,7 +642,9 @@ const EditVisitPage = () => {
                           </h6>
                         </Card.Header>
                         <Card.Body>
-                          <p className="text-muted small">All fields are optional</p>
+                          <p className="text-muted small">
+                            All fields are optional. Measurements will be automatically saved when you click "Save Changes" below.
+                          </p>
                           <Row>
                             <Col md={4}>
                               <Form.Group className="mb-3">
@@ -755,9 +798,12 @@ const EditVisitPage = () => {
                             >
                               {saving
                                 ? (editingMeasurement ? 'Updating...' : 'Adding...')
-                                : (editingMeasurement ? 'Update Measurement' : 'Add Measurement')
+                                : (editingMeasurement ? 'Update Measurement Now' : 'Add Measurement Now')
                               }
                             </Button>
+                            <small className="text-muted align-self-center ms-2">
+                              (Optional: saves immediately without leaving page)
+                            </small>
                           </div>
                         </Card.Body>
                       </Card>
