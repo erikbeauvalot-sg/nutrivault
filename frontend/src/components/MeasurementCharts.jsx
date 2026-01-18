@@ -21,13 +21,21 @@ const MeasurementCharts = ({ visits }) => {
           const measurementDate = measurement.created_at || visit.visit_date;
           const date = new Date(measurementDate);
 
+          // Calculate BMI if weight and height are available but BMI is not
+          let bmi = measurement.bmi || null;
+          if (!bmi && measurement.weight_kg && measurement.height_cm) {
+            const heightInMeters = measurement.height_cm / 100;
+            bmi = parseFloat((measurement.weight_kg / (heightInMeters * heightInMeters)).toFixed(2));
+          }
+
           data.push({
             date: date,
             visitDate: date.toLocaleDateString(),
             visitTime: date.toLocaleString(),
             weight_kg: measurement.weight_kg || null,
             height_cm: measurement.height_cm || null,
-            bmi: measurement.bmi || null,
+            bmi: bmi,
+            bmiCalculated: !measurement.bmi && bmi ? true : false, // Flag to indicate calculated BMI
             bp_systolic: measurement.blood_pressure_systolic || null,
             bp_diastolic: measurement.blood_pressure_diastolic || null,
             waist_cm: measurement.waist_circumference_cm || null,
