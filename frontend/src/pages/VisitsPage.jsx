@@ -285,7 +285,12 @@ const VisitsPage = () => {
                       </thead>
                       <tbody>
                         {visits.map(visit => (
-                          <tr key={visit.id}>
+                          <tr
+                            key={visit.id}
+                            onClick={() => handleViewClick(visit.id)}
+                            style={{ cursor: 'pointer' }}
+                            className="visit-row"
+                          >
                             <td>
                               <div>{formatDate(visit.visit_date)}</div>
                               <small className="text-muted">{formatTime(visit.visit_date)}</small>
@@ -309,16 +314,8 @@ const VisitsPage = () => {
                             <td>{visit.visit_type || '-'}</td>
                             <td>{getStatusBadge(visit.status)}</td>
                             <td>{visit.duration_minutes ? `${visit.duration_minutes} min` : '-'}</td>
-                            <td>
+                            <td onClick={(e) => e.stopPropagation()}>
                               <div className="d-flex gap-1">
-                                <Button
-                                  variant="outline-info"
-                                  size="sm"
-                                  onClick={() => handleViewClick(visit.id)}
-                                  title={t('visits.viewVisit', 'View Details')}
-                                >
-                                  👁️
-                                </Button>
                                 {canEdit(visit) && (
                                   <>
                                     <Button
@@ -403,7 +400,11 @@ const VisitsPage = () => {
                           {index < visits.length - 1 && <div className="timeline-line"></div>}
                         </div>
                         <div className="timeline-content">
-                          <Card className="timeline-card">
+                          <Card
+                            className="timeline-card"
+                            onClick={() => handleViewClick(visit.id)}
+                            style={{ cursor: 'pointer' }}
+                          >
                             <Card.Body>
                               <Row>
                                 <Col md={8}>
@@ -431,15 +432,10 @@ const VisitsPage = () => {
                                   )}
                                 </Col>
                                 <Col md={4} className="text-end">
-                                  <div className="timeline-actions d-flex gap-1 justify-content-end">
-                                    <Button
-                                      variant="outline-info"
-                                      size="sm"
-                                      onClick={() => handleViewClick(visit.id)}
-                                      title={t('visits.viewVisit', 'View Details')}
-                                    >
-                                      👁️
-                                    </Button>
+                                  <div
+                                    className="timeline-actions d-flex gap-1 justify-content-end"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
                                     {canEdit(visit) && (
                                       <>
                                         <Button

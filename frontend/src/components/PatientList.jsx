@@ -189,16 +189,6 @@ function PatientList({ patients, loading, onEdit, onDelete, onViewDetails, onSch
                   </td>
                   <td onClick={(e) => e.stopPropagation()}>
                     <div className="d-flex gap-1">
-                      {onViewDetails && (
-                        <Button
-                          variant="outline-info"
-                          size="sm"
-                          onClick={() => onViewDetails(patient)}
-                          title={t('patients.viewCompleteProfile', 'View Complete Profile')}
-                        >
-                          📋
-                        </Button>
-                      )}
                       {onScheduleVisit && (
                         <Button
                           variant="outline-success"

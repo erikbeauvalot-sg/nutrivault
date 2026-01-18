@@ -194,7 +194,12 @@ function InvoiceList({
               </tr>
             ) : (
               invoices.map((invoice) => (
-                <tr key={invoice.id}>
+                <tr
+                  key={invoice.id}
+                  onClick={() => onView(invoice)}
+                  style={{ cursor: 'pointer' }}
+                  className="invoice-row"
+                >
                   <td>
                     <strong>{invoice.invoice_number}</strong>
                   </td>
@@ -222,17 +227,8 @@ function InvoiceList({
                       {t(`billing.status.${invoice.status.toLowerCase()}`, invoice.status)}
                     </Badge>
                   </td>
-                  <td>
+                  <td onClick={(e) => e.stopPropagation()}>
                     <div className="d-flex gap-1">
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => onView(invoice)}
-                        title={t('common.view', 'View')}
-                      >
-                        👁️
-                      </Button>
-
                       {canUpdate && (
                         <>
                           <Button

@@ -597,7 +597,12 @@ const PatientDetailPage = () => {
                           </thead>
                           <tbody>
                             {visits.map(visit => (
-                              <tr key={visit.id}>
+                              <tr
+                                key={visit.id}
+                                onClick={() => handleViewVisit(visit.id)}
+                                style={{ cursor: 'pointer' }}
+                                className="visit-row"
+                              >
                                 <td>{formatDateTime(visit.visit_date)}</td>
                                 <td>{visit.visit_type || 'General'}</td>
                                 <td>{visit.notes || '-'}</td>
@@ -606,16 +611,8 @@ const PatientDetailPage = () => {
                                     {visit.status || 'Scheduled'}
                                   </Badge>
                                 </td>
-                                <td>
+                                <td onClick={(e) => e.stopPropagation()}>
                                   <div className="d-flex gap-1">
-                                    <Button
-                                      variant="outline-primary"
-                                      size="sm"
-                                      onClick={() => handleViewVisit(visit.id)}
-                                      title="View Details"
-                                    >
-                                      👁️
-                                    </Button>
                                     {canEditVisits && (
                                       <Button
                                         variant="outline-secondary"
