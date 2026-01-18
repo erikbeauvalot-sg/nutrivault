@@ -50,7 +50,7 @@ const createVisitValidation = [
     .withMessage('Visit date must be a valid ISO 8601 date'),
   
   body('visit_type')
-    .optional()
+    .optional({ checkFalsy: true })
     .isString()
     .withMessage('Visit type must be a string')
     .isLength({ max: 50 })
@@ -67,22 +67,22 @@ const createVisitValidation = [
     .withMessage('Duration must be between 1 and 480 minutes'),
   
   body('chief_complaint')
-    .optional()
+    .optional({ checkFalsy: true })
     .isString()
     .withMessage('Chief complaint must be a string'),
-  
+
   body('assessment')
-    .optional()
+    .optional({ checkFalsy: true })
     .isString()
     .withMessage('Assessment must be a string'),
-  
+
   body('recommendations')
-    .optional()
+    .optional({ checkFalsy: true })
     .isString()
     .withMessage('Recommendations must be a string'),
-  
+
   body('notes')
-    .optional()
+    .optional({ checkFalsy: true })
     .isString()
     .withMessage('Notes must be a string'),
   
@@ -102,7 +102,7 @@ const updateVisitValidation = [
     .withMessage('Visit date must be a valid ISO 8601 date'),
   
   body('visit_type')
-    .optional()
+    .optional({ checkFalsy: true })
     .isString()
     .withMessage('Visit type must be a string')
     .isLength({ max: 50 })
@@ -119,22 +119,22 @@ const updateVisitValidation = [
     .withMessage('Duration must be between 1 and 480 minutes'),
   
   body('chief_complaint')
-    .optional()
+    .optional({ checkFalsy: true })
     .isString()
     .withMessage('Chief complaint must be a string'),
-  
+
   body('assessment')
-    .optional()
+    .optional({ checkFalsy: true })
     .isString()
     .withMessage('Assessment must be a string'),
-  
+
   body('recommendations')
-    .optional()
+    .optional({ checkFalsy: true })
     .isString()
     .withMessage('Recommendations must be a string'),
-  
+
   body('notes')
-    .optional()
+    .optional({ checkFalsy: true })
     .isString()
     .withMessage('Notes must be a string'),
   
