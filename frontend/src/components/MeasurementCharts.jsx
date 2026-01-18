@@ -53,10 +53,18 @@ const MeasurementCharts = ({ visits }) => {
   const measurementData = extractMeasurementData();
 
   // Debug log to verify data extraction
+  const calculatedBMICount = measurementData.filter(d => d.bmiCalculated).length;
+  const storedBMICount = measurementData.filter(d => d.bmi && !d.bmiCalculated).length;
+
   console.log('📊 Measurement data extracted:', {
     totalVisits: visits.length,
     visitsWithMeasurements: visits.filter(v => v.measurements?.length > 0).length,
     totalMeasurements: measurementData.length,
+    bmiStats: {
+      stored: storedBMICount,
+      calculated: calculatedBMICount,
+      total: storedBMICount + calculatedBMICount
+    },
     measurements: measurementData
   });
 
@@ -86,6 +94,9 @@ const MeasurementCharts = ({ visits }) => {
           {payload.map((entry, index) => (
             <p key={index} className="mb-0 small" style={{ color: entry.color }}>
               {entry.name}: {entry.value !== null ? entry.value.toFixed(2) : '-'}
+              {entry.dataKey === 'bmi' && dataPoint.bmiCalculated && (
+                <span className="text-muted"> (calculated)</span>
+              )}
             </p>
           ))}
         </div>
@@ -134,7 +145,14 @@ const MeasurementCharts = ({ visits }) => {
           <Col md={6} className="mb-4">
             <Card>
               <Card.Header className="bg-success text-white">
-                <h6 className="mb-0">📊 BMI</h6>
+                <div className="d-flex justify-content-between align-items-center">
+                  <h6 className="mb-0">📊 BMI</h6>
+                  {calculatedBMICount > 0 && (
+                    <small className="mb-0" style={{ fontSize: '0.75rem', opacity: 0.9 }}>
+                      {calculatedBMICount} auto-calculated
+                    </small>
+                  )}
+                </div>
               </Card.Header>
               <Card.Body>
                 <ResponsiveContainer width="100%" height={250}>
