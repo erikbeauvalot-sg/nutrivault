@@ -145,41 +145,63 @@ const EditVisitPage = () => {
 
       // Step 2: Check if there's any measurement data to save
       const hasMeasurementData =
-        measurementData.weight_kg ||
-        measurementData.height_cm ||
-        measurementData.bp_systolic ||
-        measurementData.bp_diastolic ||
-        measurementData.waist_circumference_cm ||
-        measurementData.body_fat_percentage ||
-        measurementData.muscle_mass_percentage ||
-        measurementData.notes;
+        (measurementData.weight_kg && measurementData.weight_kg.trim() !== '') ||
+        (measurementData.height_cm && measurementData.height_cm.trim() !== '') ||
+        (measurementData.bp_systolic && measurementData.bp_systolic.trim() !== '') ||
+        (measurementData.bp_diastolic && measurementData.bp_diastolic.trim() !== '') ||
+        (measurementData.waist_circumference_cm && measurementData.waist_circumference_cm.trim() !== '') ||
+        (measurementData.body_fat_percentage && measurementData.body_fat_percentage.trim() !== '') ||
+        (measurementData.muscle_mass_percentage && measurementData.muscle_mass_percentage.trim() !== '') ||
+        (measurementData.notes && measurementData.notes.trim() !== '');
+
+      console.log('🔍 Auto-save check:', {
+        hasMeasurementData,
+        measurementData,
+        editingMeasurement
+      });
 
       if (hasMeasurementData) {
         // Auto-save measurement if any data is filled in
         const measurementSubmitData = {
-          weight_kg: measurementData.weight_kg ? parseFloat(measurementData.weight_kg) : null,
-          height_cm: measurementData.height_cm ? parseFloat(measurementData.height_cm) : null,
-          blood_pressure_systolic: measurementData.bp_systolic ? parseInt(measurementData.bp_systolic) : null,
-          blood_pressure_diastolic: measurementData.bp_diastolic ? parseInt(measurementData.bp_diastolic) : null,
-          waist_circumference_cm: measurementData.waist_circumference_cm
+          weight_kg: measurementData.weight_kg && measurementData.weight_kg.trim() !== ''
+            ? parseFloat(measurementData.weight_kg) : null,
+          height_cm: measurementData.height_cm && measurementData.height_cm.trim() !== ''
+            ? parseFloat(measurementData.height_cm) : null,
+          blood_pressure_systolic: measurementData.bp_systolic && measurementData.bp_systolic.trim() !== ''
+            ? parseInt(measurementData.bp_systolic) : null,
+          blood_pressure_diastolic: measurementData.bp_diastolic && measurementData.bp_diastolic.trim() !== ''
+            ? parseInt(measurementData.bp_diastolic) : null,
+          waist_circumference_cm: measurementData.waist_circumference_cm && measurementData.waist_circumference_cm.trim() !== ''
             ? parseFloat(measurementData.waist_circumference_cm)
             : null,
-          body_fat_percentage: measurementData.body_fat_percentage
+          body_fat_percentage: measurementData.body_fat_percentage && measurementData.body_fat_percentage.trim() !== ''
             ? parseFloat(measurementData.body_fat_percentage)
             : null,
-          muscle_mass_percentage: measurementData.muscle_mass_percentage
+          muscle_mass_percentage: measurementData.muscle_mass_percentage && measurementData.muscle_mass_percentage.trim() !== ''
             ? parseFloat(measurementData.muscle_mass_percentage)
             : null,
-          notes: measurementData.notes || ''
+          notes: measurementData.notes && measurementData.notes.trim() !== '' ? measurementData.notes.trim() : ''
         };
 
-        if (editingMeasurement) {
-          // Update existing measurement
-          await visitService.updateMeasurement(id, editingMeasurement.id, measurementSubmitData);
-        } else {
-          // Add new measurement
-          await visitService.addMeasurements(id, measurementSubmitData);
+        console.log('💾 Auto-saving measurement:', measurementSubmitData);
+
+        try {
+          if (editingMeasurement) {
+            // Update existing measurement
+            console.log('📝 Updating measurement:', editingMeasurement.id);
+            await visitService.updateMeasurement(id, editingMeasurement.id, measurementSubmitData);
+          } else {
+            // Add new measurement
+            console.log('➕ Adding new measurement');
+            await visitService.addMeasurements(id, measurementSubmitData);
+          }
+          console.log('✅ Measurement saved successfully');
+        } catch (measurementError) {
+          console.error('❌ Error saving measurement:', measurementError);
+          throw new Error('Failed to save measurement: ' + (measurementError.response?.data?.error || measurementError.message));
         }
+      } else {
+        console.log('⏭️ No measurement data to save, skipping');
       }
 
       navigate('/visits');
@@ -263,7 +285,7 @@ const EditVisitPage = () => {
       notes: measurement.notes || ''
     });
     setEditingMeasurement(measurement);
-    setActiveTab('clinical'); // Switch to the measurement form tab
+    setActiveTab('measurements'); // Switch to the measurements tab
   };
 
   const handleCancelEdit = () => {
