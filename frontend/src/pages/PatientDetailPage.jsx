@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import DocumentListComponent from '../components/DocumentListComponent';
 import DocumentUploadModal from '../components/DocumentUploadModal';
+import MeasurementCharts from '../components/MeasurementCharts';
 import api from '../services/api';
 
 const PatientDetailPage = () => {
@@ -641,6 +642,21 @@ const PatientDetailPage = () => {
                         </table>
                       </div>
                     )}
+                  </Card.Body>
+                </Card>
+              </Tab>
+
+              {/* Measurements Tab */}
+              <Tab eventKey="measurements" title={`📊 Measurements`}>
+                <Card>
+                  <Card.Header>
+                    <h5 className="mb-0">Measurement Trends</h5>
+                    <p className="text-muted mb-0 small">
+                      Track changes in patient measurements over time
+                    </p>
+                  </Card.Header>
+                  <Card.Body>
+                    <MeasurementCharts visits={visits} />
                   </Card.Body>
                 </Card>
               </Tab>
