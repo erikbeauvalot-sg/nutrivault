@@ -114,7 +114,7 @@ const CreateVisitPage = () => {
 
   const validateForm = () => {
     if (!formData.patient_id || !formData.dietitian_id || !formData.visit_date) {
-      setError('Patient, dietitian, and visit date are required');
+      setError(t('visits.requiredFieldsError'));
       setActiveTab('visit');
       return false;
     }
@@ -177,10 +177,10 @@ const CreateVisitPage = () => {
       <Layout>
         <Container fluid>
           <Alert variant="danger">
-            <Alert.Heading>Access Denied</Alert.Heading>
-            <p>You do not have permission to create visits.</p>
+            <Alert.Heading>{t('patients.accessDenied')}</Alert.Heading>
+            <p>{t('visits.noPermissionEdit')}</p>
             <Button variant="outline-danger" onClick={handleBack}>
-              Back to Visits
+              {t('visits.backToVisits')}
             </Button>
           </Alert>
         </Container>
@@ -195,10 +195,10 @@ const CreateVisitPage = () => {
         <Row className="mb-4">
           <Col>
             <Button variant="outline-secondary" onClick={handleBack} className="mb-3">
-              ← Back to Visits
+              ← {t('visits.backToVisits')}
             </Button>
-            <h1 className="mb-0">Schedule New Visit</h1>
-            <p className="text-muted">Enter visit details in the tabs below</p>
+            <h1 className="mb-0">{t('visits.scheduleNewVisit')}</h1>
+            <p className="text-muted">{t('visits.enterVisitDetails')}</p>
           </Col>
         </Row>
 
@@ -214,23 +214,23 @@ const CreateVisitPage = () => {
             <Card.Body>
               <Tabs activeKey={activeTab} onSelect={setActiveTab} className="mb-3">
                 {/* Visit Information Tab */}
-                <Tab eventKey="visit" title="📅 Visit Information">
+                <Tab eventKey="visit" title={`📅 ${t('visits.visitInformationTab')}`}>
                   <Row>
                     <Col md={6}>
                       <Card className="mb-3">
                         <Card.Header className="bg-primary text-white">
-                          <h6 className="mb-0">Basic Details</h6>
+                          <h6 className="mb-0">{t('visits.basicDetails')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">
-                            <Form.Label>Patient *</Form.Label>
+                            <Form.Label>{t('visits.patient')} *</Form.Label>
                             <Form.Select
                               name="patient_id"
                               value={formData.patient_id}
                               onChange={handleInputChange}
                               required
                             >
-                              <option value="">Select a patient</option>
+                              <option value="">{t('visits.selectPatient')}</option>
                               {patients.map(patient => (
                                 <option key={patient.id} value={patient.id}>
                                   {patient.first_name} {patient.last_name}
@@ -240,14 +240,14 @@ const CreateVisitPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Dietitian *</Form.Label>
+                            <Form.Label>{t('visits.dietitian')} *</Form.Label>
                             <Form.Select
                               name="dietitian_id"
                               value={formData.dietitian_id}
                               onChange={handleInputChange}
                               required
                             >
-                              <option value="">Select a dietitian</option>
+                              <option value="">{t('visits.selectDietitian')}</option>
                               {dietitians.map(dietitian => {
                                 const displayName = dietitian.first_name || dietitian.last_name
                                   ? `${dietitian.first_name || ''} ${dietitian.last_name || ''}`.trim()
@@ -262,7 +262,7 @@ const CreateVisitPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Visit Date & Time *</Form.Label>
+                            <Form.Label>{t('visits.visitDateTime')} *</Form.Label>
                             <div className="d-flex gap-2">
                               <Form.Control
                                 type="datetime-local"
@@ -284,23 +284,23 @@ const CreateVisitPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Visit Type</Form.Label>
+                            <Form.Label>{t('visits.visitType')}</Form.Label>
                             <Form.Select
                               name="visit_type"
                               value={formData.visit_type}
                               onChange={handleInputChange}
                             >
-                              <option value="">Select type</option>
-                              <option value="Initial Consultation">Initial Consultation</option>
-                              <option value="Follow-up">Follow-up</option>
-                              <option value="Final Assessment">Final Assessment</option>
-                              <option value="Nutrition Counseling">Nutrition Counseling</option>
+                              <option value="">{t('visits.selectType')}</option>
+                              <option value="Initial Consultation">{t('visits.initialConsultation')}</option>
+                              <option value="Follow-up">{t('visits.followUp')}</option>
+                              <option value="Final Assessment">{t('visits.finalAssessment')}</option>
+                              <option value="Nutrition Counseling">{t('visits.nutritionCounseling')}</option>
                               <option value="Other">Other</option>
                             </Form.Select>
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Duration (minutes)</Form.Label>
+                            <Form.Label>{t('visits.duration')}</Form.Label>
                             <Form.Control
                               type="number"
                               name="duration_minutes"
@@ -318,24 +318,24 @@ const CreateVisitPage = () => {
                     <Col md={6}>
                       <Card className="mb-3">
                         <Card.Header className="bg-info text-white">
-                          <h6 className="mb-0">Options</h6>
+                          <h6 className="mb-0">{t('visits.options')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">
                             <Form.Check
                               type="checkbox"
                               name="completeImmediately"
-                              label="Complete visit immediately and create billing"
+                              label={t('visits.completeImmediately')}
                               checked={completeImmediately}
                               onChange={(e) => setCompleteImmediately(e.target.checked)}
                             />
                             <Form.Text className="text-muted">
-                              Check this to mark the visit as completed and automatically generate a billing invoice
+                              {t('visits.completeImmediatelyHelp')}
                             </Form.Text>
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Next Visit Date</Form.Label>
+                            <Form.Label>{t('visits.nextVisitDate')}</Form.Label>
                             <Form.Control
                               type="datetime-local"
                               name="next_visit_date"
@@ -343,7 +343,7 @@ const CreateVisitPage = () => {
                               onChange={handleInputChange}
                             />
                             <Form.Text className="text-muted">
-                              Schedule a follow-up appointment
+                              {t('visits.scheduleFollowUp')}
                             </Form.Text>
                           </Form.Group>
                         </Card.Body>
@@ -353,59 +353,59 @@ const CreateVisitPage = () => {
                 </Tab>
 
                 {/* Clinical Information Tab */}
-                <Tab eventKey="clinical" title="🏥 Clinical Information">
+                <Tab eventKey="clinical" title={`🏥 ${t('visits.clinicalInformationTab')}`}>
                   <Row>
                     <Col md={12}>
                       <Card className="mb-3">
                         <Card.Header className="bg-success text-white">
-                          <h6 className="mb-0">Clinical Details</h6>
+                          <h6 className="mb-0">{t('visits.clinicalDetails')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">
-                            <Form.Label>Chief Complaint</Form.Label>
+                            <Form.Label>{t('visits.chiefComplaint')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={3}
                               name="chief_complaint"
                               value={formData.chief_complaint}
                               onChange={handleInputChange}
-                              placeholder="Patient's main concerns or symptoms"
+                              placeholder={t('visits.patientMainConcerns')}
                             />
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Assessment</Form.Label>
+                            <Form.Label>{t('visits.assessment')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={4}
                               name="assessment"
                               value={formData.assessment}
                               onChange={handleInputChange}
-                              placeholder="Clinical assessment and findings"
+                              placeholder={t('visits.clinicalAssessmentFindings')}
                             />
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Recommendations</Form.Label>
+                            <Form.Label>{t('visits.recommendations')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={4}
                               name="recommendations"
                               value={formData.recommendations}
                               onChange={handleInputChange}
-                              placeholder="Treatment plan and dietary recommendations"
+                              placeholder={t('visits.treatmentPlanRecommendations')}
                             />
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Additional Notes</Form.Label>
+                            <Form.Label>{t('patients.additionalNotes')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={3}
                               name="notes"
                               value={formData.notes}
                               onChange={handleInputChange}
-                              placeholder="Any additional notes about this visit"
+                              placeholder={t('visits.additionalVisitNotes')}
                             />
                           </Form.Group>
                         </Card.Body>
@@ -421,7 +421,7 @@ const CreateVisitPage = () => {
                   Cancel
                 </Button>
                 <Button variant="primary" type="submit" disabled={loading}>
-                  {loading ? 'Creating Visit...' : 'Create Visit'}
+                  {loading ? '{t('visits.creatingVisit')}' : '{t('visits.createVisit')}'}
                 </Button>
               </div>
             </Card.Body>

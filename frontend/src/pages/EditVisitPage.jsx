@@ -83,7 +83,8 @@ const EditVisitPage = () => {
 
       setError(null);
     } catch (err) {
-      setError('Failed to load visit: ' + (err.response?.data?.error || err.message));
+      // setError('{t('visits.failedToLoadVisit')}: ' + (err.response?.data?.error || err.message));
+      setError(t('visits.failedToLoadVisit') + ': ' + (err.response?.data?.error || err.message));
       console.error('Error fetching visit:', err);
     } finally {
       setLoading(false);
@@ -214,7 +215,7 @@ const EditVisitPage = () => {
         <Container fluid>
           <div className="text-center py-5">
             <Spinner animation="border" variant="primary" />
-            <div className="mt-2">Loading visit data...</div>
+            <div className="mt-2">{t('visits.loadingDetails')}</div>
           </div>
         </Container>
       </Layout>
@@ -226,10 +227,10 @@ const EditVisitPage = () => {
       <Layout>
         <Container fluid>
           <Alert variant="danger">
-            <Alert.Heading>Access Denied</Alert.Heading>
-            <p>You do not have permission to edit visits.</p>
+            <Alert.Heading>{t('patients.accessDenied')}</Alert.Heading>
+            <p>{t('visits.noPermissionEdit')}</p>
             <Button variant="outline-danger" onClick={handleBack}>
-              Back to Visits
+              {t('visits.backToVisits')}
             </Button>
           </Alert>
         </Container>
@@ -245,7 +246,7 @@ const EditVisitPage = () => {
             <Alert.Heading>Error Loading Visit</Alert.Heading>
             <p>{error}</p>
             <Button variant="outline-danger" onClick={handleBack}>
-              Back to Visits
+              {t('visits.backToVisits')}
             </Button>
           </Alert>
         </Container>
@@ -260,10 +261,10 @@ const EditVisitPage = () => {
         <Row className="mb-4">
           <Col>
             <Button variant="outline-secondary" onClick={handleBack} className="mb-3">
-              ← Back to Visits
+              ← {t('visits.backToVisits')}
             </Button>
             <h1 className="mb-0">
-              Edit Visit
+              {t('visits.editVisit')}
               {visit?.patient && ` - ${visit.patient.first_name} ${visit.patient.last_name}`}
             </h1>
             <p className="text-muted">
@@ -284,12 +285,12 @@ const EditVisitPage = () => {
             <Card.Body>
               <Tabs activeKey={activeTab} onSelect={setActiveTab} className="mb-3">
                 {/* Visit Information Tab */}
-                <Tab eventKey="visit" title="📅 Visit Information">
+                <Tab eventKey="visit" title={`📅 ${t('visits.visitInformationTab')}`}>
                   <Row>
                     <Col md={6}>
                       <Card className="mb-3">
                         <Card.Header className="bg-primary text-white">
-                          <h6 className="mb-0">Basic Details</h6>
+                          <h6 className="mb-0">{t('visits.basicDetails')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">
@@ -336,7 +337,7 @@ const EditVisitPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Visit Type</Form.Label>
+                            <Form.Label>{t('visits.visitType')}</Form.Label>
                             <Form.Select
                               name="visit_type"
                               value={formData.visit_type}
@@ -352,7 +353,7 @@ const EditVisitPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Duration (minutes)</Form.Label>
+                            <Form.Label>{t('visits.duration')}</Form.Label>
                             <Form.Control
                               type="number"
                               name="duration_minutes"
@@ -388,7 +389,7 @@ const EditVisitPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Next Visit Date</Form.Label>
+                            <Form.Label>{t('visits.nextVisitDate')}</Form.Label>
                             <Form.Control
                               type="datetime-local"
                               name="next_visit_date"
@@ -406,16 +407,16 @@ const EditVisitPage = () => {
                 </Tab>
 
                 {/* Clinical Information Tab */}
-                <Tab eventKey="clinical" title="🏥 Clinical Information">
+                <Tab eventKey="clinical" title={`🏥 ${t('visits.clinicalInformationTab')}`}>
                   <Row>
                     <Col md={12}>
                       <Card className="mb-3">
                         <Card.Header className="bg-success text-white">
-                          <h6 className="mb-0">Clinical Details</h6>
+                          <h6 className="mb-0">{t('visits.clinicalDetails')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">
-                            <Form.Label>Chief Complaint</Form.Label>
+                            <Form.Label>{t('visits.chiefComplaint')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={3}
@@ -427,7 +428,7 @@ const EditVisitPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Assessment</Form.Label>
+                            <Form.Label>{t('visits.assessment')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={4}
@@ -439,7 +440,7 @@ const EditVisitPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Recommendations</Form.Label>
+                            <Form.Label>{t('visits.recommendations')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={4}
@@ -451,7 +452,7 @@ const EditVisitPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Additional Notes</Form.Label>
+                            <Form.Label>{t('patients.additionalNotes')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={3}
@@ -471,11 +472,11 @@ const EditVisitPage = () => {
                 <Tab eventKey="measurements" title={`📏 Measurements (${visit?.measurements?.length || 0})`}>
                   <Row>
                     <Col md={12}>
-                      {/* Measurement History */}
+                      {/* {t('visits.measurementsHistory')} */}
                       {visit?.measurements && visit.measurements.length > 0 && (
                         <Card className="mb-3">
                           <Card.Header className="bg-secondary text-white">
-                            <h6 className="mb-0">Measurement History</h6>
+                            <h6 className="mb-0">{t('visits.measurementsHistory')}</h6>
                           </Card.Header>
                           <Card.Body style={{ maxHeight: '400px', overflowY: 'auto' }}>
                             {visit.measurements
@@ -522,17 +523,17 @@ const EditVisitPage = () => {
                         </Card>
                       )}
 
-                      {/* Add New Measurement */}
+                      {/* {t('visits.addMeasurementSection')} */}
                       <Card className="mb-3">
                         <Card.Header className="bg-warning">
-                          <h6 className="mb-0">Add New Measurement</h6>
+                          <h6 className="mb-0">{t('visits.addMeasurementSection')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <p className="text-muted small">All fields are optional</p>
                           <Row>
                             <Col md={4}>
                               <Form.Group className="mb-3">
-                                <Form.Label>Weight (kg)</Form.Label>
+                                <Form.Label>{t('visits.weight')}</Form.Label>
                                 <Form.Control
                                   type="number"
                                   step="0.1"
@@ -547,7 +548,7 @@ const EditVisitPage = () => {
 
                             <Col md={4}>
                               <Form.Group className="mb-3">
-                                <Form.Label>Height (cm)</Form.Label>
+                                <Form.Label>{t('visits.height')}</Form.Label>
                                 <Form.Control
                                   type="number"
                                   step="0.1"
@@ -577,7 +578,7 @@ const EditVisitPage = () => {
                           <Row>
                             <Col md={6}>
                               <Form.Group className="mb-3">
-                                <Form.Label>Blood Pressure (Systolic)</Form.Label>
+                                <Form.Label>{t('visits.bloodPressureSystolic')}</Form.Label>
                                 <Form.Control
                                   type="number"
                                   name="bp_systolic"
@@ -592,7 +593,7 @@ const EditVisitPage = () => {
 
                             <Col md={6}>
                               <Form.Group className="mb-3">
-                                <Form.Label>Blood Pressure (Diastolic)</Form.Label>
+                                <Form.Label>{t('visits.bloodPressureDiastolic')}</Form.Label>
                                 <Form.Control
                                   type="number"
                                   name="bp_diastolic"
@@ -609,7 +610,7 @@ const EditVisitPage = () => {
                           <Row>
                             <Col md={4}>
                               <Form.Group className="mb-3">
-                                <Form.Label>Waist Circumference (cm)</Form.Label>
+                                <Form.Label>{t('visits.waistCircumference')}</Form.Label>
                                 <Form.Control
                                   type="number"
                                   step="0.1"
@@ -654,7 +655,7 @@ const EditVisitPage = () => {
                           </Row>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Measurement Notes</Form.Label>
+                            <Form.Label>{t('visits.measurementNotes')}</Form.Label>
                             <Form.Control
                               as="textarea"
                               rows={2}
@@ -685,7 +686,7 @@ const EditVisitPage = () => {
                   Cancel
                 </Button>
                 <Button variant="primary" type="submit" disabled={saving}>
-                  {saving ? 'Saving Changes...' : 'Save Changes'}
+                  {saving ? t('patients.updating') : t('visits.saveChanges')}
                 </Button>
               </div>
             </Card.Body>
