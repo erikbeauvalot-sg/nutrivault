@@ -67,12 +67,18 @@ const createPatientValidation = [
     .optional({ checkFalsy: true })
     .isLength({ max: 20 })
     .withMessage('Gender must be less than 20 characters'),
-  
+
+  body('medical_conditions')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 2000 })
+    .withMessage('Medical conditions must be less than 2000 characters'),
+
   body('assigned_dietitian_id')
     .optional({ checkFalsy: true })
     .isUUID()
     .withMessage('assigned_dietitian_id must be a valid UUID'),
-  
+
   validate
 ];
 
@@ -170,6 +176,12 @@ const updatePatientValidation = [
     .trim()
     .isLength({ max: 2000 })
     .withMessage('Medical notes must be less than 2000 characters'),
+
+  body('medical_conditions')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 2000 })
+    .withMessage('Medical conditions must be less than 2000 characters'),
   
   body('allergies')
     .optional({ checkFalsy: true })

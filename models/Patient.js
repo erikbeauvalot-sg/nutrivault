@@ -62,6 +62,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
+    medical_conditions: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
     allergies: {
       type: DataTypes.TEXT,
       allowNull: true
