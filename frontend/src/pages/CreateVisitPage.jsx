@@ -421,7 +421,7 @@ const CreateVisitPage = () => {
                   Cancel
                 </Button>
                 <Button variant="primary" type="submit" disabled={loading}>
-                  {loading ? '{t('visits.creatingVisit')}' : '{t('visits.createVisit')}'}
+                  {loading ? t('visits.creatingVisit') : t('visits.createVisit')}
                 </Button>
               </div>
             </Card.Body>
