@@ -69,6 +69,29 @@ const PatientDetailPage = () => {
     navigate(`/patients/${id}/edit`);
   };
 
+  const handleViewVisit = (visitId) => {
+    navigate(`/visits/${visitId}`);
+  };
+
+  const handleEditVisit = (visitId) => {
+    navigate(`/visits/${visitId}/edit`);
+  };
+
+  const handleDeleteVisit = async (visitId) => {
+    if (!window.confirm(t('visits.confirmDelete') || 'Are you sure you want to delete this visit?')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/api/visits/${visitId}`);
+      // Refresh patient details to update visit list
+      fetchPatientDetails();
+    } catch (err) {
+      console.error('Error deleting visit:', err);
+      setError('Failed to delete visit: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString();
@@ -82,6 +105,8 @@ const PatientDetailPage = () => {
   // Check permissions
   const canEditPatient = user?.role === 'ADMIN' || user?.role === 'DIETITIAN';
   const canViewMedicalData = user?.role === 'ADMIN' || user?.role === 'DIETITIAN' || user?.role === 'ASSISTANT';
+  const canEditVisits = user?.role === 'ADMIN' || user?.role === 'DIETITIAN' || user?.role === 'ASSISTANT';
+  const canDeleteVisits = user?.role === 'ADMIN' || user?.role === 'DIETITIAN';
 
   if (loading) {
     return (
@@ -567,6 +592,7 @@ const PatientDetailPage = () => {
                               <th>Type</th>
                               <th>Notes</th>
                               <th>Status</th>
+                              <th>Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -579,6 +605,38 @@ const PatientDetailPage = () => {
                                   <Badge bg={visit.status === 'completed' ? 'success' : 'warning'}>
                                     {visit.status || 'Scheduled'}
                                   </Badge>
+                                </td>
+                                <td>
+                                  <div className="d-flex gap-1">
+                                    <Button
+                                      variant="outline-primary"
+                                      size="sm"
+                                      onClick={() => handleViewVisit(visit.id)}
+                                      title="View Details"
+                                    >
+                                      <i className="fas fa-eye"></i>
+                                    </Button>
+                                    {canEditVisits && (
+                                      <Button
+                                        variant="outline-secondary"
+                                        size="sm"
+                                        onClick={() => handleEditVisit(visit.id)}
+                                        title="Edit Visit"
+                                      >
+                                        <i className="fas fa-edit"></i>
+                                      </Button>
+                                    )}
+                                    {canDeleteVisits && (
+                                      <Button
+                                        variant="outline-danger"
+                                        size="sm"
+                                        onClick={() => handleDeleteVisit(visit.id)}
+                                        title="Delete Visit"
+                                      >
+                                        <i className="fas fa-trash"></i>
+                                      </Button>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                             ))}
