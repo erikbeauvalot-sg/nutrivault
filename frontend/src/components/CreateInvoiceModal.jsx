@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import * as patientService from '../services/patientService';
 import * as visitService from '../services/visitService';
 
-const CreateInvoiceModal = ({ show, onHide, onSubmit }) => {
+const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -66,7 +66,7 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit }) => {
 
   const resetForm = () => {
     setFormData({
-      patient_id: '',
+      patient_id: preSelectedPatient?.id || '',
       visit_id: '',
       description: '',
       amount_total: '',
@@ -74,6 +74,10 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit }) => {
       items: []
     });
     setError(null);
+    // If patient is pre-selected, fetch their visits
+    if (preSelectedPatient?.id) {
+      fetchVisits(preSelectedPatient.id);
+    }
   };
 
   const handleInputChange = (e) => {

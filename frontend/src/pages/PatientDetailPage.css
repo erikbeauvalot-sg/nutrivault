@@ -1,0 +1,163 @@
+/**
+ * PatientDetailPage Responsive Styles
+ * Phase 2.5 - Mobile-friendly patient detail view
+ */
+
+/* Mobile: Stack action buttons vertically */
+@media (max-width: 767px) {
+  .patient-detail-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem !important;
+  }
+
+  .patient-detail-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Make back button full width on mobile */
+  .patient-detail-back-btn {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  /* Patient header - stack name and badges */
+  .patient-detail-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 1rem;
+  }
+
+  /* Mobile visit cards instead of table */
+  .visits-table-desktop {
+    display: none;
+  }
+
+  .visits-cards-mobile {
+    display: block;
+  }
+
+  .visit-card-mobile {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background-color: #fff;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+  }
+
+  .visit-card-mobile:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .visit-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .visit-card-date {
+    font-weight: 600;
+    color: #212529;
+    font-size: 1rem;
+  }
+
+  .visit-card-status {
+    flex-shrink: 0;
+  }
+
+  .visit-card-body {
+    margin-bottom: 0.75rem;
+  }
+
+  .visit-card-row {
+    display: flex;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .visit-card-label {
+    font-weight: 600;
+    color: #6c757d;
+    min-width: 80px;
+    margin-right: 0.5rem;
+  }
+
+  .visit-card-value {
+    color: #212529;
+    flex: 1;
+  }
+
+  .visit-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #dee2e6;
+  }
+
+  .visit-card-actions .btn {
+    flex: 1;
+  }
+}
+
+/* Desktop: Hide mobile cards, show table */
+@media (min-width: 768px) {
+  .visits-table-desktop {
+    display: block;
+  }
+
+  .visits-cards-mobile {
+    display: none;
+  }
+}
+
+/* Tablet and below: Stack info cards vertically */
+@media (max-width: 991px) {
+  .patient-info-cards .col-md-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
+
+/* Small tablets: Adjust info card internal layout */
+@media (max-width: 767px) {
+  /* Make label/value pairs stack on very small screens if needed */
+  .patient-info-row {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .patient-info-row .col-sm-4,
+  .patient-info-row .col-sm-5 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  .patient-info-row .col-sm-7,
+  .patient-info-row .col-sm-8 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    padding-left: 0.5rem;
+  }
+
+  /* Reduce card padding on mobile */
+  .card-body {
+    padding: 0.75rem;
+  }
+
+  /* Make tabs scrollable on mobile if needed */
+  .nav-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nav-tabs .nav-link {
+    white-space: nowrap;
+  }
+}

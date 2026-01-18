@@ -12,7 +12,10 @@ import Layout from '../components/layout/Layout';
 import DocumentListComponent from '../components/DocumentListComponent';
 import DocumentUploadModal from '../components/DocumentUploadModal';
 import MeasurementCharts from '../components/MeasurementCharts';
+import VisitModal from '../components/VisitModal';
+import CreateInvoiceModal from '../components/CreateInvoiceModal';
 import api from '../services/api';
+import './PatientDetailPage.css';
 
 const PatientDetailPage = () => {
   const { t } = useTranslation();
@@ -27,6 +30,8 @@ const PatientDetailPage = () => {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('complete');
   const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
+  const [showVisitModal, setShowVisitModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -90,6 +95,52 @@ const PatientDetailPage = () => {
     } catch (err) {
       console.error('Error deleting visit:', err);
       setError('Failed to delete visit: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleAddVisit = () => {
+    setShowVisitModal(true);
+  };
+
+  const handleAddPayment = () => {
+    setShowInvoiceModal(true);
+  };
+
+  const handleVisitModalSave = async (visitData) => {
+    try {
+      // Pre-populate with current patient and dietitian
+      const visitPayload = {
+        ...visitData,
+        patient_id: patient.id,
+        dietitian_id: patient.assigned_dietitian?.id || user.id, // Use assigned dietitian or current user
+        visit_date: visitData.visit_date || new Date().toISOString().split('T')[0], // Default to today
+        visit_time: visitData.visit_time || new Date().toTimeString().slice(0, 5), // Default to current time
+      };
+
+      await api.post('/api/visits', visitPayload);
+      setShowVisitModal(false);
+      // Refresh patient details to show new visit
+      fetchPatientDetails();
+    } catch (err) {
+      console.error('Error creating visit:', err);
+      throw new Error('Failed to create visit: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleInvoiceModalSubmit = async (invoiceData) => {
+    try {
+      // Pre-populate with current patient
+      const invoicePayload = {
+        ...invoiceData,
+        patient_id: patient.id,
+      };
+
+      await api.post('/api/billing', invoicePayload);
+      setShowInvoiceModal(false);
+      // Could refresh billing data if shown on this page
+    } catch (err) {
+      console.error('Error creating invoice:', err);
+      throw new Error('Failed to create invoice: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -158,36 +209,58 @@ const PatientDetailPage = () => {
     <Layout>
       <Container fluid>
         {/* Header */}
-        <Row className="mb-4">
-          <Col>
-            <Button variant="outline-secondary" onClick={handleBack} className="mb-3">
-              ← Back to Patients
-            </Button>
-            <h1 className="mb-0">
-              {patient.first_name} {patient.last_name}
-            </h1>
-            <div className="d-flex align-items-center gap-2 mt-2">
-              <Badge bg={patient.is_active ? 'success' : 'secondary'}>
-                {patient.is_active ? 'Active' : 'Inactive'}
-              </Badge>
-              {patient.medical_record_number && (
-                <small className="text-muted">
-                  MRN: {patient.medical_record_number}
-                </small>
+        <div className="mb-4">
+          <Button
+            variant="outline-secondary"
+            onClick={handleBack}
+            className="patient-detail-back-btn mb-3"
+          >
+            ← {t('patients.backToPatients', 'Back to Patients')}
+          </Button>
+
+          <div className="patient-detail-header d-flex justify-content-between align-items-center">
+            <div>
+              <h1 className="mb-0">
+                {patient.first_name} {patient.last_name}
+              </h1>
+              <div className="d-flex align-items-center gap-2 mt-2 flex-wrap">
+                <Badge bg={patient.is_active ? 'success' : 'secondary'}>
+                  {patient.is_active ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
+                </Badge>
+                {patient.medical_record_number && (
+                  <small className="text-muted">
+                    {t('patients.mrn', 'MRN')}: {patient.medical_record_number}
+                  </small>
+                )}
+              </div>
+            </div>
+
+            <div className="patient-detail-actions d-flex gap-2">
+              <Button
+                variant="success"
+                onClick={handleAddVisit}
+                title={t('patients.addVisit')}
+              >
+                ➕ {t('patients.addVisit')}
+              </Button>
+              <Button
+                variant="info"
+                onClick={handleAddPayment}
+                title={t('patients.addPayment')}
+              >
+                💰 {t('patients.addPayment')}
+              </Button>
+              {canEditPatient && (
+                <Button
+                  variant="primary"
+                  onClick={handleEditPatient}
+                >
+                  {t('patients.editPatient')}
+                </Button>
               )}
             </div>
-          </Col>
-          <Col xs="auto">
-            {canEditPatient && (
-              <Button
-                variant="primary"
-                onClick={handleEditPatient}
-              >
-                Edit Patient
-              </Button>
-            )}
-          </Col>
-        </Row>
+          </div>
+        </div>
 
         {/* Patient Details Tabs */}
         <Card>
@@ -195,7 +268,7 @@ const PatientDetailPage = () => {
             <Tabs activeKey={activeTab} onSelect={setActiveTab} className="mb-3">
               {/* Complete Profile Tab */}
               <Tab eventKey="complete" title="📋 Complete Profile">
-                <Row>
+                <Row className="patient-info-cards">
                   {/* Personal Information */}
                   <Col md={6}>
                     <Card className="mb-3">
@@ -579,68 +652,137 @@ const PatientDetailPage = () => {
               <Tab eventKey="visits" title={`Visits (${visits.length})`}>
                 <Card>
                   <Card.Header>
-                    <h5 className="mb-0">Visit History</h5>
+                    <h5 className="mb-0">{t('visits.visitHistory', 'Visit History')}</h5>
                   </Card.Header>
                   <Card.Body>
                     {visits.length === 0 ? (
-                      <p className="text-muted">No visits recorded yet.</p>
+                      <p className="text-muted">{t('visits.noVisits', 'No visits recorded yet.')}</p>
                     ) : (
-                      <div className="table-responsive">
-                        <table className="table table-striped">
-                          <thead>
-                            <tr>
-                              <th>Date</th>
-                              <th>Type</th>
-                              <th>Notes</th>
-                              <th>Status</th>
-                              <th>Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {visits.map(visit => (
-                              <tr
-                                key={visit.id}
-                                onClick={() => handleViewVisit(visit.id)}
-                                style={{ cursor: 'pointer' }}
-                                className="visit-row"
-                              >
-                                <td>{formatDateTime(visit.visit_date)}</td>
-                                <td>{visit.visit_type || 'General'}</td>
-                                <td>{visit.notes || '-'}</td>
-                                <td>
+                      <>
+                        {/* Desktop Table View */}
+                        <div className="visits-table-desktop table-responsive">
+                          <table className="table table-striped">
+                            <thead>
+                              <tr>
+                                <th>{t('visits.date', 'Date')}</th>
+                                <th>{t('visits.type', 'Type')}</th>
+                                <th>{t('visits.notes', 'Notes')}</th>
+                                <th>{t('visits.status', 'Status')}</th>
+                                <th>{t('common.actions', 'Actions')}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {visits.map(visit => (
+                                <tr
+                                  key={visit.id}
+                                  onClick={() => handleViewVisit(visit.id)}
+                                  style={{ cursor: 'pointer' }}
+                                  className="visit-row"
+                                >
+                                  <td>{formatDateTime(visit.visit_date)}</td>
+                                  <td>{visit.visit_type || 'General'}</td>
+                                  <td>{visit.notes || '-'}</td>
+                                  <td>
+                                    <Badge bg={visit.status === 'completed' ? 'success' : 'warning'}>
+                                      {visit.status || 'Scheduled'}
+                                    </Badge>
+                                  </td>
+                                  <td onClick={(e) => e.stopPropagation()}>
+                                    <div className="d-flex gap-1">
+                                      {canEditVisits && (
+                                        <Button
+                                          variant="outline-secondary"
+                                          size="sm"
+                                          onClick={() => handleEditVisit(visit.id)}
+                                          title={t('visits.editVisit', 'Edit Visit')}
+                                        >
+                                          ✏️
+                                        </Button>
+                                      )}
+                                      {canDeleteVisits && (
+                                        <Button
+                                          variant="outline-danger"
+                                          size="sm"
+                                          onClick={() => handleDeleteVisit(visit.id)}
+                                          title={t('visits.deleteVisit', 'Delete Visit')}
+                                        >
+                                          🗑️
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Mobile Card View */}
+                        <div className="visits-cards-mobile">
+                          {visits.map(visit => (
+                            <div
+                              key={visit.id}
+                              className="visit-card-mobile"
+                              onClick={() => handleViewVisit(visit.id)}
+                            >
+                              <div className="visit-card-header">
+                                <div className="visit-card-date">
+                                  {formatDateTime(visit.visit_date)}
+                                </div>
+                                <div className="visit-card-status">
                                   <Badge bg={visit.status === 'completed' ? 'success' : 'warning'}>
                                     {visit.status || 'Scheduled'}
                                   </Badge>
-                                </td>
-                                <td onClick={(e) => e.stopPropagation()}>
-                                  <div className="d-flex gap-1">
-                                    {canEditVisits && (
-                                      <Button
-                                        variant="outline-secondary"
-                                        size="sm"
-                                        onClick={() => handleEditVisit(visit.id)}
-                                        title="Edit Visit"
-                                      >
-                                        ✏️
-                                      </Button>
-                                    )}
-                                    {canDeleteVisits && (
-                                      <Button
-                                        variant="outline-danger"
-                                        size="sm"
-                                        onClick={() => handleDeleteVisit(visit.id)}
-                                        title="Delete Visit"
-                                      >
-                                        🗑️
-                                      </Button>
-                                    )}
+                                </div>
+                              </div>
+
+                              <div className="visit-card-body">
+                                <div className="visit-card-row">
+                                  <div className="visit-card-label">{t('visits.type', 'Type')}:</div>
+                                  <div className="visit-card-value">{visit.visit_type || 'General'}</div>
+                                </div>
+                                {visit.notes && (
+                                  <div className="visit-card-row">
+                                    <div className="visit-card-label">{t('visits.notes', 'Notes')}:</div>
+                                    <div className="visit-card-value">{visit.notes}</div>
                                   </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                                )}
+                              </div>
+
+                              <div
+                                className="visit-card-actions"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  onClick={() => handleViewVisit(visit.id)}
+                                >
+                                  {t('common.view', 'View')}
+                                </Button>
+                                {canEditVisits && (
+                                  <Button
+                                    variant="outline-secondary"
+                                    size="sm"
+                                    onClick={() => handleEditVisit(visit.id)}
+                                  >
+                                    {t('common.edit', 'Edit')}
+                                  </Button>
+                                )}
+                                {canDeleteVisits && (
+                                  <Button
+                                    variant="outline-danger"
+                                    size="sm"
+                                    onClick={() => handleDeleteVisit(visit.id)}
+                                  >
+                                    {t('common.delete', 'Delete')}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </Card.Body>
                 </Card>
@@ -824,6 +966,23 @@ const PatientDetailPage = () => {
             fetchPatientDocuments();
           }}
           selectedResource={{ resourceType: 'patients', resourceId: id }}
+        />
+
+        {/* Visit Modal */}
+        <VisitModal
+          show={showVisitModal}
+          onHide={() => setShowVisitModal(false)}
+          mode="create"
+          onSave={handleVisitModalSave}
+          preSelectedPatient={patient}
+        />
+
+        {/* Invoice Modal */}
+        <CreateInvoiceModal
+          show={showInvoiceModal}
+          onHide={() => setShowInvoiceModal(false)}
+          onSubmit={handleInvoiceModalSubmit}
+          preSelectedPatient={patient}
         />
       </Container>
     </Layout>
