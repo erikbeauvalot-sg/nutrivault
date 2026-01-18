@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Table, Button, Badge, Form, InputGroup, Spinner, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Button, Badge, Form, InputGroup, Spinner, Alert, Dropdown } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,6 +13,7 @@ import visitService from '../services/visitService';
 import { getPatients } from '../services/patientService';
 import VisitModal from '../components/VisitModal';
 import ExportModal from '../components/ExportModal';
+import './VisitsPage.css';
 
 const VisitsPage = () => {
   const { user } = useAuth();
@@ -37,6 +38,16 @@ const VisitsPage = () => {
   const [selectedVisit, setSelectedVisit] = useState(null);
   const [preSelectedPatient, setPreSelectedPatient] = useState(null);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Handle responsive layout
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     fetchPatients();
@@ -268,7 +279,77 @@ const VisitsPage = () => {
                   <h3>No visits found</h3>
                   <p className="text-muted">Try adjusting your filters or create a new visit</p>
                 </div>
+              ) : isMobile ? (
+                /* Mobile Card View */
+                <div className="visit-cards-container">
+                  {visits.map(visit => (
+                    <Card
+                      key={visit.id}
+                      className="visit-card mb-3"
+                      onClick={() => handleViewClick(visit.id)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <Card.Body>
+                        <div className="d-flex justify-content-between align-items-start mb-2">
+                          <div>
+                            <h6 className="mb-1">
+                              <strong>{formatDate(visit.visit_date)} {formatTime(visit.visit_date)}</strong>
+                            </h6>
+                            {visit.patient && (
+                              <div className="text-muted small">
+                                👤 {visit.patient.first_name} {visit.patient.last_name}
+                              </div>
+                            )}
+                          </div>
+                          {getStatusBadge(visit.status)}
+                        </div>
+
+                        <div className="mb-2">
+                          {visit.dietitian && (
+                            <div className="small mb-1">
+                              👨‍⚕️ {visit.dietitian.first_name} {visit.dietitian.last_name}
+                            </div>
+                          )}
+                          {visit.visit_type && (
+                            <div className="small mb-1">
+                              📋 {visit.visit_type}
+                            </div>
+                          )}
+                          {visit.duration_minutes && (
+                            <div className="small text-muted mb-1">
+                              ⏱️ {visit.duration_minutes} min
+                            </div>
+                          )}
+                        </div>
+
+                        {canEdit(visit) && (
+                          <div className="d-flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              onClick={() => handleEditClick(visit.id)}
+                              className="flex-fill"
+                            >
+                              ✏️ {t('common.edit', 'Edit')}
+                            </Button>
+                            <Dropdown>
+                              <Dropdown.Toggle variant="outline-secondary" size="sm">
+                                ⋮
+                              </Dropdown.Toggle>
+                              <Dropdown.Menu>
+                                <Dropdown.Item onClick={() => handleDelete(visit.id)} className="text-danger">
+                                  🗑️ {t('common.delete', 'Delete')}
+                                </Dropdown.Item>
+                              </Dropdown.Menu>
+                            </Dropdown>
+                          </div>
+                        )}
+                      </Card.Body>
+                    </Card>
+                  ))}
+                </div>
               ) : (
+                /* Desktop Table View */
                 <>
                   <div className="table-responsive">
                     <Table striped bordered hover>
@@ -343,35 +424,37 @@ const VisitsPage = () => {
                       </tbody>
                     </Table>
                   </div>
-
-                  {/* Pagination */}
-                  {pagination.totalPages > 1 && (
-                    <div className="d-flex justify-content-between align-items-center mt-3">
-                      <div>
-                        Showing page {filters.page} of {pagination.totalPages} ({pagination.total} total visits)
-                      </div>
-                      <div>
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          className="me-2"
-                          disabled={filters.page === 1}
-                          onClick={() => handleFilterChange('page', filters.page - 1)}
-                        >
-                          Previous
-                        </Button>
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          disabled={filters.page >= pagination.totalPages}
-                          onClick={() => handleFilterChange('page', filters.page + 1)}
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                 </>
+              )}
+
+              {/* Pagination (shared between mobile and desktop) */}
+              {!loading && visits.length > 0 && pagination.totalPages > 1 && (
+                <div className="visits-pagination mt-3">
+                  <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div className="text-muted small">
+                      Showing page {filters.page} of {pagination.totalPages} ({pagination.total} total visits)
+                    </div>
+                    <div>
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        className="me-2"
+                        disabled={filters.page === 1}
+                        onClick={() => handleFilterChange('page', filters.page - 1)}
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        disabled={filters.page >= pagination.totalPages}
+                        onClick={() => handleFilterChange('page', filters.page + 1)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               )}
             </Card.Body>
           </Card>

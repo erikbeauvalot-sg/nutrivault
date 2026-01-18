@@ -1,0 +1,36 @@
+/* VisitsPage Responsive Styles */
+
+.visit-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.visit-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.visit-row:hover {
+  background-color: #f8f9fa;
+}
+
+.visits-pagination {
+  padding-top: 1rem;
+  border-top: 1px solid #dee2e6;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 767px) {
+  .visits-pagination .d-flex {
+    flex-direction: column;
+    align-items: stretch !important;
+    text-align: center;
+  }
+
+  .visits-pagination .text-muted {
+    margin-bottom: 0.5rem;
+  }
+
+  .visits-pagination button {
+    width: 48%;
+  }
+}
