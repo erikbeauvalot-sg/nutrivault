@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Table, Button, Badge, Form, InputGroup, Spinner, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Button, Badge, Form, InputGroup, Spinner, Alert, Dropdown } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +12,7 @@ import Layout from '../components/layout/Layout';
 import userService from '../services/userService';
 import UserModal from '../components/UserModal';
 import ChangePasswordModal from '../components/ChangePasswordModal';
+import './UsersPage.css';
 
 const UsersPage = () => {
   const { t } = useTranslation();
@@ -33,6 +34,16 @@ const UsersPage = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [userModalMode, setUserModalMode] = useState('create');
   const [selectedUser, setSelectedUser] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Handle responsive layout
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Redirect if not admin
   useEffect(() => {
@@ -258,7 +269,80 @@ const UsersPage = () => {
                 <h3>{t('users.noUsersFound')}</h3>
                 <p className="text-muted">{t('users.tryAdjustingFilters')}</p>
               </div>
+            ) : isMobile ? (
+              /* Mobile Card View */
+              <div className="user-cards-container">
+                {users.map(usr => (
+                  <Card key={usr.id} className="user-card mb-3">
+                    <Card.Body>
+                      <div className="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                          <h6 className="mb-1">
+                            <strong>{usr.username}</strong>
+                            {usr.id === user.id && <Badge bg="info" className="ms-2">You</Badge>}
+                          </h6>
+                          <div className="text-muted small">{usr.first_name} {usr.last_name}</div>
+                        </div>
+                        <div className="d-flex flex-column align-items-end gap-1">
+                          {usr.role && getRoleBadge(usr.role.name)}
+                          {getStatusBadge(usr.is_active, usr.locked_until)}
+                        </div>
+                      </div>
+
+                      <div className="mb-2">
+                        <div className="small mb-1">
+                          📧 {usr.email}
+                        </div>
+                        {usr.last_login && (
+                          <div className="small text-muted mb-1">
+                            🕐 {formatDate(usr.last_login)}
+                          </div>
+                        )}
+                        {usr.failed_login_attempts > 0 && (
+                          <Badge bg="warning" className="mt-1">⚠️ {usr.failed_login_attempts} failed attempts</Badge>
+                        )}
+                      </div>
+
+                      <div className="d-flex gap-2 mt-3">
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          onClick={() => handleEditClick(usr.id)}
+                          className="flex-fill"
+                        >
+                          ✏️ {t('users.viewEdit')}
+                        </Button>
+                        <Dropdown>
+                          <Dropdown.Toggle variant="outline-secondary" size="sm">
+                            ⋮
+                          </Dropdown.Toggle>
+                          <Dropdown.Menu>
+                            <Dropdown.Item
+                              onClick={() => handleToggleStatus(usr.id)}
+                              disabled={usr.id === user.id}
+                            >
+                              {usr.is_active ? '⏸️ ' + t('users.deactivate') : '▶️ ' + t('users.activate')}
+                            </Dropdown.Item>
+                            <Dropdown.Item onClick={() => handlePasswordClick(usr)}>
+                              🔑 {t('users.resetPassword')}
+                            </Dropdown.Item>
+                            <Dropdown.Divider />
+                            <Dropdown.Item
+                              onClick={() => handleDelete(usr.id)}
+                              disabled={usr.id === user.id}
+                              className="text-danger"
+                            >
+                              🗑️ {t('users.delete')}
+                            </Dropdown.Item>
+                          </Dropdown.Menu>
+                        </Dropdown>
+                      </div>
+                    </Card.Body>
+                  </Card>
+                ))}
+              </div>
             ) : (
+              /* Desktop Table View */
               <>
                 <div className="table-responsive">
                   <Table striped bordered hover>
