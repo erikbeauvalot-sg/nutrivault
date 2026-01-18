@@ -52,7 +52,7 @@ const PatientDetailPage = () => {
 
   const fetchPatientDocuments = async () => {
     try {
-      const response = await api.get(`/api/documents?resource_type=patients&resource_id=${id}`);
+      const response = await api.get(`/api/documents?resource_type=patient&resource_id=${id}`);
       const documentsData = response.data?.data || response.data || [];
       setDocuments(Array.isArray(documentsData) ? documentsData : []);
     } catch (err) {
