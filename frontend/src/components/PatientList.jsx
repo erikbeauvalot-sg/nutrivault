@@ -158,7 +158,12 @@ function PatientList({ patients, loading, onEdit, onDelete, onViewDetails, onSch
               </tr>
             ) : (
               paginatedPatients.map(patient => (
-                <tr key={patient.id}>
+                <tr
+                  key={patient.id}
+                  onClick={() => onViewDetails && onViewDetails(patient)}
+                  style={{ cursor: onViewDetails ? 'pointer' : 'default' }}
+                  className="patient-row"
+                >
                   <td>
                     <div>
                       <strong>{patient.first_name} {patient.last_name}</strong>
@@ -182,7 +187,7 @@ function PatientList({ patients, loading, onEdit, onDelete, onViewDetails, onSch
                       {patient.is_active ? t('common.active') : t('common.inactive')}
                     </Badge>
                   </td>
-                  <td>
+                  <td onClick={(e) => e.stopPropagation()}>
                     <div className="d-flex gap-1">
                       {onViewDetails && (
                         <Button
