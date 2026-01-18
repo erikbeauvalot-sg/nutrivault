@@ -50,8 +50,49 @@ echo ""
 echo "----------------------------------------"
 echo "Test: Get token using get_token.sh script"
 echo "----------------------------------------"
-TOKEN_RESPONSE=$(bash ./get_token.sh admin Admin123!)
+# TOKEN_RESPONSE=$(bash ./get_token.sh admin Admin123!)
+
+
+echo -e ${GREEN}$ACCESS_TOKEN
+
+
+echo "----------------------------------------"
+echo "TEST API CALL WITH TOKEN"
+echo "----------------------------------------"
+API_RESPONSE=$(curl -s -X GET "$BASE_URL/api/patients" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json")
+
+echo "$API_RESPONSE" | jq .
+if echo "$API_RESPONSE" | jq -e '.success == true' > /dev/null; then
+  echo -e "${GREEN}✅ PASSED: API call successful with token${NC}"
+else
+  echo -e "${RED}❌ FAILED: API call failed with token${NC}"
+  exit 1
+fi
+echo "" 
+echo "All tests completed."
 
 PATIENT_ID="2794785d-32e8-4fcc-8a0b-8c70bb284be3"
+API_RESPONSE=$(curl -s -X PUT "$BASE_URL/api/patients/$PATIENT_ID" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "medical_notes": "Updated medical notes",
+    "height_cm": 175,
+    "weight_kg": 70,
+    "blood_type": "O+",
+    "dietary_preferences": "Vegetarian"
+  }')
 
+echo "$API_RESPONSE" | jq .
+if echo "$API_RESPONSE" | jq -e '.success == true' > /dev/null; then
+  echo -e "${GREEN}✅ PASSED: API PUT call successful"
+else
+  echo -e "${RED}❌ FAILED: API PUT call failed"
+  exit 1
+fi
+echo "" 
+echo "All tests completed."
 
+exit 0

@@ -52,13 +52,13 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
     primary_care_physician: '',
     allergies: '',
     current_medications: '',
-    medical_conditions: '',
+    medical_notes: '',
     height_cm: '',
     weight_kg: '',
     blood_type: '',
 
     // Dietary Information
-    dietary_restrictions: '',
+    dietary_preferences: '',
     food_preferences: '',
     nutritional_goals: '',
     exercise_habits: '',
@@ -93,12 +93,12 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
         primary_care_physician: patient.primary_care_physician || '',
         allergies: patient.allergies || '',
         current_medications: patient.current_medications || '',
-        medical_conditions: patient.medical_conditions || '',
+        medical_notes: patient.medical_notes || '',
         height_cm: patient.height_cm || '',
         weight_kg: patient.weight_kg || '',
         blood_type: patient.blood_type || '',
 
-        dietary_restrictions: patient.dietary_restrictions || '',
+        dietary_preferences: patient.dietary_preferences || '',
         food_preferences: patient.food_preferences || '',
         nutritional_goals: patient.nutritional_goals || '',
         exercise_habits: patient.exercise_habits || '',
@@ -182,11 +182,11 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
       primary_care_physician: '',
       allergies: '',
       current_medications: '',
-      medical_conditions: '',
+      medical_notes: '',
       height_cm: '',
       weight_kg: '',
       blood_type: '',
-      dietary_restrictions: '',
+      dietary_preferences: '',
       food_preferences: '',
       nutritional_goals: '',
       exercise_habits: '',
@@ -487,8 +487,8 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
               <Form.Control
                 as="textarea"
                 rows={2}
-                name="medical_conditions"
-                value={formData.medical_conditions}
+                name="medical_notes"
+                value={formData.medical_notes}
                 onChange={handleInputChange}
                 placeholder={t('patients.listConditions')}
               />
@@ -503,8 +503,8 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
               <Form.Control
                 as="textarea"
                 rows={2}
-                name="dietary_restrictions"
-                value={formData.dietary_restrictions}
+                name="dietary_preferences"
+                value={formData.dietary_preferences}
                 onChange={handleInputChange}
                 placeholder={t('patients.dietaryRestrictionsPlaceholder')}
               />

@@ -70,6 +70,62 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
+    blood_type: {
+      type: DataTypes.STRING(10),
+      allowNull: true
+    },
+    current_medications: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    medical_record_number: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
+    insurance_provider: {
+      type: DataTypes.STRING(200),
+      allowNull: true
+    },
+    insurance_policy_number: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
+    primary_care_physician: {
+      type: DataTypes.STRING(200),
+      allowNull: true
+    },
+    height_cm: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true
+    },
+    weight_kg: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true
+    },
+    food_preferences: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    nutritional_goals: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    exercise_habits: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    smoking_status: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
+    alcohol_consumption: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
     assigned_dietitian_id: {
       type: DataTypes.UUID,
       allowNull: true

@@ -123,12 +123,80 @@ const updatePatientValidation = [
     .isUUID()
     .withMessage('assigned_dietitian_id must be a valid UUID'),
   
-  validate
+  body('gender')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 20 })
+    .withMessage('Gender must be less than 20 characters'),
+  
+  body('address')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Address must be less than 500 characters'),
+  
+  body('city')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('City must be less than 100 characters'),
+  
+  body('state')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('State must be less than 50 characters'),
+  
+  body('zip_code')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 20 })
+    .withMessage('Zip code must be less than 20 characters'),
+  
+  body('emergency_contact_name')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 200 })
+    .withMessage('Emergency contact name must be less than 200 characters'),
+  
+  body('emergency_contact_phone')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 20 })
+    .withMessage('Emergency contact phone must be less than 20 characters'),
+  
+  body('medical_notes')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 2000 })
+    .withMessage('Medical notes must be less than 2000 characters'),
+  
+  body('allergies')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage('Allergies must be less than 1000 characters'),
+  
+  body('dietary_preferences')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage('Dietary preferences must be less than 1000 characters'),
+  
+  body('blood_type')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 10 })
+    .withMessage('Blood type must be less than 10 characters'),
+
+  body('current_medications')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 2000 })
+    .withMessage('Current medications must be less than 2000 characters'),
+
 ];
 
-/**
- * Validation rules for patient ID parameter
- */
 const patientIdValidation = [
   param('id')
     .isUUID()

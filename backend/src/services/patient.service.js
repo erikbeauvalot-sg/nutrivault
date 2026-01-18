@@ -131,6 +131,14 @@ async function getPatientById(patientId, user, requestMetadata = {}) {
         id: patientId,
         is_active: true
       },
+      attributes: [
+        'id', 'first_name', 'last_name', 'email', 'phone', 'date_of_birth', 'gender',
+        'address', 'city', 'state', 'zip_code', 'emergency_contact_name', 'emergency_contact_phone',
+        'medical_record_number', 'insurance_provider', 'insurance_policy_number', 'primary_care_physician',
+        'allergies', 'current_medications', 'medical_notes', 'height_cm', 'weight_kg', 'blood_type',
+        'dietary_preferences', 'food_preferences', 'nutritional_goals', 'exercise_habits', 'smoking_status', 'alcohol_consumption',
+        'assigned_dietitian_id', 'is_active', 'created_at', 'updated_at'
+      ],
       include: [
         {
           model: User,
