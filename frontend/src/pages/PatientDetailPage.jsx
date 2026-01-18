@@ -614,7 +614,7 @@ const PatientDetailPage = () => {
                                       onClick={() => handleViewVisit(visit.id)}
                                       title="View Details"
                                     >
-                                      <i className="fas fa-eye"></i>
+                                      👁️
                                     </Button>
                                     {canEditVisits && (
                                       <Button
@@ -623,7 +623,7 @@ const PatientDetailPage = () => {
                                         onClick={() => handleEditVisit(visit.id)}
                                         title="Edit Visit"
                                       >
-                                        <i className="fas fa-edit"></i>
+                                        ✏️
                                       </Button>
                                     )}
                                     {canDeleteVisits && (
@@ -633,7 +633,7 @@ const PatientDetailPage = () => {
                                         onClick={() => handleDeleteVisit(visit.id)}
                                         title="Delete Visit"
                                       >
-                                        <i className="fas fa-trash"></i>
+                                        🗑️
                                       </Button>
                                     )}
                                   </div>
