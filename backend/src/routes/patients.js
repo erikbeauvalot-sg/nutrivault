@@ -74,6 +74,12 @@ const createPatientValidation = [
     .isLength({ max: 2000 })
     .withMessage('Medical conditions must be less than 2000 characters'),
 
+  body('dietary_restrictions')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage('Dietary restrictions must be less than 1000 characters'),
+
   body('assigned_dietitian_id')
     .optional({ checkFalsy: true })
     .isUUID()
@@ -194,7 +200,13 @@ const updatePatientValidation = [
     .trim()
     .isLength({ max: 1000 })
     .withMessage('Dietary preferences must be less than 1000 characters'),
-  
+
+  body('dietary_restrictions')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage('Dietary restrictions must be less than 1000 characters'),
+
   body('blood_type')
     .optional({ checkFalsy: true })
     .trim()

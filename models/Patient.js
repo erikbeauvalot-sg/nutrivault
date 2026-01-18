@@ -74,6 +74,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
+    dietary_restrictions: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
     blood_type: {
       type: DataTypes.STRING(10),
       allowNull: true
