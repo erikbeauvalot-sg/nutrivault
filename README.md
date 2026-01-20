@@ -55,19 +55,20 @@ A comprehensive nutrition practice management system for dietitians, assistants,
 
 3. **Set up environment variables**
    ```bash
-   # Copy environment files
-   cp .env.example .env  # Root level
+   # For development
+   cp .env.example .env
 
-   # Edit .env with your configuration
-   # For SQLite (default):
-   #   DB_DIALECT=sqlite
-   #   DB_STORAGE=./backend/data/nutrivault_prod.db
-   # For PostgreSQL:
-   #   DB_DIALECT=postgres
-   #   DB_HOST=localhost
-   #   DB_NAME=nutrivault
-   #   DB_USER=youruser
-   #   DB_PASSWORD=yourpassword
+   # For production (optional - see .env.production.example for guide)
+   # cp .env.production.example .env
+
+   # Edit .env and update:
+   # - JWT_SECRET (must be 32+ characters)
+   # - REFRESH_TOKEN_SECRET (must be 32+ characters)
+   # - Database settings (SQLite by default, or PostgreSQL)
+
+   # Generate secure secrets:
+   openssl rand -base64 32  # Use output for JWT_SECRET
+   openssl rand -base64 32  # Use output for REFRESH_TOKEN_SECRET
    ```
 
 4. **Set up database**

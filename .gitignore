@@ -8,6 +8,7 @@ yarn.lock
 .env.production
 
 # Database
+backend/backend/*
 backend/data/*.db
 backend/data/*.db-journal
 backend/data/*.db-shm
