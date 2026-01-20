@@ -48,3 +48,8 @@ data/nutrivault.db
 # Docker test logs
 *-build.log
 test-*.log
+
+temp_uploads/
+uploads/
+
+*.OLD
