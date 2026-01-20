@@ -57,10 +57,17 @@ A comprehensive nutrition practice management system for dietitians, assistants,
    ```bash
    # Copy environment files
    cp .env.example .env  # Root level
-   cp backend/.env.example backend/.env
-   cp frontend/.env.example frontend/.env
 
-   # Edit .env files with your configuration
+   # Edit .env with your configuration
+   # For SQLite (default):
+   #   DB_DIALECT=sqlite
+   #   DB_STORAGE=./backend/data/nutrivault_prod.db
+   # For PostgreSQL:
+   #   DB_DIALECT=postgres
+   #   DB_HOST=localhost
+   #   DB_NAME=nutrivault
+   #   DB_USER=youruser
+   #   DB_PASSWORD=yourpassword
    ```
 
 4. **Set up database**
@@ -185,6 +192,32 @@ npm run db:migrate  # ✅ Works
 - Migrations: `/migrations/` (not `/backend/migrations/`)
 - Seeders: `/seeders/` (not `/backend/seeders/`)
 - Config: `/config/database.js` (not `/backend/config/config.json`)
+
+---
+
+**Error: "Using environment 'production'" and "no such table" errors**
+
+This happens when `NODE_ENV=production` but you want to use SQLite instead of PostgreSQL.
+
+**Solution**: Set the database dialect explicitly in your `.env` file:
+```bash
+# At the project root, create/edit .env
+NODE_ENV=production
+DB_DIALECT=sqlite
+DB_STORAGE=./backend/data/nutrivault_prod.db
+
+# JWT secrets (required, at least 32 characters)
+JWT_SECRET=your-super-secret-key-at-least-32-characters-long
+REFRESH_TOKEN_SECRET=another-different-secret-32-chars-long
+```
+
+Then run migrations:
+```bash
+npm run db:migrate
+npm run db:seed
+```
+
+**Note**: The system now supports SQLite in production by default. To use PostgreSQL, set `DB_DIALECT=postgres` and configure the PostgreSQL connection variables.
 
 ## API Documentation
 
