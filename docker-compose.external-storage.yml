@@ -24,11 +24,11 @@ services:
       - PORT=3001
       - DB_DIALECT=${DB_DIALECT:-sqlite}
       - DB_STORAGE=/app/backend/data/nutrivault_prod.db
-      - DB_HOST=${DB_HOST}
+      - DB_HOST=${DB_HOST:-localhost}
       - DB_PORT=${DB_PORT:-5432}
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-nutrivault}
+      - DB_USER=${DB_USER:-nutrivault}
+      - DB_PASSWORD=${DB_PASSWORD:-}
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
       - BCRYPT_ROUNDS=${BCRYPT_ROUNDS:-12}
