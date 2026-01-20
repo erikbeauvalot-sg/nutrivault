@@ -1,0 +1,77 @@
+/* Invoice List Responsive Styles */
+
+.invoice-list-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.invoice-list-filters {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.invoice-search-input {
+  width: 300px;
+}
+
+.invoice-status-filter {
+  width: 150px;
+}
+
+.invoice-results-count {
+  white-space: nowrap;
+}
+
+.invoice-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.invoice-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.invoice-row:hover {
+  background-color: #f8f9fa;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 767px) {
+  .invoice-list-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .invoice-list-filters {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .invoice-search-input {
+    width: 100%;
+  }
+
+  .invoice-status-filter {
+    width: 100%;
+  }
+
+  .invoice-results-count {
+    text-align: center;
+    font-size: 0.875rem;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 768px) and (max-width: 991px) {
+  .invoice-search-input {
+    width: 250px;
+  }
+
+  .invoice-status-filter {
+    width: 130px;
+  }
+}

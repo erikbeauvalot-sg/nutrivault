@@ -6,11 +6,7 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
-      },
-      token_hash: {
-        type: Sequelize.STRING(255),
-        unique: true,
+        primaryKey: true,
         allowNull: false
       },
       user_id: {
@@ -23,31 +19,39 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
+      token_hash: {
+        type: Sequelize.STRING(255),
+        allowNull: false,
+        unique: true,
+        comment: 'bcrypt hash of refresh token'
+      },
       expires_at: {
         type: Sequelize.DATE,
         allowNull: false
+      },
+      is_revoked: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
       },
       revoked_at: {
         type: Sequelize.DATE,
         allowNull: true
       },
-      ip_address: {
-        type: Sequelize.STRING(45),
-        allowNull: true
-      },
-      user_agent: {
-        type: Sequelize.TEXT,
-        allowNull: true
-      },
       created_at: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      },
+      updated_at: {
+        type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
 
-    await queryInterface.addIndex('refresh_tokens', ['token_hash']);
     await queryInterface.addIndex('refresh_tokens', ['user_id']);
+    await queryInterface.addIndex('refresh_tokens', ['token_hash']);
     await queryInterface.addIndex('refresh_tokens', ['expires_at']);
   },
 

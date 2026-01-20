@@ -1,345 +1,190 @@
 /**
  * App Component
- * Main application with routing and lazy loading
+ * Main application router with protected routes
  */
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Suspense, lazy } from 'react';
-import { Spinner, Container } from 'react-bootstrap';
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import AuthProvider from './contexts/AuthProvider';
-import useAuth from './hooks/useAuth';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './contexts/AuthContext';
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+import PatientsPage from './pages/PatientsPage';
+import CreatePatientPage from './pages/CreatePatientPage';
+import EditPatientPage from './pages/EditPatientPage';
+import PatientDetailPage from './pages/PatientDetailPage';
+import VisitsPage from './pages/VisitsPage';
+import CreateVisitPage from './pages/CreateVisitPage';
+import EditVisitPage from './pages/EditVisitPage';
+import VisitDetailPage from './pages/VisitDetailPage';
+import UsersPage from './pages/UsersPage';
+import BillingPage from './pages/BillingPage';
+import InvoiceDetailPage from './pages/InvoiceDetailPage';
+import ReportsPage from './pages/ReportsPage';
+import DocumentsPage from './pages/DocumentsPage';
 import ProtectedRoute from './components/ProtectedRoute';
-import RoleGuard from './components/RoleGuard';
-import Layout from './components/layout/Layout';
-import './styles/index.css';
 
-// Lazy load page components for better performance
-const LoginPage = lazy(() => import('./pages/Login'));
-const DashboardPage = lazy(() => import('./pages/Dashboard'));
-const UnauthorizedPage = lazy(() => import('./pages/Unauthorized'));
-const NotFoundPage = lazy(() => import('./pages/NotFound'));
+function App() {
+  const { loading, isAuthenticated } = useAuth();
 
-// Patient Management (lazy loaded)
-const PatientListPage = lazy(() => import('./pages/patients/PatientList'));
-const PatientDetailsPage = lazy(() => import('./pages/patients/PatientDetails'));
-const CreatePatientPage = lazy(() => import('./pages/patients/CreatePatient'));
-const EditPatientPage = lazy(() => import('./pages/patients/EditPatient'));
-const PatientVisitHistoryPage = lazy(() => import('./pages/patients/PatientVisitHistory'));
-
-// Visit Management (lazy loaded)
-const VisitListPage = lazy(() => import('./pages/visits/VisitList'));
-const VisitDetailsPage = lazy(() => import('./pages/visits/VisitDetails'));
-const CreateVisitPage = lazy(() => import('./pages/visits/CreateVisit'));
-const EditVisitPage = lazy(() => import('./pages/visits/EditVisit'));
-
-// Billing Management (lazy loaded)
-const BillingListPage = lazy(() => import('./pages/billing/BillingList'));
-const InvoiceDetailsPage = lazy(() => import('./pages/billing/InvoiceDetails'));
-const CreateInvoicePage = lazy(() => import('./pages/billing/CreateInvoice'));
-
-// User Management (lazy loaded)
-const UserListPage = lazy(() => import('./pages/users/UserList'));
-const UserDetailsPage = lazy(() => import('./pages/users/UserDetails'));
-const CreateUserPage = lazy(() => import('./pages/users/CreateUser'));
-const EditUserPage = lazy(() => import('./pages/users/EditUser'));
-
-// Reports & Audit (lazy loaded)
-const ReportsPage = lazy(() => import('./pages/Reports'));
-const AuditLogListPage = lazy(() => import('./pages/audit/AuditLogList'));
-
-// Profile (lazy loaded)
-const ProfilePage = lazy(() => import('./pages/Profile'));
-const ChangePasswordPage = lazy(() => import('./pages/ChangePassword'));
-
-/**
- * Loading Fallback Component
- */
-function LoadingFallback() {
-  return (
-    <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
-      <Spinner animation="border" role="status" variant="primary">
-        <span className="visually-hidden">Loading...</span>
-      </Spinner>
-    </Container>
-  );
-}
-
-/**
- * Routes Component (inside provider to access auth context)
- */
-function AppRoutes() {
-  const { loading, user, isAuthenticated } = useAuth();
-
-  console.log('[AppRoutes] Rendering routes', { loading, isAuthenticated, username: user?.username });
-
+  // Show loading spinner while checking authentication
   if (loading) {
-    console.log('[AppRoutes] Still loading, showing fallback');
-    return <LoadingFallback />;
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/unauthorized" element={<UnauthorizedPage />} />
+    <Routes>
+      {/* Public Routes */}
+      <Route
+        path="/login"
+        element={
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
+        }
+      />
 
-        {/* Protected Routes - Dashboard */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <DashboardPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+      {/* Protected Routes */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* Protected Routes - Patient Management */}
-        <Route
-          path="/patients"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <PatientListPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/patients/new"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <CreatePatientPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/patients/:id"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <PatientDetailsPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/patients/:id/edit"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <EditPatientPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/patients/:id/visits"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <PatientVisitHistoryPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+      <Route
+        path="/patients"
+        element={
+          <ProtectedRoute>
+            <PatientsPage />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* Protected Routes - Visit Management */}
-        <Route
-          path="/visits"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <VisitListPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/visits/new"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <CreateVisitPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/visits/:id"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <VisitDetailsPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/visits/:id/edit"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <EditVisitPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+      <Route
+        path="/patients/create"
+        element={
+          <ProtectedRoute>
+            <CreatePatientPage />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* Protected Routes - Billing Management */}
-        <Route
-          path="/billing"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <BillingListPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/billing/new"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <CreateInvoicePage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/billing/:id"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <InvoiceDetailsPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+      <Route
+        path="/patients/:id/edit"
+        element={
+          <ProtectedRoute>
+            <EditPatientPage />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* Protected Routes - User Management (Admin Only) */}
-        <Route
-          path="/users"
-          element={
-            <ProtectedRoute requiredRoles={['ADMIN']}>
-              <Layout>
-                <UserListPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/users/new"
-          element={
-            <ProtectedRoute requiredRoles={['ADMIN']}>
-              <Layout>
-                <CreateUserPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/users/:id"
-          element={
-            <ProtectedRoute requiredRoles={['ADMIN']}>
-              <Layout>
-                <UserDetailsPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/users/:id/edit"
-          element={
-            <ProtectedRoute requiredRoles={['ADMIN']}>
-              <Layout>
-                <EditUserPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+      <Route
+        path="/patients/:id"
+        element={
+          <ProtectedRoute>
+            <PatientDetailPage />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* Protected Routes - Reports & Audit Logs */}
-        <Route
-          path="/reports"
-          element={
-            <ProtectedRoute requiredRoles={['ADMIN', 'DIETITIAN']}>
-              <Layout>
-                <ReportsPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/audit-logs"
-          element={
-            <ProtectedRoute requiredRoles={['ADMIN']}>
-              <Layout>
-                <AuditLogListPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+      <Route
+        path="/visits"
+        element={
+          <ProtectedRoute>
+            <VisitsPage />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* Protected Routes - Profile */}
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <ProfilePage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profile/change-password"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <ChangePasswordPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+      <Route
+        path="/visits/create"
+        element={
+          <ProtectedRoute>
+            <CreateVisitPage />
+          </ProtectedRoute>
+        }
+      />
 
-        {/* Error Routes */}
-        <Route path="/404" element={<NotFoundPage />} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </Suspense>
-  );
-}
+      <Route
+        path="/visits/:id/edit"
+        element={
+          <ProtectedRoute>
+            <EditVisitPage />
+          </ProtectedRoute>
+        }
+      />
 
-/**
- * Main App Component
- */
-export function App() {
-  return (
-    <Router>
-      <AuthProvider>
-        <AppRoutes />
-        <ToastContainer
-          position="top-right"
-          autoClose={5000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-        />
-      </AuthProvider>
-    </Router>
+      <Route
+        path="/visits/:id"
+        element={
+          <ProtectedRoute>
+            <VisitDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute>
+            <UsersPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/billing"
+        element={
+          <ProtectedRoute>
+            <BillingPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/billing/:id"
+        element={
+          <ProtectedRoute>
+            <InvoiceDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/reports"
+        element={
+          <ProtectedRoute>
+            <ReportsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/documents"
+        element={
+          <ProtectedRoute>
+            <DocumentsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Default Route */}
+      <Route
+        path="/"
+        element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />}
+      />
+
+      {/* Catch-all Route */}
+      <Route
+        path="*"
+        element={<Navigate to="/" replace />}
+      />
+    </Routes>
   );
 }
 

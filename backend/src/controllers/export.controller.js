@@ -1,101 +1,122 @@
-/**
- * Data Export Controller
- *
- * Handles HTTP requests for data export endpoints
- */
-
-const {
-  exportPatients,
-  exportVisits,
-  exportBilling
-} = require('../services/export.service');
-const { asyncHandler } = require('../middleware/errorHandler');
+const exportService = require('../services/export.service');
+const auditService = require('../services/audit.service');
 
 /**
- * Export patients data
- * GET /api/export/patients?format=csv|excel|pdf
+ * Export Controller
+ * Handles data export requests
  */
-const exportPatientsHandler = asyncHandler(async (req, res) => {
-  const format = req.query.format || 'csv';
-  const filters = {
-    is_active: req.query.is_active
-  };
+class ExportController {
+  /**
+   * Export patients data
+   */
+  async exportPatients(req, res) {
+    try {
+      const { format = 'csv', is_active } = req.query;
+      const filters = {};
 
-  const requestMetadata = {
-    ip: req.ip,
-    userAgent: req.get('user-agent'),
-    method: req.method,
-    path: req.path
-  };
+      if (is_active !== undefined) {
+        filters.is_active = is_active;
+      }
 
-  const result = await exportPatients(format, filters, req.user, requestMetadata);
+      const result = await exportService.exportPatients(format, filters, req.user);
 
-  const timestamp = new Date().toISOString().split('T')[0];
-  const filename = `patients_${timestamp}.${result.extension}`;
+      // Log the export action
+      await auditService.logAction(
+        req.user.id,
+        'EXPORT',
+        'patients',
+        null,
+        `Exported ${result.filename} (${format.toUpperCase()})`,
+        req.ip
+      );
 
-  res.setHeader('Content-Type', result.contentType);
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-  res.send(result.data);
-});
+      // Set response headers
+      res.setHeader('Content-Type', result.contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
 
-/**
- * Export visits data
- * GET /api/export/visits?format=csv|excel|pdf
- */
-const exportVisitsHandler = asyncHandler(async (req, res) => {
-  const format = req.query.format || 'csv';
-  const filters = {
-    patient_id: req.query.patient_id,
-    status: req.query.status
-  };
+      res.send(result.data);
+    } catch (error) {
+      console.error('Export patients error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to export patients data'
+      });
+    }
+  }
 
-  const requestMetadata = {
-    ip: req.ip,
-    userAgent: req.get('user-agent'),
-    method: req.method,
-    path: req.path
-  };
+  /**
+   * Export visits data
+   */
+  async exportVisits(req, res) {
+    try {
+      const { format = 'csv', patient_id, status } = req.query;
+      const filters = {};
 
-  const result = await exportVisits(format, filters, req.user, requestMetadata);
+      if (patient_id) filters.patient_id = patient_id;
+      if (status) filters.status = status;
 
-  const timestamp = new Date().toISOString().split('T')[0];
-  const filename = `visits_${timestamp}.${result.extension}`;
+      const result = await exportService.exportVisits(format, filters, req.user);
 
-  res.setHeader('Content-Type', result.contentType);
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-  res.send(result.data);
-});
+      // Log the export action
+      await auditService.logAction(
+        req.user.id,
+        'EXPORT',
+        'visits',
+        null,
+        `Exported ${result.filename} (${format.toUpperCase()})`,
+        req.ip
+      );
 
-/**
- * Export billing data
- * GET /api/export/billing?format=csv|excel|pdf
- */
-const exportBillingHandler = asyncHandler(async (req, res) => {
-  const format = req.query.format || 'csv';
-  const filters = {
-    patient_id: req.query.patient_id,
-    status: req.query.status
-  };
+      // Set response headers
+      res.setHeader('Content-Type', result.contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
 
-  const requestMetadata = {
-    ip: req.ip,
-    userAgent: req.get('user-agent'),
-    method: req.method,
-    path: req.path
-  };
+      res.send(result.data);
+    } catch (error) {
+      console.error('Export visits error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to export visits data'
+      });
+    }
+  }
 
-  const result = await exportBilling(format, filters, req.user, requestMetadata);
+  /**
+   * Export billing data
+   */
+  async exportBilling(req, res) {
+    try {
+      const { format = 'csv', patient_id, status } = req.query;
+      const filters = {};
 
-  const timestamp = new Date().toISOString().split('T')[0];
-  const filename = `billing_${timestamp}.${result.extension}`;
+      if (patient_id) filters.patient_id = patient_id;
+      if (status) filters.status = status;
 
-  res.setHeader('Content-Type', result.contentType);
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-  res.send(result.data);
-});
+      const result = await exportService.exportBilling(format, filters, req.user);
 
-module.exports = {
-  exportPatientsHandler,
-  exportVisitsHandler,
-  exportBillingHandler
-};
+      // Log the export action
+      await auditService.logAction(
+        req.user.id,
+        'EXPORT',
+        'billing',
+        null,
+        `Exported ${result.filename} (${format.toUpperCase()})`,
+        req.ip
+      );
+
+      // Set response headers
+      res.setHeader('Content-Type', result.contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+
+      res.send(result.data);
+    } catch (error) {
+      console.error('Export billing error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to export billing data'
+      });
+    }
+  }
+}
+
+module.exports = new ExportController();

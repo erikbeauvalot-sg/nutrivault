@@ -1,544 +1,541 @@
 /**
- * Billing Management Service
+ * Billing Service
  *
- * Business logic for billing and invoice management operations
+ * Business logic for billing/invoice management with RBAC and audit logging.
+ * Handles invoice creation, payment recording, and financial tracking.
  */
 
-const db = require('../../models');
-const { AppError } = require('../middleware/errorHandler');
-const { logCrudEvent } = require('./audit.service');
-const { Op } = require('sequelize');
-const QueryBuilder = require('../utils/queryBuilder');
-const { BILLING_CONFIG } = require('../config/queryConfigs');
-const cacheInvalidation = require('./cache-invalidation.service');
+const db = require('../../../models');
+const Billing = db.Billing;
+const Patient = db.Patient;
+const Visit = db.Visit;
+const User = db.User;
+const auditService = require('./audit.service');
+const { Op } = db.Sequelize;
 
 /**
- * Check if user has access to patient for billing
+ * Get all invoices with filtering and pagination
+ *
+ * @param {Object} user - Authenticated user object
+ * @param {Object} filters - Filter criteria
+ * @param {string} filters.patient_id - Filter by patient ID
+ * @param {string} filters.status - Filter by status (DRAFT, SENT, PAID, OVERDUE, CANCELLED)
+ * @param {string} filters.search - Search by invoice number or service description
+ * @param {Date} filters.start_date - Filter invoices from this date
+ * @param {Date} filters.end_date - Filter invoices to this date
+ * @param {number} filters.page - Page number (default 1)
+ * @param {number} filters.limit - Items per page (default 20)
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Invoices, total count, and pagination info
  */
-async function checkPatientAccessForBilling(patientId, user) {
-  const patient = await db.Patient.findByPk(patientId);
+async function getInvoices(user, filters = {}, requestMetadata = {}) {
+  try {
+    const whereClause = { is_active: true };
 
-  if (!patient) {
-    throw new AppError('Patient not found', 404, 'PATIENT_NOT_FOUND');
-  }
-
-  // Dietitians can only access billing for their assigned patients
-  if (user.role && user.role.name === 'DIETITIAN') {
-    if (patient.assigned_dietitian_id !== user.id) {
-      throw new AppError(
-        'Access denied. You can only manage billing for your assigned patients',
-        403,
-        'NOT_ASSIGNED_PATIENT'
-      );
-    }
-  }
-
-  return patient;
-}
-
-/**
- * Generate next invoice number
- */
-async function generateInvoiceNumber() {
-  const year = new Date().getFullYear();
-  const prefix = `INV-${year}-`;
-
-  // Find the latest invoice for this year
-  const latestInvoice = await db.Billing.findOne({
-    where: {
-      invoice_number: {
-        [Op.like]: `${prefix}%`
+    // RBAC: Apply role-based filtering
+    if (user && user.role) {
+      if (user.role.name === 'VIEWER') {
+        // VIEWER can only see their own invoices if they have any
+        // For now, VIEWER role doesn't create invoices, so return empty
+        return {
+          invoices: [],
+          total: 0,
+          page: filters.page || 1,
+          limit: filters.limit || 20,
+          totalPages: 0
+        };
       }
-    },
-    order: [['created_at', 'DESC']]
-  });
+      // ADMIN, DIETITIAN, ASSISTANT can see all invoices
+    }
 
-  let nextNumber = 1;
-  if (latestInvoice) {
-    const lastNumber = parseInt(latestInvoice.invoice_number.split('-')[2]);
-    nextNumber = lastNumber + 1;
-  }
+    // Apply filters
+    if (filters.patient_id) {
+      whereClause.patient_id = filters.patient_id;
+    }
 
-  return `${prefix}${String(nextNumber).padStart(6, '0')}`;
-}
+    if (filters.status) {
+      whereClause.status = filters.status;
+    }
 
-/**
- * Get all billing records with filtering and pagination
- * Supports search across invoice_number and notes
- */
-async function getBillingRecords(filters = {}, requestingUser) {
-  // Use QueryBuilder for advanced filtering and search
-  const queryBuilder = new QueryBuilder(BILLING_CONFIG);
-  const { where, pagination, sort } = queryBuilder.build(filters);
+    if (filters.search) {
+      whereClause[Op.or] = [
+        { invoice_number: { [Op.like]: `%${filters.search}%` } },
+        { service_description: { [Op.like]: `%${filters.search}%` } }
+      ];
+    }
 
-  // Verify patient access if filtering by specific patient
-  if (filters.patient_id) {
-    await checkPatientAccessForBilling(filters.patient_id, requestingUser);
-  }
+    if (filters.start_date || filters.end_date) {
+      whereClause.invoice_date = {};
+      if (filters.start_date) {
+        whereClause.invoice_date[Op.gte] = filters.start_date;
+      }
+      if (filters.end_date) {
+        whereClause.invoice_date[Op.lte] = filters.end_date;
+      }
+    }
 
-  // Apply RBAC: Dietitians can only see billing for their assigned patients
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    const assignedPatients = await db.Patient.findAll({
-      where: { assigned_dietitian_id: requestingUser.id },
-      attributes: ['id']
+    const page = parseInt(filters.page) || 1;
+    const limit = parseInt(filters.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const { rows: invoices, count: total } = await Billing.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email'],
+          where: { is_active: true },
+          required: true
+        },
+        {
+          model: Visit,
+          as: 'visit',
+          attributes: ['id', 'visit_date', 'status'],
+          required: false
+        }
+      ],
+      order: [['invoice_date', 'DESC'], ['created_at', 'DESC']],
+      limit,
+      offset
     });
-    const patientIds = assignedPatients.map(p => p.id);
 
-    if (patientIds.length > 0) {
-      where.patient_id = { [Op.in]: patientIds };
-    } else {
-      // Dietitian has no assigned patients - return empty results
-      where.patient_id = null;
-    }
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      invoices,
+      total,
+      page,
+      limit,
+      totalPages
+    };
+  } catch (error) {
+    console.error('Error in getInvoices:', error);
+    throw error;
   }
+}
 
-  // Handle legacy from_date/to_date parameters (backward compatibility)
-  // Fixed: now properly converts strings to Date objects
-  const { from_date, to_date } = filters;
-  if (from_date || to_date) {
-    if (!where.invoice_date) {
-      where.invoice_date = {};
-    }
-    if (from_date) {
-      if (typeof where.invoice_date === 'object') {
-        where.invoice_date[Op.gte] = new Date(from_date);
-      }
-    }
-    if (to_date) {
-      if (typeof where.invoice_date === 'object') {
-        where.invoice_date[Op.lte] = new Date(to_date);
-      }
-    }
-  }
-
-  const { count, rows } = await db.Billing.findAndCountAll({
-    where,
-    include: [
-      {
-        model: db.Patient,
-        as: 'patient',
-        attributes: ['id', 'first_name', 'last_name']
+/**
+ * Get invoice by ID
+ *
+ * @param {string} invoiceId - Invoice UUID
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Invoice with patient and visit details
+ */
+async function getInvoiceById(invoiceId, user, requestMetadata = {}) {
+  try {
+    const invoice = await Billing.findOne({
+      where: {
+        id: invoiceId,
+        is_active: true
       },
-      {
-        model: db.Visit,
-        as: 'visit',
-        attributes: ['id', 'visit_date', 'visit_type']
-      }
-    ],
-    limit: pagination.limit,
-    offset: pagination.offset,
-    order: sort
-  });
-
-  return {
-    billing: rows,
-    total: count,
-    limit: pagination.limit,
-    offset: pagination.offset
-  };
-}
-
-/**
- * Get billing record by ID
- */
-async function getBillingById(billingId, requestingUser) {
-  const billing = await db.Billing.findByPk(billingId, {
-    include: [
-      {
-        model: db.Patient,
-        as: 'patient',
-        attributes: ['id', 'first_name', 'last_name', 'email', 'assigned_dietitian_id']
-      },
-      {
-        model: db.Visit,
-        as: 'visit',
-        attributes: ['id', 'visit_date', 'visit_type', 'duration_minutes']
-      },
-      {
-        model: db.User,
-        as: 'creator',
-        attributes: ['id', 'username', 'first_name', 'last_name']
-      }
-    ]
-  });
-
-  if (!billing) {
-    throw new AppError('Billing record not found', 404, 'BILLING_NOT_FOUND');
-  }
-
-  // Check access for dietitians
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    if (billing.patient.assigned_dietitian_id !== requestingUser.id) {
-      throw new AppError(
-        'Access denied. You can only view billing for your assigned patients',
-        403,
-        'NOT_ASSIGNED_PATIENT'
-      );
-    }
-  }
-
-  return billing;
-}
-
-/**
- * Create new billing record/invoice
- */
-async function createBilling(billingData, createdBy, requestingUser) {
-  const {
-    patient_id,
-    visit_id,
-    invoice_date,
-    due_date,
-    amount,
-    tax_amount,
-    currency,
-    status,
-    payment_method,
-    notes
-  } = billingData;
-
-  // Validate required fields
-  if (!patient_id || !invoice_date || !due_date || amount === undefined) {
-    throw new AppError(
-      'Patient ID, invoice date, due date, and amount are required',
-      400,
-      'VALIDATION_ERROR'
-    );
-  }
-
-  // Check patient access
-  await checkPatientAccessForBilling(patient_id, requestingUser);
-
-  // Verify visit exists if provided
-  if (visit_id) {
-    const visit = await db.Visit.findByPk(visit_id);
-    if (!visit) {
-      throw new AppError('Visit not found', 404, 'VISIT_NOT_FOUND');
-    }
-    if (visit.patient_id !== patient_id) {
-      throw new AppError('Visit does not belong to this patient', 400, 'VISIT_PATIENT_MISMATCH');
-    }
-  }
-
-  // Generate invoice number
-  const invoice_number = await generateInvoiceNumber();
-
-  // Calculate total amount
-  const taxAmt = tax_amount || 0;
-  const total_amount = parseFloat(amount) + parseFloat(taxAmt);
-
-  // Create billing record
-  const billing = await db.Billing.create({
-    patient_id,
-    visit_id,
-    invoice_number,
-    invoice_date,
-    due_date,
-    amount,
-    tax_amount: taxAmt,
-    total_amount,
-    currency: currency || 'USD',
-    status: status || 'PENDING',
-    payment_method,
-    notes,
-    created_by: createdBy,
-    updated_by: createdBy
-  });
-
-  // Log creation
-  await logCrudEvent({
-    user_id: createdBy,
-    action: 'CREATE',
-    resource_type: 'billing',
-    resource_id: billing.id,
-    changes: { created: true, invoice_number },
-    status: 'SUCCESS'
-  });
-
-  // Reload with associations
-  await billing.reload({
-    include: [
-      {
-        model: db.Patient,
-        as: 'patient',
-        attributes: ['id', 'first_name', 'last_name', 'email']
-      },
-      {
-        model: db.Visit,
-        as: 'visit',
-        attributes: ['id', 'visit_date', 'visit_type']
-      }
-    ]
-  });
-
-  // Invalidate cache
-  cacheInvalidation.invalidateBillingCache(billing.id, billing.patient_id);
-
-  return billing;
-}
-
-/**
- * Update billing record
- */
-async function updateBilling(billingId, updates, updatedBy, requestingUser) {
-  const billing = await db.Billing.findByPk(billingId, {
-    include: [{
-      model: db.Patient,
-      as: 'patient',
-      attributes: ['id', 'assigned_dietitian_id']
-    }]
-  });
-
-  if (!billing) {
-    throw new AppError('Billing record not found', 404, 'BILLING_NOT_FOUND');
-  }
-
-  // Check access for dietitians
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    if (billing.patient.assigned_dietitian_id !== requestingUser.id) {
-      throw new AppError(
-        'Access denied. You can only update billing for your assigned patients',
-        403,
-        'NOT_ASSIGNED_PATIENT'
-      );
-    }
-  }
-
-  // Fields that can be updated
-  const allowedUpdates = [
-    'due_date',
-    'amount',
-    'tax_amount',
-    'status',
-    'payment_method',
-    'payment_date',
-    'notes'
-  ];
-
-  // Filter updates to only allowed fields
-  const filteredUpdates = {};
-  Object.keys(updates).forEach(key => {
-    if (allowedUpdates.includes(key) && updates[key] !== undefined) {
-      filteredUpdates[key] = updates[key];
-    }
-  });
-
-  // Recalculate total if amount or tax changed
-  if (filteredUpdates.amount !== undefined || filteredUpdates.tax_amount !== undefined) {
-    const newAmount = filteredUpdates.amount !== undefined ? filteredUpdates.amount : billing.amount;
-    const newTax = filteredUpdates.tax_amount !== undefined ? filteredUpdates.tax_amount : billing.tax_amount;
-    filteredUpdates.total_amount = parseFloat(newAmount) + parseFloat(newTax);
-  }
-
-  // Track changes for audit log
-  const changes = {};
-  Object.keys(filteredUpdates).forEach(key => {
-    if (String(billing[key]) !== String(filteredUpdates[key])) {
-      changes[key] = {
-        old: billing[key],
-        new: filteredUpdates[key]
-      };
-    }
-  });
-
-  // Update billing
-  await billing.update({
-    ...filteredUpdates,
-    updated_by: updatedBy
-  });
-
-  // Log the update
-  await logCrudEvent({
-    user_id: updatedBy,
-    action: 'UPDATE',
-    resource_type: 'billing',
-    resource_id: billingId,
-    changes: changes,
-    status: 'SUCCESS'
-  });
-
-  // Reload with associations
-  await billing.reload({
-    include: [
-      {
-        model: db.Patient,
-        as: 'patient',
-        attributes: ['id', 'first_name', 'last_name', 'email']
-      },
-      {
-        model: db.Visit,
-        as: 'visit',
-        attributes: ['id', 'visit_date', 'visit_type']
-      }
-    ]
-  });
-
-  // Invalidate cache
-  cacheInvalidation.invalidateBillingCache(billingId, billing.patient_id);
-
-  return billing;
-}
-
-/**
- * Delete billing record
- */
-async function deleteBilling(billingId, deletedBy, requestingUser) {
-  const billing = await db.Billing.findByPk(billingId, {
-    include: [{
-      model: db.Patient,
-      as: 'patient',
-      attributes: ['id', 'assigned_dietitian_id']
-    }]
-  });
-
-  if (!billing) {
-    throw new AppError('Billing record not found', 404, 'BILLING_NOT_FOUND');
-  }
-
-  // Check access for dietitians
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    if (billing.patient.assigned_dietitian_id !== requestingUser.id) {
-      throw new AppError(
-        'Access denied. You can only delete billing for your assigned patients',
-        403,
-        'NOT_ASSIGNED_PATIENT'
-      );
-    }
-  }
-
-  // Prevent deletion of paid invoices
-  if (billing.status === 'PAID') {
-    throw new AppError('Cannot delete paid invoices', 400, 'CANNOT_DELETE_PAID_INVOICE');
-  }
-
-  const invoice_number = billing.invoice_number;
-
-  // Hard delete
-  await billing.destroy();
-
-  // Log the deletion
-  await logCrudEvent({
-    user_id: deletedBy,
-    action: 'DELETE',
-    resource_type: 'billing',
-    resource_id: billingId,
-    changes: { invoice_number },
-    status: 'SUCCESS'
-  });
-
-  // Invalidate cache
-  cacheInvalidation.invalidateBillingCache(billingId, billing.patient_id);
-
-  return { message: 'Billing record deleted successfully' };
-}
-
-/**
- * Mark invoice as paid
- */
-async function markAsPaid(billingId, paymentData, updatedBy, requestingUser) {
-  const { payment_method, payment_date } = paymentData;
-
-  const billing = await getBillingById(billingId, requestingUser);
-
-  if (billing.status === 'PAID') {
-    throw new AppError('Invoice is already marked as paid', 400, 'ALREADY_PAID');
-  }
-
-  await billing.update({
-    status: 'PAID',
-    payment_method: payment_method || billing.payment_method,
-    payment_date: payment_date || new Date().toISOString().split('T')[0],
-    updated_by: updatedBy
-  });
-
-  // Log the payment
-  await logCrudEvent({
-    user_id: updatedBy,
-    action: 'UPDATE',
-    resource_type: 'billing',
-    resource_id: billingId,
-    changes: { status: { old: billing.status, new: 'PAID' } },
-    status: 'SUCCESS'
-  });
-
-  // Invalidate cache
-  cacheInvalidation.invalidateBillingCache(billingId, billing.patient_id);
-
-  return billing;
-}
-
-/**
- * Get billing statistics
- */
-async function getBillingStats(filters = {}, requestingUser) {
-  let where = {};
-
-  const { from_date, to_date } = filters;
-
-  if (from_date) {
-    where.invoice_date = { [Op.gte]: from_date };
-  }
-
-  if (to_date) {
-    where.invoice_date = { ...where.invoice_date, [Op.lte]: to_date };
-  }
-
-  // If user is a dietitian, only count their patients' billing
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    const assignedPatients = await db.Patient.findAll({
-      where: { assigned_dietitian_id: requestingUser.id },
-      attributes: ['id']
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email', 'phone', 'address'],
+          where: { is_active: true },
+          required: true
+        },
+        {
+          model: Visit,
+          as: 'visit',
+          attributes: ['id', 'visit_date', 'status', 'notes'],
+          required: false
+        }
+      ]
     });
-    const patientIds = assignedPatients.map(p => p.id);
 
-    if (patientIds.length > 0) {
-      where.patient_id = { [Op.in]: patientIds };
-    } else {
-      where.patient_id = null;
+    if (!invoice) {
+      const error = new Error('Invoice not found');
+      error.statusCode = 404;
+      throw error;
     }
+
+    // RBAC: Check if user can view this invoice
+    if (user && user.role) {
+      if (user.role.name === 'VIEWER') {
+        const error = new Error('Access denied');
+        error.statusCode = 403;
+        throw error;
+      }
+      // ADMIN, DIETITIAN, ASSISTANT can view all invoices
+    }
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'READ',
+      resource_type: 'billing',
+      resource_id: invoiceId,
+      changes: { action: 'view_invoice' },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200
+    });
+
+    return invoice;
+  } catch (error) {
+    console.error('Error in getInvoiceById:', error);
+    throw error;
   }
+}
 
-  const totalInvoices = await db.Billing.count({ where });
+/**
+ * Create new invoice
+ *
+ * @param {Object} invoiceData - Invoice data
+ * @param {string} invoiceData.patient_id - Patient UUID
+ * @param {string} invoiceData.visit_id - Optional visit UUID
+ * @param {string} invoiceData.service_description - Service description
+ * @param {number} invoiceData.amount_total - Total amount
+ * @param {Date} invoiceData.due_date - Due date
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Created invoice
+ */
+async function createInvoice(invoiceData, user, requestMetadata = {}) {
+  try {
+    // RBAC: Check permissions
+    if (user && user.role) {
+      if (user.role.name === 'VIEWER') {
+        const error = new Error('Access denied');
+        error.statusCode = 403;
+        throw error;
+      }
+      // ADMIN, DIETITIAN, ASSISTANT can create invoices
+    }
 
-  // Revenue by status
-  const revenueByStatus = await db.Billing.findAll({
-    attributes: [
-      'status',
-      [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count'],
-      [db.sequelize.fn('SUM', db.sequelize.col('total_amount')), 'total']
-    ],
-    where,
-    group: ['status']
-  });
+    // Validate patient exists
+    const patient = await Patient.findOne({
+      where: { id: invoiceData.patient_id, is_active: true }
+    });
 
-  // Total revenue
-  const totalRevenue = await db.Billing.sum('total_amount', { where }) || 0;
-  const paidRevenue = await db.Billing.sum('total_amount', {
-    where: { ...where, status: 'PAID' }
-  }) || 0;
-  const pendingRevenue = await db.Billing.sum('total_amount', {
-    where: { ...where, status: 'PENDING' }
-  }) || 0;
+    if (!patient) {
+      const error = new Error('Patient not found');
+      error.statusCode = 404;
+      throw error;
+    }
 
-  return {
-    total_invoices: totalInvoices,
-    total_revenue: parseFloat(totalRevenue).toFixed(2),
-    paid_revenue: parseFloat(paidRevenue).toFixed(2),
-    pending_revenue: parseFloat(pendingRevenue).toFixed(2),
-    by_status: revenueByStatus.map(item => ({
-      status: item.status,
-      count: parseInt(item.get('count')),
-      total: parseFloat(item.get('total') || 0).toFixed(2)
-    }))
-  };
+    // Validate visit if provided
+    if (invoiceData.visit_id) {
+      const visit = await Visit.findOne({
+        where: { 
+          id: invoiceData.visit_id,
+          status: { [Op.notIn]: ['CANCELLED', 'NO_SHOW'] }
+        }
+      });
+
+      if (!visit) {
+        const error = new Error('Visit not found or not eligible for billing');
+        error.statusCode = 404;
+        throw error;
+      }
+    }
+
+    // Generate invoice number (format: INV-YYYY-NNNN)
+    const currentYear = new Date().getFullYear();
+    const lastInvoice = await Billing.findOne({
+      where: {
+        invoice_number: { [Op.like]: `INV-${currentYear}-%` }
+      },
+      order: [['invoice_number', 'DESC']]
+    });
+
+    let nextNumber = 1;
+    if (lastInvoice) {
+      const lastNumber = parseInt(lastInvoice.invoice_number.split('-')[2]);
+      nextNumber = lastNumber + 1;
+    }
+
+    const invoiceNumber = `INV-${currentYear}-${nextNumber.toString().padStart(4, '0')}`;
+
+    // Calculate amounts
+    const amountTotal = parseFloat(invoiceData.amount_total) || 0;
+    const amountDue = amountTotal; // Initially, due amount equals total
+
+    // Set default due date to 30 days from now if not provided
+    const dueDate = invoiceData.due_date ? new Date(invoiceData.due_date) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    const invoice = await Billing.create({
+      patient_id: invoiceData.patient_id,
+      visit_id: invoiceData.visit_id || null,
+      invoice_number: invoiceNumber,
+      invoice_date: new Date(),
+      due_date: dueDate,
+      service_description: invoiceData.service_description,
+      amount_total: amountTotal,
+      amount_paid: 0,
+      amount_due: amountDue,
+      status: 'DRAFT'
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'CREATE',
+      resource_type: 'billing',
+      resource_id: invoice.id,
+      changes: {
+        action: 'create_invoice',
+        invoice_number: invoiceNumber,
+        amount_total: amountTotal
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 201
+    });
+
+    return invoice;
+  } catch (error) {
+    console.error('Error in createInvoice:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update invoice
+ *
+ * @param {string} invoiceId - Invoice UUID
+ * @param {Object} updateData - Update data
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated invoice
+ */
+async function updateInvoice(invoiceId, updateData, user, requestMetadata = {}) {
+  try {
+    // RBAC: Check permissions
+    if (user && user.role) {
+      if (user.role.name === 'VIEWER') {
+        const error = new Error('Access denied');
+        error.statusCode = 403;
+        throw error;
+      }
+      // ADMIN, DIETITIAN, ASSISTANT can update invoices
+    }
+
+    const invoice = await Billing.findOne({
+      where: { id: invoiceId, is_active: true }
+    });
+
+    if (!invoice) {
+      const error = new Error('Invoice not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const oldData = invoice.toJSON();
+
+    // Update fields
+    const allowedFields = [
+      'service_description', 'amount_total', 'due_date', 'status', 'notes'
+    ];
+
+    const updates = {};
+    allowedFields.forEach(field => {
+      if (updateData[field] !== undefined) {
+        updates[field] = updateData[field];
+      }
+    });
+
+    // Recalculate amounts if total changed
+    if (updates.amount_total !== undefined) {
+      const newTotal = parseFloat(updates.amount_total);
+      const currentPaid = parseFloat(invoice.amount_paid);
+      updates.amount_due = Math.max(0, newTotal - currentPaid);
+    }
+
+    await invoice.update(updates);
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'UPDATE',
+      resource_type: 'billing',
+      resource_id: invoiceId,
+      changes: { before: oldData, after: updates },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200
+    });
+
+    return invoice;
+  } catch (error) {
+    console.error('Error in updateInvoice:', error);
+    throw error;
+  }
+}
+
+/**
+ * Record payment for invoice
+ *
+ * @param {string} invoiceId - Invoice UUID
+ * @param {Object} paymentData - Payment data
+ * @param {number} paymentData.amount - Payment amount
+ * @param {string} paymentData.payment_method - Payment method
+ * @param {Date} paymentData.payment_date - Payment date
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated invoice
+ */
+async function recordPayment(invoiceId, paymentData, user, requestMetadata = {}) {
+  try {
+    // RBAC: Check permissions
+    if (user && user.role) {
+      if (user.role.name === 'VIEWER') {
+        const error = new Error('Access denied');
+        error.statusCode = 403;
+        throw error;
+      }
+      // ADMIN, DIETITIAN, ASSISTANT can record payments
+    }
+
+    const invoice = await Billing.findOne({
+      where: { id: invoiceId, is_active: true }
+    });
+
+    if (!invoice) {
+      const error = new Error('Invoice not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const oldData = invoice.toJSON();
+    const paymentAmount = parseFloat(paymentData.amount) || 0;
+    const currentPaid = parseFloat(invoice.amount_paid);
+    const currentDue = parseFloat(invoice.amount_due);
+
+    if (paymentAmount <= 0) {
+      const error = new Error('Payment amount must be greater than 0');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (paymentAmount > currentDue) {
+      const error = new Error('Payment amount cannot exceed due amount');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const newPaid = currentPaid + paymentAmount;
+    const newDue = Math.max(0, currentDue - paymentAmount);
+
+    // Determine new status
+    let newStatus = invoice.status;
+    if (newDue === 0 && newPaid >= invoice.amount_total) {
+      newStatus = 'PAID';
+    } else if (newDue > 0 && new Date() > new Date(invoice.due_date)) {
+      newStatus = 'OVERDUE';
+    }
+
+    const updates = {
+      amount_paid: newPaid,
+      amount_due: newDue,
+      status: newStatus,
+      payment_method: paymentData.payment_method || invoice.payment_method,
+      payment_date: paymentData.payment_date || new Date()
+    };
+
+    await invoice.update(updates);
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'UPDATE',
+      resource_type: 'billing',
+      resource_id: invoiceId,
+      changes: {
+        before: oldData,
+        after: updates,
+        action: 'record_payment',
+        payment_amount: paymentAmount
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200
+    });
+
+    return invoice;
+  } catch (error) {
+    console.error('Error in recordPayment:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete invoice (soft delete)
+ *
+ * @param {string} invoiceId - Invoice UUID
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<boolean>} Success status
+ */
+async function deleteInvoice(invoiceId, user, requestMetadata = {}) {
+  try {
+    // RBAC: Check permissions
+    if (user && user.role) {
+      if (user.role.name !== 'ADMIN') {
+        const error = new Error('Only administrators can delete invoices');
+        error.statusCode = 403;
+        throw error;
+      }
+    }
+
+    const invoice = await Billing.findOne({
+      where: { id: invoiceId, is_active: true }
+    });
+
+    if (!invoice) {
+      const error = new Error('Invoice not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const oldData = invoice.toJSON();
+
+    // Soft delete
+    await invoice.update({ is_active: false });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'DELETE',
+      resource_type: 'billing',
+      resource_id: invoiceId,
+      changes: { before: oldData, after: { is_active: false }, action: 'soft_delete_invoice' },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Error in deleteInvoice:', error);
+    throw error;
+  }
 }
 
 module.exports = {
-  getBillingRecords,
-  getBillingById,
-  createBilling,
-  updateBilling,
-  deleteBilling,
-  markAsPaid,
-  getBillingStats
+  getInvoices,
+  getInvoiceById,
+  createInvoice,
+  updateInvoice,
+  recordPayment,
+  deleteInvoice
 };

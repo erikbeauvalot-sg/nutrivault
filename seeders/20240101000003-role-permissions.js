@@ -1,98 +1,118 @@
 'use strict';
 
+const { v4: uuidv4 } = require('uuid');
+
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     // Get all roles and permissions
     const roles = await queryInterface.sequelize.query(
-      'SELECT id, name FROM roles;',
+      'SELECT id, name FROM roles',
       { type: Sequelize.QueryTypes.SELECT }
     );
 
     const permissions = await queryInterface.sequelize.query(
-      'SELECT id, name FROM permissions;',
+      'SELECT id, code FROM permissions',
       { type: Sequelize.QueryTypes.SELECT }
     );
 
-    // Create permission maps
-    const permissionMap = {};
-    permissions.forEach(p => {
-      permissionMap[p.name] = p.id;
-    });
+    // Check if role_permissions already exist
+    const existing = await queryInterface.sequelize.query(
+      'SELECT * FROM role_permissions LIMIT 1',
+      { type: Sequelize.QueryTypes.SELECT }
+    );
 
-    const roleMap = {};
-    roles.forEach(r => {
-      roleMap[r.name] = r.id;
-    });
+    if (existing.length > 0) {
+      console.log('ℹ️  Role permissions already exist, skipping seed');
+      return;
+    }
 
-    // Define role-permission mappings
     const rolePermissions = [];
+    const now = new Date();
 
-    // ADMIN - all permissions
-    const adminPermissions = permissions.map(p => ({
-      role_id: roleMap['ADMIN'],
-      permission_id: p.id,
-      created_at: new Date()
-    }));
-    rolePermissions.push(...adminPermissions);
+    // Find role IDs
+    const adminRole = roles.find(r => r.name === 'ADMIN');
+    const dietitianRole = roles.find(r => r.name === 'DIETITIAN');
+    const assistantRole = roles.find(r => r.name === 'ASSISTANT');
+    const viewerRole = roles.find(r => r.name === 'VIEWER');
 
-    // DIETITIAN - manage patients, visits, and billing
-    const dietitianPermissionNames = [
-      'patients.create', 'patients.read', 'patients.update', 'patients.list',
-      'visits.create', 'visits.read', 'visits.update', 'visits.delete', 'visits.list',
-      'billing.create', 'billing.read', 'billing.update', 'billing.list',
-      'users.read',
-      'api_keys.create', 'api_keys.read', 'api_keys.delete',
-      'reports.read', 'reports.patients', 'reports.visits', 'reports.billing', 'reports.overview',
-      'documents.upload', 'documents.read', 'documents.update', 'documents.delete',
-      'export.patients', 'export.visits', 'export.billing'
-    ];
-    dietitianPermissionNames.forEach(name => {
-      if (permissionMap[name]) {
+    // ADMIN: All 40 permissions
+    if (adminRole) {
+      permissions.forEach(permission => {
         rolePermissions.push({
-          role_id: roleMap['DIETITIAN'],
-          permission_id: permissionMap[name],
-          created_at: new Date()
+          id: uuidv4(),
+          role_id: adminRole.id,
+          permission_id: permission.id,
+          created_at: now,
+          updated_at: now
         });
-      }
-    });
+      });
+    }
 
-    // ASSISTANT - create visits/billing, limited patient access
-    const assistantPermissionNames = [
-      'patients.read', 'patients.list',
-      'visits.create', 'visits.read', 'visits.update', 'visits.list',
-      'billing.create', 'billing.read', 'billing.list',
-      'users.read',
-      'documents.upload', 'documents.read'
-    ];
-    assistantPermissionNames.forEach(name => {
-      if (permissionMap[name]) {
-        rolePermissions.push({
-          role_id: roleMap['ASSISTANT'],
-          permission_id: permissionMap[name],
-          created_at: new Date()
+    // DIETITIAN: Patients, visits, billing, documents, reports, audit logs (no user management)
+    if (dietitianRole) {
+      permissions
+        .filter(p => 
+          !p.code.startsWith('api_keys.') &&
+          !p.code.startsWith('system.') &&
+          !p.code.startsWith('users.')
+        )
+        .forEach(permission => {
+          rolePermissions.push({
+            id: uuidv4(),
+            role_id: dietitianRole.id,
+            permission_id: permission.id,
+            created_at: now,
+            updated_at: now
+          });
         });
-      }
-    });
+    }
 
-    // VIEWER - read-only access
-    const viewerPermissionNames = [
-      'patients.read', 'patients.list',
-      'visits.read', 'visits.list',
-      'billing.read', 'billing.list',
-      'users.read',
-      'documents.read'
-    ];
-    viewerPermissionNames.forEach(name => {
-      if (permissionMap[name]) {
-        rolePermissions.push({
-          role_id: roleMap['VIEWER'],
-          permission_id: permissionMap[name],
-          created_at: new Date()
+    // ASSISTANT: View patients and manage visits (create/read/update for visits, read for patients)
+    if (assistantRole) {
+      permissions
+        .filter(p => 
+          (p.code.startsWith('patients.') && p.code.includes('read')) ||
+          (p.code.startsWith('visits.')) ||
+          (p.code.startsWith('billing.') && (p.code.includes('create') || p.code.includes('read'))) ||
+          (p.code.startsWith('documents.') && (p.code.includes('upload') || p.code.includes('read') || p.code.includes('download')))
+        )
+        .forEach(permission => {
+          rolePermissions.push({
+            id: uuidv4(),
+            role_id: assistantRole.id,
+            permission_id: permission.id,
+            created_at: now,
+            updated_at: now
+          });
         });
-      }
-    });
+    }
+
+    // VIEWER: Read-only access (10 permissions)
+    if (viewerRole) {
+      permissions
+        .filter(p => 
+          p.code.includes('.read') ||
+          p.code.includes('.download') ||
+          p.code.startsWith('reports.') ||
+          p.code.startsWith('audit_logs.read')
+        )
+        .forEach(permission => {
+          rolePermissions.push({
+            id: uuidv4(),
+            role_id: viewerRole.id,
+            permission_id: permission.id,
+            created_at: now,
+            updated_at: now
+          });
+        });
+    }
 
     await queryInterface.bulkInsert('role_permissions', rolePermissions);
+    console.log(`✅ Seeded ${rolePermissions.length} role-permission mappings`);
+    console.log(`   - ADMIN: ${permissions.length} permissions (all)`);
+    console.log(`   - DIETITIAN: ${rolePermissions.filter(rp => rp.role_id === dietitianRole?.id).length} permissions`);
+    console.log(`   - ASSISTANT: ${rolePermissions.filter(rp => rp.role_id === assistantRole?.id).length} permissions`);
+    console.log(`   - VIEWER: ${rolePermissions.filter(rp => rp.role_id === viewerRole?.id).length} permissions`);
   },
 
   down: async (queryInterface, Sequelize) => {

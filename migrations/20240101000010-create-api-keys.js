@@ -6,15 +6,7 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
-      },
-      key_hash: {
-        type: Sequelize.STRING(255),
-        unique: true,
-        allowNull: false
-      },
-      key_prefix: {
-        type: Sequelize.STRING(10),
+        primaryKey: true,
         allowNull: false
       },
       user_id: {
@@ -27,42 +19,51 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      name: {
+      key_name: {
         type: Sequelize.STRING(100),
-        allowNull: false
+        allowNull: false,
+        comment: 'Human-readable name for the API key'
+      },
+      key_hash: {
+        type: Sequelize.STRING(255),
+        allowNull: false,
+        unique: true,
+        comment: 'bcrypt hash of API key'
       },
       expires_at: {
         type: Sequelize.DATE,
-        allowNull: true
+        allowNull: true,
+        comment: 'NULL means no expiration'
       },
       last_used_at: {
         type: Sequelize.DATE,
         allowNull: true
       },
+      usage_count: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        defaultValue: 0
+      },
       is_active: {
         type: Sequelize.BOOLEAN,
+        allowNull: false,
         defaultValue: true
       },
-      created_by: {
-        type: Sequelize.UUID,
-        allowNull: true,
-        references: {
-          model: 'users',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
-      },
       created_at: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      },
+      updated_at: {
+        type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
 
-    await queryInterface.addIndex('api_keys', ['key_hash']);
     await queryInterface.addIndex('api_keys', ['user_id']);
-    await queryInterface.addIndex('api_keys', ['key_prefix']);
+    await queryInterface.addIndex('api_keys', ['key_hash']);
+    await queryInterface.addIndex('api_keys', ['is_active']);
   },
 
   down: async (queryInterface, Sequelize) => {

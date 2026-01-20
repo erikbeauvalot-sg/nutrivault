@@ -1,482 +1,793 @@
 /**
- * Visit Management Service
- *
- * Business logic for visit management operations
+ * Visit Service
+ * 
+ * Business logic for visit management with RBAC and audit logging.
+ * Enforces dietitian filtering and status tracking.
  */
 
-const db = require('../../models');
-const { AppError } = require('../middleware/errorHandler');
-const { logCrudEvent } = require('./audit.service');
-const { Op } = require('sequelize');
-const QueryBuilder = require('../utils/queryBuilder');
-const { VISITS_CONFIG } = require('../config/queryConfigs');
-const cacheInvalidation = require('./cache-invalidation.service');
-
-/**
- * Check if user has access to patient
- */
-async function checkPatientAccess(patientId, user) {
-  const patient = await db.Patient.findByPk(patientId);
-
-  if (!patient) {
-    throw new AppError('Patient not found', 404, 'PATIENT_NOT_FOUND');
-  }
-
-  // Dietitians can only access their assigned patients
-  if (user.role && user.role.name === 'DIETITIAN') {
-    if (patient.assigned_dietitian_id !== user.id) {
-      throw new AppError(
-        'Access denied. You can only manage visits for your assigned patients',
-        403,
-        'NOT_ASSIGNED_PATIENT'
-      );
-    }
-  }
-
-  return patient;
-}
+const db = require('../../../models');
+const Visit = db.Visit;
+const VisitMeasurement = db.VisitMeasurement;
+const Patient = db.Patient;
+const User = db.User;
+const Role = db.Role;
+const auditService = require('./audit.service');
+const billingService = require('./billing.service');
+const { Op } = db.Sequelize;
 
 /**
  * Get all visits with filtering and pagination
- * Dietitians can only see visits for their assigned patients
- * Supports search across chief_complaint, assessment, recommendations
+ * 
+ * @param {Object} user - Authenticated user object
+ * @param {Object} filters - Filter criteria
+ * @param {string} filters.search - Search by patient name
+ * @param {string} filters.patient_id - Filter by patient
+ * @param {string} filters.dietitian_id - Filter by dietitian
+ * @param {string} filters.status - Filter by status
+ * @param {string} filters.start_date - Filter visits after this date
+ * @param {string} filters.end_date - Filter visits before this date
+ * @param {number} filters.page - Page number (default 1)
+ * @param {number} filters.limit - Items per page (default 20)
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Visits, total count, and pagination info
  */
-async function getVisits(filters = {}, requestingUser) {
-  // Use QueryBuilder for advanced filtering and search
-  const queryBuilder = new QueryBuilder(VISITS_CONFIG);
-  const { where, pagination, sort } = queryBuilder.build(filters);
+async function getVisits(user, filters = {}, requestMetadata = {}) {
+  try {
+    const whereClause = {};
 
-  // Verify patient access if filtering by specific patient
-  if (filters.patient_id) {
-    await checkPatientAccess(filters.patient_id, requestingUser);
-  }
+    // RBAC: In POC system, all authenticated users can see all visits
+    // (Original restrictive logic commented out for POC purposes)
+    // if (user && user.role && user.role.name === 'DIETITIAN') {
+    //   // Get patients assigned to this dietitian
+    //   const assignedPatients = await Patient.findAll({
+    //     where: { assigned_dietitian_id: user.id, is_active: true },
+    //     attributes: ['id']
+    //   });
+    //   const patientIds = assignedPatients.map(p => p.id);
 
-  // Apply RBAC: Dietitians can only see their own visits
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    if (filters.dietitian_id && filters.dietitian_id !== requestingUser.id) {
-      throw new AppError(
-        'Access denied. You can only view your own visits',
-        403,
-        'ACCESS_DENIED'
-      );
+    //   // Can see visits where they're the dietitian OR visits for their assigned patients
+    //   whereClause[Op.or] = [
+    //     { dietitian_id: user.id },
+    //     { patient_id: { [Op.in]: patientIds } }
+    //   ];
+    // }
+
+    // Apply additional filters
+    if (filters.patient_id) {
+      whereClause.patient_id = filters.patient_id;
     }
-    // Force dietitian filter for dietitian users
-    where.dietitian_id = requestingUser.id;
-  } else if (filters.dietitian_id && !where.dietitian_id) {
-    // Admins can filter by specific dietitian (if not already set by QueryBuilder)
-    where.dietitian_id = filters.dietitian_id;
-  }
 
-  // Handle legacy from_date/to_date parameters (backward compatibility)
-  const { from_date, to_date } = filters;
-  if (from_date || to_date) {
-    if (!where.visit_date) {
-      where.visit_date = {};
+    if (filters.dietitian_id) {
+      whereClause.dietitian_id = filters.dietitian_id;
     }
-    if (from_date) {
-      if (typeof where.visit_date === 'object') {
-        where.visit_date[Op.gte] = new Date(from_date);
+
+    if (filters.status) {
+      whereClause.status = filters.status;
+    }
+
+    if (filters.start_date) {
+      whereClause.visit_date = whereClause.visit_date || {};
+      whereClause.visit_date[Op.gte] = new Date(filters.start_date);
+    }
+
+    if (filters.end_date) {
+      whereClause.visit_date = whereClause.visit_date || {};
+      whereClause.visit_date[Op.lte] = new Date(filters.end_date);
+    }
+
+    // Search by patient name
+    if (filters.search) {
+      const patients = await Patient.findAll({
+        where: {
+          [Op.or]: [
+            { first_name: { [Op.like]: `%${filters.search}%` } },
+            { last_name: { [Op.like]: `%${filters.search}%` } }
+          ]
+        },
+        attributes: ['id']
+      });
+      const searchPatientIds = patients.map(p => p.id);
+      
+      if (searchPatientIds.length > 0) {
+        if (whereClause.patient_id) {
+          // If already filtering by patient_id, intersect
+          whereClause.patient_id = searchPatientIds.includes(whereClause.patient_id) 
+            ? whereClause.patient_id 
+            : null;
+        } else {
+          whereClause.patient_id = { [Op.in]: searchPatientIds };
+        }
+      } else {
+        // No patients match search, return empty
+        whereClause.patient_id = null;
       }
     }
-    if (to_date) {
-      if (typeof where.visit_date === 'object') {
-        where.visit_date[Op.lte] = new Date(to_date);
-      }
-    }
+
+    // Pagination
+    const page = parseInt(filters.page) || 1;
+    const limit = parseInt(filters.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await Visit.findAndCountAll({
+      where: whereClause,
+      limit,
+      offset,
+      order: [['visit_date', 'DESC']],
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email']
+        },
+        {
+          model: User,
+          as: 'dietitian',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        },
+        {
+          model: VisitMeasurement,
+          as: 'measurements',
+          required: false
+        }
+      ]
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'READ',
+      resource_type: 'visits',
+      resource_id: null,
+      details: { filter_count: count, page, limit },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return {
+      visits: rows,
+      total: count,
+      page,
+      limit,
+      totalPages: Math.ceil(count / limit)
+    };
+  } catch (error) {
+    console.error('Error in getVisits:', error);
+    throw error;
   }
-
-  const { count, rows } = await db.Visit.findAndCountAll({
-    where,
-    include: [
-      {
-        model: db.Patient,
-        as: 'patient',
-        attributes: ['id', 'first_name', 'last_name', 'date_of_birth']
-      },
-      {
-        model: db.User,
-        as: 'dietitian',
-        attributes: ['id', 'username', 'first_name', 'last_name']
-      }
-    ],
-    limit: pagination.limit,
-    offset: pagination.offset,
-    order: sort
-  });
-
-  return {
-    visits: rows,
-    total: count,
-    limit: pagination.limit,
-    offset: pagination.offset
-  };
 }
 
 /**
  * Get visit by ID
+ * 
+ * @param {Object} user - Authenticated user object
+ * @param {string} visitId - Visit UUID
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Visit details with patient, dietitian, and measurements
  */
-async function getVisitById(visitId, requestingUser) {
-  const visit = await db.Visit.findByPk(visitId, {
-    include: [
-      {
-        model: db.Patient,
-        as: 'patient',
-        attributes: ['id', 'first_name', 'last_name', 'date_of_birth', 'assigned_dietitian_id']
-      },
-      {
-        model: db.User,
-        as: 'dietitian',
-        attributes: ['id', 'username', 'first_name', 'last_name']
-      }
-    ]
-  });
+async function getVisitById(user, visitId, requestMetadata = {}) {
+  try {
+    console.log('📅 [getVisitById] Fetching visit:', visitId);
+    
+    const visit = await Visit.findByPk(visitId, {
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email', 'phone', 'assigned_dietitian_id']
+        },
+        {
+          model: User,
+          as: 'dietitian',
+          attributes: ['id', 'username', 'first_name', 'last_name', 'email']
+        },
+        {
+          model: VisitMeasurement,
+          as: 'measurements'
+        }
+      ]
+    });
 
-  if (!visit) {
-    throw new AppError('Visit not found', 404, 'VISIT_NOT_FOUND');
-  }
+    console.log('📅 [getVisitById] Visit found:', !!visit);
 
-  // Check access for dietitians
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    // Dietitians can only view visits for their assigned patients
-    if (visit.patient.assigned_dietitian_id !== requestingUser.id) {
-      throw new AppError(
-        'Access denied. You can only view visits for your assigned patients',
-        403,
-        'NOT_ASSIGNED_PATIENT'
-      );
+    if (!visit) {
+      const error = new Error('Visit not found');
+      error.statusCode = 404;
+      throw error;
     }
-  }
 
-  return visit;
+    // RBAC: Check if user is authorized to view this visit
+    if (user.role.name === 'DIETITIAN') {
+      const isAssignedDietitian = visit.dietitian_id === user.id;
+      const isPatientsDietitian = visit.patient.assigned_dietitian_id === user.id;
+      
+      if (!isAssignedDietitian && !isPatientsDietitian) {
+        const error = new Error('Access denied: You can only view visits for your assigned patients');
+        error.statusCode = 403;
+        throw error;
+      }
+    }
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'READ',
+      resource_type: 'visits',
+      resource_id: visitId,
+      details: { patient_id: visit.patient_id, status: visit.status },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    console.log('📅 [getVisitById] Returning visit data');
+    return visit;
+  } catch (error) {
+    console.error('❌ [getVisitById] Error:', error.message);
+    throw error;
+    throw error;
+  }
 }
 
 /**
  * Create new visit
+ * 
+ * @param {Object} user - Authenticated user object
+ * @param {Object} visitData - Visit data
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Created visit
  */
-async function createVisit(visitData, createdBy, requestingUser) {
-  const {
-    patient_id,
-    dietitian_id,
-    visit_date,
-    duration_minutes,
-    visit_type,
-    status,
-    chief_complaint,
-    assessment,
-    recommendations,
-    next_visit_date,
-    private_notes
-  } = visitData;
-
-  // Validate required fields
-  if (!patient_id || !visit_date || !duration_minutes) {
-    throw new AppError(
-      'Patient ID, visit date, and duration are required',
-      400,
-      'VALIDATION_ERROR'
-    );
-  }
-
-  // Check patient access
-  await checkPatientAccess(patient_id, requestingUser);
-
-  // Set dietitian_id - if not provided, use requesting user if they're a dietitian
-  let finalDietitianId = dietitian_id;
-  if (!finalDietitianId) {
-    if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-      finalDietitianId = requestingUser.id;
-    } else {
-      throw new AppError(
-        'Dietitian ID is required',
-        400,
-        'VALIDATION_ERROR'
-      );
+async function createVisit(user, visitData, requestMetadata = {}) {
+  try {
+    // Validate patient exists and is active
+    const patient = await Patient.findByPk(visitData.patient_id);
+    if (!patient || !patient.is_active) {
+      const error = new Error('Patient not found or inactive');
+      error.statusCode = 400;
+      throw error;
     }
-  }
 
-  // Verify dietitian exists
-  const dietitian = await db.User.findByPk(finalDietitianId);
-  if (!dietitian) {
-    throw new AppError('Dietitian not found', 404, 'DIETITIAN_NOT_FOUND');
-  }
+    // Validate dietitian exists and is active
+    const dietitian = await User.findByPk(visitData.dietitian_id);
+    if (!dietitian || !dietitian.is_active) {
+      const error = new Error('Dietitian not found or inactive');
+      error.statusCode = 400;
+      throw error;
+    }
 
-  // Create visit
-  const visit = await db.Visit.create({
-    patient_id,
-    dietitian_id: finalDietitianId,
-    visit_date: new Date(visit_date),
-    duration_minutes,
-    visit_type,
-    status: status || 'SCHEDULED',
-    chief_complaint,
-    assessment,
-    recommendations,
-    next_visit_date,
-    private_notes,
-    created_by: createdBy,
-    updated_by: createdBy
-  });
+    // Validate dietitian role
+    const dietitianRole = await Role.findByPk(dietitian.role_id);
+    if (dietitianRole.name !== 'DIETITIAN' && dietitianRole.name !== 'ADMIN') {
+      const error = new Error('Assigned user must have DIETITIAN or ADMIN role');
+      error.statusCode = 400;
+      throw error;
+    }
 
-  // Log creation
-  await logCrudEvent({
-    user_id: createdBy,
-    action: 'CREATE',
-    resource_type: 'visits',
-    resource_id: visit.id,
-    changes: { created: true },
-    status: 'SUCCESS'
-  });
+    // Create visit
+    const visit = await Visit.create({
+      patient_id: visitData.patient_id,
+      dietitian_id: visitData.dietitian_id,
+      visit_date: visitData.visit_date,
+      visit_type: visitData.visit_type || 'Follow-up',
+      status: visitData.status || 'SCHEDULED',
+      duration_minutes: visitData.duration_minutes,
+      chief_complaint: visitData.chief_complaint,
+      assessment: visitData.assessment,
+      recommendations: visitData.recommendations,
+      notes: visitData.notes,
+      next_visit_date: visitData.next_visit_date
+    });
 
-  // Reload with associations
-  await visit.reload({
-    include: [
-      {
-        model: db.Patient,
-        as: 'patient',
-        attributes: ['id', 'first_name', 'last_name', 'date_of_birth']
-      },
-      {
-        model: db.User,
-        as: 'dietitian',
-        attributes: ['id', 'username', 'first_name', 'last_name']
+    // Fetch with associations
+    const createdVisit = await Visit.findByPk(visit.id, {
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email']
+        },
+        {
+          model: User,
+          as: 'dietitian',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        }
+      ]
+    });
+
+    // Auto-create invoice when visit is created as COMPLETED
+    let createdInvoice = null;
+    if (visit.status === 'COMPLETED') {
+      try {
+        // Check if invoice already exists for this visit (shouldn't happen for new visits)
+        const existingInvoice = await db.Billing.findOne({
+          where: { visit_id: visit.id, is_active: true }
+        });
+
+        if (!existingInvoice) {
+          // Create invoice automatically
+          const invoiceData = {
+            patient_id: visit.patient_id,
+            visit_id: visit.id,
+            service_description: `Consultation - ${visit.visit_type || 'General Visit'}`,
+            amount_total: calculateVisitAmount(visit), // Helper function for pricing
+            due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+          };
+
+          createdInvoice = await billingService.createInvoice(invoiceData, user, {
+            ...requestMetadata,
+            note: 'Auto-generated invoice for immediately completed visit'
+          });
+
+          console.log(`✅ Auto-created invoice for immediately completed visit ${visit.id}: ${createdInvoice.id}`);
+        }
+      } catch (billingError) {
+        console.error('❌ Failed to auto-create invoice for new completed visit:', billingError);
+        // Don't fail the visit creation if billing creation fails
       }
-    ]
-  });
+    }
 
-  // Invalidate cache
-  cacheInvalidation.invalidateVisitCache(visit.id, visit.patient_id);
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'CREATE',
+      resource_type: 'visits',
+      resource_id: visit.id,
+      details: {
+        patient_id: visit.patient_id,
+        dietitian_id: visit.dietitian_id,
+        visit_date: visit.visit_date,
+        status: visit.status
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
 
-  return visit;
+    return {
+      ...createdVisit.toJSON(),
+      created_invoice: createdInvoice ? {
+        id: createdInvoice.id,
+        invoice_number: createdInvoice.invoice_number
+      } : null
+    };
+  } catch (error) {
+    console.error('Error in createVisit:', error);
+    throw error;
+  }
 }
 
 /**
  * Update visit
+ * 
+ * @param {Object} user - Authenticated user object
+ * @param {string} visitId - Visit UUID
+ * @param {Object} updateData - Update data
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated visit
  */
-async function updateVisit(visitId, updates, updatedBy, requestingUser) {
-  const visit = await db.Visit.findByPk(visitId, {
-    include: [{
-      model: db.Patient,
-      as: 'patient',
-      attributes: ['id', 'assigned_dietitian_id']
-    }]
-  });
+async function updateVisit(user, visitId, updateData, requestMetadata = {}) {
+  try {
+    const visit = await Visit.findByPk(visitId);
 
-  if (!visit) {
-    throw new AppError('Visit not found', 404, 'VISIT_NOT_FOUND');
-  }
-
-  // Check access for dietitians
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    if (visit.patient.assigned_dietitian_id !== requestingUser.id) {
-      throw new AppError(
-        'Access denied. You can only update visits for your assigned patients',
-        403,
-        'NOT_ASSIGNED_PATIENT'
-      );
+    if (!visit) {
+      const error = new Error('Visit not found');
+      error.statusCode = 404;
+      throw error;
     }
-  }
 
-  // Fields that can be updated
-  const allowedUpdates = [
-    'visit_date',
-    'duration_minutes',
-    'visit_type',
-    'status',
-    'chief_complaint',
-    'assessment',
-    'recommendations',
-    'next_visit_date',
-    'private_notes',
-    'dietitian_id'
-  ];
-
-  // Filter updates to only allowed fields
-  const filteredUpdates = {};
-  Object.keys(updates).forEach(key => {
-    if (allowedUpdates.includes(key) && updates[key] !== undefined) {
-      filteredUpdates[key] = updates[key];
+    // RBAC: Only assigned dietitian, admin, or assistant can update
+    if (user.role.name === 'DIETITIAN' && visit.dietitian_id !== user.id) {
+      const error = new Error('Access denied: You can only update your own visits');
+      error.statusCode = 403;
+      throw error;
     }
-  });
 
-  // Convert date strings to Date objects
-  if (filteredUpdates.visit_date) {
-    filteredUpdates.visit_date = new Date(filteredUpdates.visit_date);
-  }
+    // Track changes for audit
+    const changes = {};
+    const allowedFields = [
+      'visit_date', 'visit_type', 'status', 'duration_minutes',
+      'chief_complaint', 'assessment', 'recommendations', 'notes', 'next_visit_date'
+    ];
 
-  // Track changes for audit log
-  const changes = {};
-  Object.keys(filteredUpdates).forEach(key => {
-    if (visit[key] !== filteredUpdates[key]) {
-      changes[key] = {
-        old: visit[key],
-        new: filteredUpdates[key]
-      };
-    }
-  });
-
-  // Update visit
-  await visit.update({
-    ...filteredUpdates,
-    updated_by: updatedBy
-  });
-
-  // Log the update
-  await logCrudEvent({
-    user_id: updatedBy,
-    action: 'UPDATE',
-    resource_type: 'visits',
-    resource_id: visitId,
-    changes: changes,
-    status: 'SUCCESS'
-  });
-
-  // Reload with associations
-  await visit.reload({
-    include: [
-      {
-        model: db.Patient,
-        as: 'patient',
-        attributes: ['id', 'first_name', 'last_name', 'date_of_birth']
-      },
-      {
-        model: db.User,
-        as: 'dietitian',
-        attributes: ['id', 'username', 'first_name', 'last_name']
+    allowedFields.forEach(field => {
+      if (updateData[field] !== undefined && updateData[field] !== visit[field]) {
+        changes[field] = { old: visit[field], new: updateData[field] };
+        visit[field] = updateData[field];
       }
-    ]
-  });
+    });
 
-  // Invalidate cache
-  cacheInvalidation.invalidateVisitCache(visitId, visit.patient_id);
+    await visit.save();
 
-  return visit;
+    // Auto-create invoice when visit status changes to COMPLETED
+    if (changes.status && changes.status.new === 'COMPLETED' && changes.status.old !== 'COMPLETED') {
+      try {
+        // Check if invoice already exists for this visit
+        const existingInvoice = await db.Billing.findOne({
+          where: { visit_id: visitId, is_active: true }
+        });
+
+        if (!existingInvoice) {
+          // Create invoice automatically
+          const invoiceData = {
+            patient_id: visit.patient_id,
+            visit_id: visitId,
+            service_description: `Consultation - ${visit.visit_type || 'General Visit'}`,
+            amount_total: calculateVisitAmount(visit), // Helper function for pricing
+            due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
+          };
+
+          await billingService.createInvoice(invoiceData, user, {
+            ...requestMetadata,
+            note: 'Auto-generated invoice for completed visit'
+          });
+
+          console.log(`✅ Auto-created invoice for completed visit ${visitId}`);
+        }
+      } catch (billingError) {
+        console.error('❌ Failed to auto-create invoice:', billingError);
+        // Don't fail the visit update if billing creation fails
+        // Log the error but continue
+      }
+    }
+
+    // Fetch with associations
+    const updatedVisit = await Visit.findByPk(visitId, {
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email']
+        },
+        {
+          model: User,
+          as: 'dietitian',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        },
+        {
+          model: VisitMeasurement,
+          as: 'measurements'
+        }
+      ]
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'UPDATE',
+      resource_type: 'visits',
+      resource_id: visitId,
+      details: { changes },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return updatedVisit;
+  } catch (error) {
+    console.error('Error in updateVisit:', error);
+    throw error;
+  }
 }
 
 /**
  * Delete visit
+ * 
+ * @param {Object} user - Authenticated user object
+ * @param {string} visitId - Visit UUID
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<void>}
  */
-async function deleteVisit(visitId, deletedBy, requestingUser) {
-  const visit = await db.Visit.findByPk(visitId, {
-    include: [{
-      model: db.Patient,
-      as: 'patient',
-      attributes: ['id', 'assigned_dietitian_id']
-    }]
-  });
+async function deleteVisit(user, visitId, requestMetadata = {}) {
+  try {
+    const visit = await Visit.findByPk(visitId);
 
-  if (!visit) {
-    throw new AppError('Visit not found', 404, 'VISIT_NOT_FOUND');
-  }
-
-  // Check access for dietitians
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    if (visit.patient.assigned_dietitian_id !== requestingUser.id) {
-      throw new AppError(
-        'Access denied. You can only delete visits for your assigned patients',
-        403,
-        'NOT_ASSIGNED_PATIENT'
-      );
+    if (!visit) {
+      const error = new Error('Visit not found');
+      error.statusCode = 404;
+      throw error;
     }
+
+    // RBAC: Only admin, assistant, or assigned dietitian can delete
+    if (user.role.name === 'DIETITIAN' && visit.dietitian_id !== user.id) {
+      const error = new Error('Access denied: You can only delete your own visits');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // Delete associated measurements first
+    await VisitMeasurement.destroy({
+      where: { visit_id: visitId }
+    });
+
+    // Delete visit
+    await visit.destroy();
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'DELETE',
+      resource_type: 'visits',
+      resource_id: visitId,
+      details: {
+        patient_id: visit.patient_id,
+        dietitian_id: visit.dietitian_id,
+        visit_date: visit.visit_date
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+  } catch (error) {
+    console.error('Error in deleteVisit:', error);
+    throw error;
   }
-
-  // Hard delete (visits don't have soft delete)
-  await visit.destroy();
-
-  // Log the deletion
-  await logCrudEvent({
-    user_id: deletedBy,
-    action: 'DELETE',
-    resource_type: 'visits',
-    resource_id: visitId,
-    status: 'SUCCESS'
-  });
-
-  // Invalidate cache
-  cacheInvalidation.invalidateVisitCache(visitId, visit.patient_id);
-
-  return { message: 'Visit deleted successfully' };
 }
 
 /**
- * Get visit statistics
+ * Add measurements to visit
+ * 
+ * @param {Object} user - Authenticated user object
+ * @param {string} visitId - Visit UUID
+ * @param {Object} measurementData - Measurement data
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Created measurement
  */
-async function getVisitStats(filters = {}, requestingUser) {
-  let where = {};
+async function addMeasurements(user, visitId, measurementData, requestMetadata = {}) {
+  try {
+    const visit = await Visit.findByPk(visitId);
 
-  const { from_date, to_date } = filters;
+    if (!visit) {
+      const error = new Error('Visit not found');
+      error.statusCode = 404;
+      throw error;
+    }
 
-  if (from_date) {
-    where.visit_date = { [Op.gte]: new Date(from_date) };
-  }
+    // RBAC: Only assigned dietitian can add measurements
+    if (user.role.name === 'DIETITIAN' && visit.dietitian_id !== user.id) {
+      const error = new Error('Access denied: You can only add measurements to your own visits');
+      error.statusCode = 403;
+      throw error;
+    }
 
-  if (to_date) {
-    where.visit_date = { ...where.visit_date, [Op.lte]: new Date(to_date) };
-  }
+    // Auto-calculate BMI if weight and height provided
+    let bmi = measurementData.bmi;
+    if (measurementData.weight_kg && measurementData.height_cm && !bmi) {
+      const heightInMeters = measurementData.height_cm / 100;
+      bmi = (measurementData.weight_kg / (heightInMeters * heightInMeters)).toFixed(2);
+    }
 
-  // If user is a dietitian, only count their visits
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    where.dietitian_id = requestingUser.id;
-  }
-
-  const totalVisits = await db.Visit.count({ where });
-
-  // Visits by status
-  const visitsByStatus = await db.Visit.findAll({
-    attributes: [
-      'status',
-      [db.sequelize.fn('COUNT', db.sequelize.col('Visit.id')), 'count']
-    ],
-    where,
-    group: ['status']
-  });
-
-  // Visits by type
-  const visitsByType = await db.Visit.findAll({
-    attributes: [
-      'visit_type',
-      [db.sequelize.fn('COUNT', db.sequelize.col('Visit.id')), 'count']
-    ],
-    where,
-    group: ['visit_type']
-  });
-
-  // Visits by dietitian (admins only)
-  let visitsByDietitian = [];
-  if (!requestingUser.role || requestingUser.role.name !== 'DIETITIAN') {
-    visitsByDietitian = await db.Visit.findAll({
-      attributes: [
-        'dietitian_id',
-        [db.sequelize.fn('COUNT', db.sequelize.col('Visit.id')), 'count']
-      ],
-      include: [{
-        model: db.User,
-        as: 'dietitian',
-        attributes: ['username', 'first_name', 'last_name']
-      }],
-      where,
-      group: ['dietitian_id', 'dietitian.id', 'dietitian.username', 'dietitian.first_name', 'dietitian.last_name']
+    // Always create new measurement record for history tracking (Beta feature)
+    // This allows tracking measurement changes over time for trend analysis
+    const measurement = await VisitMeasurement.create({
+      visit_id: visitId,
+      weight_kg: measurementData.weight_kg || null,
+      height_cm: measurementData.height_cm || null,
+      bmi: bmi || null,
+      blood_pressure_systolic: measurementData.blood_pressure_systolic || null,
+      blood_pressure_diastolic: measurementData.blood_pressure_diastolic || null,
+      waist_circumference_cm: measurementData.waist_circumference_cm || null,
+      body_fat_percentage: measurementData.body_fat_percentage || null,
+      muscle_mass_percentage: measurementData.muscle_mass_percentage || null,
+      notes: measurementData.notes || null
     });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'CREATE',
+      resource_type: 'visit_measurements',
+      resource_id: measurement.id,
+      details: {
+        visit_id: visitId,
+        bmi: bmi,
+        weight_kg: measurementData.weight_kg,
+        height_cm: measurementData.height_cm,
+        timestamp: new Date().toISOString()
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return measurement;
+  } catch (error) {
+    console.error('Error in addMeasurements:', error);
+    throw error;
+  }
+}
+
+/**
+ * Calculate the amount to charge for a visit based on visit type and duration
+ * 
+ * @param {Object} visit - Visit object
+ * @returns {number} Amount in euros
+ */
+function calculateVisitAmount(visit) {
+  // Base pricing by visit type
+  const basePrices = {
+    'Initial Consultation': 150,
+    'Follow-up': 100,
+    'Final Assessment': 120,
+    'Nutrition Counseling': 80,
+    'Other': 100
+  };
+
+  const basePrice = basePrices[visit.visit_type] || basePrices['Other'];
+  
+  // Adjust based on duration (if longer than 60 minutes, add €50 per additional 30 minutes)
+  const duration = visit.duration_minutes || 60;
+  if (duration > 60) {
+    const extraMinutes = duration - 60;
+    const extraHalfHours = Math.ceil(extraMinutes / 30);
+    return basePrice + (extraHalfHours * 50);
   }
 
-  return {
-    total: totalVisits,
-    by_status: visitsByStatus.map(item => ({
-      status: item.status,
-      count: parseInt(item.get('count'))
-    })),
-    by_type: visitsByType.map(item => ({
-      type: item.visit_type,
-      count: parseInt(item.get('count'))
-    })),
-    by_dietitian: visitsByDietitian.map(item => ({
-      dietitian: {
-        id: item.dietitian_id,
-        name: `${item.dietitian.first_name} ${item.dietitian.last_name}`,
-        username: item.dietitian.username
+  return basePrice;
+}
+
+/**
+ * Update measurement
+ *
+ * @param {Object} user - Authenticated user object
+ * @param {string} visitId - Visit UUID
+ * @param {string} measurementId - Measurement UUID
+ * @param {Object} measurementData - Measurement update data
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated measurement
+ */
+async function updateMeasurement(user, visitId, measurementId, measurementData, requestMetadata = {}) {
+  try {
+    const visit = await Visit.findByPk(visitId);
+
+    if (!visit) {
+      const error = new Error('Visit not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // RBAC: Only assigned dietitian can update measurements
+    if (user.role.name === 'DIETITIAN' && visit.dietitian_id !== user.id) {
+      const error = new Error('Access denied: You can only update measurements for your own visits');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const measurement = await VisitMeasurement.findOne({
+      where: {
+        id: measurementId,
+        visit_id: visitId
+      }
+    });
+
+    if (!measurement) {
+      const error = new Error('Measurement not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Store old values for audit
+    const oldValues = measurement.toJSON();
+
+    // Auto-calculate BMI if weight and height provided
+    let bmi = measurementData.bmi;
+    if (measurementData.weight_kg && measurementData.height_cm && !bmi) {
+      const heightInMeters = measurementData.height_cm / 100;
+      bmi = (measurementData.weight_kg / (heightInMeters * heightInMeters)).toFixed(2);
+    }
+
+    // Update measurement
+    await measurement.update({
+      weight_kg: measurementData.weight_kg !== undefined ? measurementData.weight_kg : measurement.weight_kg,
+      height_cm: measurementData.height_cm !== undefined ? measurementData.height_cm : measurement.height_cm,
+      bmi: bmi !== undefined ? bmi : measurement.bmi,
+      blood_pressure_systolic: measurementData.blood_pressure_systolic !== undefined
+        ? measurementData.blood_pressure_systolic
+        : measurement.blood_pressure_systolic,
+      blood_pressure_diastolic: measurementData.blood_pressure_diastolic !== undefined
+        ? measurementData.blood_pressure_diastolic
+        : measurement.blood_pressure_diastolic,
+      waist_circumference_cm: measurementData.waist_circumference_cm !== undefined
+        ? measurementData.waist_circumference_cm
+        : measurement.waist_circumference_cm,
+      body_fat_percentage: measurementData.body_fat_percentage !== undefined
+        ? measurementData.body_fat_percentage
+        : measurement.body_fat_percentage,
+      muscle_mass_percentage: measurementData.muscle_mass_percentage !== undefined
+        ? measurementData.muscle_mass_percentage
+        : measurement.muscle_mass_percentage,
+      notes: measurementData.notes !== undefined ? measurementData.notes : measurement.notes
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'UPDATE',
+      resource_type: 'visit_measurements',
+      resource_id: measurementId,
+      status: 'SUCCESS',
+      severity: 'INFO',
+      changes: {
+        before: oldValues,
+        after: measurement.toJSON()
       },
-      count: parseInt(item.get('count'))
-    }))
-  };
+      ip_address: requestMetadata.ip,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return measurement;
+  } catch (error) {
+    console.error('Error in updateMeasurement:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete measurement
+ *
+ * @param {Object} user - Authenticated user object
+ * @param {string} visitId - Visit UUID
+ * @param {string} measurementId - Measurement UUID
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<void>}
+ */
+async function deleteMeasurement(user, visitId, measurementId, requestMetadata = {}) {
+  try {
+    const visit = await Visit.findByPk(visitId);
+
+    if (!visit) {
+      const error = new Error('Visit not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // RBAC: Only assigned dietitian can delete measurements
+    if (user.role.name === 'DIETITIAN' && visit.dietitian_id !== user.id) {
+      const error = new Error('Access denied: You can only delete measurements from your own visits');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const measurement = await VisitMeasurement.findOne({
+      where: {
+        id: measurementId,
+        visit_id: visitId
+      }
+    });
+
+    if (!measurement) {
+      const error = new Error('Measurement not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Store values for audit before deletion
+    const deletedValues = measurement.toJSON();
+
+    // Delete measurement
+    await measurement.destroy();
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'DELETE',
+      resource_type: 'visit_measurements',
+      resource_id: measurementId,
+      status: 'SUCCESS',
+      severity: 'WARNING',
+      changes: { before: deletedValues },
+      ip_address: requestMetadata.ip,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      user_agent: requestMetadata.userAgent
+    });
+  } catch (error) {
+    console.error('Error in deleteMeasurement:', error);
+    throw error;
+  }
 }
 
 module.exports = {
@@ -485,5 +796,7 @@ module.exports = {
   createVisit,
   updateVisit,
   deleteVisit,
-  getVisitStats
+  addMeasurements,
+  updateMeasurement,
+  deleteMeasurement
 };

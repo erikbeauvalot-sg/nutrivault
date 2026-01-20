@@ -1,117 +1,51 @@
-/**
- * Document Model
- *
- * Polymorphic model for file uploads associated with various resources
- * (patients, visits, users)
- */
-
-'use strict';
-
 module.exports = (sequelize, DataTypes) => {
   const Document = sequelize.define('Document', {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
+      primaryKey: true,
+      allowNull: false
     },
-
-    // Polymorphic association
     resource_type: {
       type: DataTypes.STRING(50),
-      allowNull: false,
-      validate: {
-        isIn: [['patients', 'visits', 'users']]
-      }
+      allowNull: true,
+      comment: 'patient, visit, user - polymorphic association (optional for general uploads)'
     },
     resource_id: {
       type: DataTypes.UUID,
-      allowNull: false
+      allowNull: true,
+      comment: 'ID of associated resource - polymorphic association (optional for general uploads)'
     },
-
-    // Document categorization
-    document_type: {
-      type: DataTypes.STRING(100),
-      allowNull: false,
-      validate: {
-        isIn: [[
-          'medical_record',
-          'lab_result',
-          'diet_plan',
-          'profile_photo',
-          'meal_plan',
-          'progress_photo',
-          'prescription',
-          'insurance_card',
-          'consent_form',
-          'other'
-        ]]
-      }
-    },
-
-    // File information
-    original_filename: {
+    file_name: {
       type: DataTypes.STRING(255),
       allowNull: false
-    },
-    stored_filename: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
-      unique: true
     },
     file_path: {
       type: DataTypes.STRING(500),
-      allowNull: false
+      allowNull: false,
+      comment: 'Relative path from uploads directory'
+    },
+    file_size: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      comment: 'File size in bytes'
     },
     mime_type: {
       type: DataTypes.STRING(100),
       allowNull: false
     },
-    file_size: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      validate: {
-        min: 0,
-        max: 10485760 // 10MB max
-      }
-    },
-
-    // Optional metadata
-    title: {
-      type: DataTypes.STRING(255),
-      allowNull: true
+    uploaded_by: {
+      type: DataTypes.UUID,
+      allowNull: false
     },
     description: {
       type: DataTypes.TEXT,
       allowNull: true
     },
-    metadata: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      get() {
-        const rawValue = this.getDataValue('metadata');
-        return rawValue ? JSON.parse(rawValue) : null;
-      },
-      set(value) {
-        this.setDataValue('metadata', value ? JSON.stringify(value) : null);
-      }
-    },
-
-    // Audit fields
-    created_by: {
-      type: DataTypes.UUID,
+    is_active: {
+      type: DataTypes.BOOLEAN,
       allowNull: false,
-      references: {
-        model: 'users',
-        key: 'id'
-      }
-    },
-    updated_by: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: 'users',
-        key: 'id'
-      }
+      defaultValue: true
     }
   }, {
     tableName: 'documents',
@@ -119,34 +53,19 @@ module.exports = (sequelize, DataTypes) => {
     underscored: true,
     indexes: [
       {
-        fields: ['resource_type', 'resource_id'],
-        name: 'documents_resource_idx'
+        fields: ['resource_type']
       },
       {
-        fields: ['document_type'],
-        name: 'documents_type_idx'
+        fields: ['resource_id']
       },
       {
-        fields: ['created_by'],
-        name: 'documents_created_by_idx'
+        fields: ['uploaded_by']
+      },
+      {
+        fields: ['resource_type', 'resource_id']
       }
     ]
   });
-
-  Document.associate = (models) => {
-    // User associations for audit trail
-    Document.belongsTo(models.User, {
-      foreignKey: 'created_by',
-      as: 'creator'
-    });
-    Document.belongsTo(models.User, {
-      foreignKey: 'updated_by',
-      as: 'updater'
-    });
-
-    // Note: Polymorphic associations are handled at the service layer
-    // to maintain flexibility across different resource types
-  };
 
   return Document;
 };

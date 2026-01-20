@@ -1,18 +1,17 @@
 # NutriVault
 
-**Your complete nutrition practice management system**
-
-A secure, full-stack web application for dietitians to manage patient data, appointments, billing, and visit records with comprehensive audit logging and role-based access control.
+A comprehensive nutrition practice management system for dietitians, assistants, and patients. Built with Node.js/Express backend and React/Vite frontend.
 
 ## Features
 
-- **Patient Management**: Complete patient records with contact info, medical notes, dietary preferences, and allergies
-- **Visit Tracking**: Schedule and document patient visits with measurements, assessments, and recommendations
-- **Billing System**: Generate invoices, track payments, and manage financial records
-- **User Management**: Role-based access control (Admin, Dietitian, Assistant, Viewer)
-- **Audit Logging**: Comprehensive tracking of all data access and modifications
-- **Security**: JWT authentication, API keys, password hashing, rate limiting, and HTTPS
-- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
+- **Patient Management**: Complete CRUD operations for patient records
+- **Visit Tracking**: Schedule and manage patient visits with measurements
+- **Billing System**: Invoice generation, payment processing, and financial reporting
+- **Document Management**: Upload, preview, and organize patient documents
+- **Role-Based Access Control**: Secure authentication with 4 user roles (Admin, Dietitian, Assistant, Viewer)
+- **Audit Logging**: Comprehensive tracking of all system activities
+- **Internationalization**: Support for English and French languages
+- **Responsive Design**: Mobile-friendly interface
 
 ## Technology Stack
 
@@ -21,445 +20,202 @@ A secure, full-stack web application for dietitians to manage patient data, appo
 - **Framework**: Express.js
 - **Database**: SQLite (development) / PostgreSQL (production)
 - **ORM**: Sequelize
-- **Authentication**: JWT + Refresh Tokens
-- **Logging**: Winston
+- **Authentication**: JWT + API Keys
+- **Security**: bcrypt, Helmet, CORS
 
 ### Frontend
-- **Framework**: React 18+
-- **UI Library**: Bootstrap 5+ with React-Bootstrap
-- **State Management**: Redux Toolkit / React Context API
+- **Framework**: React 18
 - **Build Tool**: Vite
-- **HTTP Client**: Axios
+- **UI Library**: React Bootstrap
+- **Routing**: React Router v6
+- **Internationalization**: react-i18next
 
 ## Quick Start
 
 ### Prerequisites
-
 - Node.js 18+ LTS
-- npm (comes with Node.js)
-- Git
+- npm or yarn
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/erikbeauvalot-sg/nutrivault.git
+   git clone <repository-url>
    cd nutrivault
    ```
 
-2. **Backend Setup**
+2. **Install dependencies**
+   ```bash
+   # Backend
+   cd backend && npm install
+
+   # Frontend
+   cd ../frontend && npm install
+   ```
+
+3. **Set up environment variables**
+   ```bash
+   # Copy environment files
+   cp .env.example .env  # Root level
+   cp backend/.env.example backend/.env
+   cp frontend/.env.example frontend/.env
+
+   # Edit .env files with your configuration
+   ```
+
+4. **Set up database**
    ```bash
    cd backend
-   npm install
-   
-   # Copy environment template and configure
-   cp .env.example .env
-   # Edit .env with your configuration (see Environment Variables section below)
-   
-   # Initialize database
    npm run db:migrate
    npm run db:seed
-   
-   # Start development server
-   npm run dev
    ```
 
-3. **Frontend Setup** (in a new terminal)
+5. **Start development servers**
    ```bash
-   cd frontend
-   npm install
-   
-   # Copy environment template and configure
-   cp .env.example .env
-   # Edit .env with your configuration (see Environment Variables section below)
-   
-   # Start development server
-   npm run dev
+   # Backend (port 3001)
+   cd backend && npm run dev
+
+   # Frontend (port 5173) - in new terminal
+   cd frontend && npm run dev
    ```
 
-4. **Access the application**
+6. **Access the application**
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:3001
-   - API Documentation: http://localhost:3001/api-docs
 
-## Environment Variables
+### Default Login Credentials
 
-### Backend (.env)
-
-Create a `backend/.env` file with the following variables:
-
-```bash
-# Server Configuration
-NODE_ENV=development
-PORT=3001
-HOST=localhost                             # Use '0.0.0.0' to listen on all network interfaces for network access
-
-# Database Configuration
-DB_DIALECT=sqlite                          # Use 'postgres' for production
-DB_HOST=localhost                          # PostgreSQL host (if using postgres)
-DB_PORT=5432                               # PostgreSQL port (if using postgres)
-DB_NAME=nutrivault_dev                     # Database name
-DB_USER=postgres                           # PostgreSQL user (if using postgres)
-DB_PASSWORD=yourpassword                   # PostgreSQL password (if using postgres)
-DB_STORAGE=./data/nutrivault_dev.db        # SQLite file path (if using sqlite)
-
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-JWT_EXPIRES_IN=15m
-JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-this-in-production
-JWT_REFRESH_EXPIRES_IN=7d
-
-# Security
-BCRYPT_ROUNDS=10
-RATE_LIMIT_WINDOW_MS=900000                # 15 minutes
-RATE_LIMIT_MAX_REQUESTS=100                # Max requests per window
-
-# CORS Configuration
-CORS_ORIGIN=http://localhost:5173          # Frontend URL
-ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
-# For network access, add your IP addresses (e.g., http://192.168.1.173:5173,http://192.168.1.173:3001)
-
-# File Upload
-MAX_FILE_SIZE=10485760                     # 10MB in bytes
-UPLOAD_DIR=./uploads
-
-# Logging
-LOG_LEVEL=debug                            # debug, info, warn, error
-LOG_FILE_PATH=./logs/app.log
-
-# Session
-SESSION_SECRET=your-session-secret-change-this-in-production
-
-# API Documentation
-API_DOCS_ENABLED=true
-```
-
-### Frontend (.env)
-
-Create a `frontend/.env` file with the following variables:
-
-```bash
-# API Configuration
-VITE_API_BASE_URL=http://localhost:3001/api
-VITE_API_TIMEOUT=30000
-
-# Application Configuration
-VITE_APP_NAME=NutriVault
-VITE_APP_VERSION=1.0.0
-
-# Feature Flags
-VITE_ENABLE_ANALYTICS=false
-VITE_ENABLE_DEBUG=true
-
-# Environment
-VITE_ENVIRONMENT=development
-```
-
-### Production Environment
-
-For production deployment, ensure you:
-
-1. **Change all secrets** - Generate secure random strings for JWT_SECRET, JWT_REFRESH_SECRET, and SESSION_SECRET
-2. **Use PostgreSQL** - Set DB_DIALECT=postgres and configure PostgreSQL connection
-3. **Enable HTTPS** - Configure SSL/TLS certificates
-4. **Set NODE_ENV=production** - This enables production optimizations
-5. **Configure CORS** - Set CORS_ORIGIN to your production frontend URL
-6. **Disable API docs** - Set API_DOCS_ENABLED=false in production
-7. **Secure file uploads** - Configure appropriate file size limits and allowed types
-8. **Set strong bcrypt rounds** - Use BCRYPT_ROUNDS=12 or higher for production
-
-See [docs/SECURITY.md](docs/SECURITY.md) for detailed security guidelines.
-
-### Docker Setup (Alternative)
-
-```bash
-docker-compose up
-```
-
-## Default Test Users
-
-After seeding the database:
-
-| Role | Username | Password |
-|------|----------|----------|
-| Admin | admin | Admin123! |
-
-**⚠️ Change this password before deploying to production!**
-
-**Note**: Only the admin user is created by the seeder. Other users must be created through the application.
-
-## NPM Scripts
-
-### Backend
-
-- `npm run dev` - Start development server with auto-reload
-- `npm start` - Start production server
-- `npm run db:migrate` - Run database migrations
-- `npm run db:seed` - Seed database with test data
-- `npm run db:reset` - Reset database (undo, migrate, seed)
-- `npm test` - Run tests
-- `npm run admin:create` - Create a new admin user (CLI)
-- `npm run admin:reset-password` - Reset admin user password (CLI)
-- `npm run test:coverage` - Run tests with coverage
-- `npm run lint` - Run ESLint
-- `npm run lint:fix` - Fix ESLint issues
-
-### Frontend
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm test` - Run component tests
-- `npm run lint` - Run ESLint
-
-
-## Admin User Management
-
-### CLI Commands
-
-The backend includes CLI commands for managing admin users without needing the web interface.
-
-#### Create Admin User
-
-Create a new admin user with auto-generated secure password:
-
-```bash
-cd backend
-npm run admin:create <username> <email> <firstname> <lastname>
-```
-
-Create admin with a specific password:
-
-```bash
-cd backend
-npm run admin:create <username> <email> <firstname> <lastname> "YourPassword123!"
-```
-
-**Example:**
-```bash
-cd backend
-npm run admin:create johndoe john@example.com John Doe
-
-# Output:
-# 🔑 Generated password: %1B|@?a4w?1<GNnw
-# ⚠️  Please save this password securely!
-# ✅ Admin user created successfully!
-```
-
-#### Reset Admin Password
-
-Reset an admin user's password with auto-generated password:
-
-```bash
-cd backend
-npm run admin:reset-password <username>
-```
-
-Reset with a specific password:
-
-```bash
-cd backend
-npm run admin:reset-password <username> "NewPassword123!"
-```
-
-**Example:**
-```bash
-cd backend
-npm run admin:reset-password admin
-
-# Output:
-# 🔑 Generated password: Bo4@60QN6e+Az7WP
-# ⚠️  Please save this password securely!
-# ✅ Password reset successfully!
-```
-
-**Password Requirements:**
-- Minimum 8 characters
-- At least one uppercase letter
-- At least one lowercase letter
-- At least one number
-- At least one special character
-
-
-**Database Support:**
-The CLI commands automatically work with both SQLite (development) and PostgreSQL (production). The database is determined by the `NODE_ENV` environment variable. For production use:
-
-```bash
-NODE_ENV=production npm run admin:create username email@example.com First Last
-```
-
-**Note:** Auto-generated passwords are 16 characters long and meet all security requirements. See [backend/src/cli/README.md](backend/src/cli/README.md) for more details.
+- **Username**: admin
+- **Password**: Admin123!
 
 ## Project Structure
 
 ```
-nutrivaul/
-├── backend/                # Backend application
-│   ├── data/              # SQLite database files (gitignored)
-│   ├── logs/              # Application logs (gitignored)
-│   ├── migrations/        # Database migrations
-│   ├── seeders/           # Database seed files
-│   ├── src/               # Source code
-│   │   ├── config/        # Configuration files
-│   │   ├── controllers/   # Request handlers
-│   │   ├── middleware/    # Custom middleware
-│   │   ├── models/        # Sequelize models
-│   │   ├── routes/        # API routes
-│   │   ├── services/      # Business logic
-│   │   └── utils/         # Utility functions
-│   ├── tests/             # Test files
-│   └── package.json       # Backend dependencies
-├── frontend/              # Frontend application
-│   ├── public/            # Static files
-│   ├── src/               # Source code
-│   │   ├── components/    # React components
-│   │   ├── pages/         # Page components
-│   │   ├── services/      # API services
-│   │   ├── store/         # State management
-│   │   └── utils/         # Utility functions
-│   └── package.json       # Frontend dependencies
-├── docs/                  # Documentation
-│   ├── agents/            # Multi-agent development docs
-│   ├── api/               # API documentation
-│   ├── architecture/      # Architecture docs
-│   └── setup/             # Setup guides
-├── docker-compose.yml     # Docker composition
-├── .gitignore             # Git ignore rules
-└── README.md              # This file
+nutrivault/
+├── backend/                 # Express.js API server
+│   ├── src/
+│   │   ├── controllers/     # Route handlers
+│   │   ├── middleware/      # Authentication, validation, RBAC
+│   │   ├── routes/          # API route definitions
+│   │   ├── services/        # Business logic layer
+│   │   └── utils/          # Helper utilities
+│   ├── config/             # Database and app configuration
+│   ├── migrations/         # Database schema migrations
+│   ├── models/             # Sequelize models
+│   └── seeders/            # Database seed data
+├── frontend/               # React application
+│   ├── src/
+│   │   ├── components/     # Reusable UI components
+│   │   ├── pages/          # Page components
+│   │   ├── services/       # API service layer
+│   │   ├── contexts/       # React contexts
+│   │   └── locales/        # Translation files
+│   ├── public/             # Static assets
+│   └── tests/              # Frontend tests
+├── docs/                   # Documentation
+├── utils/                  # Shared utilities
+└── config/                 # Shared configuration
 ```
 
-## Documentation
+## Development
 
-- **[Development Setup Guide](docs/setup/DEVELOPMENT_SETUP.md)** - Detailed setup instructions
-- **[API Documentation](docs/api/)** - API endpoints reference
-- **[Architecture Overview](docs/architecture/)** - System architecture
-- **[Multi-Agent Development](docs/agents/)** - Agent collaboration guide
-- **[Security Guidelines](docs/security/)** - Security best practices
+### Available Scripts
 
-## Development Approach
-
-This project uses a **multi-agent development system** where 10 specialized AI agents collaborate:
-
-1. **Project Architect** - System design and architecture
-2. **Backend Developer** - API development and business logic
-3. **Database Specialist** - Database design and ORM
-4. **Security Specialist** - Authentication and authorization
-5. **Frontend Developer** - React UI development
-6. **UI/UX Specialist** - User interface design
-7. **Audit Logger** - Logging and audit trail
-8. **Testing Specialist** - Quality assurance and testing
-9. **DevOps Specialist** - Deployment and infrastructure
-10. **Documentation Specialist** - Comprehensive documentation
-
-See [docs/agents/](docs/agents/) for more details.
-
-## Security Features
-
-- **Authentication**: JWT access tokens + refresh tokens
-- **API Keys**: For programmatic access
-- **Password Security**: bcrypt hashing with configurable rounds
-- **Account Lockout**: Protection against brute force attacks
-- **Rate Limiting**: Prevent DoS attacks
-- **CORS**: Configurable cross-origin resource sharing
-- **Input Validation**: Comprehensive validation on all endpoints
-- **Audit Logging**: Track all data access and modifications
-- **HTTPS**: TLS 1.2+ in production
-- **Security Headers**: Helmet.js for Express security
-
-## Database
-
-### Development: SQLite
-- File-based database at `backend/data/nutrivault_dev.db`
-- Zero configuration required
-- Perfect for local development
-- Automatically created on first migration
-
-### Production: PostgreSQL
-- Robust, scalable relational database
-- Advanced features (UUID, JSONB, etc.)
-- Concurrent access support
-- Production-ready performance
-
-Both databases use the same Sequelize ORM, making migration seamless.
-
-## Testing
-
-### Backend Tests
 ```bash
+# Backend
 cd backend
-npm test                    # All unit tests
-npm run test:coverage       # With coverage report
-```
+npm run dev          # Start development server with hot reload
+npm run db:migrate   # Run database migrations
+npm run db:seed      # Seed database with initial data
+npm test            # Run backend tests
 
-### Frontend Tests
-```bash
+# Frontend
 cd frontend
-npm test                    # Component tests (Vitest)
+npm run dev         # Start development server
+npm run build       # Build for production
+npm run preview     # Preview production build
 ```
 
-### E2E Tests (Playwright)
-```bash
-# Prerequisites: Backend and frontend must be running
-cd backend && npm start
-cd frontend && npm run dev
-
-# Run E2E tests
-npm run test:e2e            # All browsers, headless
-npm run test:e2e:headed     # With visible browser
-npm run test:e2e:ui         # Interactive UI mode
-npm run test:e2e:chromium   # Chromium only
-npm run test:e2e:report     # View HTML report
-```
-
-See [tests/e2e/README.md](tests/e2e/README.md) for comprehensive E2E testing documentation.
-
-## Original Testing Section
+### Testing
 
 ```bash
 # Backend tests
-cd backend
-npm test                    # All tests
-npm run test:coverage       # With coverage report
+cd backend && npm test
 
 # Frontend tests
-cd frontend
-npm test                    # Component tests
-npm run test:e2e           # End-to-end tests
+cd frontend && npm test
+
+# API integration tests
+./test-auth.sh
+./test-billing.sh
 ```
 
-## Deployment
+### Internationalization
 
-See [docs/setup/DEPLOYMENT.md](docs/setup/DEPLOYMENT.md) for production deployment instructions.
+The application supports English and French languages. All user-facing strings use translation keys. To add new translations:
+
+1. Add keys to `frontend/src/locales/en.json`
+2. Add corresponding translations to `frontend/src/locales/fr.json`
+3. Use `t('key')` in components
+
+## API Documentation
+
+### Authentication
+- `POST /api/auth/login` - User login
+- `POST /api/auth/refresh` - Refresh access token
+- `POST /api/auth/logout` - User logout
+
+### Patients
+- `GET /api/patients` - List patients
+- `POST /api/patients` - Create patient
+- `GET /api/patients/:id` - Get patient details
+- `PUT /api/patients/:id` - Update patient
+- `DELETE /api/patients/:id` - Delete patient
+
+### Visits
+- `GET /api/visits` - List visits
+- `POST /api/visits` - Create visit
+- `GET /api/visits/:id` - Get visit details
+- `PUT /api/visits/:id` - Update visit
+- `DELETE /api/visits/:id` - Delete visit
+
+### Billing
+- `GET /api/billing/invoices` - List invoices
+- `POST /api/billing/invoices/:id/payments` - Record payment
+
+### Documents
+- `GET /api/documents` - List documents
+- `POST /api/documents` - Upload document
+- `GET /api/documents/:id/download` - Download document
+
+## Security
+
+- **Password Security**: bcrypt with 12+ rounds
+- **JWT Tokens**: 15-30 minute expiration with refresh tokens
+- **Rate Limiting**: Multi-tier rate limiting (6 different limiters)
+- **Input Validation**: Comprehensive validation on all inputs
+- **CORS**: Restricted origins in production
+- **Security Headers**: Helmet middleware for security headers
 
 ## Contributing
 
-Contributions are welcome! Please follow these steps:
-1. Fork the [repository](https://github.com/erikbeauvalot-sg/nutrivault)
-2. Create a feature branch (`git checkout -b feature/your-feature-name`)
-3. Commit your changes (`git commit -m 'Add your feature'`)
-4. Push to the branch (`git push origin feature/your-feature-name`)
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-
-## Compliance
-
-- **HIPAA**: Health Insurance Portability and Accountability Act considerations
-- **GDPR**: General Data Protection Regulation ready
-- **Data Retention**: Configurable retention policies
-- **Audit Trail**: Comprehensive logging for compliance
 
 ## License
 
-License: GPL-2.0
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Support
 
-For support, please contact [erik@beauvalot.com] or open an issue on GitHub.
-
-## Acknowledgments
-
-Built with modern web technologies and best practices for healthcare data management.
+For support and questions:
+- Create an issue in the GitHub repository
+- Check the documentation in `docs/`
+- Review troubleshooting guides in `.github/instructions/`
 
 ---
 
-**Last Updated**: 2026-01-07
-**Version**: 1.0.0
-**Status**: Phase 5.1 - E2E Testing Framework Complete
+**Last Updated**: January 11, 2026

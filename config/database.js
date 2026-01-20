@@ -1,7 +1,10 @@
+require('dotenv').config();
+const path = require('path');
+
 module.exports = {
   development: {
     dialect: 'sqlite',
-    storage: require('path').resolve(__dirname, '../data/nutrivault_dev.db'),
+    storage: path.join(__dirname, '..', 'backend', 'data', 'nutrivault.db'),
     logging: console.log,
     define: {
       timestamps: true,
@@ -22,14 +25,19 @@ module.exports = {
     }
   },
   production: {
-    dialect: 'postgres',
-    host: process.env.DB_HOST,
+    dialect: process.env.DB_DIALECT || 'postgres',
+    host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 5432,
-    database: process.env.DB_NAME,
-    username: process.env.DB_USER,
+    database: process.env.DB_NAME || 'nutrivault',
+    username: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD,
-    ssl: process.env.DB_SSL === 'true',
     logging: false,
+    dialectOptions: {
+      ssl: process.env.DB_SSL === 'true' ? {
+        require: true,
+        rejectUnauthorized: false
+      } : false
+    },
     define: {
       timestamps: true,
       underscored: true,

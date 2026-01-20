@@ -1,101 +1,119 @@
-import axios from 'axios';
-import tokenManager from '../utils/tokenManager';
+/**
+ * Axios Instance with Interceptors
+ * Handles automatic token injection and token refresh on 401 errors
+ */
 
-// Create axios instance with base config
+import axios from 'axios';
+import * as tokenStorage from '../utils/tokenStorage';
+
+// Create axios instance with base configuration
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  timeout: 10000,
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json',
+  },
 });
 
-console.log('[API] Configured with baseURL:', import.meta.env.VITE_API_URL);
+// Flag to prevent multiple simultaneous refresh attempts
+let isRefreshing = false;
+let failedQueue = [];
 
-// Check if API URL changed and clear old tokens
-const storedApiUrl = localStorage.getItem('apiUrl');
-if (storedApiUrl && storedApiUrl !== import.meta.env.VITE_API_URL) {
-  console.log('[API] API URL changed, clearing old tokens');
-  tokenManager.clearAll();
-}
-localStorage.setItem('apiUrl', import.meta.env.VITE_API_URL);
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
 
-// Request interceptor - add auth token to headers
+// Request interceptor: Add Authorization header if token exists
 api.interceptors.request.use(
   (config) => {
-    const token = tokenManager.getAccessToken(); // Use tokenManager instead of localStorage
-    console.log(`[API] ${config.method.toUpperCase()} ${config.url}`, {
-      hasToken: !!token,
-      baseURL: config.baseURL
-    });
+    const token = tokenStorage.getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
   (error) => {
-    console.error('[API] Request error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor - handle token refresh on 401
+// Response interceptor: Handle 401 errors and token refresh
 api.interceptors.response.use(
   (response) => {
-    console.log(`[API] Response ${response.status}:`, response.config.url);
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
-    console.error(`[API] Response error ${error.response?.status}:`, {
-      url: originalRequest?.url,
-      message: error.message,
-      data: error.response?.data
-    });
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      console.log('[API] 401 error, attempting token refresh');
-      originalRequest._retry = true;
-      const refreshToken = tokenManager.getRefreshToken(); // Use tokenManager
-
-      if (refreshToken) {
-        try {
-          console.log('[API] Refreshing token...');
-          const response = await axios.post(
-            `${import.meta.env.VITE_API_URL}/auth/refresh`,
-            { refresh_token: refreshToken }
-          );
-
-          const { access_token } = response.data;
-          
-          // Preserve rememberMe preference
-          const rememberMe = localStorage.getItem('rememberMe') === 'true';
-          tokenManager.setTokens(access_token, refreshToken, rememberMe);
-          console.log('[API] Token refreshed successfully');
-
-          // Retry original request with new token
-          originalRequest.headers.Authorization = `Bearer ${access_token}`;
-          return api(originalRequest);
-        } catch (refreshError) {
-          console.error('[API] Token refresh failed, redirecting to login');
-          // Refresh failed, clear tokens and redirect to login
-          tokenManager.clearAll();
-          if (window.location.pathname !== '/login') {
-            window.location.href = '/login';
-          }
-          return Promise.reject(refreshError);
-        }
-      } else {
-        console.log('[API] No refresh token available, redirecting to login');
-        // No refresh token, clear everything and redirect
-        tokenManager.clearAll();
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
-      }
+    // If error is not 401 or request already retried, reject
+    if (error.response?.status !== 401 || originalRequest._retry) {
+      return Promise.reject(error);
     }
 
-    return Promise.reject(error);
+    // If already refreshing, queue this request
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      })
+        .then(token => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        })
+        .catch(err => {
+          return Promise.reject(err);
+        });
+    }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
+
+    const refreshToken = tokenStorage.getRefreshToken();
+
+    if (!refreshToken) {
+      // No refresh token available, redirect to login
+      tokenStorage.clearTokens();
+      window.location.href = '/login';
+      return Promise.reject(error);
+    }
+
+    try {
+      // Attempt to refresh token
+      const { data } = await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/auth/refresh`,
+        { refreshToken }
+      );
+
+      // Store new tokens
+      tokenStorage.setTokens(
+        data.accessToken,
+        data.refreshToken,
+        tokenStorage.isRemembered()
+      );
+
+      // Update authorization header
+      api.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
+      originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+
+      // Process queued requests
+      processQueue(null, data.accessToken);
+
+      // Retry original request
+      return api(originalRequest);
+    } catch (refreshError) {
+      // Refresh failed, clear tokens and redirect to login
+      processQueue(refreshError, null);
+      tokenStorage.clearTokens();
+      window.location.href = '/login';
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshing = false;
+    }
   }
 );
 

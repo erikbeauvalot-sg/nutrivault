@@ -8,34 +8,49 @@ module.exports = {
       {
         id: uuidv4(),
         name: 'ADMIN',
-        description: 'Full system access - can manage all users, patients, and system settings',
+        description: 'System administrator with full access to all features',
+        is_active: true,
         created_at: new Date(),
         updated_at: new Date()
       },
       {
         id: uuidv4(),
         name: 'DIETITIAN',
-        description: 'Manage assigned patients - can create/edit patients, visits, and billing',
+        description: 'Licensed dietitian with access to patient management and clinical features',
+        is_active: true,
         created_at: new Date(),
         updated_at: new Date()
       },
       {
         id: uuidv4(),
         name: 'ASSISTANT',
-        description: 'Limited access - can view patients and create visits/billing',
+        description: 'Administrative assistant with limited access to patient data',
+        is_active: true,
         created_at: new Date(),
         updated_at: new Date()
       },
       {
         id: uuidv4(),
         name: 'VIEWER',
-        description: 'Read-only access - can only view patient data',
+        description: 'Read-only access for auditors and observers',
+        is_active: true,
         created_at: new Date(),
         updated_at: new Date()
       }
     ];
 
-    await queryInterface.bulkInsert('roles', roles);
+    // Check if roles already exist to avoid duplicates
+    const existingRoles = await queryInterface.sequelize.query(
+      'SELECT name FROM roles',
+      { type: Sequelize.QueryTypes.SELECT }
+    );
+
+    if (existingRoles.length === 0) {
+      await queryInterface.bulkInsert('roles', roles);
+      console.log('✅ Seeded 4 roles: ADMIN, DIETITIAN, ASSISTANT, VIEWER');
+    } else {
+      console.log('ℹ️  Roles already exist, skipping seed');
+    }
   },
 
   down: async (queryInterface, Sequelize) => {

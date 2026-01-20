@@ -1,78 +1,138 @@
-/**
- * NutriVault - Server Startup
- *
- * Server startup logic - only runs when this file is executed directly
- * Tests can import app.js without starting the server
- */
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const db = require('../../models');
 
-const app = require('./app');
-const db = require('../models');
-
-// Environment variables
+const app = express();
 const PORT = process.env.PORT || 3001;
-const HOST = process.env.HOST || 'localhost';
-const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// Database connection and server start
-async function startServer() {
-  try {
-    // Test database connection
-    await db.sequelize.authenticate();
-    console.log(`✓ Database connected (${db.sequelize.options.dialect})`);
+// CORS Configuration
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, Postman, or same-origin)
+    if (!origin) return callback(null, true);
 
-    // Sync database (create tables if they don't exist)
-    // In development/docker, we sync models. In production, use migrations.
-    if (NODE_ENV === 'development' || process.env.DB_SYNC === 'true') {
-      await db.sequelize.sync({ alter: false });
-      console.log('✓ Database tables synced');
-    } else {
-      console.log('✓ Database models loaded');
+    // In development, allow all origins
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
     }
 
-    // Start server
-    const server = app.listen(PORT, HOST, () => {
-      console.log('╔════════════════════════════════════════════╗');
-      console.log('║          NutriVault API Server            ║');
-      console.log('╚════════════════════════════════════════════╝');
-      console.log(`Environment: ${NODE_ENV}`);
-      console.log(`Host: ${HOST}`);
-      console.log(`Port: ${PORT}`);
-      console.log(`Server: http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
-      console.log(`Health: http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}/health`);
-      console.log(`API Info: http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}/api`);
-      if (HOST === '0.0.0.0') {
-        console.log(`Network: Available on all network interfaces`);
-      }
-      console.log('');
-      console.log('Press CTRL+C to stop');
-      console.log('');
+    // In production, check against allowed origins
+    const allowedOrigins = process.env.ALLOWED_ORIGINS
+      ? process.env.ALLOWED_ORIGINS.split(',')
+      : [];
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true, // Allow credentials (cookies, authorization headers)
+  optionsSuccessStatus: 200
+};
+
+// Middleware
+app.use(cors(corsOptions));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Import authentication and authorization middleware
+const authenticate = require('./middleware/authenticate');
+const { requirePermission } = require('./middleware/rbac');
+
+// Basic health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', message: 'NutriVault POC Server is running' });
+});
+
+// Authentication routes (public)
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
+
+// Patient routes (protected - RBAC enforced in routes file)
+const patientRoutes = require('./routes/patients');
+app.use('/api/patients', patientRoutes);
+
+// Visit routes (protected - RBAC enforced in routes file)
+const visitRoutes = require('./routes/visits');
+app.use('/api/visits', visitRoutes);
+
+// User routes (protected - RBAC enforced in routes file)
+const userRoutes = require('./routes/users');
+app.use('/api/users', userRoutes);
+
+// Billing routes (protected - RBAC enforced in routes file)
+const billingRoutes = require('./routes/billing');
+app.use('/api/billing', billingRoutes);
+
+// Document routes (protected - RBAC enforced in routes file)
+const documentRoutes = require('./routes/documents');
+app.use('/api/documents', documentRoutes);
+
+// Export routes (protected - RBAC enforced in routes file)
+const exportRoutes = require('./routes/export');
+app.use('/api/export', exportRoutes);
+
+// Basic error handler
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  
+  // Handle Sequelize validation errors
+  if (err.name === 'SequelizeValidationError') {
+    return res.status(400).json({
+      success: false,
+      error: 'Validation error',
+      details: err.errors.map(e => ({
+        field: e.path,
+        message: e.message
+      }))
     });
-
-    return server;
-
-  } catch (error) {
-    console.error('✗ Failed to start server:', error.message);
-    process.exit(1);
   }
-}
-
-// Handle shutdown gracefully
-process.on('SIGTERM', async () => {
-  console.log('\nSIGTERM received. Shutting down gracefully...');
-  await db.sequelize.close();
-  process.exit(0);
+  
+  // Handle Sequelize unique constraint errors
+  if (err.name === 'SequelizeUniqueConstraintError') {
+    return res.status(400).json({
+      success: false,
+      error: 'Duplicate entry',
+      details: err.errors.map(e => ({
+        field: e.path,
+        message: `${e.path} already exists`
+      }))
+    });
+  }
+  
+  res.status(err.statusCode || err.status || 500).json({
+    success: false,
+    error: err.message || 'Internal Server Error'
+  });
 });
 
-process.on('SIGINT', async () => {
-  console.log('\nSIGINT received. Shutting down gracefully...');
-  await db.sequelize.close();
-  process.exit(0);
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Route not found'
+  });
 });
 
-// Only start server if this file is run directly (not imported)
-if (require.main === module) {
-  startServer();
-}
+// Sync database and start server
+db.sequelize.sync()
+  .then(() => {
+    console.log('Database synchronized');
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`✅ NutriVault POC server running on http://localhost:${PORT}`);
+      console.log(`🌐 Accessible on network at http://0.0.0.0:${PORT}`);
+      console.log(`📊 Health check: http://localhost:${PORT}/health`);
+      console.log(`👥 Patients API: http://localhost:${PORT}/api/patients`);
+      console.log(`📅 Visits API: http://localhost:${PORT}/api/visits`);
+      console.log(`👤 Users API: http://localhost:${PORT}/api/users`);
+      console.log(`💰 Billing API: http://localhost:${PORT}/api/billing`);
+    });
+  })
+  .catch(err => {
+    console.error('Unable to sync database:', err);
+    process.exit(1);
+  });
 
-// Export app for testing
 module.exports = app;

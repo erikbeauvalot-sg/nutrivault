@@ -6,33 +6,47 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
+        allowNull: false
       },
-      name: {
+      code: {
         type: Sequelize.STRING(100),
+        allowNull: false,
         unique: true,
-        allowNull: false
-      },
-      resource: {
-        type: Sequelize.STRING(50),
-        allowNull: false
-      },
-      action: {
-        type: Sequelize.STRING(50),
-        allowNull: false
+        comment: 'Permission code in format: resource.action (e.g., patients.create)'
       },
       description: {
         type: Sequelize.TEXT,
         allowNull: true
       },
-      created_at: {
+      resource: {
+        type: Sequelize.STRING(50),
         allowNull: false,
+        comment: 'Resource type: patients, visits, billing, users, etc.'
+      },
+      action: {
+        type: Sequelize.STRING(50),
+        allowNull: false,
+        comment: 'Action type: create, read, update, delete, etc.'
+      },
+      is_active: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
+      },
+      created_at: {
         type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      },
+      updated_at: {
+        type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
 
-    await queryInterface.addIndex('permissions', ['name']);
+    await queryInterface.addIndex('permissions', ['code']);
     await queryInterface.addIndex('permissions', ['resource']);
   },
 

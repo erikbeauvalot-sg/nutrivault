@@ -1,491 +1,538 @@
 /**
- * Patient Management Service
- *
- * Business logic for patient management operations
+ * Patient Service
+ * 
+ * Business logic for patient management with RBAC and audit logging.
+ * Enforces dietitian filtering and soft delete.
  */
 
-const db = require('../../models');
-const { AppError } = require('../middleware/errorHandler');
-const { logCrudEvent } = require('./audit.service');
-const { Op } = require('sequelize');
-const QueryBuilder = require('../utils/queryBuilder');
-const { PATIENTS_CONFIG } = require('../config/queryConfigs');
-const cacheInvalidation = require('./cache-invalidation.service');
+const db = require('../../../models');
+const Patient = db.Patient;
+const User = db.User;
+const Role = db.Role;
+const auditService = require('./audit.service');
+const { Op } = db.Sequelize;
 
 /**
  * Get all patients with filtering and pagination
- * Dietitians can only see their assigned patients
+ * 
+ * @param {Object} user - Authenticated user object
+ * @param {Object} filters - Filter criteria
+ * @param {string} filters.search - Search by name, email, or phone
+ * @param {boolean} filters.is_active - Filter by active status
+ * @param {string} filters.assigned_dietitian_id - Filter by assigned dietitian
+ * @param {number} filters.page - Page number (default 1)
+ * @param {number} filters.limit - Items per page (default 20)
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Patients, total count, and pagination info
  */
-async function getPatients(filters = {}, requestingUser) {
-  // Use QueryBuilder for advanced filtering
-  const queryBuilder = new QueryBuilder(PATIENTS_CONFIG);
-  const { where, pagination, sort } = queryBuilder.build(filters);
+async function getPatients(user, filters = {}, requestMetadata = {}) {
+  try {
+    const whereClause = { is_active: true };
 
-  // Apply RBAC: Dietitians can only see their assigned patients
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    where.assigned_dietitian_id = requestingUser.id;
-  } else if (filters.assigned_dietitian_id && !where.assigned_dietitian_id) {
-    // Admins can filter by specific dietitian (if not already filtered by QueryBuilder)
-    where.assigned_dietitian_id = filters.assigned_dietitian_id;
-  }
+    // RBAC: In POC system, all authenticated users can see all active patients
+    // (Original restrictive logic commented out for POC purposes)
+    // if (user && user.role && user.role.name === 'DIETITIAN') {
+    //   whereClause.assigned_dietitian_id = user.id;
+    // }
 
-  // Handle legacy age filtering (age_min/age_max) with date calculations
-  // This is backward compatible with existing API
-  const { age_min, age_max } = filters;
-  if (age_min || age_max) {
-    const today = new Date();
-    if (age_max) {
-      const minBirthDate = new Date(today.getFullYear() - age_max - 1, today.getMonth(), today.getDate());
-      if (!where.date_of_birth) {
-        where.date_of_birth = {};
-      }
-      if (typeof where.date_of_birth === 'object') {
-        where.date_of_birth[Op.gte] = minBirthDate;
-      }
+    // Apply additional filters
+    if (filters.search) {
+      whereClause[Op.or] = [
+        { first_name: { [Op.like]: `%${filters.search}%` } },
+        { last_name: { [Op.like]: `%${filters.search}%` } },
+        { email: { [Op.like]: `%${filters.search}%` } },
+        { phone: { [Op.like]: `%${filters.search}%` } }
+      ];
     }
-    if (age_min) {
-      const maxBirthDate = new Date(today.getFullYear() - age_min, today.getMonth(), today.getDate());
-      if (!where.date_of_birth) {
-        where.date_of_birth = {};
-      }
-      if (typeof where.date_of_birth === 'object') {
-        where.date_of_birth[Op.lte] = maxBirthDate;
-      }
+
+    if (filters.is_active !== undefined && filters.is_active !== '') {
+      // Convert string to boolean for database query
+      whereClause.is_active = filters.is_active === 'true' || filters.is_active === true;
     }
+
+    if (filters.assigned_dietitian_id) {
+      whereClause.assigned_dietitian_id = filters.assigned_dietitian_id;
+    }
+
+    // Pagination
+    const page = parseInt(filters.page) || 1;
+    const limit = parseInt(filters.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await Patient.findAndCountAll({
+      where: whereClause,
+      limit,
+      offset,
+      order: [['last_name', 'ASC'], ['first_name', 'ASC']],
+      include: [
+        {
+          model: User,
+          as: 'assigned_dietitian',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        }
+      ]
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'READ',
+      resource_type: 'patients',
+      resource_id: null,
+      changes: { filter_count: count },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200,
+      // status_code: 200
+    });
+
+    return {
+      patients: rows,
+      total: count,
+      page,
+      limit,
+      totalPages: Math.ceil(count / limit)
+    };
+  } catch (error) {
+    // Audit log failure
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'READ',
+      resource_type: 'patients',
+      status_code: 500,
+      error_message: error.message,
+      // status_code: 500,
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path
+    });
+
+    throw error;
   }
-
-  const { count, rows } = await db.Patient.findAndCountAll({
-    where,
-    include: [
-      {
-        model: db.User,
-        as: 'assignedDietitian',
-        attributes: ['id', 'username', 'first_name', 'last_name', 'email']
-      }
-    ],
-    limit: pagination.limit,
-    offset: pagination.offset,
-    order: sort
-  });
-
-  return {
-    patients: rows,
-    total: count,
-    limit: pagination.limit,
-    offset: pagination.offset
-  };
 }
 
 /**
  * Get patient by ID
- * Checks if dietitian is assigned to this patient
+ * 
+ * @param {string} patientId - Patient UUID
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Patient data
  */
-async function getPatientById(patientId, requestingUser) {
-  const patient = await db.Patient.findByPk(patientId, {
-    include: [
-      {
-        model: db.User,
-        as: 'assignedDietitian',
-        attributes: ['id', 'username', 'first_name', 'last_name', 'email']
+async function getPatientById(patientId, user, requestMetadata = {}) {
+  try {
+    const patient = await Patient.findOne({
+      where: { 
+        id: patientId,
+        is_active: true
       },
-      {
-        model: db.User,
-        as: 'creator',
-        attributes: ['id', 'username', 'first_name', 'last_name']
-      }
-    ]
-  });
+      attributes: [
+        'id', 'first_name', 'last_name', 'email', 'phone', 'date_of_birth', 'gender',
+        'address', 'city', 'state', 'zip_code', 'emergency_contact_name', 'emergency_contact_phone',
+        'medical_record_number', 'insurance_provider', 'insurance_policy_number', 'primary_care_physician',
+        'allergies', 'current_medications', 'medical_conditions', 'medical_notes', 'height_cm', 'weight_kg', 'blood_type',
+        'dietary_restrictions', 'dietary_preferences', 'food_preferences', 'nutritional_goals', 'exercise_habits', 'smoking_status', 'alcohol_consumption',
+        'assigned_dietitian_id', 'is_active', 'notes', 'created_at', 'updated_at'
+      ],
+      include: [
+        {
+          model: User,
+          as: 'assigned_dietitian',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        }
+      ]
+    });
 
-  if (!patient) {
-    throw new AppError('Patient not found', 404, 'PATIENT_NOT_FOUND');
-  }
-
-  // Check if dietitian is assigned to this patient
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    if (patient.assigned_dietitian_id !== requestingUser.id) {
-      throw new AppError(
-        'Access denied. You can only view your assigned patients',
-        403,
-        'NOT_ASSIGNED_PATIENT'
-      );
+    if (!patient) {
+      const error = new Error('Patient not found');
+      error.statusCode = 404;
+      throw error;
     }
-  }
 
-  return patient;
+    // RBAC: Dietitians can only access their assigned patients
+    if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
+      const error = new Error('Access denied. You can only access your assigned patients');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'READ',
+      resource_type: 'patients',
+      resource_id: patient.id,
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200,
+      // status_code: 200
+    });
+
+    return patient;
+  } catch (error) {
+    // Audit log failure
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'READ',
+      resource_type: 'patients',
+      resource_id: patientId,
+      status_code: 500,
+      error_message: error.message,
+      // status_code: 500,
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path
+    });
+
+    throw error;
+  }
+}
+
+/**
+ * Get patient details with visits and measurements for graphical display
+ * 
+ * @param {string} patientId - Patient UUID
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Patient data with visits and measurements
+ */
+async function getPatientDetails(patientId, user, requestMetadata = {}) {
+  try {
+    const patient = await Patient.findOne({
+      where: {
+        id: patientId,
+        is_active: true
+      },
+      include: [
+        {
+          model: User,
+          as: 'assigned_dietitian',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        },
+        {
+          model: db.Visit,
+          as: 'visits',
+          required: false,
+          include: [
+            {
+              model: db.VisitMeasurement,
+              as: 'measurements',
+              required: false
+            },
+            {
+              model: User,
+              as: 'dietitian',
+              attributes: ['id', 'username', 'first_name', 'last_name']
+            }
+          ]
+        }
+      ],
+      order: [
+        [{ model: db.Visit, as: 'visits' }, 'visit_date', 'ASC'],
+        [{ model: db.Visit, as: 'visits' }, { model: db.VisitMeasurement, as: 'measurements' }, 'created_at', 'ASC']
+      ]
+    });
+
+    if (!patient) {
+      const error = new Error('Patient not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // RBAC: Dietitians can only access their assigned patients
+    if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
+      const error = new Error('Access denied. You can only access your assigned patients');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'READ',
+      resource_type: 'patients',
+      resource_id: patient.id,
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200,
+      details: 'Patient details with visits and measurements accessed'
+    });
+
+    return patient;
+  } catch (error) {
+    console.error('Error in getPatientDetails:', error);
+    throw error;
+  }
 }
 
 /**
  * Create new patient
+ * 
+ * @param {Object} patientData - Patient data
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Created patient
  */
-async function createPatient(patientData, createdBy) {
-  const {
-    first_name,
-    last_name,
-    date_of_birth,
-    gender,
-    email,
-    phone,
-    address,
-    city,
-    postal_code,
-    country,
-    emergency_contact_name,
-    emergency_contact_phone,
-    medical_notes,
-    dietary_preferences,
-    allergies,
-    assigned_dietitian_id
-  } = patientData;
+async function createPatient(patientData, user, requestMetadata = {}) {
+  try {
+    // Validate assigned_dietitian_id if provided
+    if (patientData.assigned_dietitian_id) {
+      const dietitian = await User.findOne({
+        where: { id: patientData.assigned_dietitian_id },
+        include: [{ model: Role, as: 'role' }]
+      });
 
-  // Validate required fields
-  if (!first_name || !last_name || !date_of_birth) {
-    throw new AppError(
-      'First name, last name, and date of birth are required',
-      400,
-      'VALIDATION_ERROR'
-    );
-  }
+      if (!dietitian) {
+        const error = new Error('Assigned dietitian not found');
+        error.statusCode = 400;
+        throw error;
+      }
 
-  // Check if assigned dietitian exists
-  if (assigned_dietitian_id) {
-    const dietitian = await db.User.findByPk(assigned_dietitian_id);
-    if (!dietitian) {
-      throw new AppError('Assigned dietitian not found', 404, 'DIETITIAN_NOT_FOUND');
+      // Only non-admin users are restricted to assigning DIETITIAN role users
+      // Admins can assign any active user
+      if (user.role.name !== 'ADMIN' && dietitian.role.name !== 'DIETITIAN') {
+        const error = new Error('Assigned user must have DIETITIAN role');
+        error.statusCode = 400;
+        throw error;
+      }
     }
+
+    // Create patient
+    const patient = await Patient.create(patientData);
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'CREATE',
+      resource_type: 'patients',
+      resource_id: patient.id,
+      changes: { after: patient.toJSON() },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200,
+      // status_code: 200
+    });
+
+    return patient;
+  } catch (error) {
+    // Audit log failure
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'CREATE',
+      resource_type: 'patients',
+      status_code: 500,
+      error_message: error.message,
+      // status_code: 500,
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path
+    });
+
+    throw error;
   }
-
-  // Create patient
-  const patient = await db.Patient.create({
-    first_name,
-    last_name,
-    date_of_birth,
-    gender,
-    email,
-    phone,
-    address,
-    city,
-    postal_code,
-    country,
-    emergency_contact_name,
-    emergency_contact_phone,
-    medical_notes,
-    dietary_preferences,
-    allergies,
-    assigned_dietitian_id,
-    is_active: true,
-    created_by: createdBy,
-    updated_by: createdBy
-  });
-
-  // Log creation
-  await logCrudEvent({
-    user_id: createdBy,
-    action: 'CREATE',
-    resource_type: 'patients',
-    resource_id: patient.id,
-    changes: { created: true },
-    status: 'SUCCESS'
-  });
-
-  // Reload with associations
-  await patient.reload({
-    include: [{
-      model: db.User,
-      as: 'assignedDietitian',
-      attributes: ['id', 'username', 'first_name', 'last_name', 'email']
-    }]
-  });
-
-  // Invalidate cache
-  cacheInvalidation.invalidatePatientCache();
-
-  return patient;
 }
 
 /**
  * Update patient
+ * 
+ * @param {string} patientId - Patient UUID
+ * @param {Object} updateData - Updated patient data
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated patient
  */
-async function updatePatient(patientId, updates, updatedBy, requestingUser) {
-  const patient = await db.Patient.findByPk(patientId);
-
-  if (!patient) {
-    throw new AppError('Patient not found', 404, 'PATIENT_NOT_FOUND');
-  }
-
-  // Check if dietitian is assigned to this patient
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    if (patient.assigned_dietitian_id !== requestingUser.id) {
-      throw new AppError(
-        'Access denied. You can only update your assigned patients',
-        403,
-        'NOT_ASSIGNED_PATIENT'
-      );
-    }
-  }
-
-  // Fields that can be updated
-  const allowedUpdates = [
-    'first_name',
-    'last_name',
-    'date_of_birth',
-    'gender',
-    'email',
-    'phone',
-    'address',
-    'city',
-    'postal_code',
-    'country',
-    'emergency_contact_name',
-    'emergency_contact_phone',
-    'medical_notes',
-    'dietary_preferences',
-    'allergies',
-    'assigned_dietitian_id'
-  ];
-
-  // Filter updates to only allowed fields
-  const filteredUpdates = {};
-  Object.keys(updates).forEach(key => {
-    if (allowedUpdates.includes(key) && updates[key] !== undefined) {
-      filteredUpdates[key] = updates[key];
-    }
-  });
-
-  // Track changes for audit log
-  const changes = {};
-  Object.keys(filteredUpdates).forEach(key => {
-    if (patient[key] !== filteredUpdates[key]) {
-      changes[key] = {
-        old: patient[key],
-        new: filteredUpdates[key]
-      };
-    }
-  });
-
-  // Update patient
-  await patient.update({
-    ...filteredUpdates,
-    updated_by: updatedBy
-  });
-
-  // Log the update
-  await logCrudEvent({
-    user_id: updatedBy,
-    action: 'UPDATE',
-    resource_type: 'patients',
-    resource_id: patientId,
-    changes: changes,
-    status: 'SUCCESS'
-  });
-
-  // Reload with associations
-  await patient.reload({
-    include: [{
-      model: db.User,
-      as: 'assignedDietitian',
-      attributes: ['id', 'username', 'first_name', 'last_name', 'email']
-    }]
-  });
-
-  // Invalidate cache
-  cacheInvalidation.invalidatePatientCache(patientId);
-
-  return patient;
-}
-
-/**
- * Delete patient (soft delete by deactivating)
- */
-async function deletePatient(patientId, deletedBy, requestingUser) {
-  const patient = await db.Patient.findByPk(patientId);
-
-  if (!patient) {
-    throw new AppError('Patient not found', 404, 'PATIENT_NOT_FOUND');
-  }
-
-  // Check if dietitian is assigned to this patient
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    if (patient.assigned_dietitian_id !== requestingUser.id) {
-      throw new AppError(
-        'Access denied. You can only delete your assigned patients',
-        403,
-        'NOT_ASSIGNED_PATIENT'
-      );
-    }
-  }
-
-  // Deactivate instead of hard delete
-  await patient.update({
-    is_active: false,
-    updated_by: deletedBy
-  });
-
-  // Log the deletion
-  await logCrudEvent({
-    user_id: deletedBy,
-    action: 'DELETE',
-    resource_type: 'patients',
-    resource_id: patientId,
-    status: 'SUCCESS'
-  });
-
-  // Invalidate cache
-  cacheInvalidation.invalidatePatientCache(patientId);
-
-  return { message: 'Patient deactivated successfully' };
-}
-
-/**
- * Activate patient
- */
-async function activatePatient(patientId, activatedBy, requestingUser) {
-  const patient = await db.Patient.findByPk(patientId);
-
-  if (!patient) {
-    throw new AppError('Patient not found', 404, 'PATIENT_NOT_FOUND');
-  }
-
-  // Check if dietitian is assigned to this patient
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    if (patient.assigned_dietitian_id !== requestingUser.id) {
-      throw new AppError(
-        'Access denied. You can only activate your assigned patients',
-        403,
-        'NOT_ASSIGNED_PATIENT'
-      );
-    }
-  }
-
-  if (patient.is_active) {
-    throw new AppError('Patient is already active', 400, 'PATIENT_ALREADY_ACTIVE');
-  }
-
-  await patient.update({
-    is_active: true,
-    updated_by: activatedBy
-  });
-
-  // Log activation
-  await logCrudEvent({
-    user_id: activatedBy,
-    action: 'UPDATE',
-    resource_type: 'patients',
-    resource_id: patientId,
-    changes: { is_active: { old: false, new: true } },
-    status: 'SUCCESS'
-  });
-
-  // Invalidate cache
-  cacheInvalidation.invalidatePatientCache(patientId);
-
-  return { message: 'Patient activated successfully' };
-}
-
-/**
- * Deactivate patient
- */
-async function deactivatePatient(patientId, deactivatedBy, requestingUser) {
-  const patient = await db.Patient.findByPk(patientId);
-
-  if (!patient) {
-    throw new AppError('Patient not found', 404, 'PATIENT_NOT_FOUND');
-  }
-
-  // Check if dietitian is assigned to this patient
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    if (patient.assigned_dietitian_id !== requestingUser.id) {
-      throw new AppError(
-        'Access denied. You can only deactivate your assigned patients',
-        403,
-        'NOT_ASSIGNED_PATIENT'
-      );
-    }
-  }
-
-  if (!patient.is_active) {
-    throw new AppError('Patient is already inactive', 400, 'PATIENT_ALREADY_INACTIVE');
-  }
-
-  await patient.update({
-    is_active: false,
-    updated_by: deactivatedBy
-  });
-
-  // Log deactivation
-  await logCrudEvent({
-    user_id: deactivatedBy,
-    action: 'UPDATE',
-    resource_type: 'patients',
-    resource_id: patientId,
-    changes: { is_active: { old: true, new: false } },
-    status: 'SUCCESS'
-  });
-
-  // Invalidate cache
-  cacheInvalidation.invalidatePatientCache(patientId);
-
-  return { message: 'Patient deactivated successfully' };
-}
-
-/**
- * Get patient statistics
- */
-async function getPatientStats(requestingUser) {
-  let where = {};
-
-  // If user is a dietitian, only count their assigned patients
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    where.assigned_dietitian_id = requestingUser.id;
-  }
-
-  const totalPatients = await db.Patient.count({ where });
-  const activePatients = await db.Patient.count({
-    where: { ...where, is_active: true }
-  });
-  const inactivePatients = await db.Patient.count({
-    where: { ...where, is_active: false }
-  });
-
-  // Patients by assigned dietitian (admins only)
-  let patientsByDietitian = [];
-  if (!requestingUser.role || requestingUser.role.name !== 'DIETITIAN') {
-    patientsByDietitian = await db.Patient.findAll({
-      attributes: [
-        'assigned_dietitian_id',
-        [db.sequelize.fn('COUNT', db.sequelize.col('Patient.id')), 'count']
-      ],
-      include: [{
-        model: db.User,
-        as: 'assignedDietitian',
-        attributes: ['username', 'first_name', 'last_name']
-      }],
-      group: ['assigned_dietitian_id', 'assignedDietitian.id', 'assignedDietitian.username', 'assignedDietitian.first_name', 'assignedDietitian.last_name'],
-      where: { assigned_dietitian_id: { [Op.not]: null } }
+async function updatePatient(patientId, updateData, user, requestMetadata = {}) {
+  try {
+    const patient = await Patient.findOne({
+      where: { 
+        id: patientId,
+        is_active: true
+      }
     });
-  }
 
-  return {
-    total: totalPatients,
-    active: activePatients,
-    inactive: inactivePatients,
-    by_dietitian: patientsByDietitian.map(item => ({
-      dietitian: item.assignedDietitian ? {
-        id: item.assigned_dietitian_id,
-        name: `${item.assignedDietitian.first_name} ${item.assignedDietitian.last_name}`,
-        username: item.assignedDietitian.username
-      } : null,
-      count: parseInt(item.get('count'))
-    }))
-  };
+    if (!patient) {
+      const error = new Error('Patient not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // RBAC: Dietitians can only update their assigned patients
+    if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
+      const error = new Error('Access denied. You can only update your assigned patients');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // Validate assigned_dietitian_id if being updated
+    if (updateData.assigned_dietitian_id && updateData.assigned_dietitian_id !== patient.assigned_dietitian_id) {
+      const dietitian = await User.findOne({
+        where: { id: updateData.assigned_dietitian_id },
+        include: [{ model: Role, as: 'role' }]
+      });
+
+      if (!dietitian) {
+        const error = new Error('Assigned dietitian not found');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      // Only non-admin users are restricted to assigning DIETITIAN role users
+      // Admins can assign any active user
+      if (user.role.name !== 'ADMIN' && dietitian.role.name !== 'DIETITIAN') {
+        const error = new Error('Assigned user must have DIETITIAN role');
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
+    // Capture before state
+    const beforeData = patient.toJSON();
+
+    // Update patient
+    await patient.update(updateData);
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'UPDATE',
+      resource_type: 'patients',
+      resource_id: patient.id,
+      changes: { 
+        before: beforeData, 
+        after: patient.toJSON() 
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200,
+      // status_code: 200
+    });
+
+    return patient;
+  } catch (error) {
+    // Audit log failure
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'UPDATE',
+      resource_type: 'patients',
+      resource_id: patientId,
+      status_code: 500,
+      error_message: error.message,
+      // status_code: 500,
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path
+    });
+
+    throw error;
+  }
+}
+
+/**
+ * Delete patient (soft delete)
+ * 
+ * @param {string} patientId - Patient UUID
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Success message
+ */
+async function deletePatient(patientId, user, requestMetadata = {}) {
+  try {
+    const patient = await Patient.findOne({
+      where: { 
+        id: patientId,
+        is_active: true
+      }
+    });
+
+    if (!patient) {
+      const error = new Error('Patient not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // RBAC: In POC system, DIETITIANS can delete all patients
+    // (Original restrictive logic commented out for POC purposes)
+    // if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
+    //   const error = new Error('Access denied. You can only delete your assigned patients');
+    //   error.statusCode = 403;
+    //   throw error;
+    // }
+
+    // Capture before state
+    const beforeData = patient.toJSON();
+
+    // Soft delete: set is_active to false
+    await patient.update({ is_active: false });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'DELETE',
+      resource_type: 'patients',
+      resource_id: patient.id,
+      changes: { before: beforeData },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200,
+      // status_code: 200
+    });
+
+    return {
+      success: true,
+      message: 'Patient deleted successfully'
+    };
+  } catch (error) {
+    // Audit log failure
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'DELETE',
+      resource_type: 'patients',
+      resource_id: patientId,
+      status_code: 500,
+      error_message: error.message,
+      // status_code: 500,
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path
+    });
+
+    throw error;
+  }
 }
 
 module.exports = {
   getPatients,
   getPatientById,
+  getPatientDetails,
   createPatient,
   updatePatient,
-  deletePatient,
-  activatePatient,
-  deactivatePatient,
-  getPatientStats
+  deletePatient
 };

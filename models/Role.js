@@ -1,39 +1,38 @@
-'use strict';
-
 module.exports = (sequelize, DataTypes) => {
   const Role = sequelize.define('Role', {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
+      primaryKey: true,
+      allowNull: false
     },
     name: {
       type: DataTypes.STRING(50),
+      allowNull: false,
       unique: true,
-      allowNull: false
+      validate: {
+        isIn: [['ADMIN', 'DIETITIAN', 'ASSISTANT', 'VIEWER']]
+      }
     },
     description: {
       type: DataTypes.TEXT,
       allowNull: true
+    },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true
     }
   }, {
     tableName: 'roles',
     timestamps: true,
-    underscored: true
+    underscored: true,
+    indexes: [
+      {
+        fields: ['name']
+      }
+    ]
   });
-
-  Role.associate = (models) => {
-    Role.hasMany(models.User, {
-      foreignKey: 'role_id',
-      as: 'users'
-    });
-    Role.belongsToMany(models.Permission, {
-      through: models.RolePermission,
-      foreignKey: 'role_id',
-      otherKey: 'permission_id',
-      as: 'permissions'
-    });
-  };
 
   return Role;
 };

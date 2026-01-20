@@ -41,6 +41,8 @@ coverage/
 *.temp
 .cache/
 data/nutrivault_dev.db
+data/nutrivault.db
+backend/backend/data/*.db
 
 # Docker test logs
 *-build.log

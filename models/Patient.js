@@ -1,11 +1,10 @@
-'use strict';
-
 module.exports = (sequelize, DataTypes) => {
   const Patient = sequelize.define('Patient', {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
+      primaryKey: true,
+      allowNull: false
     },
     first_name: {
       type: DataTypes.STRING(100),
@@ -15,22 +14,23 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(100),
       allowNull: false
     },
-    date_of_birth: {
-      type: DataTypes.DATEONLY,
-      allowNull: false
-    },
-    gender: {
-      type: DataTypes.STRING(20),
-      allowNull: true
-    },
     email: {
       type: DataTypes.STRING(255),
       allowNull: true,
+      unique: true,
       validate: {
         isEmail: true
       }
     },
     phone: {
+      type: DataTypes.STRING(20),
+      allowNull: true
+    },
+    date_of_birth: {
+      type: DataTypes.DATEONLY,
+      allowNull: true
+    },
+    gender: {
       type: DataTypes.STRING(20),
       allowNull: true
     },
@@ -42,12 +42,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(100),
       allowNull: true
     },
-    postal_code: {
-      type: DataTypes.STRING(20),
+    state: {
+      type: DataTypes.STRING(50),
       allowNull: true
     },
-    country: {
-      type: DataTypes.STRING(100),
+    zip_code: {
+      type: DataTypes.STRING(20),
       allowNull: true
     },
     emergency_contact_name: {
@@ -62,7 +62,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
-    dietary_preferences: {
+    medical_conditions: {
       type: DataTypes.TEXT,
       allowNull: true
     },
@@ -70,62 +70,95 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
-    is_active: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true
+    dietary_preferences: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    dietary_restrictions: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    blood_type: {
+      type: DataTypes.STRING(10),
+      allowNull: true
+    },
+    current_medications: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    medical_record_number: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
+    insurance_provider: {
+      type: DataTypes.STRING(200),
+      allowNull: true
+    },
+    insurance_policy_number: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
+    primary_care_physician: {
+      type: DataTypes.STRING(200),
+      allowNull: true
+    },
+    height_cm: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true
+    },
+    weight_kg: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true
+    },
+    food_preferences: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    nutritional_goals: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    exercise_habits: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    smoking_status: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
+    alcohol_consumption: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true
     },
     assigned_dietitian_id: {
       type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: 'users',
-        key: 'id'
-      }
+      allowNull: true
     },
-    created_by: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: 'users',
-        key: 'id'
-      }
-    },
-    updated_by: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: 'users',
-        key: 'id'
-      }
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true
     }
   }, {
     tableName: 'patients',
     timestamps: true,
-    underscored: true
+    underscored: true,
+    indexes: [
+      {
+        fields: ['email']
+      },
+      {
+        fields: ['assigned_dietitian_id']
+      },
+      {
+        fields: ['last_name']
+      }
+    ]
   });
-
-  Patient.associate = (models) => {
-    Patient.belongsTo(models.User, {
-      foreignKey: 'assigned_dietitian_id',
-      as: 'assignedDietitian'
-    });
-    Patient.belongsTo(models.User, {
-      foreignKey: 'created_by',
-      as: 'creator'
-    });
-    Patient.belongsTo(models.User, {
-      foreignKey: 'updated_by',
-      as: 'updater'
-    });
-    Patient.hasMany(models.Visit, {
-      foreignKey: 'patient_id',
-      as: 'visits'
-    });
-    Patient.hasMany(models.Billing, {
-      foreignKey: 'patient_id',
-      as: 'billings'
-    });
-  };
 
   return Patient;
 };

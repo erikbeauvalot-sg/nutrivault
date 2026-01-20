@@ -1,75 +1,61 @@
-'use strict';
-
 module.exports = (sequelize, DataTypes) => {
   const ApiKey = sequelize.define('ApiKey', {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
-    },
-    key_hash: {
-      type: DataTypes.STRING(255),
-      unique: true,
-      allowNull: false
-    },
-    key_prefix: {
-      type: DataTypes.STRING(10),
+      primaryKey: true,
       allowNull: false
     },
     user_id: {
       type: DataTypes.UUID,
-      allowNull: false,
-      references: {
-        model: 'users',
-        key: 'id'
-      }
-    },
-    name: {
-      type: DataTypes.STRING(100),
       allowNull: false
+    },
+    key_name: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      comment: 'Human-readable name for the API key'
+    },
+    key_hash: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      unique: true,
+      comment: 'bcrypt hash of API key'
     },
     expires_at: {
       type: DataTypes.DATE,
-      allowNull: true
+      allowNull: true,
+      comment: 'NULL means no expiration'
     },
     last_used_at: {
       type: DataTypes.DATE,
       allowNull: true
     },
+    usage_count: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0
+    },
     is_active: {
       type: DataTypes.BOOLEAN,
+      allowNull: false,
       defaultValue: true
-    },
-    created_by: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: 'users',
-        key: 'id'
-      }
     }
   }, {
     tableName: 'api_keys',
     timestamps: true,
     underscored: true,
-    createdAt: 'created_at',
-    updatedAt: false
+    indexes: [
+      {
+        fields: ['user_id']
+      },
+      {
+        fields: ['key_hash']
+      },
+      {
+        fields: ['is_active']
+      }
+    ]
   });
-
-  ApiKey.associate = (models) => {
-    ApiKey.belongsTo(models.User, {
-      foreignKey: 'user_id',
-      as: 'user'
-    });
-    ApiKey.belongsTo(models.User, {
-      foreignKey: 'created_by',
-      as: 'creator'
-    });
-    ApiKey.hasMany(models.AuditLog, {
-      foreignKey: 'api_key_id',
-      as: 'auditLogs'
-    });
-  };
 
   return ApiKey;
 };

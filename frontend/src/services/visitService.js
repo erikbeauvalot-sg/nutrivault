@@ -1,190 +1,109 @@
+/**
+ * Visit Service
+ * API wrapper for visit management endpoints
+ */
+
 import api from './api';
 
 /**
- * Visit Service
- * Handles all API calls related to visit management
+ * Get all visits with optional filters
+ * @param {Object} filters - Query parameters (search, patient_id, dietitian_id, status, start_date, end_date, page, limit)
+ * @returns {Promise} API response
  */
-
-/**
- * Get all visits with optional filtering, searching, and pagination
- * @param {Object} params - Query parameters
- * @param {string} params.search - Search term for patient name or notes
- * @param {string} params.patientId - Filter by patient ID
- * @param {string} params.visitType - Filter by visit type
- * @param {string} params.status - Filter by status
- * @param {string} params.startDate - Filter by start date (YYYY-MM-DD)
- * @param {string} params.endDate - Filter by end date (YYYY-MM-DD)
- * @param {number} params.page - Page number (1-indexed)
- * @param {number} params.limit - Number of items per page
- * @returns {Promise} Response with visits array and pagination data
- */
-export const getVisits = async (params = {}) => {
-  try {
-    const queryParams = new URLSearchParams();
-
-    if (params.search) {
-      queryParams.append('search', params.search);
+export const getVisits = async (filters = {}) => {
+  const params = new URLSearchParams();
+  Object.keys(filters).forEach(key => {
+    if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
+      params.append(key, filters[key]);
     }
-    if (params.patientId) {
-      queryParams.append('patientId', params.patientId);
-    }
-    if (params.visitType) {
-      queryParams.append('visitType', params.visitType);
-    }
-    if (params.status) {
-      queryParams.append('status', params.status);
-    }
-    if (params.startDate) {
-      queryParams.append('startDate', params.startDate);
-    }
-    if (params.endDate) {
-      queryParams.append('endDate', params.endDate);
-    }
-    if (params.page) {
-      queryParams.append('page', params.page);
-    }
-    if (params.limit) {
-      queryParams.append('limit', params.limit);
-    }
-
-    const response = await api.get(`/visits?${queryParams.toString()}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching visits:', error);
-    throw new Error(error.response?.data?.message || 'Failed to fetch visits');
-  }
+  });
+  
+  const response = await api.get(`/api/visits?${params.toString()}`);
+  return response;
 };
 
 /**
- * Get a single visit by ID
- * @param {number} id - Visit ID
- * @returns {Promise} Visit data
+ * Get visit by ID
+ * @param {string} id - Visit UUID
+ * @returns {Promise} API response
  */
-export const getVisit = async (id) => {
-  try {
-    const response = await api.get(`/visits/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching visit ${id}:`, error);
-    throw new Error(error.response?.data?.message || 'Failed to fetch visit details');
-  }
+export const getVisitById = async (id) => {
+  const response = await api.get(`/api/visits/${id}`);
+  return response;
 };
 
 /**
- * Get all visits for a specific patient
- * @param {number} patientId - Patient ID
- * @param {Object} params - Additional query parameters (page, limit)
- * @returns {Promise} Response with patient visits array and pagination data
- */
-export const getPatientVisits = async (patientId, params = {}) => {
-  try {
-    const queryParams = new URLSearchParams();
-    if (params.page) {
-      queryParams.append('page', params.page);
-    }
-    if (params.limit) {
-      queryParams.append('limit', params.limit);
-    }
-
-    const response = await api.get(`/patients/${patientId}/visits?${queryParams.toString()}`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching visits for patient ${patientId}:`, error);
-    throw new Error(error.response?.data?.message || 'Failed to fetch patient visits');
-  }
-};
-
-/**
- * Create a new visit
+ * Create new visit
  * @param {Object} visitData - Visit data
- * @param {number} visitData.patientId - Patient ID
- * @param {string} visitData.visitDate - Visit date (ISO 8601 format)
- * @param {string} visitData.visitType - Visit type (Initial, Follow-up, etc.)
- * @param {string} visitData.status - Status (Scheduled, Completed, Cancelled)
- * @param {string} visitData.notes - Visit notes
- * @param {Array} visitData.measurements - Array of measurements
- * @returns {Promise} Created visit data
+ * @returns {Promise} API response
  */
 export const createVisit = async (visitData) => {
-  try {
-    const response = await api.post('/visits', visitData);
-    return response.data;
-  } catch (error) {
-    console.error('Error creating visit:', error);
-    throw new Error(error.response?.data?.message || 'Failed to create visit');
-  }
+  const response = await api.post('/api/visits', visitData);
+  return response;
 };
 
 /**
- * Update an existing visit
- * @param {number} id - Visit ID
- * @param {Object} visitData - Updated visit data
- * @returns {Promise} Updated visit data
+ * Update visit
+ * @param {string} id - Visit UUID
+ * @param {Object} updateData - Update data
+ * @returns {Promise} API response
  */
-export const updateVisit = async (id, visitData) => {
-  try {
-    const response = await api.put(`/visits/${id}`, visitData);
-    return response.data;
-  } catch (error) {
-    console.error(`Error updating visit ${id}:`, error);
-    throw new Error(error.response?.data?.message || 'Failed to update visit');
-  }
+export const updateVisit = async (id, updateData) => {
+  const response = await api.put(`/api/visits/${id}`, updateData);
+  return response;
 };
 
 /**
- * Update visit status
- * @param {number} id - Visit ID
- * @param {string} status - New status (Scheduled, Completed, Cancelled)
- * @returns {Promise} Updated visit data
- */
-export const updateVisitStatus = async (id, status) => {
-  try {
-    const response = await api.patch(`/visits/${id}/status`, { status });
-    return response.data;
-  } catch (error) {
-    console.error(`Error updating visit status ${id}:`, error);
-    throw new Error(error.response?.data?.message || 'Failed to update visit status');
-  }
-};
-
-/**
- * Delete a visit
- * @param {number} id - Visit ID
- * @returns {Promise} Success message
+ * Delete visit
+ * @param {string} id - Visit UUID
+ * @returns {Promise} API response
  */
 export const deleteVisit = async (id) => {
-  try {
-    const response = await api.delete(`/visits/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error deleting visit ${id}:`, error);
-    throw new Error(error.response?.data?.message || 'Failed to delete visit');
-  }
+  const response = await api.delete(`/api/visits/${id}`);
+  return response;
 };
 
 /**
- * Get measurement history for a patient
- * @param {number} patientId - Patient ID
- * @param {string} measurementType - Type of measurement (weight, height, bmi, etc.)
- * @returns {Promise} Array of measurement data with dates
+ * Add measurements to visit
+ * @param {string} id - Visit UUID
+ * @param {Object} measurements - Measurement data
+ * @returns {Promise} API response
  */
-export const getPatientMeasurementHistory = async (patientId, measurementType) => {
-  try {
-    const response = await api.get(`/patients/${patientId}/measurements/${measurementType}`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching measurement history for patient ${patientId}:`, error);
-    throw new Error(error.response?.data?.message || 'Failed to fetch measurement history');
-  }
+export const addMeasurements = async (id, measurements) => {
+  const response = await api.post(`/api/visits/${id}/measurements`, measurements);
+  return response;
+};
+
+/**
+ * Update measurement
+ * @param {string} visitId - Visit UUID
+ * @param {string} measurementId - Measurement UUID
+ * @param {Object} measurements - Measurement data
+ * @returns {Promise} API response
+ */
+export const updateMeasurement = async (visitId, measurementId, measurements) => {
+  const response = await api.put(`/api/visits/${visitId}/measurements/${measurementId}`, measurements);
+  return response;
+};
+
+/**
+ * Delete measurement
+ * @param {string} visitId - Visit UUID
+ * @param {string} measurementId - Measurement UUID
+ * @returns {Promise} API response
+ */
+export const deleteMeasurement = async (visitId, measurementId) => {
+  const response = await api.delete(`/api/visits/${visitId}/measurements/${measurementId}`);
+  return response;
 };
 
 export default {
   getVisits,
-  getVisit,
-  getPatientVisits,
+  getVisitById,
   createVisit,
   updateVisit,
-  updateVisitStatus,
   deleteVisit,
-  getPatientMeasurementHistory
+  addMeasurements,
+  updateMeasurement,
+  deleteMeasurement
 };

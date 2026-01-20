@@ -6,42 +6,43 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
+        allowNull: false
       },
       timestamp: {
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
-        allowNull: false
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       user_id: {
         type: Sequelize.UUID,
         allowNull: true,
-        references: {
-          model: 'users',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+        comment: 'No FK constraint - audit logs must persist even if user deleted'
       },
       username: {
-        type: Sequelize.STRING(50),
-        allowNull: true
+        type: Sequelize.STRING(100),
+        allowNull: true,
+        comment: 'Denormalized for audit trail'
       },
       action: {
-        type: Sequelize.STRING(100),
-        allowNull: false
+        type: Sequelize.STRING(50),
+        allowNull: false,
+        comment: 'CREATE, READ, UPDATE, DELETE, LOGIN, LOGOUT, etc.'
       },
       resource_type: {
         type: Sequelize.STRING(50),
-        allowNull: false
+        allowNull: true,
+        comment: 'patient, visit, billing, user, document, etc.'
       },
       resource_id: {
         type: Sequelize.UUID,
-        allowNull: true
+        allowNull: true,
+        comment: 'ID of affected resource'
       },
       ip_address: {
         type: Sequelize.STRING(45),
-        allowNull: true
+        allowNull: true,
+        comment: 'IPv4 or IPv6 address'
       },
       user_agent: {
         type: Sequelize.TEXT,
@@ -49,49 +50,43 @@ module.exports = {
       },
       request_method: {
         type: Sequelize.STRING(10),
-        allowNull: true
+        allowNull: true,
+        comment: 'GET, POST, PUT, DELETE'
       },
       request_path: {
         type: Sequelize.TEXT,
         allowNull: true
       },
       changes: {
-        type: Sequelize.JSON,
-        allowNull: true
+        type: Sequelize.TEXT,
+        allowNull: true,
+        comment: 'JSON string of before/after values (TEXT for SQLite, JSONB for PostgreSQL)'
       },
-      status: {
-        type: Sequelize.STRING(20),
+      status_code: {
+        type: Sequelize.INTEGER,
         allowNull: true
       },
       error_message: {
         type: Sequelize.TEXT,
         allowNull: true
       },
-      severity: {
-        type: Sequelize.STRING(20),
-        allowNull: true
+      created_at: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
-      session_id: {
-        type: Sequelize.STRING(255),
-        allowNull: true
-      },
-      api_key_id: {
-        type: Sequelize.UUID,
-        allowNull: true,
-        references: {
-          model: 'api_keys',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+      updated_at: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
 
-    await queryInterface.addIndex('audit_logs', ['timestamp']);
     await queryInterface.addIndex('audit_logs', ['user_id']);
-    await queryInterface.addIndex('audit_logs', ['resource_type', 'resource_id']);
+    await queryInterface.addIndex('audit_logs', ['timestamp']);
+    await queryInterface.addIndex('audit_logs', ['resource_type']);
+    await queryInterface.addIndex('audit_logs', ['resource_id']);
     await queryInterface.addIndex('audit_logs', ['action']);
-    await queryInterface.addIndex('audit_logs', ['severity']);
   },
 
   down: async (queryInterface, Sequelize) => {

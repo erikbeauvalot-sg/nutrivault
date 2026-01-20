@@ -6,7 +6,8 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
+        allowNull: false
       },
       first_name: {
         type: Sequelize.STRING(100),
@@ -16,19 +17,20 @@ module.exports = {
         type: Sequelize.STRING(100),
         allowNull: false
       },
-      date_of_birth: {
-        type: Sequelize.DATEONLY,
-        allowNull: false
+      email: {
+        type: Sequelize.STRING(255),
+        allowNull: true,
+        unique: true
       },
-      gender: {
+      phone: {
         type: Sequelize.STRING(20),
         allowNull: true
       },
-      email: {
-        type: Sequelize.STRING(255),
+      date_of_birth: {
+        type: Sequelize.DATEONLY,
         allowNull: true
       },
-      phone: {
+      gender: {
         type: Sequelize.STRING(20),
         allowNull: true
       },
@@ -40,12 +42,12 @@ module.exports = {
         type: Sequelize.STRING(100),
         allowNull: true
       },
-      postal_code: {
-        type: Sequelize.STRING(20),
+      state: {
+        type: Sequelize.STRING(50),
         allowNull: true
       },
-      country: {
-        type: Sequelize.STRING(100),
+      zip_code: {
+        type: Sequelize.STRING(20),
         allowNull: true
       },
       emergency_contact_name: {
@@ -60,17 +62,13 @@ module.exports = {
         type: Sequelize.TEXT,
         allowNull: true
       },
-      dietary_preferences: {
-        type: Sequelize.TEXT,
-        allowNull: true
-      },
       allergies: {
         type: Sequelize.TEXT,
         allowNull: true
       },
-      is_active: {
-        type: Sequelize.BOOLEAN,
-        defaultValue: true
+      dietary_preferences: {
+        type: Sequelize.TEXT,
+        allowNull: true
       },
       assigned_dietitian_id: {
         type: Sequelize.UUID,
@@ -82,41 +80,26 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'SET NULL'
       },
-      created_by: {
-        type: Sequelize.UUID,
-        allowNull: true,
-        references: {
-          model: 'users',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
-      },
-      updated_by: {
-        type: Sequelize.UUID,
-        allowNull: true,
-        references: {
-          model: 'users',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+      is_active: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
       },
       created_at: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       updated_at: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
 
-    await queryInterface.addIndex('patients', ['last_name']);
+    await queryInterface.addIndex('patients', ['email']);
     await queryInterface.addIndex('patients', ['assigned_dietitian_id']);
-    await queryInterface.addIndex('patients', ['is_active']);
+    await queryInterface.addIndex('patients', ['last_name']);
   },
 
   down: async (queryInterface, Sequelize) => {

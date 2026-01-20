@@ -1,317 +1,108 @@
 /**
- * Audit Logging Service
- *
- * Handles audit log creation and retrieval
+ * Audit Service
+ * 
+ * Handles audit logging for all CRUD operations.
+ * Records user actions, changes, and request metadata for compliance.
  */
 
-const db = require('../../models');
-const logger = require('../config/logger');
+const db = require('../../../models');
+const AuditLog = db.AuditLog;
 
 /**
- * Log audit event to database
+ * Create an audit log entry
+ * 
+ * @param {Object} auditData - Audit log data
+ * @param {string} auditData.user_id - User UUID
+ * @param {string} auditData.username - Username
+ * @param {string} auditData.action - Action: CREATE, READ, UPDATE, DELETE
+ * @param {string} auditData.resource_type - Resource: patients, visits, users, etc.
+ * @param {string} auditData.resource_id - Resource UUID
+ * @param {Object} auditData.changes - Before/after data: { before: {...}, after: {...} }
+ * @param {string} auditData.ip_address - Request IP address
+ * @param {string} auditData.user_agent - Request user agent
+ * @param {string} auditData.request_method - HTTP method
+ * @param {string} auditData.request_path - Request path
+ * @param {number} auditData.status_code - HTTP status code (optional)
+ * @param {string} auditData.error_message - Error message if operation failed
+ * @returns {Promise<Object>} Created audit log entry
  */
-async function logAuditEvent({
-  user_id = null,
-  username = null,
-  action,
-  resource_type,
-  resource_id = null,
-  ip_address = null,
-  user_agent = null,
-  request_method = null,
-  request_path = null,
-  changes = null,
-  status = 'SUCCESS',
-  error_message = null,
-  severity = 'INFO',
-  session_id = null,
-  api_key_id = null
-}) {
+async function log(auditData) {
   try {
-    await db.AuditLog.create({
-      user_id,
-      username,
-      action,
-      resource_type,
-      resource_id,
-      ip_address,
-      user_agent,
-      request_method,
-      request_path,
-      changes,
-      status,
-      error_message,
-      severity,
-      session_id,
-      api_key_id
+    const auditLog = await AuditLog.create({
+      user_id: auditData.user_id,
+      username: auditData.username,
+      action: auditData.action,
+      resource_type: auditData.resource_type,
+      resource_id: auditData.resource_id || null,
+      changes: auditData.changes ? JSON.stringify(auditData.changes) : null,
+      ip_address: auditData.ip_address,
+      user_agent: auditData.user_agent,
+      request_method: auditData.request_method,
+      request_path: auditData.request_path,
+      status_code: auditData.status_code || null,
+      error_message: auditData.error_message || null
     });
 
-    // Also log to file for redundancy
-    logger.info('Audit event', {
-      user_id,
-      username,
-      action,
-      resource_type,
-      resource_id,
-      status,
-      severity
-    });
-
+    return auditLog;
   } catch (error) {
-    // Don't throw error - log to file as fallback
-    logger.error('Failed to create audit log', {
-      error: error.message,
-      event: { action, resource_type, user_id }
-    });
+    // If audit logging fails, log to console but don't break the request
+    console.error('❌ Audit logging failed:', error.message);
+    return null;
   }
 }
 
 /**
- * Log authentication event
- */
-async function logAuthEvent({
-  user_id,
-  username,
-  action, // LOGIN, LOGOUT, FAILED_LOGIN, TOKEN_REFRESH, etc.
-  ip_address,
-  user_agent,
-  status = 'SUCCESS',
-  error_message = null
-}) {
-  const severity = status === 'FAILURE' ? 'WARN' : 'INFO';
-
-  await logAuditEvent({
-    user_id,
-    username,
-    action,
-    resource_type: 'auth',
-    ip_address,
-    user_agent,
-    request_method: 'POST',
-    status,
-    error_message,
-    severity
-  });
-}
-
-/**
- * Log authorization failure
- */
-async function logAuthorizationFailure({
-  user_id,
-  username,
-  action,
-  resource_type,
-  resource_id,
-  ip_address,
-  user_agent,
-  request_method,
-  request_path,
-  reason
-}) {
-  await logAuditEvent({
-    user_id,
-    username,
-    action: action || 'AUTHORIZATION_FAILURE',
-    resource_type,
-    resource_id,
-    ip_address,
-    user_agent,
-    request_method,
-    request_path,
-    status: 'FAILURE',
-    error_message: reason,
-    severity: 'WARN'
-  });
-}
-
-/**
- * Log CRUD operation
- */
-async function logCrudEvent({
-  user_id,
-  username,
-  action, // CREATE, READ, UPDATE, DELETE
-  resource_type,
-  resource_id,
-  changes = null, // { before: {...}, after: {...} }
-  ip_address,
-  user_agent,
-  request_method,
-  request_path
-}) {
-  const severity = action === 'DELETE' ? 'WARN' : 'INFO';
-
-  await logAuditEvent({
-    user_id,
-    username,
-    action,
-    resource_type,
-    resource_id,
-    changes,
-    ip_address,
-    user_agent,
-    request_method,
-    request_path,
-    status: 'SUCCESS',
-    severity
-  });
-}
-
-/**
- * Log data access (for sensitive resources)
- */
-async function logDataAccess({
-  user_id,
-  username,
-  resource_type,
-  resource_id,
-  ip_address,
-  user_agent,
-  request_path
-}) {
-  await logAuditEvent({
-    user_id,
-    username,
-    action: 'READ',
-    resource_type,
-    resource_id,
-    ip_address,
-    user_agent,
-    request_method: 'GET',
-    request_path,
-    status: 'SUCCESS',
-    severity: 'INFO'
-  });
-}
-
-/**
- * Get audit logs with filtering and search
- * Supports search across username, action, resource_type, request_path, error_message
+ * Get audit logs with filtering
+ * 
+ * @param {Object} filters - Filter criteria
+ * @param {string} filters.user_id - Filter by user ID
+ * @param {string} filters.resource_type - Filter by resource type
+ * @param {string} filters.resource_id - Filter by resource ID
+ * @param {string} filters.action - Filter by action
+ * @param {Date} filters.start_date - Filter by start date
+ * @param {Date} filters.end_date - Filter by end date
+ * @param {number} filters.limit - Limit results (default 100)
+ * @param {number} filters.offset - Offset for pagination
+ * @returns {Promise<Object>} Audit logs and total count
  */
 async function getAuditLogs(filters = {}) {
-  // Use QueryBuilder for advanced filtering and search
-  const QueryBuilder = require('../utils/queryBuilder');
-  const { AUDIT_CONFIG } = require('../config/queryConfigs');
+  try {
+    const whereClause = {};
 
-  const queryBuilder = new QueryBuilder(AUDIT_CONFIG);
-  const { where, pagination, sort } = queryBuilder.build(filters);
+    if (filters.user_id) whereClause.user_id = filters.user_id;
+    if (filters.resource_type) whereClause.resource_type = filters.resource_type;
+    if (filters.resource_id) whereClause.resource_id = filters.resource_id;
+    if (filters.action) whereClause.action = filters.action;
 
-  // Handle legacy from_date/to_date parameters (backward compatibility)
-  const { from_date, to_date } = filters;
-  if (from_date || to_date) {
-    if (!where.timestamp) {
-      where.timestamp = {};
+    if (filters.start_date || filters.end_date) {
+      whereClause.created_at = {};
+      if (filters.start_date) whereClause.created_at[db.Sequelize.Op.gte] = filters.start_date;
+      if (filters.end_date) whereClause.created_at[db.Sequelize.Op.lte] = filters.end_date;
     }
-    if (from_date) {
-      if (typeof where.timestamp === 'object') {
-        where.timestamp[db.Sequelize.Op.gte] = new Date(from_date);
-      }
-    }
-    if (to_date) {
-      if (typeof where.timestamp === 'object') {
-        where.timestamp[db.Sequelize.Op.lte] = new Date(to_date);
-      }
-    }
+
+    const limit = filters.limit || 100;
+    const offset = filters.offset || 0;
+
+    const { count, rows } = await AuditLog.findAndCountAll({
+      where: whereClause,
+      order: [['created_at', 'DESC']],
+      limit,
+      offset
+    });
+
+    return {
+      auditLogs: rows,
+      total: count,
+      limit,
+      offset
+    };
+  } catch (error) {
+    console.error('❌ Failed to retrieve audit logs:', error.message);
+    throw error;
   }
-
-  const logs = await db.AuditLog.findAndCountAll({
-    where,
-    limit: pagination.limit,
-    offset: pagination.offset,
-    order: sort,
-    include: [{
-      model: db.User,
-      as: 'user',
-      attributes: ['id', 'username', 'email'],
-      required: false
-    }]
-  });
-
-  return {
-    logs: logs.rows,
-    total: logs.count,
-    limit: pagination.limit,
-    offset: pagination.offset
-  };
-}
-
-/**
- * Get audit log statistics
- */
-async function getAuditStats(filters = {}) {
-  const { from_date, to_date, user_id } = filters;
-
-  const where = {};
-  if (user_id) where.user_id = user_id;
-
-  if (from_date || to_date) {
-    where.timestamp = {};
-    if (from_date) where.timestamp[db.Sequelize.Op.gte] = new Date(from_date);
-    if (to_date) where.timestamp[db.Sequelize.Op.lte] = new Date(to_date);
-  }
-
-  const [
-    totalLogs,
-    byAction,
-    byStatus,
-    bySeverity,
-    byResourceType
-  ] = await Promise.all([
-    db.AuditLog.count({ where }),
-    db.AuditLog.findAll({
-      where,
-      attributes: [
-        'action',
-        [db.Sequelize.fn('COUNT', db.Sequelize.col('id')), 'count']
-      ],
-      group: ['action'],
-      raw: true
-    }),
-    db.AuditLog.findAll({
-      where,
-      attributes: [
-        'status',
-        [db.Sequelize.fn('COUNT', db.Sequelize.col('id')), 'count']
-      ],
-      group: ['status'],
-      raw: true
-    }),
-    db.AuditLog.findAll({
-      where,
-      attributes: [
-        'severity',
-        [db.Sequelize.fn('COUNT', db.Sequelize.col('id')), 'count']
-      ],
-      group: ['severity'],
-      raw: true
-    }),
-    db.AuditLog.findAll({
-      where,
-      attributes: [
-        'resource_type',
-        [db.Sequelize.fn('COUNT', db.Sequelize.col('id')), 'count']
-      ],
-      group: ['resource_type'],
-      raw: true
-    })
-  ]);
-
-  return {
-    total: totalLogs,
-    by_action: byAction,
-    by_status: byStatus,
-    by_severity: bySeverity,
-    by_resource_type: byResourceType
-  };
 }
 
 module.exports = {
-  logAuditEvent,
-  logAuthEvent,
-  logAuthorizationFailure,
-  logCrudEvent,
-  logDataAccess,
-  getAuditLogs,
-  getAuditStats
+  log,
+  getAuditLogs
 };

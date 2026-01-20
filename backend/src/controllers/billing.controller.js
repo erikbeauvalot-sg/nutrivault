@@ -1,128 +1,161 @@
 /**
- * Billing Management Controller
+ * Billing Controller
  *
- * Handles HTTP requests for billing and invoice management endpoints
+ * HTTP request handlers for billing/invoice management.
+ * Thin controllers that delegate business logic to billing service.
  */
 
-const {
-  getBillingRecords,
-  getBillingById,
-  createBilling,
-  updateBilling,
-  deleteBilling,
-  markAsPaid,
-  getBillingStats
-} = require('../services/billing.service');
-const { asyncHandler } = require('../middleware/errorHandler');
+const billingService = require('../services/billing.service');
 
 /**
- * Get all billing records
- * GET /api/billing
+ * Extract request metadata for audit logging
+ * @param {Object} req - Express request object
+ * @returns {Object} Request metadata
  */
-const getBillingRecordsHandler = asyncHandler(async (req, res) => {
-  // Pass all query parameters to service for QueryBuilder processing
-  const filters = req.query;
-
-  const result = await getBillingRecords(filters, req.user);
-
-  res.json({
-    success: true,
-    data: result
-  });
-});
-
-/**
- * Get billing record by ID
- * GET /api/billing/:id
- */
-const getBillingByIdHandler = asyncHandler(async (req, res) => {
-  const billing = await getBillingById(req.params.id, req.user);
-
-  res.json({
-    success: true,
-    data: { billing }
-  });
-});
-
-/**
- * Create new billing record/invoice
- * POST /api/billing
- */
-const createBillingHandler = asyncHandler(async (req, res) => {
-  const billing = await createBilling(req.body, req.user.id, req.user);
-
-  res.status(201).json({
-    success: true,
-    message: 'Invoice created successfully',
-    data: { billing }
-  });
-});
-
-/**
- * Update billing record
- * PUT /api/billing/:id
- */
-const updateBillingHandler = asyncHandler(async (req, res) => {
-  const billing = await updateBilling(req.params.id, req.body, req.user.id, req.user);
-
-  res.json({
-    success: true,
-    message: 'Billing record updated successfully',
-    data: { billing }
-  });
-});
-
-/**
- * Delete billing record
- * DELETE /api/billing/:id
- */
-const deleteBillingHandler = asyncHandler(async (req, res) => {
-  const result = await deleteBilling(req.params.id, req.user.id, req.user);
-
-  res.json({
-    success: true,
-    message: result.message
-  });
-});
-
-/**
- * Mark invoice as paid
- * POST /api/billing/:id/pay
- */
-const markAsPaidHandler = asyncHandler(async (req, res) => {
-  const billing = await markAsPaid(req.params.id, req.body, req.user.id, req.user);
-
-  res.json({
-    success: true,
-    message: 'Invoice marked as paid successfully',
-    data: { billing }
-  });
-});
-
-/**
- * Get billing statistics
- * GET /api/billing/stats
- */
-const getBillingStatsHandler = asyncHandler(async (req, res) => {
-  const filters = {
-    from_date: req.query.from_date,
-    to_date: req.query.to_date
+function getRequestMetadata(req) {
+  return {
+    ip: req.ip || req.connection.remoteAddress,
+    userAgent: req.get('user-agent'),
+    method: req.method,
+    path: req.originalUrl
   };
+}
 
-  const stats = await getBillingStats(filters, req.user);
+/**
+ * GET /api/billing - Get all invoices
+ */
+exports.getAllInvoices = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const filters = {
+      patient_id: req.query.patient_id,
+      status: req.query.status,
+      search: req.query.search,
+      start_date: req.query.start_date,
+      end_date: req.query.end_date,
+      page: req.query.page,
+      limit: req.query.limit
+    };
+    const requestMetadata = getRequestMetadata(req);
 
-  res.json({
-    success: true,
-    data: stats
-  });
-});
+    const result = await billingService.getInvoices(user, filters, requestMetadata);
 
-module.exports = {
-  getBillingRecordsHandler,
-  getBillingByIdHandler,
-  createBillingHandler,
-  updateBillingHandler,
-  deleteBillingHandler,
-  markAsPaidHandler,
-  getBillingStatsHandler
+    res.json({
+      success: true,
+      data: result.invoices,
+      pagination: {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/billing/:id - Get invoice by ID
+ */
+exports.getInvoiceById = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const requestMetadata = getRequestMetadata(req);
+
+    const invoice = await billingService.getInvoiceById(id, user, requestMetadata);
+
+    res.json({
+      success: true,
+      data: invoice
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/billing - Create new invoice
+ */
+exports.createInvoice = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const invoiceData = req.body;
+    const requestMetadata = getRequestMetadata(req);
+
+    const invoice = await billingService.createInvoice(invoiceData, user, requestMetadata);
+
+    res.status(201).json({
+      success: true,
+      data: invoice,
+      message: 'Invoice created successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/billing/:id - Update invoice
+ */
+exports.updateInvoice = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const updateData = req.body;
+    const requestMetadata = getRequestMetadata(req);
+
+    const invoice = await billingService.updateInvoice(id, updateData, user, requestMetadata);
+
+    res.json({
+      success: true,
+      data: invoice,
+      message: 'Invoice updated successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/billing/:id/payment - Record payment
+ */
+exports.recordPayment = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const paymentData = req.body;
+    const requestMetadata = getRequestMetadata(req);
+
+    const invoice = await billingService.recordPayment(id, paymentData, user, requestMetadata);
+
+    res.json({
+      success: true,
+      data: invoice,
+      message: 'Payment recorded successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/billing/:id - Delete invoice
+ */
+exports.deleteInvoice = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const requestMetadata = getRequestMetadata(req);
+
+    await billingService.deleteInvoice(id, user, requestMetadata);
+
+    res.json({
+      success: true,
+      message: 'Invoice deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
 };

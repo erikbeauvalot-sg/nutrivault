@@ -1,45 +1,49 @@
-'use strict';
-
 module.exports = (sequelize, DataTypes) => {
   const Permission = sequelize.define('Permission', {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
+      primaryKey: true,
+      allowNull: false
     },
-    name: {
+    code: {
       type: DataTypes.STRING(100),
+      allowNull: false,
       unique: true,
-      allowNull: false
-    },
-    resource: {
-      type: DataTypes.STRING(50),
-      allowNull: false
-    },
-    action: {
-      type: DataTypes.STRING(50),
-      allowNull: false
+      comment: 'Permission code in format: resource.action (e.g., patients.create)'
     },
     description: {
       type: DataTypes.TEXT,
       allowNull: true
+    },
+    resource: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      comment: 'Resource type: patients, visits, billing, users, etc.'
+    },
+    action: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      comment: 'Action type: create, read, update, delete, etc.'
+    },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true
     }
   }, {
     tableName: 'permissions',
     timestamps: true,
     underscored: true,
-    createdAt: 'created_at',
-    updatedAt: false
+    indexes: [
+      {
+        fields: ['code']
+      },
+      {
+        fields: ['resource']
+      }
+    ]
   });
-
-  Permission.associate = (models) => {
-    Permission.belongsToMany(models.Role, {
-      through: models.RolePermission,
-      foreignKey: 'permission_id',
-      otherKey: 'role_id',
-      as: 'roles'
-    });
-  };
 
   return Permission;
 };

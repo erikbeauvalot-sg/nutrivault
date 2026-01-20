@@ -1,351 +1,673 @@
 /**
- * User Management Service
- *
- * Business logic for user management operations
+ * User Service
+ * 
+ * Business logic for user management with RBAC and audit logging.
+ * Handles user CRUD, password management, and account status.
  */
 
-const db = require('../../models');
-const { hashPassword, validatePasswordStrength } = require('../auth/password');
-const { AppError } = require('../middleware/errorHandler');
-const { logCrudEvent } = require('./audit.service');
-const { Op } = require('sequelize');
-const QueryBuilder = require('../utils/queryBuilder');
-const { USERS_CONFIG } = require('../config/queryConfigs');
+const db = require('../../../models');
+const User = db.User;
+const Role = db.Role;
+const Permission = db.Permission;
+const auditService = require('./audit.service');
+const bcrypt = require('bcryptjs');
+const { Op } = db.Sequelize;
 
 /**
- * Get all users with filtering and pagination
+ * Get all users with filtering and pagination (Admin only)
+ * 
+ * @param {Object} user - Authenticated user object
+ * @param {Object} filters - Filter criteria
+ * @param {string} filters.search - Search by username, email, or name
+ * @param {string} filters.role_id - Filter by role
+ * @param {boolean} filters.is_active - Filter by active status
+ * @param {number} filters.page - Page number (default 1)
+ * @param {number} filters.limit - Items per page (default 20)
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Users, total count, and pagination info
  */
-async function getUsers(filters = {}) {
-  // Use QueryBuilder for advanced filtering
-  const queryBuilder = new QueryBuilder(USERS_CONFIG);
-  const { where, pagination, sort } = queryBuilder.build(filters);
+async function getUsers(user, filters = {}, requestMetadata = {}) {
+  try {
+    const whereClause = {};
 
-  const { count, rows } = await db.User.findAndCountAll({
-    where,
-    include: [{
-      model: db.Role,
-      as: 'role',
-      attributes: ['id', 'name', 'description']
-    }],
-    attributes: { exclude: ['password_hash'] },
-    limit: pagination.limit,
-    offset: pagination.offset,
-    order: sort
-  });
+    // Apply filters
+    if (filters.search) {
+      whereClause[Op.or] = [
+        { username: { [Op.like]: `%${filters.search}%` } },
+        { email: { [Op.like]: `%${filters.search}%` } },
+        { first_name: { [Op.like]: `%${filters.search}%` } },
+        { last_name: { [Op.like]: `%${filters.search}%` } }
+      ];
+    }
 
-  return {
-    users: rows,
-    total: count,
-    limit: pagination.limit,
-    offset: pagination.offset
-  };
+    if (filters.role_id) {
+      whereClause.role_id = filters.role_id;
+    }
+
+    // Filter by is_active status
+    // Empty string means "All Status" - show both active and inactive users
+    // 'true' means active only, 'false' means inactive only
+    // undefined means default to active only
+    if (filters.is_active === 'true') {
+      whereClause.is_active = true;
+    } else if (filters.is_active === 'false') {
+      whereClause.is_active = false;
+    } else if (filters.is_active === '') {
+      // All Status selected - don't filter by is_active (show both active and inactive)
+      // No whereClause.is_active filter applied
+    } else if (filters.is_active !== undefined) {
+      // Handle boolean values or other truthy/falsy values
+      whereClause.is_active = filters.is_active === true || filters.is_active === 'true';
+    } else {
+      // Default: only show active users unless explicitly filtering for inactive
+      whereClause.is_active = true;
+    }
+
+    // Pagination
+    const page = parseInt(filters.page) || 1;
+    const limit = parseInt(filters.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await User.findAndCountAll({
+      where: whereClause,
+      limit,
+      offset,
+      order: [['username', 'ASC']],
+      attributes: { exclude: ['password_hash'] },
+      distinct: true,  // ✅ FIX: Prevent count from being multiplied by joins
+      include: [
+        {
+          model: Role,
+          as: 'role',
+          attributes: ['id', 'name', 'description'],
+          include: [
+            {
+              model: Permission,
+              as: 'permissions',
+              through: { attributes: [] }
+            }
+          ]
+        }
+      ]
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'READ',
+      resource_type: 'users',
+      resource_id: null,
+      details: { filter_count: count, page, limit },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return {
+      users: rows,
+      total: count,
+      page,
+      limit,
+      totalPages: Math.ceil(count / limit)
+    };
+  } catch (error) {
+    console.error('Error in getUsers:', error);
+    throw error;
+  }
 }
 
 /**
  * Get user by ID
+ * 
+ * @param {Object} user - Authenticated user object
+ * @param {string} userId - User UUID
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} User details with role and permissions
  */
-async function getUserById(userId) {
-  const user = await db.User.findByPk(userId, {
-    include: [{
-      model: db.Role,
-      as: 'role',
-      include: [{
-        model: db.Permission,
-        as: 'permissions',
-        through: { attributes: [] }
-      }]
-    }],
-    attributes: { exclude: ['password_hash'] }
-  });
+async function getUserById(user, userId, requestMetadata = {}) {
+  try {
+    const targetUser = await User.findByPk(userId, {
+      attributes: { exclude: ['password_hash'] },
+      include: [
+        {
+          model: Role,
+          as: 'role',
+          attributes: ['id', 'name', 'description'],
+          include: [
+            {
+              model: Permission,
+              as: 'permissions',
+              through: { attributes: [] }
+            }
+          ]
+        }
+      ]
+    });
 
-  if (!user) {
-    throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+    if (!targetUser) {
+      const error = new Error('User not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // RBAC: Admin can view any user, users can view own profile
+    if (user.role.name !== 'ADMIN' && user.id !== userId) {
+      const error = new Error('Access denied: You can only view your own profile');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'READ',
+      resource_type: 'users',
+      resource_id: userId,
+      details: { target_username: targetUser.username },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return targetUser;
+  } catch (error) {
+    console.error('Error in getUserById:', error);
+    throw error;
   }
+}
 
-  return user;
+/**
+ * Create new user (Admin only)
+ * 
+ * @param {Object} user - Authenticated user object
+ * @param {Object} userData - User data
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Created user
+ */
+async function createUser(user, userData, requestMetadata = {}) {
+  try {
+    // Check if username already exists
+    const existingUser = await User.findOne({
+      where: { username: userData.username }
+    });
+    if (existingUser) {
+      const error = new Error('Username already exists');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Check if email already exists
+    const existingEmail = await User.findOne({
+      where: { email: userData.email }
+    });
+    if (existingEmail) {
+      const error = new Error('Email already exists');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Validate role exists
+    const role = await Role.findByPk(userData.role_id);
+    if (!role) {
+      const error = new Error('Role not found');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(userData.password, 12);
+
+    // Create user
+    const newUser = await User.create({
+      username: userData.username,
+      email: userData.email,
+      password_hash: hashedPassword,
+      role_id: userData.role_id,
+      first_name: userData.first_name,
+      last_name: userData.last_name,
+      phone: userData.phone,
+      language_preference: userData.language_preference || 'fr',
+      is_active: true
+    });
+
+    // Fetch with associations (exclude password)
+    const createdUser = await User.findByPk(newUser.id, {
+      attributes: { exclude: ['password_hash'] },
+      include: [
+        {
+          model: Role,
+          as: 'role',
+          attributes: ['id', 'name', 'description']
+        }
+      ]
+    });
+
+    // Audit log (exclude password)
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'CREATE',
+      resource_type: 'users',
+      resource_id: newUser.id,
+      details: {
+        username: newUser.username,
+        email: newUser.email,
+        role_id: newUser.role_id
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return createdUser;
+  } catch (error) {
+    console.error('Error in createUser:', error);
+    throw error;
+  }
 }
 
 /**
  * Update user
+ * 
+ * @param {Object} user - Authenticated user object
+ * @param {string} userId - User UUID
+ * @param {Object} updateData - Update data
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated user
  */
-async function updateUser(userId, updates, updatedBy) {
-  const user = await db.User.findByPk(userId);
+async function updateUser(user, userId, updateData, requestMetadata = {}) {
+  try {
+    const targetUser = await User.findByPk(userId);
 
-  if (!user) {
-    throw new AppError('User not found', 404, 'USER_NOT_FOUND');
-  }
-
-  // Fields that can be updated
-  const allowedUpdates = [
-    'email',
-    'first_name',
-    'last_name',
-    'role_id'
-  ];
-
-  // Filter updates to only allowed fields
-  const filteredUpdates = {};
-  Object.keys(updates).forEach(key => {
-    if (allowedUpdates.includes(key)) {
-      filteredUpdates[key] = updates[key];
+    if (!targetUser) {
+      const error = new Error('User not found');
+      error.statusCode = 404;
+      throw error;
     }
-  });
 
-  // Check if email is being changed and if it already exists
-  if (filteredUpdates.email && filteredUpdates.email !== user.email) {
-    const existingUser = await db.User.findOne({
-      where: { email: filteredUpdates.email }
+    // RBAC: Admin can update any user, users can update own profile (limited fields)
+    const isAdmin = user.role.name === 'ADMIN';
+    const isOwnProfile = user.id === userId;
+
+    if (!isAdmin && !isOwnProfile) {
+      const error = new Error('Access denied: You can only update your own profile');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // Track changes for audit
+    const changes = {};
+    let allowedFields;
+
+    if (isAdmin) {
+      // Admin can update all fields except password (use separate endpoint)
+      allowedFields = ['username', 'email', 'role_id', 'first_name', 'last_name', 'phone', 'is_active', 'language_preference'];
+    } else {
+      // Regular users can only update their own basic info
+      allowedFields = ['first_name', 'last_name', 'phone', 'email', 'language_preference'];
+    }
+
+    // Check if email is being changed and if it's already taken
+    if (updateData.email && updateData.email !== targetUser.email) {
+      const existingEmail = await User.findOne({
+        where: { email: updateData.email, id: { [Op.ne]: userId } }
+      });
+      if (existingEmail) {
+        const error = new Error('Email already exists');
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
+    // Check if username is being changed and if it's already taken
+    if (updateData.username && updateData.username !== targetUser.username) {
+      const existingUser = await User.findOne({
+        where: { username: updateData.username, id: { [Op.ne]: userId } }
+      });
+      if (existingUser) {
+        const error = new Error('Username already exists');
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
+    // Validate role if being updated
+    if (updateData.role_id && isAdmin) {
+      const role = await Role.findByPk(updateData.role_id);
+      if (!role) {
+        const error = new Error('Role not found');
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+    
+    allowedFields.forEach(field => {
+      if (updateData[field] !== undefined && updateData[field] !== targetUser[field]) {
+        changes[field] = { old: targetUser[field], new: updateData[field] };
+        targetUser[field] = updateData[field];
+      }
     });
-    if (existingUser) {
-      throw new AppError('Email already exists', 409, 'EMAIL_EXISTS');
-    }
+
+    await targetUser.save();
+
+    // Fetch with associations (exclude password)
+    const updatedUser = await User.findByPk(userId, {
+      attributes: { exclude: ['password_hash'] },
+      include: [
+        {
+          model: Role,
+          as: 'role',
+          attributes: ['id', 'name', 'description'],
+          include: [
+            {
+              model: Permission,
+              as: 'permissions',
+              through: { attributes: [] }
+            }
+          ]
+        }
+      ]
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'UPDATE',
+      resource_type: 'users',
+      resource_id: userId,
+      details: { changes, target_username: targetUser.username },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return updatedUser;
+  } catch (error) {
+    console.error('Error in updateUser:', error);
+    throw error;
   }
-
-  // Track changes for audit log
-  const changes = {};
-  Object.keys(filteredUpdates).forEach(key => {
-    if (user[key] !== filteredUpdates[key]) {
-      changes[key] = {
-        old: user[key],
-        new: filteredUpdates[key]
-      };
-    }
-  });
-
-  // Update user
-  await user.update({
-    ...filteredUpdates,
-    updated_by: updatedBy
-  });
-
-  // Log the update
-  await logCrudEvent({
-    user_id: updatedBy,
-    action: 'UPDATE',
-    resource_type: 'users',
-    resource_id: userId,
-    changes: changes,
-    status: 'SUCCESS'
-  });
-
-  // Reload with associations
-  await user.reload({
-    include: [{
-      model: db.Role,
-      as: 'role',
-      attributes: ['id', 'name', 'description']
-    }],
-    attributes: { exclude: ['password_hash'] }
-  });
-
-  return user;
 }
 
 /**
- * Delete user (soft delete by deactivating)
+ * Delete user (soft delete - set is_active=false)
+ * 
+ * @param {Object} user - Authenticated user object
+ * @param {string} userId - User UUID
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<void>}
  */
-async function deleteUser(userId, deletedBy) {
-  const user = await db.User.findByPk(userId);
+async function deleteUser(user, userId, requestMetadata = {}) {
+  try {
+    const targetUser = await User.findByPk(userId);
 
-  if (!user) {
-    throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+    if (!targetUser) {
+      const error = new Error('User not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Cannot delete self
+    if (user.id === userId) {
+      const error = new Error('Cannot delete your own account');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Soft delete - set is_active to false
+    targetUser.is_active = false;
+    await targetUser.save();
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'DELETE',
+      resource_type: 'users',
+      resource_id: userId,
+      details: { target_username: targetUser.username },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+  } catch (error) {
+    console.error('Error in deleteUser:', error.message);
+    throw error;
   }
-
-  // Prevent self-deletion
-  if (userId === deletedBy) {
-    throw new AppError('Cannot delete your own account', 400, 'CANNOT_DELETE_SELF');
-  }
-
-  // Deactivate instead of hard delete
-  await user.update({
-    is_active: false,
-    updated_by: deletedBy
-  });
-
-  // Log the deletion
-  await logCrudEvent({
-    user_id: deletedBy,
-    action: 'DELETE',
-    resource_type: 'users',
-    resource_id: userId,
-    status: 'SUCCESS'
-  });
-
-  return { message: 'User deactivated successfully' };
 }
 
 /**
  * Change user password
+ * 
+ * @param {Object} user - Authenticated user object
+ * @param {string} userId - User UUID
+ * @param {string} oldPassword - Current password (required if not admin)
+ * @param {string} newPassword - New password
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<void>}
  */
-async function changePassword(userId, currentPassword, newPassword, changedBy) {
-  const user = await db.User.findByPk(userId);
+async function changePassword(user, userId, oldPassword, newPassword, requestMetadata = {}) {
+  try {
+    const targetUser = await User.findByPk(userId);
 
-  if (!user) {
-    throw new AppError('User not found', 404, 'USER_NOT_FOUND');
-  }
-
-  // If user is changing their own password, verify current password
-  if (userId === changedBy) {
-    const { verifyPassword } = require('../auth/password');
-    const isValid = await verifyPassword(currentPassword, user.password_hash);
-    if (!isValid) {
-      throw new AppError('Current password is incorrect', 401, 'INVALID_PASSWORD');
+    if (!targetUser) {
+      const error = new Error('User not found');
+      error.statusCode = 404;
+      throw error;
     }
+
+    const isAdmin = user.role.name === 'ADMIN';
+    const isOwnPassword = user.id === userId;
+
+    // RBAC: Admin can reset any password, users can change own password
+    if (!isAdmin && !isOwnPassword) {
+      const error = new Error('Access denied: You can only change your own password');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // If not admin, verify old password
+    if (!isAdmin && isOwnPassword) {
+      if (!oldPassword) {
+        const error = new Error('Old password is required');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const isValidPassword = await bcrypt.compare(oldPassword, targetUser.password_hash);
+      if (!isValidPassword) {
+        const error = new Error('Old password is incorrect');
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    // Update password and reset failed login attempts
+    targetUser.password_hash = hashedPassword;
+    targetUser.failed_login_attempts = 0;
+    targetUser.locked_until = null;
+    await targetUser.save();
+
+    // Audit log (don't include passwords)
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'PASSWORD_CHANGE',
+      resource_type: 'users',
+      resource_id: userId,
+      details: {
+        target_username: targetUser.username,
+        reset_by_admin: isAdmin && !isOwnPassword
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+  } catch (error) {
+    console.error('Error in changePassword:', error);
+    throw error;
   }
-  // If admin is changing someone else's password, they don't need current password
-
-  // Validate new password strength
-  const validation = validatePasswordStrength(newPassword);
-  if (!validation.valid) {
-    throw new AppError(
-      `Password does not meet requirements: ${validation.errors.join(', ')}`,
-      400,
-      'WEAK_PASSWORD'
-    );
-  }
-
-  // Hash and update password
-  const password_hash = await hashPassword(newPassword);
-  await user.update({
-    password_hash,
-    updated_by: changedBy
-  });
-
-  // Log password change
-  await logCrudEvent({
-    user_id: changedBy,
-    action: 'UPDATE',
-    resource_type: 'users',
-    resource_id: userId,
-    changes: { password: 'changed' },
-    status: 'SUCCESS'
-  });
-
-  return { message: 'Password changed successfully' };
 }
 
 /**
- * Activate user
+ * Toggle user active status
+ * 
+ * @param {Object} user - Authenticated user object
+ * @param {string} userId - User UUID
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated user
  */
-async function activateUser(userId, activatedBy) {
-  const user = await db.User.findByPk(userId);
+async function toggleUserStatus(user, userId, requestMetadata = {}) {
+  try {
+    const targetUser = await User.findByPk(userId);
 
-  if (!user) {
-    throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+    if (!targetUser) {
+      const error = new Error('User not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Cannot toggle own status
+    if (user.id === userId) {
+      const error = new Error('Cannot toggle your own account status');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Toggle status
+    targetUser.is_active = !targetUser.is_active;
+    await targetUser.save();
+
+    // Fetch with associations (exclude password)
+    const updatedUser = await User.findByPk(userId, {
+      attributes: { exclude: ['password_hash'] },
+      include: [
+        {
+          model: Role,
+          as: 'role',
+          attributes: ['id', 'name', 'description']
+        }
+      ]
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: targetUser.is_active ? 'ACTIVATE' : 'DEACTIVATE',
+      resource_type: 'users',
+      resource_id: userId,
+      details: {
+        target_username: targetUser.username,
+        new_status: targetUser.is_active
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return updatedUser;
+  } catch (error) {
+    console.error('Error in toggleUserStatus:', error);
+    throw error;
   }
-
-  if (user.is_active) {
-    throw new AppError('User is already active', 400, 'USER_ALREADY_ACTIVE');
-  }
-
-  await user.update({
-    is_active: true,
-    failed_login_attempts: 0,
-    locked_until: null,
-    updated_by: activatedBy
-  });
-
-  // Log activation
-  await logCrudEvent({
-    user_id: activatedBy,
-    action: 'UPDATE',
-    resource_type: 'users',
-    resource_id: userId,
-    changes: { is_active: { old: false, new: true } },
-    status: 'SUCCESS'
-  });
-
-  return { message: 'User activated successfully' };
 }
 
 /**
- * Deactivate user
+ * Get all active dietitians (DIETITIAN role only)
+ * Used for patient assignment dropdowns - excludes ADMIN users
+ *
+ * @returns {Promise<Array>} Array of dietitian users with their roles
  */
-async function deactivateUser(userId, deactivatedBy) {
-  const user = await db.User.findByPk(userId);
+async function getDietitians() {
+  try {
+    console.log('🔍 getDietitians() - Querying for active users with DIETITIAN role only...');
+    
+    // First, let's see all active users
+    const allActiveUsers = await User.findAll({
+      where: { is_active: true },
+      attributes: ['id', 'username', 'first_name', 'last_name', 'role_id'],
+      include: [{
+        model: Role,
+        as: 'role',
+        attributes: ['id', 'name']
+      }]
+    });
+    
+    console.log(`🔍 All active users (${allActiveUsers.length}):`);
+    allActiveUsers.forEach(u => {
+      console.log(`   - ${u.username}: role_id=${u.role_id}, role.name=${u.role?.name}`);
+    });
 
-  if (!user) {
-    throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+    // Now fetch only dietitians (not admins)
+    const dietitians = await User.findAll({
+      where: {
+        is_active: true
+      },
+      attributes: { exclude: ['password_hash'] },
+      include: [
+        {
+          model: Role,
+          as: 'role',
+          attributes: ['id', 'name', 'description'],
+          where: {
+            name: 'DIETITIAN'  // Only DIETITIAN role, not ADMIN
+          },
+          required: true,  // Explicit INNER JOIN
+          include: [
+            {
+              model: Permission,
+              as: 'permissions',
+              through: { attributes: [] }
+            }
+          ]
+        }
+      ],
+      order: [['first_name', 'ASC'], ['last_name', 'ASC']]
+    });
+
+    console.log(`✅ getDietitians() - Found ${dietitians.length} dietitians:`);
+    dietitians.forEach(u => {
+      console.log(`   - ${u.username}: role=${u.role?.name}, is_active=${u.is_active}`);
+    });
+
+    return dietitians;
+  } catch (error) {
+    console.error('🔥 Error in getDietitians:', error.message);
+    console.error('🔥 Stack:', error.stack);
+    throw error;
   }
-
-  // Prevent self-deactivation
-  if (userId === deactivatedBy) {
-    throw new AppError('Cannot deactivate your own account', 400, 'CANNOT_DEACTIVATE_SELF');
-  }
-
-  if (!user.is_active) {
-    throw new AppError('User is already inactive', 400, 'USER_ALREADY_INACTIVE');
-  }
-
-  await user.update({
-    is_active: false,
-    updated_by: deactivatedBy
-  });
-
-  // Revoke all active refresh tokens
-  await db.RefreshToken.update(
-    { revoked_at: new Date() },
-    { where: { user_id: userId, revoked_at: null } }
-  );
-
-  // Revoke all active API keys
-  await db.ApiKey.update(
-    { is_active: false },
-    { where: { user_id: userId, is_active: true } }
-  );
-
-  // Log deactivation
-  await logCrudEvent({
-    user_id: deactivatedBy,
-    action: 'UPDATE',
-    resource_type: 'users',
-    resource_id: userId,
-    changes: { is_active: { old: true, new: false } },
-    status: 'SUCCESS'
-  });
-
-  return { message: 'User deactivated successfully. All tokens and API keys revoked.' };
 }
 
 /**
- * Get user statistics
+ * Get all available roles
+ * @returns {Promise<Array>} Array of all roles
  */
-async function getUserStats() {
-  const totalUsers = await db.User.count();
-  const activeUsers = await db.User.count({ where: { is_active: true } });
-  const inactiveUsers = await db.User.count({ where: { is_active: false } });
+async function getRoles() {
+  try {
+    console.log('🔍 getRoles() - Fetching all available roles...');
 
-  const usersByRole = await db.User.findAll({
-    attributes: [
-      'role_id',
-      [db.sequelize.fn('COUNT', db.sequelize.col('User.id')), 'count']
-    ],
-    include: [{
-      model: db.Role,
-      as: 'role',
-      attributes: ['name']
-    }],
-    group: ['role_id', 'role.id', 'role.name']
-  });
+    const roles = await Role.findAll({
+      where: { is_active: true },
+      order: [['name', 'ASC']]
+    });
 
-  return {
-    total: totalUsers,
-    active: activeUsers,
-    inactive: inactiveUsers,
-    by_role: usersByRole.map(item => ({
-      role: item.role.name,
-      count: parseInt(item.get('count'))
-    }))
-  };
+    console.log(`✅ Found ${roles.length} active roles:`, roles.map(r => r.name).join(', '));
+
+    return roles;
+  } catch (error) {
+    console.error('🔥 Error in getRoles:', error.message);
+    console.error('🔥 Stack:', error.stack);
+    throw error;
+  }
 }
 
 module.exports = {
   getUsers,
   getUserById,
+  createUser,
   updateUser,
   deleteUser,
   changePassword,
-  activateUser,
-  deactivateUser,
-  getUserStats
+  toggleUserStatus,
+  getDietitians,
+  getRoles
 };

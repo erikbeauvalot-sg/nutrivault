@@ -1,113 +1,99 @@
-'use strict';
-
 module.exports = (sequelize, DataTypes) => {
   const Billing = sequelize.define('Billing', {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
+      primaryKey: true,
+      allowNull: false
     },
     patient_id: {
       type: DataTypes.UUID,
-      allowNull: false,
-      references: {
-        model: 'patients',
-        key: 'id'
-      }
+      allowNull: false
     },
     visit_id: {
       type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: 'visits',
-        key: 'id'
-      }
+      allowNull: true
     },
     invoice_number: {
       type: DataTypes.STRING(50),
-      unique: true,
-      allowNull: false
+      allowNull: false,
+      unique: true
     },
     invoice_date: {
-      type: DataTypes.DATEONLY,
+      type: DataTypes.DATE,
       allowNull: false
     },
     due_date: {
-      type: DataTypes.DATEONLY,
+      type: DataTypes.DATE,
       allowNull: false
     },
-    amount: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: false
+    service_description: {
+      type: DataTypes.TEXT,
+      allowNull: true
     },
-    tax_amount: {
+    amount_total: {
       type: DataTypes.DECIMAL(10, 2),
-      defaultValue: 0
+      allowNull: false,
+      defaultValue: 0.00
     },
-    total_amount: {
+    amount_paid: {
       type: DataTypes.DECIMAL(10, 2),
-      allowNull: false
+      allowNull: false,
+      defaultValue: 0.00
     },
-    currency: {
-      type: DataTypes.STRING(3),
-      defaultValue: 'USD'
+    amount_due: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0.00
     },
     status: {
-      type: DataTypes.STRING(50),
-      defaultValue: 'PENDING'
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: 'DRAFT',
+      validate: {
+        isIn: [['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED']]
+      }
     },
     payment_method: {
       type: DataTypes.STRING(50),
-      allowNull: true
+      allowNull: true,
+      comment: 'Cash, Credit Card, Insurance, etc.'
     },
     payment_date: {
-      type: DataTypes.DATEONLY,
+      type: DataTypes.DATE,
       allowNull: true
     },
     notes: {
       type: DataTypes.TEXT,
       allowNull: true
     },
-    created_by: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: 'users',
-        key: 'id'
-      }
-    },
-    updated_by: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: 'users',
-        key: 'id'
-      }
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true
     }
   }, {
     tableName: 'billing',
     timestamps: true,
-    underscored: true
+    underscored: true,
+    indexes: [
+      {
+        fields: ['patient_id']
+      },
+      {
+        fields: ['visit_id']
+      },
+      {
+        fields: ['invoice_number']
+      },
+      {
+        fields: ['status']
+      },
+      {
+        fields: ['due_date']
+      }
+    ]
   });
-
-  Billing.associate = (models) => {
-    Billing.belongsTo(models.Patient, {
-      foreignKey: 'patient_id',
-      as: 'patient'
-    });
-    Billing.belongsTo(models.Visit, {
-      foreignKey: 'visit_id',
-      as: 'visit'
-    });
-    Billing.belongsTo(models.User, {
-      foreignKey: 'created_by',
-      as: 'creator'
-    });
-    Billing.belongsTo(models.User, {
-      foreignKey: 'updated_by',
-      as: 'updater'
-    });
-  };
 
   return Billing;
 };

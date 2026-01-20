@@ -1,36 +1,37 @@
-'use strict';
-
 module.exports = (sequelize, DataTypes) => {
   const RolePermission = sequelize.define('RolePermission', {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      allowNull: false
+    },
     role_id: {
       type: DataTypes.UUID,
-      allowNull: false,
-      primaryKey: true,
-      references: {
-        model: 'roles',
-        key: 'id'
-      }
+      allowNull: false
     },
     permission_id: {
       type: DataTypes.UUID,
-      allowNull: false,
-      primaryKey: true,
-      references: {
-        model: 'permissions',
-        key: 'id'
-      }
+      allowNull: false
     }
   }, {
     tableName: 'role_permissions',
     timestamps: true,
     underscored: true,
-    createdAt: 'created_at',
-    updatedAt: false
+    indexes: [
+      {
+        unique: true,
+        fields: ['role_id', 'permission_id'],
+        name: 'unique_role_permission'
+      },
+      {
+        fields: ['role_id']
+      },
+      {
+        fields: ['permission_id']
+      }
+    ]
   });
-
-  RolePermission.associate = (models) => {
-    // No additional associations needed - handled by belongsToMany
-  };
 
   return RolePermission;
 };

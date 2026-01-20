@@ -6,7 +6,8 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
+        allowNull: false
       },
       patient_id: {
         type: Sequelize.UUID,
@@ -16,7 +17,7 @@ module.exports = {
           key: 'id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'RESTRICT'
       },
       dietitian_id: {
         type: Sequelize.UUID,
@@ -32,17 +33,20 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: false
       },
-      duration_minutes: {
-        type: Sequelize.INTEGER,
-        allowNull: false
-      },
       visit_type: {
         type: Sequelize.STRING(50),
-        allowNull: true
+        allowNull: true,
+        comment: 'Initial, Follow-up, Final, etc.'
       },
       status: {
-        type: Sequelize.STRING(50),
-        defaultValue: 'SCHEDULED'
+        type: Sequelize.STRING(20),
+        allowNull: false,
+        defaultValue: 'SCHEDULED',
+        comment: 'SCHEDULED, COMPLETED, CANCELLED, NO_SHOW'
+      },
+      duration_minutes: {
+        type: Sequelize.INTEGER,
+        allowNull: true
       },
       chief_complaint: {
         type: Sequelize.TEXT,
@@ -56,42 +60,22 @@ module.exports = {
         type: Sequelize.TEXT,
         allowNull: true
       },
-      next_visit_date: {
-        type: Sequelize.DATEONLY,
-        allowNull: true
-      },
-      private_notes: {
+      notes: {
         type: Sequelize.TEXT,
         allowNull: true
       },
-      created_by: {
-        type: Sequelize.UUID,
-        allowNull: true,
-        references: {
-          model: 'users',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
-      },
-      updated_by: {
-        type: Sequelize.UUID,
-        allowNull: true,
-        references: {
-          model: 'users',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+      next_visit_date: {
+        type: Sequelize.DATE,
+        allowNull: true
       },
       created_at: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       updated_at: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
@@ -100,7 +84,6 @@ module.exports = {
     await queryInterface.addIndex('visits', ['dietitian_id']);
     await queryInterface.addIndex('visits', ['visit_date']);
     await queryInterface.addIndex('visits', ['status']);
-    await queryInterface.addIndex('visits', ['patient_id', 'visit_date']);
   },
 
   down: async (queryInterface, Sequelize) => {

@@ -55,3 +55,12 @@ The following instructions are only to be applied when performing a code review.
 - [ ] The folder name is lower case, with words separated by hyphens.
 - [ ] Any bundled assets (scripts, templates, data files) are referenced in the SKILL.md instructions.
 - [ ] Bundled assets are reasonably sized (under 5MB per file).
+
+
+## Plan file guide
+- [ ] always translate all string on the frontend using the i18n system.
+- [ ] The plan has markdown front matter.
+- [ ] Follow any plan file specific instructions stored in the /plan directory.
+- [ ] for now the plan file that is being used is : /plan/feature-nutrivault-complete-system-1.md
+- [ ] Make sure you update the status of the plan file if needed.
+

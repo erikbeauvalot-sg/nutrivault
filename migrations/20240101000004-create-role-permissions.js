@@ -3,10 +3,15 @@
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.createTable('role_permissions', {
+      id: {
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
+        primaryKey: true,
+        allowNull: false
+      },
       role_id: {
         type: Sequelize.UUID,
         allowNull: false,
-        primaryKey: true,
         references: {
           model: 'roles',
           key: 'id'
@@ -17,7 +22,6 @@ module.exports = {
       permission_id: {
         type: Sequelize.UUID,
         allowNull: false,
-        primaryKey: true,
         references: {
           model: 'permissions',
           key: 'id'
@@ -26,10 +30,22 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       created_at: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      },
+      updated_at: {
+        type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
+    });
+
+    // Composite unique constraint
+    await queryInterface.addConstraint('role_permissions', {
+      fields: ['role_id', 'permission_id'],
+      type: 'unique',
+      name: 'unique_role_permission'
     });
 
     await queryInterface.addIndex('role_permissions', ['role_id']);

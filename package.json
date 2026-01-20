@@ -1,5 +1,5 @@
 {
-  "name": "diet",
+  "name": "nutrivault",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -8,36 +8,36 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "test:e2e": "playwright test",
-    "test:e2e:headed": "playwright test --headed",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:debug": "playwright test --debug",
-    "test:e2e:chromium": "playwright test --project=chromium",
-    "test:e2e:firefox": "playwright test --project=firefox",
-    "test:e2e:webkit": "playwright test --project=webkit",
-    "test:e2e:report": "playwright show-report",
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate:undo": "sequelize-cli db:migrate:undo",
     "db:migrate:undo:all": "sequelize-cli db:migrate:undo:all",
     "db:seed": "sequelize-cli db:seed:all",
-    "db:seed:undo": "sequelize-cli db:seed:undo:all",
-    "db:reset": "npm run db:migrate:undo:all && npm run db:migrate && npm run db:seed",
-    "update-todo": "node utils/update-todo.js"
+    "db:seed:undo": "sequelize-cli db:seed:undo:all"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/erikbeauvalot-sg/nutrivault.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/erikbeauvalot-sg/nutrivault/issues"
+  },
+  "homepage": "https://github.com/erikbeauvalot-sg/nutrivault#readme",
   "dependencies": {
-    "bcrypt": "^5.1.1",
-    "pg": "^8.16.3",
-    "pg-hstore": "^2.3.4",
+    "axios": "^1.13.2",
+    "bcryptjs": "^3.0.3",
+    "chart.js": "^4.5.1",
+    "dotenv": "^17.2.3",
+    "multer": "^2.0.2",
+    "react-chartjs-2": "^5.3.1",
     "sequelize": "^6.37.7",
-    "sequelize-cli": "^6.6.3",
     "sqlite3": "^5.1.7",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0"
+    "sequelize-cli": "^6.6.5"
   }
 }

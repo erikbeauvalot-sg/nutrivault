@@ -6,7 +6,8 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
+        allowNull: false
       },
       patient_id: {
         type: Sequelize.UUID,
@@ -16,7 +17,7 @@ module.exports = {
           key: 'id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'RESTRICT'
       },
       visit_id: {
         type: Sequelize.UUID,
@@ -30,77 +31,68 @@ module.exports = {
       },
       invoice_number: {
         type: Sequelize.STRING(50),
-        unique: true,
-        allowNull: false
+        allowNull: false,
+        unique: true
       },
       invoice_date: {
-        type: Sequelize.DATEONLY,
+        type: Sequelize.DATE,
         allowNull: false
       },
       due_date: {
-        type: Sequelize.DATEONLY,
+        type: Sequelize.DATE,
         allowNull: false
       },
-      amount: {
-        type: Sequelize.DECIMAL(10, 2),
-        allowNull: false
+      service_description: {
+        type: Sequelize.TEXT,
+        allowNull: true
       },
-      tax_amount: {
+      amount_total: {
         type: Sequelize.DECIMAL(10, 2),
-        defaultValue: 0
+        allowNull: false,
+        defaultValue: 0.00
       },
-      total_amount: {
+      amount_paid: {
         type: Sequelize.DECIMAL(10, 2),
-        allowNull: false
+        allowNull: false,
+        defaultValue: 0.00
       },
-      currency: {
-        type: Sequelize.STRING(3),
-        defaultValue: 'USD'
+      amount_due: {
+        type: Sequelize.DECIMAL(10, 2),
+        allowNull: false,
+        defaultValue: 0.00
       },
       status: {
-        type: Sequelize.STRING(50),
-        defaultValue: 'PENDING'
+        type: Sequelize.STRING(20),
+        allowNull: false,
+        defaultValue: 'DRAFT',
+        comment: 'DRAFT, SENT, PAID, OVERDUE, CANCELLED'
       },
       payment_method: {
         type: Sequelize.STRING(50),
-        allowNull: true
+        allowNull: true,
+        comment: 'Cash, Credit Card, Insurance, etc.'
       },
       payment_date: {
-        type: Sequelize.DATEONLY,
+        type: Sequelize.DATE,
         allowNull: true
       },
       notes: {
         type: Sequelize.TEXT,
         allowNull: true
       },
-      created_by: {
-        type: Sequelize.UUID,
-        allowNull: true,
-        references: {
-          model: 'users',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
-      },
-      updated_by: {
-        type: Sequelize.UUID,
-        allowNull: true,
-        references: {
-          model: 'users',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+      is_active: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
       },
       created_at: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       updated_at: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
@@ -109,7 +101,7 @@ module.exports = {
     await queryInterface.addIndex('billing', ['visit_id']);
     await queryInterface.addIndex('billing', ['invoice_number']);
     await queryInterface.addIndex('billing', ['status']);
-    await queryInterface.addIndex('billing', ['invoice_date']);
+    await queryInterface.addIndex('billing', ['due_date']);
   },
 
   down: async (queryInterface, Sequelize) => {

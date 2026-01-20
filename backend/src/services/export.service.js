@@ -1,383 +1,355 @@
-/**
- * Data Export Service
- *
- * Handles exporting data to CSV, Excel, and PDF formats
- */
-
 const { Parser } = require('json2csv');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
-const db = require('../../models');
-const { AppError } = require('../middleware/errorHandler');
-const { logCrudEvent } = require('./audit.service');
-const fs = require('fs');
-const path = require('path');
+const { Op } = require('sequelize');
+const db = require('../../../models');
 
 /**
- * Export patients data
+ * Export Service
+ * Handles data export to CSV, Excel, and PDF formats
  */
-async function exportPatients(format, filters, requestingUser, requestMetadata) {
-  // Apply same RBAC rules as getPatients
-  const where = {};
+class ExportService {
+  /**
+   * Export patients data
+   * @param {string} format - 'csv', 'excel', or 'pdf'
+   * @param {Object} filters - Query filters
+   * @param {Object} user - User object for RBAC
+   * @returns {Object} { data: Buffer, contentType: string, extension: string }
+   */
+  async exportPatients(format, filters = {}, user) {
+    // Build query with RBAC filtering
+    const whereClause = {};
 
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    where.assigned_dietitian_id = requestingUser.id;
-  }
-
-  // Apply filters if provided
-  if (filters.is_active !== undefined) {
-    where.is_active = filters.is_active === 'true' || filters.is_active === true;
-  }
-
-  const patients = await db.Patient.findAll({
-    where,
-    include: [
-      {
-        model: db.User,
-        as: 'assignedDietitian',
-        attributes: ['id', 'username', 'first_name', 'last_name']
-      }
-    ],
-    order: [['created_at', 'DESC']]
-  });
-
-  // Transform data for export
-  const exportData = patients.map(p => ({
-    ID: p.id,
-    'First Name': p.first_name,
-    'Last Name': p.last_name,
-    'Date of Birth': p.date_of_birth,
-    Gender: p.gender || 'N/A',
-    Email: p.email || 'N/A',
-    Phone: p.phone || 'N/A',
-    City: p.city || 'N/A',
-    'Postal Code': p.postal_code || 'N/A',
-    Country: p.country || 'N/A',
-    'Assigned Dietitian': p.assignedDietitian
-      ? `${p.assignedDietitian.first_name} ${p.assignedDietitian.last_name}`
-      : 'Unassigned',
-    'Is Active': p.is_active ? 'Yes' : 'No',
-    'Created At': p.created_at.toISOString()
-  }));
-
-  // Audit log
-  await logCrudEvent(
-    'EXPORT',
-    'patients',
-    null,
-    requestingUser,
-    requestMetadata,
-    null,
-    { format, count: exportData.length }
-  );
-
-  return generateExport(exportData, format, 'patients');
-}
-
-/**
- * Export visits data
- */
-async function exportVisits(format, filters, requestingUser, requestMetadata) {
-  const where = {};
-
-  // Apply filters
-  if (filters.patient_id) {
-    where.patient_id = filters.patient_id;
-  }
-  if (filters.status) {
-    where.status = filters.status;
-  }
-
-  const visits = await db.Visit.findAll({
-    where,
-    include: [
-      {
-        model: db.Patient,
-        as: 'patient',
-        attributes: ['id', 'first_name', 'last_name'],
-        include: [
-          {
-            model: db.User,
-            as: 'assignedDietitian',
-            attributes: ['id', 'first_name', 'last_name']
-          }
-        ]
-      },
-      {
-        model: db.User,
-        as: 'dietitian',
-        attributes: ['id', 'first_name', 'last_name']
-      }
-    ],
-    order: [['visit_date', 'DESC']]
-  });
-
-  // Filter for dietitians - only their assigned patients
-  let filteredVisits = visits;
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    filteredVisits = visits.filter(v =>
-      v.patient.assignedDietitian && v.patient.assignedDietitian.id === requestingUser.id
-    );
-  }
-
-  const exportData = filteredVisits.map(v => ({
-    ID: v.id,
-    'Patient Name': `${v.patient.first_name} ${v.patient.last_name}`,
-    'Visit Date': v.visit_date,
-    'Visit Type': v.visit_type || 'N/A',
-    Status: v.status,
-    'Chief Complaint': v.chief_complaint || 'N/A',
-    'Dietitian': v.dietitian
-      ? `${v.dietitian.first_name} ${v.dietitian.last_name}`
-      : 'N/A',
-    Duration: v.duration ? `${v.duration} min` : 'N/A',
-    'Created At': v.created_at.toISOString()
-  }));
-
-  await logCrudEvent(
-    'EXPORT',
-    'visits',
-    null,
-    requestingUser,
-    requestMetadata,
-    null,
-    { format, count: exportData.length }
-  );
-
-  return generateExport(exportData, format, 'visits');
-}
-
-/**
- * Export billing data
- */
-async function exportBilling(format, filters, requestingUser, requestMetadata) {
-  const where = {};
-
-  if (filters.patient_id) {
-    where.patient_id = filters.patient_id;
-  }
-  if (filters.status) {
-    where.status = filters.status;
-  }
-
-  const billings = await db.Billing.findAll({
-    where,
-    include: [
-      {
-        model: db.Patient,
-        as: 'patient',
-        attributes: ['id', 'first_name', 'last_name'],
-        include: [
-          {
-            model: db.User,
-            as: 'assignedDietitian',
-            attributes: ['id', 'first_name', 'last_name']
-          }
-        ]
-      },
-      {
-        model: db.Visit,
-        as: 'visit',
-        attributes: ['id', 'visit_date']
-      }
-    ],
-    order: [['invoice_date', 'DESC']]
-  });
-
-  // Filter for dietitians
-  let filteredBilling = billings;
-  if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-    filteredBilling = billings.filter(b =>
-      b.patient.assignedDietitian && b.patient.assignedDietitian.id === requestingUser.id
-    );
-  }
-
-  const exportData = filteredBilling.map(b => ({
-    'Invoice Number': b.invoice_number,
-    'Patient Name': `${b.patient.first_name} ${b.patient.last_name}`,
-    'Invoice Date': b.invoice_date,
-    'Due Date': b.due_date,
-    Amount: `$${parseFloat(b.amount).toFixed(2)}`,
-    'Amount Paid': b.amount_paid ? `$${parseFloat(b.amount_paid).toFixed(2)}` : '$0.00',
-    Status: b.status,
-    'Payment Method': b.payment_method || 'N/A',
-    'Visit Date': b.visit && b.visit.visit_date ? b.visit.visit_date : 'N/A',
-    'Created At': b.created_at.toISOString()
-  }));
-
-  await logCrudEvent(
-    'EXPORT',
-    'billing',
-    null,
-    requestingUser,
-    requestMetadata,
-    null,
-    { format, count: exportData.length }
-  );
-
-  return generateExport(exportData, format, 'billing');
-}
-
-/**
- * Generate export in specified format
- */
-function generateExport(data, format, resourceType) {
-  switch (format.toLowerCase()) {
-    case 'csv':
-      return generateCSV(data);
-    case 'excel':
-    case 'xlsx':
-      return generateExcel(data, resourceType);
-    case 'pdf':
-      return generatePDF(data, resourceType);
-    default:
-      throw new AppError(`Unsupported export format: ${format}`, 400, 'INVALID_FORMAT');
-  }
-}
-
-/**
- * Generate CSV export
- */
-function generateCSV(data) {
-  if (!data || data.length === 0) {
-    throw new AppError('No data available for export', 400, 'NO_DATA');
-  }
-
-  const parser = new Parser();
-  const csv = parser.parse(data);
-
-  return {
-    data: Buffer.from(csv, 'utf-8'),
-    contentType: 'text/csv',
-    extension: 'csv'
-  };
-}
-
-/**
- * Generate Excel export
- */
-async function generateExcel(data, resourceType) {
-  if (!data || data.length === 0) {
-    throw new AppError('No data available for export', 400, 'NO_DATA');
-  }
-
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet(resourceType.charAt(0).toUpperCase() + resourceType.slice(1));
-
-  // Get column names from first row
-  const columns = Object.keys(data[0]).map(key => ({
-    header: key,
-    key: key,
-    width: 20
-  }));
-
-  worksheet.columns = columns;
-
-  // Add data rows
-  data.forEach(row => {
-    worksheet.addRow(row);
-  });
-
-  // Style header row
-  worksheet.getRow(1).font = { bold: true };
-  worksheet.getRow(1).fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FFE0E0E0' }
-  };
-
-  // Generate buffer
-  const buffer = await workbook.xlsx.writeBuffer();
-
-  return {
-    data: buffer,
-    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    extension: 'xlsx'
-  };
-}
-
-/**
- * Generate PDF export
- */
-function generatePDF(data, resourceType) {
-  if (!data || data.length === 0) {
-    throw new AppError('No data available for export', 400, 'NO_DATA');
-  }
-
-  const doc = new PDFDocument({ margin: 50 });
-  const buffers = [];
-
-  doc.on('data', buffers.push.bind(buffers));
-
-  // Title
-  doc.fontSize(20).text(`${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)} Export`, {
-    align: 'center'
-  });
-
-  doc.moveDown();
-  doc.fontSize(10).text(`Generated: ${new Date().toLocaleString()}`, {
-    align: 'center'
-  });
-
-  doc.moveDown(2);
-
-  // Table
-  const columns = Object.keys(data[0]);
-  const columnWidth = (doc.page.width - 100) / columns.length;
-
-  // Header
-  doc.fontSize(9).font('Helvetica-Bold');
-  let y = doc.y;
-  columns.forEach((col, i) => {
-    doc.text(col, 50 + (i * columnWidth), y, {
-      width: columnWidth,
-      align: 'left'
-    });
-  });
-
-  doc.moveDown();
-  doc.font('Helvetica');
-
-  // Rows
-  data.forEach((row, rowIndex) => {
-    if (doc.y > 700) {
-      doc.addPage();
-      y = 50;
-      doc.y = y;
+    // Apply filters
+    if (filters.is_active !== undefined) {
+      whereClause.is_active = filters.is_active === 'true' || filters.is_active === true;
     }
 
-    y = doc.y;
-    columns.forEach((col, i) => {
-      const value = String(row[col] || '');
-      doc.text(value.substring(0, 50), 50 + (i * columnWidth), y, {
-        width: columnWidth,
-        height: 15,
-        align: 'left',
-        ellipsis: true
-      });
+    // RBAC: Dietitians can only export assigned patients
+    if (user.role?.name === 'DIETITIAN') {
+      whereClause.assigned_dietitian_id = user.id;
+    }
+
+    // Fetch patients with related data
+    const patients = await db.Patient.findAll({
+      where: whereClause,
+      include: [{
+        model: db.User,
+        as: 'assignedDietitian',
+        attributes: ['first_name', 'last_name'],
+        required: false
+      }],
+      order: [['created_at', 'DESC']]
     });
 
-    doc.moveDown(0.5);
-  });
+    // Transform data for export
+    const exportData = patients.map(patient => ({
+      'ID': patient.id,
+      'First Name': patient.first_name,
+      'Last Name': patient.last_name,
+      'Date of Birth': patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : '',
+      'Gender': patient.gender || '',
+      'Email': patient.email || '',
+      'Phone': patient.phone || '',
+      'Address': patient.address || '',
+      'City': patient.city || '',
+      'Postal Code': patient.postal_code || '',
+      'Country': patient.country || '',
+      'Assigned Dietitian': patient.assignedDietitian ?
+        `${patient.assignedDietitian.first_name} ${patient.assignedDietitian.last_name}` : '',
+      'Is Active': patient.is_active ? 'Yes' : 'No',
+      'Created At': new Date(patient.created_at).toLocaleDateString()
+    }));
 
-  doc.end();
+    return this.generateFile(exportData, format, 'patients');
+  }
 
-  return new Promise((resolve, reject) => {
-    doc.on('end', () => {
-      const pdfBuffer = Buffer.concat(buffers);
-      resolve({
-        data: pdfBuffer,
-        contentType: 'application/pdf',
-        extension: 'pdf'
-      });
+  /**
+   * Export visits data
+   * @param {string} format - 'csv', 'excel', or 'pdf'
+   * @param {Object} filters - Query filters
+   * @param {Object} user - User object for RBAC
+   * @returns {Object} { data: Buffer, contentType: string, extension: string }
+   */
+  async exportVisits(format, filters = {}, user) {
+    // Build query with RBAC filtering
+    const whereClause = {};
+
+    // Apply filters
+    if (filters.patient_id) {
+      whereClause.patient_id = filters.patient_id;
+    }
+    if (filters.status) {
+      whereClause.status = filters.status;
+    }
+
+    // RBAC: Dietitians can only export visits for assigned patients
+    if (user.role?.name === 'DIETITIAN') {
+      const assignedPatientIds = await db.Patient.findAll({
+        where: { assigned_dietitian_id: user.id },
+        attributes: ['id']
+      }).then(patients => patients.map(p => p.id));
+
+      if (assignedPatientIds.length === 0) {
+        throw new Error('No assigned patients found');
+      }
+
+      whereClause.patient_id = { [Op.in]: assignedPatientIds };
+    }
+
+    // Fetch visits with related data
+    const visits = await db.Visit.findAll({
+      where: whereClause,
+      include: [
+        {
+          model: db.Patient,
+          as: 'patient',
+          attributes: ['first_name', 'last_name']
+        },
+        {
+          model: db.User,
+          as: 'dietitian',
+          attributes: ['first_name', 'last_name'],
+          required: false
+        }
+      ],
+      order: [['visit_date', 'DESC']]
     });
 
-    doc.on('error', reject);
-  });
+    // Transform data for export
+    const exportData = visits.map(visit => ({
+      'ID': visit.id,
+      'Patient Name': `${visit.patient.first_name} ${visit.patient.last_name}`,
+      'Visit Date': new Date(visit.visit_date).toLocaleDateString(),
+      'Visit Type': visit.visit_type || '',
+      'Status': visit.status,
+      'Chief Complaint': visit.chief_complaint || '',
+      'Dietitian': visit.dietitian ?
+        `${visit.dietitian.first_name} ${visit.dietitian.last_name}` : '',
+      'Duration (min)': visit.duration || '',
+      'Created At': new Date(visit.created_at).toLocaleDateString()
+    }));
+
+    return this.generateFile(exportData, format, 'visits');
+  }
+
+  /**
+   * Export billing data
+   * @param {string} format - 'csv', 'excel', or 'pdf'
+   * @param {Object} filters - Query filters
+   * @param {Object} user - User object for RBAC
+   * @returns {Object} { data: Buffer, contentType: string, extension: string }
+   */
+  async exportBilling(format, filters = {}, user) {
+    // Build query with RBAC filtering
+    const whereClause = {};
+
+    // Apply filters
+    if (filters.patient_id) {
+      whereClause.patient_id = filters.patient_id;
+    }
+    if (filters.status) {
+      whereClause.status = filters.status;
+    }
+
+    // RBAC: Dietitians can only export billing for assigned patients
+    if (user.role?.name === 'DIETITIAN') {
+      const assignedPatientIds = await db.Patient.findAll({
+        where: { assigned_dietitian_id: user.id },
+        attributes: ['id']
+      }).then(patients => patients.map(p => p.id));
+
+      if (assignedPatientIds.length === 0) {
+        throw new Error('No assigned patients found');
+      }
+
+      whereClause.patient_id = { [Op.in]: assignedPatientIds };
+    }
+
+    // Fetch billing records with related data
+    const billingRecords = await db.Billing.findAll({
+      where: whereClause,
+      include: [{
+        model: db.Patient,
+        as: 'patient',
+        attributes: ['first_name', 'last_name']
+      }],
+      order: [['created_at', 'DESC']]
+    });
+
+    // Transform data for export
+    const exportData = billingRecords.map(record => ({
+      'Invoice Number': record.invoice_number || '',
+      'Patient Name': `${record.patient.first_name} ${record.patient.last_name}`,
+      'Invoice Date': record.invoice_date ? new Date(record.invoice_date).toLocaleDateString() : '',
+      'Due Date': record.due_date ? new Date(record.due_date).toLocaleDateString() : '',
+      'Amount': record.amount ? `$${record.amount.toFixed(2)}` : '',
+      'Amount Paid': record.amount_paid ? `$${record.amount_paid.toFixed(2)}` : '',
+      'Status': record.status,
+      'Payment Method': record.payment_method || '',
+      'Created At': new Date(record.created_at).toLocaleDateString()
+    }));
+
+    return this.generateFile(exportData, format, 'billing');
+  }
+
+  /**
+   * Generate file in specified format
+   * @param {Array} data - Data to export
+   * @param {string} format - 'csv', 'excel', or 'pdf'
+   * @param {string} filename - Base filename
+   * @returns {Object} { data: Buffer, contentType: string, extension: string }
+   */
+  async generateFile(data, format, filename) {
+    const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const fullFilename = `${filename}_${timestamp}`;
+
+    switch (format.toLowerCase()) {
+      case 'csv':
+        return this.generateCSV(data, fullFilename);
+      case 'excel':
+        return this.generateExcel(data, fullFilename);
+      case 'pdf':
+        return this.generatePDF(data, fullFilename);
+      default:
+        throw new Error('Unsupported format. Use csv, excel, or pdf.');
+    }
+  }
+
+  /**
+   * Generate CSV file
+   */
+  generateCSV(data, filename) {
+    if (data.length === 0) {
+      throw new Error('No data to export');
+    }
+
+    const parser = new Parser();
+    const csv = parser.parse(data);
+
+    return {
+      data: Buffer.from(csv, 'utf8'),
+      contentType: 'text/csv',
+      extension: 'csv',
+      filename: `${filename}.csv`
+    };
+  }
+
+  /**
+   * Generate Excel file
+   */
+  async generateExcel(data, filename) {
+    if (data.length === 0) {
+      throw new Error('No data to export');
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Data');
+
+    // Add headers with styling
+    const headers = Object.keys(data[0]);
+    worksheet.columns = headers.map(header => ({
+      header,
+      key: header,
+      width: Math.max(header.length, 15)
+    }));
+
+    // Style header row
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE6E6FA' } // Light gray
+    };
+
+    // Add data rows
+    data.forEach(row => {
+      worksheet.addRow(row);
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    return {
+      data: Buffer.from(buffer),
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      extension: 'xlsx',
+      filename: `${filename}.xlsx`
+    };
+  }
+
+  /**
+   * Generate PDF file
+   */
+  async generatePDF(data, filename) {
+    if (data.length === 0) {
+      throw new Error('No data to export');
+    }
+
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument();
+        const buffers = [];
+
+        doc.on('data', buffers.push.bind(buffers));
+        doc.on('end', () => {
+          const pdfBuffer = Buffer.concat(buffers);
+          resolve({
+            data: pdfBuffer,
+            contentType: 'application/pdf',
+            extension: 'pdf',
+            filename: `${filename}.pdf`
+          });
+        });
+
+        // Add title
+        doc.fontSize(16).text(`${filename.replace('_', ' ').toUpperCase()} REPORT`, { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(10).text(`Generated on: ${new Date().toLocaleString()}`, { align: 'center' });
+        doc.moveDown(2);
+
+        // Calculate column widths
+        const headers = Object.keys(data[0]);
+        const pageWidth = 550; // A4 width minus margins
+        const colWidth = pageWidth / headers.length;
+
+        // Add table headers
+        doc.font('Helvetica-Bold');
+        headers.forEach((header, i) => {
+          doc.text(header, 50 + (i * colWidth), doc.y, {
+            width: colWidth - 10,
+            align: 'left'
+          });
+        });
+        doc.moveDown();
+
+        // Add horizontal line
+        doc.moveTo(50, doc.y).lineTo(pageWidth + 50, doc.y).stroke();
+        doc.moveDown();
+
+        // Add data rows
+        doc.font('Helvetica');
+        data.forEach(row => {
+          headers.forEach((header, i) => {
+            const value = row[header] || '';
+            doc.text(value.toString(), 50 + (i * colWidth), doc.y, {
+              width: colWidth - 10,
+              align: 'left'
+            });
+          });
+          doc.moveDown();
+
+          // Check if we need a new page
+          if (doc.y > 700) {
+            doc.addPage();
+          }
+        });
+
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
 }
 
-module.exports = {
-  exportPatients,
-  exportVisits,
-  exportBilling
-};
+module.exports = new ExportService();

@@ -1,96 +1,68 @@
 /**
  * Billing Service
- * Handles all billing-related API calls
+ * API calls for invoice and payment management
  */
 
 import api from './api';
 
 /**
  * Get all invoices with optional filters
+ * @param {object} filters - Filter parameters (patient_id, status, search, start_date, end_date, page, limit)
+ * @returns {Promise<object>} Invoices array and pagination info
  */
-export const getInvoices = async (filters = {}, page = 1, limit = 25) => {
-  const params = new URLSearchParams();
+export const getInvoices = async (filters = {}) => {
+  const response = await api.get('/api/billing', { params: filters });
+  return response;
+};
 
-  if (filters.search) {
-    params.append('search', filters.search);
-  }
-  if (filters.status) {
-    params.append('status', filters.status);
-  }
-  if (filters.patientId) {
-    params.append('patient_id', filters.patientId);
-  }
-  if (filters.startDate) {
-    params.append('start_date', filters.startDate);
-  }
-  if (filters.endDate) {
-    params.append('end_date', filters.endDate);
-  }
-  if (page) {
-    params.append('page', page);
-  }
-  if (limit) {
-    params.append('limit', limit);
-  }
+/**
+ * Get single invoice by ID
+ * @param {string} id - Invoice UUID
+ * @returns {Promise<object>} Invoice object
+ */
+export const getInvoiceById = async (id) => {
+  const response = await api.get(`/api/billing/${id}`);
+  return response;
+};
 
-  const response = await api.get(`/billing?${params.toString()}`);
+/**
+ * Create new invoice
+ * @param {object} invoiceData - Invoice information
+ * @returns {Promise<object>} Created invoice
+ */
+export const createInvoice = async (invoiceData) => {
+  const response = await api.post('/api/billing', invoiceData);
   return response.data;
 };
 
 /**
- * Get a single invoice by ID
+ * Update existing invoice
+ * @param {string} id - Invoice UUID
+ * @param {object} invoiceData - Updated invoice information
+ * @returns {Promise<object>} Updated invoice
  */
-export const getInvoice = async (id) => {
-  const response = await api.get(`/billing/${id}`);
+export const updateInvoice = async (id, invoiceData) => {
+  const response = await api.put(`/api/billing/${id}`, invoiceData);
   return response.data;
 };
 
 /**
- * Create a new invoice
- */
-export const createInvoice = async (data) => {
-  const response = await api.post('/billing', data);
-  return response.data;
-};
-
-/**
- * Update an existing invoice
- */
-export const updateInvoice = async (id, data) => {
-  const response = await api.put(`/billing/${id}`, data);
-  return response.data;
-};
-
-/**
- * Record a payment for an invoice
+ * Record payment for invoice
+ * @param {string} id - Invoice UUID
+ * @param {object} paymentData - Payment information (amount, payment_method, payment_date, notes)
+ * @returns {Promise<object>} Updated invoice
  */
 export const recordPayment = async (id, paymentData) => {
-  const response = await api.post(`/billing/${id}/mark-paid`, paymentData);
+  const response = await api.post(`/api/billing/${id}/payment`, paymentData);
   return response.data;
 };
 
 /**
- * Delete an invoice
+ * Delete invoice (soft delete)
+ * @param {string} id - Invoice UUID
+ * @returns {Promise<void>}
  */
 export const deleteInvoice = async (id) => {
-  const response = await api.delete(`/billing/${id}`);
+  const response = await api.delete(`/api/billing/${id}`);
   return response.data;
-};
-
-/**
- * Get billing statistics
- */
-export const getBillingStats = async () => {
-  const response = await api.get('/billing/stats');
-  return response.data;
-};
-
-export default {
-  getInvoices,
-  getInvoice,
-  createInvoice,
-  updateInvoice,
-  recordPayment,
-  deleteInvoice,
-  getBillingStats
 };

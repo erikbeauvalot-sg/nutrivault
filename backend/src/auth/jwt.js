@@ -1,62 +1,72 @@
-/**
- * JWT Authentication Utilities
- *
- * Handles JWT token generation, verification, and refresh token management
- */
-
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 
-// JWT configuration from environment
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production-min-32-chars';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '30m';
-const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'dev-refresh-secret-change-in-production';
-const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || '7d';
+const JWT_SECRET = process.env.JWT_SECRET;
+const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
+const JWT_ACCESS_EXPIRATION = process.env.JWT_ACCESS_EXPIRATION || '30m';
+const JWT_REFRESH_EXPIRATION = process.env.JWT_REFRESH_EXPIRATION || '30d';
+const JWT_ISSUER = process.env.JWT_ISSUER || 'nutrivault';
+
+// Validate required environment variables on module load
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET must be defined and at least 32 characters long');
+}
+
+if (!REFRESH_TOKEN_SECRET || REFRESH_TOKEN_SECRET.length < 32) {
+  throw new Error('REFRESH_TOKEN_SECRET must be defined and at least 32 characters long');
+}
 
 /**
- * Generate access token (JWT)
+ * Sign an access token with user information
+ * @param {string} userId - User's UUID
+ * @param {Object} userData - Additional user data (role_id, username, etc.)
+ * @returns {string} Signed JWT access token
  */
-function generateAccessToken(user) {
+function signAccessToken(userId, userData = {}) {
   const payload = {
-    id: user.id,
-    username: user.username,
-    email: user.email,
-    role_id: user.role_id,
-    type: 'access'
+    sub: userId,
+    type: 'access',
+    ...userData
   };
 
   return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN,
-    issuer: 'nutrivault',
-    subject: user.id
+    algorithm: 'HS256',
+    expiresIn: JWT_ACCESS_EXPIRATION,
+    issuer: JWT_ISSUER,
+    audience: JWT_ISSUER
   });
 }
 
 /**
- * Generate refresh token
+ * Sign a refresh token
+ * @param {string} userId - User's UUID
+ * @returns {string} Signed JWT refresh token
  */
-function generateRefreshToken(user) {
+function signRefreshToken(userId) {
   const payload = {
-    id: user.id,
-    username: user.username,
-    type: 'refresh',
-    jti: crypto.randomBytes(16).toString('hex') // Unique token ID
+    sub: userId,
+    type: 'refresh'
   };
 
   return jwt.sign(payload, REFRESH_TOKEN_SECRET, {
-    expiresIn: REFRESH_TOKEN_EXPIRES_IN,
-    issuer: 'nutrivault',
-    subject: user.id
+    algorithm: 'HS256',
+    expiresIn: JWT_REFRESH_EXPIRATION,
+    issuer: JWT_ISSUER,
+    audience: JWT_ISSUER
   });
 }
 
 /**
- * Verify access token
+ * Verify an access token
+ * @param {string} token - JWT access token to verify
+ * @returns {Object} Decoded token payload
+ * @throws {Error} If token is invalid or expired
  */
 function verifyAccessToken(token) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET, {
-      issuer: 'nutrivault'
+      algorithms: ['HS256'],
+      issuer: JWT_ISSUER,
+      audience: JWT_ISSUER
     });
 
     if (decoded.type !== 'access') {
@@ -66,21 +76,26 @@ function verifyAccessToken(token) {
     return decoded;
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
-      throw new Error('Token expired');
+      throw new Error('Access token expired');
     } else if (error.name === 'JsonWebTokenError') {
-      throw new Error('Invalid token');
+      throw new Error('Invalid access token');
     }
     throw error;
   }
 }
 
 /**
- * Verify refresh token
+ * Verify a refresh token
+ * @param {string} token - JWT refresh token to verify
+ * @returns {Object} Decoded token payload
+ * @throws {Error} If token is invalid or expired
  */
 function verifyRefreshToken(token) {
   try {
     const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET, {
-      issuer: 'nutrivault'
+      algorithms: ['HS256'],
+      issuer: JWT_ISSUER,
+      audience: JWT_ISSUER
     });
 
     if (decoded.type !== 'refresh') {
@@ -99,78 +114,51 @@ function verifyRefreshToken(token) {
 }
 
 /**
- * Decode token without verification (for debugging)
+ * Generate a complete token pair (access + refresh)
+ * @param {Object} user - User object with id, role_id, username
+ * @returns {Object} Object containing accessToken and refreshToken
  */
-function decodeToken(token) {
-  return jwt.decode(token);
+function generateTokenPair(user) {
+  const accessToken = signAccessToken(user.id, {
+    role_id: user.role_id,
+    username: user.username
+  });
+
+  const refreshToken = signRefreshToken(user.id);
+
+  return {
+    accessToken,
+    refreshToken,
+    expiresIn: getExpirationSeconds(JWT_ACCESS_EXPIRATION)
+  };
 }
 
 /**
- * Hash token for storage (one-way hash)
+ * Convert expiration string to seconds
+ * @param {string} expiration - Expiration string (e.g., '30m', '7d')
+ * @returns {number} Expiration time in seconds
  */
-function hashToken(token) {
-  return crypto.createHash('sha256').update(token).digest('hex');
-}
-
-/**
- * Generate API key
- */
-function generateApiKey() {
-  // Format: nutri_ak_<32 random characters>
-  const randomPart = crypto.randomBytes(24).toString('base64')
-    .replace(/\+/g, '')
-    .replace(/\//g, '')
-    .replace(/=/g, '')
-    .substring(0, 32);
-
-  return `nutri_ak_${randomPart}`;
-}
-
-/**
- * Get API key prefix (first 12 characters for identification)
- */
-function getApiKeyPrefix(apiKey) {
-  return apiKey.substring(0, 12);
-}
-
-/**
- * Calculate token expiration date
- */
-function calculateTokenExpiration(expiresIn) {
-  // Parse expiry string (e.g., '7d', '30m', '24h')
-  const match = expiresIn.match(/^(\d+)([smhd])$/);
-  if (!match) {
-    throw new Error('Invalid expiration format');
-  }
+function getExpirationSeconds(expiration) {
+  const match = expiration.match(/^(\d+)([smhd])$/);
+  if (!match) return 1800; // Default 30 minutes
 
   const value = parseInt(match[1]);
   const unit = match[2];
-  const now = new Date();
 
-  switch (unit) {
-    case 's': // seconds
-      return new Date(now.getTime() + value * 1000);
-    case 'm': // minutes
-      return new Date(now.getTime() + value * 60 * 1000);
-    case 'h': // hours
-      return new Date(now.getTime() + value * 60 * 60 * 1000);
-    case 'd': // days
-      return new Date(now.getTime() + value * 24 * 60 * 60 * 1000);
-    default:
-      throw new Error('Invalid expiration unit');
-  }
+  const multipliers = {
+    s: 1,
+    m: 60,
+    h: 3600,
+    d: 86400
+  };
+
+  return value * (multipliers[unit] || 60);
 }
 
 module.exports = {
-  generateAccessToken,
-  generateRefreshToken,
+  signAccessToken,
+  signRefreshToken,
   verifyAccessToken,
   verifyRefreshToken,
-  decodeToken,
-  hashToken,
-  generateApiKey,
-  getApiKeyPrefix,
-  calculateTokenExpiration,
-  JWT_EXPIRES_IN,
-  REFRESH_TOKEN_EXPIRES_IN
+  generateTokenPair
 };

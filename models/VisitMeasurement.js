@@ -1,19 +1,14 @@
-'use strict';
-
 module.exports = (sequelize, DataTypes) => {
   const VisitMeasurement = sequelize.define('VisitMeasurement', {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
-      primaryKey: true
+      primaryKey: true,
+      allowNull: false
     },
     visit_id: {
       type: DataTypes.UUID,
-      allowNull: false,
-      references: {
-        model: 'visits',
-        key: 'id'
-      }
+      allowNull: false
     },
     weight_kg: {
       type: DataTypes.DECIMAL(5, 2),
@@ -27,6 +22,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(4, 2),
       allowNull: true
     },
+    blood_pressure_systolic: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
+    blood_pressure_diastolic: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
     waist_circumference_cm: {
       type: DataTypes.DECIMAL(5, 2),
       allowNull: true
@@ -35,12 +38,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(4, 2),
       allowNull: true
     },
-    blood_pressure_systolic: {
-      type: DataTypes.INTEGER,
-      allowNull: true
-    },
-    blood_pressure_diastolic: {
-      type: DataTypes.INTEGER,
+    muscle_mass_percentage: {
+      type: DataTypes.DECIMAL(4, 2),
       allowNull: true
     },
     notes: {
@@ -51,16 +50,12 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'visit_measurements',
     timestamps: true,
     underscored: true,
-    createdAt: 'created_at',
-    updatedAt: false
+    indexes: [
+      {
+        fields: ['visit_id']
+      }
+    ]
   });
-
-  VisitMeasurement.associate = (models) => {
-    VisitMeasurement.belongsTo(models.Visit, {
-      foreignKey: 'visit_id',
-      as: 'visit'
-    });
-  };
 
   return VisitMeasurement;
 };

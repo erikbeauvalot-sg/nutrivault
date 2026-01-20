@@ -1,321 +1,254 @@
 /**
- * Role-Based Access Control (RBAC) Middleware
- *
- * Provides permission and role-based authorization
+ * RBAC (Role-Based Access Control) Middleware
+ * 
+ * Provides 8 middleware functions for authorization:
+ * 1. requirePermission(permission) - Single permission
+ * 2. requireAnyPermission([...]) - At least one permission (OR)
+ * 3. requireAllPermissions([...]) - All permissions (AND)
+ * 4. requireRole(roleName) - Specific role
+ * 5. requireAnyRole([...]) - At least one role
+ * 6. requireOwnerOrPermission(field, permission) - Owner or has permission
+ * 7. requireAssignedDietitian() - For patient data access
+ * 8. Helper functions: hasPermission, hasRole, isAdmin
  */
 
-const { AppError } = require('./errorHandler');
-const { getUserPermissions } = require('./auth');
-const { logAuthorizationFailure } = require('../services/audit.service');
-
 /**
- * Require specific permission
- * Usage: requirePermission('patients.read')
- */
-function requirePermission(permission) {
-  return async (req, res, next) => {
-    try {
-      // Check if user is authenticated
-      if (!req.user) {
-        throw new AppError(
-          'Authentication required',
-          401,
-          'AUTHENTICATION_REQUIRED'
-        );
-      }
-
-      // Get user permissions
-      const userPermissions = getUserPermissions(req.user);
-
-      // Check if user has the required permission
-      if (!userPermissions.includes(permission)) {
-        // Log authorization failure
-        logAuthorizationFailure({
-          user_id: req.user.id,
-          username: req.user.username,
-          action: 'PERMISSION_CHECK',
-          resource_type: permission.split('.')[0],
-          resource_id: null,
-          ip_address: req.ip,
-          user_agent: req.headers['user-agent'],
-          request_method: req.method,
-          request_path: req.path,
-          reason: `Missing permission: ${permission}`
-        }).catch(() => {}); // Don't block on logging error
-
-        throw new AppError(
-          `Permission denied. Required permission: ${permission}`,
-          403,
-          'PERMISSION_DENIED'
-        );
-      }
-
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
-}
-
-/**
- * Require any of the specified permissions (OR logic)
- * Usage: requireAnyPermission(['patients.read', 'patients.update'])
- */
-function requireAnyPermission(permissions) {
-  return async (req, res, next) => {
-    try {
-      if (!req.user) {
-        throw new AppError(
-          'Authentication required',
-          401,
-          'AUTHENTICATION_REQUIRED'
-        );
-      }
-
-      const userPermissions = getUserPermissions(req.user);
-
-      // Check if user has at least one of the required permissions
-      const hasPermission = permissions.some(permission =>
-        userPermissions.includes(permission)
-      );
-
-      if (!hasPermission) {
-        throw new AppError(
-          `Permission denied. Required one of: ${permissions.join(', ')}`,
-          403,
-          'PERMISSION_DENIED'
-        );
-      }
-
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
-}
-
-/**
- * Require all of the specified permissions (AND logic)
- * Usage: requireAllPermissions(['patients.read', 'visits.read'])
- */
-function requireAllPermissions(permissions) {
-  return async (req, res, next) => {
-    try {
-      if (!req.user) {
-        throw new AppError(
-          'Authentication required',
-          401,
-          'AUTHENTICATION_REQUIRED'
-        );
-      }
-
-      const userPermissions = getUserPermissions(req.user);
-
-      // Check if user has all required permissions
-      const hasAllPermissions = permissions.every(permission =>
-        userPermissions.includes(permission)
-      );
-
-      if (!hasAllPermissions) {
-        const missingPermissions = permissions.filter(
-          permission => !userPermissions.includes(permission)
-        );
-        throw new AppError(
-          `Permission denied. Missing permissions: ${missingPermissions.join(', ')}`,
-          403,
-          'PERMISSION_DENIED'
-        );
-      }
-
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
-}
-
-/**
- * Require specific role
- * Usage: requireRole('ADMIN')
- */
-function requireRole(roleName) {
-  return async (req, res, next) => {
-    try {
-      if (!req.user) {
-        throw new AppError(
-          'Authentication required',
-          401,
-          'AUTHENTICATION_REQUIRED'
-        );
-      }
-
-      // Check if user has the required role
-      if (!req.user.role || req.user.role.name !== roleName) {
-        // Log authorization failure
-        logAuthorizationFailure({
-          user_id: req.user.id,
-          username: req.user.username,
-          action: 'ROLE_CHECK',
-          resource_type: 'role',
-          resource_id: null,
-          ip_address: req.ip,
-          user_agent: req.headers['user-agent'],
-          request_method: req.method,
-          request_path: req.path,
-          reason: `Required role: ${roleName}, actual role: ${req.user.role?.name || 'none'}`
-        }).catch(() => {});
-
-        throw new AppError(
-          `Access denied. Required role: ${roleName}`,
-          403,
-          'ROLE_REQUIRED'
-        );
-      }
-
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
-}
-
-/**
- * Require any of the specified roles (OR logic)
- * Usage: requireAnyRole(['ADMIN', 'DIETITIAN'])
- */
-function requireAnyRole(roles) {
-  return async (req, res, next) => {
-    try {
-      if (!req.user) {
-        throw new AppError(
-          'Authentication required',
-          401,
-          'AUTHENTICATION_REQUIRED'
-        );
-      }
-
-      if (!req.user.role || !roles.includes(req.user.role.name)) {
-        throw new AppError(
-          `Access denied. Required one of roles: ${roles.join(', ')}`,
-          403,
-          'ROLE_REQUIRED'
-        );
-      }
-
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
-}
-
-/**
- * Check if user is the owner of the resource or has permission
- * Usage: requireOwnerOrPermission('userId', 'users.update')
- */
-function requireOwnerOrPermission(ownerField, permission) {
-  return async (req, res, next) => {
-    try {
-      if (!req.user) {
-        throw new AppError(
-          'Authentication required',
-          401,
-          'AUTHENTICATION_REQUIRED'
-        );
-      }
-
-      // Check if user is the owner
-      const isOwner = req.params.id === req.user.id ||
-                     req.body[ownerField] === req.user.id;
-
-      if (isOwner) {
-        return next();
-      }
-
-      // If not owner, check permission
-      const userPermissions = getUserPermissions(req.user);
-      if (!userPermissions.includes(permission)) {
-        throw new AppError(
-          'Access denied. You can only access your own resources',
-          403,
-          'ACCESS_DENIED'
-        );
-      }
-
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
-}
-
-/**
- * Check if user can access resource based on assigned dietitian
- * For dietitians to only access their assigned patients
- */
-function requireAssignedDietitian() {
-  return async (req, res, next) => {
-    try {
-      if (!req.user) {
-        throw new AppError(
-          'Authentication required',
-          401,
-          'AUTHENTICATION_REQUIRED'
-        );
-      }
-
-      // Admins can access all resources
-      if (req.user.role && req.user.role.name === 'ADMIN') {
-        return next();
-      }
-
-      // For other roles, check if they're the assigned dietitian
-      // This will be validated in the controller/service layer
-      // This middleware just ensures they have the basic permission
-
-      const userPermissions = getUserPermissions(req.user);
-      if (!userPermissions.includes('patients.read')) {
-        throw new AppError(
-          'Permission denied',
-          403,
-          'PERMISSION_DENIED'
-        );
-      }
-
-      // Store the user's role for later checking in services
-      req.requireAssignedCheck = true;
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
-}
-
-/**
- * Permission helper - check if user has permission
- * Can be used in route handlers
+ * Check if user has a specific permission
+ * @param {Object} user - User object with Role and Permissions
+ * @param {string} permission - Permission code (e.g., 'patients.read')
+ * @returns {boolean}
  */
 function hasPermission(user, permission) {
-  const userPermissions = getUserPermissions(user);
-  return userPermissions.includes(permission);
+  if (!user || !user.role || !user.role.permissions) {
+    return false;
+  }
+
+  return user.role.permissions.some(p => p.code === permission);
 }
 
 /**
- * Role helper - check if user has role
- * Can be used in route handlers
+ * Check if user has a specific role
+ * @param {Object} user - User object with Role
+ * @param {string} roleName - Role name (e.g., 'ADMIN', 'DIETITIAN')
+ * @returns {boolean}
  */
 function hasRole(user, roleName) {
-  return user.role && user.role.name === roleName;
+  if (!user || !user.role) {
+    return false;
+  }
+
+  return user.role.name === roleName;
 }
 
 /**
- * Check if user is admin
+ * Check if user is an admin
+ * @param {Object} user - User object with Role
+ * @returns {boolean}
  */
 function isAdmin(user) {
   return hasRole(user, 'ADMIN');
 }
 
+/**
+ * Middleware: Require a single permission
+ * @param {string} permission - Permission code (e.g., 'patients.read')
+ * @returns {Function} Express middleware
+ */
+function requirePermission(permission) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    if (hasPermission(req.user, permission)) {
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      error: `Missing required permission: ${permission}`
+    });
+  };
+}
+
+/**
+ * Middleware: Require at least one permission (OR logic)
+ * @param {Array<string>} permissions - Array of permission codes
+ * @returns {Function} Express middleware
+ */
+function requireAnyPermission(permissions) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    const hasAny = permissions.some(permission => hasPermission(req.user, permission));
+
+    if (hasAny) {
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      error: `Missing required permissions. Need one of: ${permissions.join(', ')}`
+    });
+  };
+}
+
+/**
+ * Middleware: Require all permissions (AND logic)
+ * @param {Array<string>} permissions - Array of permission codes
+ * @returns {Function} Express middleware
+ */
+function requireAllPermissions(permissions) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    const missingPermissions = permissions.filter(permission => !hasPermission(req.user, permission));
+
+    if (missingPermissions.length === 0) {
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      error: `Missing required permissions: ${missingPermissions.join(', ')}`
+    });
+  };
+}
+
+/**
+ * Middleware: Require a specific role
+ * @param {string} roleName - Role name (e.g., 'ADMIN', 'DIETITIAN')
+ * @returns {Function} Express middleware
+ */
+function requireRole(roleName) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    if (hasRole(req.user, roleName)) {
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      error: `Required role: ${roleName}`
+    });
+  };
+}
+
+/**
+ * Middleware: Require at least one role (OR logic)
+ * @param {Array<string>} roleNames - Array of role names
+ * @returns {Function} Express middleware
+ */
+function requireAnyRole(roleNames) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    const hasAnyRole = roleNames.some(roleName => hasRole(req.user, roleName));
+
+    if (hasAnyRole) {
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      error: `Required role. Need one of: ${roleNames.join(', ')}`
+    });
+  };
+}
+
+/**
+ * Middleware: Require user owns the resource OR has permission
+ * @param {string} field - Field name to check (e.g., 'user_id', 'created_by')
+ * @param {string} permission - Permission code if not owner
+ * @returns {Function} Express middleware
+ */
+function requireOwnerOrPermission(field, permission) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    // Check if user owns the resource
+    const resourceUserId = req.body[field] || req.params[field] || req.query[field];
+
+    if (resourceUserId === req.user.id) {
+      return next();
+    }
+
+    // Check if user has the permission
+    if (hasPermission(req.user, permission)) {
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      error: 'Access denied. Must be owner or have appropriate permission'
+    });
+  };
+}
+
+/**
+ * Middleware: Require user is assigned dietitian for patient OR has permission
+ * Used for patient data access
+ * @returns {Function} Express middleware
+ */
+function requireAssignedDietitian() {
+  return async (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    // Admins can access all patient data
+    if (isAdmin(req.user)) {
+      return next();
+    }
+
+    // Check if user has general patients.read permission
+    if (hasPermission(req.user, 'patients.read')) {
+      // Dietitians with patients.read can only access their assigned patients
+      // This logic will be enforced in the service layer
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      error: 'Access denied. Must be assigned dietitian or have appropriate permission'
+    });
+  };
+}
+
 module.exports = {
+  // Middleware functions
   requirePermission,
   requireAnyPermission,
   requireAllPermissions,
@@ -323,6 +256,8 @@ module.exports = {
   requireAnyRole,
   requireOwnerOrPermission,
   requireAssignedDietitian,
+  
+  // Helper functions
   hasPermission,
   hasRole,
   isAdmin

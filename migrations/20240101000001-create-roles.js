@@ -6,25 +6,31 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
+        allowNull: false
       },
       name: {
         type: Sequelize.STRING(50),
-        unique: true,
-        allowNull: false
+        allowNull: false,
+        unique: true
       },
       description: {
         type: Sequelize.TEXT,
         allowNull: true
       },
-      created_at: {
+      is_active: {
+        type: Sequelize.BOOLEAN,
         allowNull: false,
+        defaultValue: true
+      },
+      created_at: {
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       updated_at: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });

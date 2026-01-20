@@ -1,406 +1,431 @@
-/**
- * Authentication Service
- *
- * Business logic for authentication operations
- */
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const db = require('../../../models');
+const { generateTokenPair } = require('../auth/jwt');
 
-const db = require('../../models');
-const { hashPassword, verifyPassword } = require('../auth/password');
-const {
-  generateAccessToken,
-  generateRefreshToken,
-  verifyRefreshToken,
-  hashToken,
-  generateApiKey,
-  getApiKeyPrefix,
-  calculateTokenExpiration,
-  REFRESH_TOKEN_EXPIRES_IN
-} = require('../auth/jwt');
-const { AppError } = require('../middleware/errorHandler');
-const { logAuthEvent } = require('./audit.service');
+const MAX_LOGIN_ATTEMPTS = parseInt(process.env.MAX_LOGIN_ATTEMPTS) || 5;
+const LOCKOUT_DURATION_MINUTES = parseInt(process.env.LOCKOUT_DURATION_MINUTES) || 30;
 
-// Account lockout configuration
-const MAX_FAILED_LOGIN_ATTEMPTS = parseInt(process.env.MAX_FAILED_LOGIN_ATTEMPTS || '5');
-const ACCOUNT_LOCKOUT_DURATION = process.env.ACCOUNT_LOCKOUT_DURATION || '30m';
+class AuthService {
+  /**
+   * Authenticate user with username and password
+   * @param {string} username - Username
+   * @param {string} password - Plain text password
+   * @returns {Object} User object with tokens
+   */
+  async login(username, password) {
+    try {
+      console.log('🔐 LOGIN ATTEMPT:', { username, passwordLength: password?.length });
+      console.log('📁 DATABASE:', db.sequelize.config.storage || db.sequelize.config.database);
+      console.log('🔌 DB DIALECT:', db.sequelize.config.dialect);
+      
+      // First, try a simple query without associations
+      console.log('🔍 SIMPLE QUERY TEST...');
+      const simpleUser = await db.User.findOne({
+        where: { username }
+      });
+      console.log('   Simple query result:', simpleUser ? 'FOUND' : 'NOT FOUND');
+      
+      if (simpleUser) {
+        console.log('   Simple user data:', {
+          id: simpleUser.id,
+          username: simpleUser.username,
+          email: simpleUser.email,
+          role_id: simpleUser.role_id,
+          is_active: simpleUser.is_active
+        });
+      }
+      
+      // Find user with role and permissions
+      console.log('🔍 FULL QUERY WITH ASSOCIATIONS...');
+      const user = await db.User.findOne({
+        where: { username },
+        include: [
+          {
+            model: db.Role,
+            as: 'role',
+            include: [
+              {
+                model: db.Permission,
+                as: 'permissions',
+                through: { attributes: [] }
+              }
+            ]
+          }
+        ]
+      });
 
-/**
- * Register new user (Admin only)
- */
-async function register(userData, createdBy) {
-  const { username, email, password, first_name, last_name, role_id } = userData;
+      console.log('🔍 USER FOUND (with associations):', user ? 'YES' : 'NO');
+      if (user) {
+        console.log('   User ID:', user.id);
+        console.log('   Username:', user.username);
+        console.log('   Is Active:', user.is_active);
+        console.log('   Password Hash:', user.password_hash ? user.password_hash.substring(0, 20) + '...' : 'NULL');
+        console.log('   Role:', user.role?.name || 'NO ROLE');
+        console.log('   Permissions:', user.role?.permissions?.length || 0);
+      }
 
-  // Check if username already exists
-  const existingUser = await db.User.findOne({
-    where: { username }
-  });
+      if (!user) {
+        console.log('❌ ERROR: User not found in database');
+        throw new Error('Invalid credentials');
+      }
 
-  if (existingUser) {
-    throw new AppError('Username already exists', 409, 'USERNAME_EXISTS');
+      // Check if account is active
+      if (!user.is_active) {
+        console.log('❌ ERROR: Account is not active');
+        throw new Error('Account is deactivated');
+      }
+
+      // Check if account is locked
+      if (user.locked_until && new Date(user.locked_until) > new Date()) {
+        const minutesRemaining = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
+        console.log('❌ ERROR: Account is locked until', user.locked_until);
+        throw new Error(`Account is locked. Try again in ${minutesRemaining} minutes`);
+      }
+
+      // Verify password
+      console.log('🔑 COMPARING PASSWORD...');
+      console.log('   Password provided:', password ? `"${password}"` : 'NULL/EMPTY');
+      console.log('   Hash in DB:', user.password_hash ? 'EXISTS' : 'NULL');
+      
+      const isValidPassword = await bcrypt.compare(password, user.password_hash);
+      
+      console.log('✓ BCRYPT RESULT:', isValidPassword);
+
+      if (!isValidPassword) {
+        console.log('❌ ERROR: Password comparison failed');
+        // Increment failed login attempts
+        await this.incrementFailedAttempts(user.id);
+        throw new Error('Invalid credentials');
+      }
+      
+      console.log('✅ PASSWORD VALID - Proceeding with login');
+
+      // Reset failed login attempts on successful login
+      await this.resetFailedAttempts(user.id);
+
+      // Update last login
+      await user.update({ last_login: new Date() });
+
+      // Generate token pair
+      const tokens = generateTokenPair(user);
+
+      // Store refresh token in database (hashed)
+      const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, 10);
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30); // 30 days from now
+
+      await db.RefreshToken.create({
+        user_id: user.id,
+        token_hash: refreshTokenHash,
+        expires_at: expiresAt
+      });
+
+      return {
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role.name,
+          permissions: user.role.permissions.map(p => p.code)
+        },
+        ...tokens
+      };
+    } catch (error) {
+      console.error('🔥 Login error:', error.message);
+      console.error('🔥 Stack:', error.stack);
+      throw error;
+    }
   }
 
-  // Check if email already exists
-  const existingEmail = await db.User.findOne({
-    where: { email }
-  });
+  /**
+   * Logout user by revoking refresh token
+   * @param {string} refreshToken - Refresh token to revoke
+   * @param {string} userId - User ID
+   */
+  async logout(refreshToken, userId) {
+    // Find all refresh tokens for this user
+    const tokens = await db.RefreshToken.findAll({
+      where: {
+        user_id: userId,
+        is_revoked: false
+      }
+    });
 
-  if (existingEmail) {
-    throw new AppError('Email already exists', 409, 'EMAIL_EXISTS');
-  }
-
-  // Hash password
-  const password_hash = await hashPassword(password);
-
-  // Create user
-  const user = await db.User.create({
-    username,
-    email,
-    password_hash,
-    first_name,
-    last_name,
-    role_id,
-    is_active: true,
-    created_by: createdBy,
-    updated_by: createdBy
-  });
-
-  // Remove password hash from response
-  const userResponse = user.toJSON();
-  delete userResponse.password_hash;
-
-  return userResponse;
-}
-
-/**
- * Public registration with immediate login
- */
-async function publicRegister(userData, ipAddress, userAgent) {
-  const { username, email, password, first_name, last_name, role_id } = userData;
-
-  // Check if username already exists
-  const existingUser = await db.User.findOne({
-    where: { username }
-  });
-
-  if (existingUser) {
-    throw new AppError('Username already exists', 409, 'USERNAME_EXISTS');
-  }
-
-  // Check if email already exists
-  const existingEmail = await db.User.findOne({
-    where: { email }
-  });
-
-  if (existingEmail) {
-    throw new AppError('Email already exists', 409, 'EMAIL_EXISTS');
-  }
-
-  // Hash password
-  const password_hash = await hashPassword(password);
-
-  // Create user (self-created, so no createdBy)
-  const user = await db.User.create({
-    username,
-    email,
-    password_hash,
-    first_name,
-    last_name,
-    role_id,
-    is_active: true,
-    created_by: null, // Self-registered
-    updated_by: null
-  });
-
-  // Immediately log in the user
-  const loginResult = await login(username, password, ipAddress, userAgent);
-
-  return loginResult;
-}
-
-/**
- * Login user
- */
-async function login(username, password, ipAddress, userAgent) {
-  // Find user by username
-  const user = await db.User.findOne({
-    where: { username },
-    include: [{
-      model: db.Role,
-      as: 'role',
-      include: [{
-        model: db.Permission,
-        as: 'permissions',
-        through: { attributes: [] }
-      }]
-    }]
-  });
-
-  if (!user) {
-    throw new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS');
-  }
-
-  // Check if account is locked
-  if (user.locked_until && new Date() < new Date(user.locked_until)) {
-    const minutesLeft = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
-    throw new AppError(
-      `Account is locked. Try again in ${minutesLeft} minutes`,
-      401,
-      'ACCOUNT_LOCKED'
-    );
-  }
-
-  // Check if account is active
-  if (!user.is_active) {
-    throw new AppError('Account is deactivated', 401, 'ACCOUNT_DEACTIVATED');
-  }
-
-  // Verify password
-  const isPasswordValid = await verifyPassword(password, user.password_hash);
-
-  if (!isPasswordValid) {
-    // Increment failed login attempts
-    const failedAttempts = (user.failed_login_attempts || 0) + 1;
-    const updateData = {
-      failed_login_attempts: failedAttempts
-    };
-
-    // Lock account if max attempts reached
-    if (failedAttempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
-      const lockoutExpiry = calculateTokenExpiration(ACCOUNT_LOCKOUT_DURATION);
-      updateData.locked_until = lockoutExpiry;
+    // Check each token hash
+    for (const tokenRecord of tokens) {
+      const matches = await bcrypt.compare(refreshToken, tokenRecord.token_hash);
+      if (matches) {
+        await tokenRecord.update({
+          is_revoked: true,
+          revoked_at: new Date()
+        });
+        return true;
+      }
     }
 
-    await user.update(updateData);
+    // Token not found - throw error for consistency
+    throw new Error('Invalid refresh token');
+  }
 
-    // Log failed login attempt
-    await logAuthEvent({
-      user_id: user.id,
-      username: user.username,
-      action: 'FAILED_LOGIN',
-      ip_address: ipAddress,
-      user_agent: userAgent,
-      status: 'FAILURE',
-      error_message: 'Invalid password'
+  /**
+   * Refresh access token using refresh token
+   * @param {string} refreshToken - Refresh token
+   * @returns {Object} New token pair
+   */
+  async refreshTokens(refreshToken) {
+    const { verifyRefreshToken } = require('../auth/jwt');
+
+    // Verify refresh token structure
+    let decoded;
+    try {
+      decoded = verifyRefreshToken(refreshToken);
+    } catch (error) {
+      throw new Error('Invalid refresh token');
+    }
+
+    // Find user
+    const user = await db.User.findByPk(decoded.sub, {
+      include: [
+        {
+          model: db.Role,
+          as: 'role',
+          include: [
+            {
+              model: db.Permission,
+              as: 'permissions',
+              through: { attributes: [] }
+            }
+          ]
+        }
+      ]
     });
 
-    throw new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS');
-  }
+    if (!user || !user.is_active) {
+      throw new Error('User not found or inactive');
+    }
 
-  // Reset failed login attempts on successful login
-  if (user.failed_login_attempts > 0 || user.locked_until) {
-    await user.update({
-      failed_login_attempts: 0,
-      locked_until: null
+    // Find refresh token in database and validate
+    const tokens = await db.RefreshToken.findAll({
+      where: {
+        user_id: user.id,
+        is_revoked: false
+      }
     });
-  }
 
-  // Generate tokens
-  const accessToken = generateAccessToken(user);
-  const refreshToken = generateRefreshToken(user);
+    let validToken = null;
+    for (const tokenRecord of tokens) {
+      const matches = await bcrypt.compare(refreshToken, tokenRecord.token_hash);
+      if (matches) {
+        // Check if expired
+        if (new Date(tokenRecord.expires_at) < new Date()) {
+          throw new Error('Refresh token expired');
+        }
+        validToken = tokenRecord;
+        break;
+      }
+    }
 
-  // Store refresh token in database
-  const refreshTokenExpiry = calculateTokenExpiration(REFRESH_TOKEN_EXPIRES_IN);
-  await db.RefreshToken.create({
-    token_hash: hashToken(refreshToken),
-    user_id: user.id,
-    expires_at: refreshTokenExpiry,
-    ip_address: ipAddress,
-    user_agent: userAgent
-  });
+    if (!validToken) {
+      throw new Error('Invalid refresh token');
+    }
 
-  // Update last login timestamp
-  await user.update({
-    last_login_at: new Date()
-  });
-
-  // Log successful login
-  await logAuthEvent({
-    user_id: user.id,
-    username: user.username,
-    action: 'LOGIN',
-    ip_address: ipAddress,
-    user_agent: userAgent,
-    status: 'SUCCESS'
-  });
-
-  // Remove sensitive data from response
-  const userResponse = user.toJSON();
-  delete userResponse.password_hash;
-  delete userResponse.failed_login_attempts;
-  delete userResponse.locked_until;
-
-  return {
-    user: userResponse,
-    accessToken,
-    refreshToken
-  };
-}
-
-/**
- * Logout user (invalidate refresh token)
- */
-async function logout(refreshToken) {
-  if (!refreshToken) {
-    throw new AppError('Refresh token required', 400, 'REFRESH_TOKEN_REQUIRED');
-  }
-
-  const tokenHash = hashToken(refreshToken);
-
-  // Find and revoke refresh token
-  const token = await db.RefreshToken.findOne({
-    where: { token_hash: tokenHash }
-  });
-
-  if (token) {
-    await token.update({
+    // Revoke old refresh token (token rotation)
+    await validToken.update({
+      is_revoked: true,
       revoked_at: new Date()
     });
 
-    // Log logout
-    await logAuthEvent({
-      user_id: token.user_id,
-      username: null,
-      action: 'LOGOUT',
-      ip_address: null,
-      user_agent: null,
-      status: 'SUCCESS'
+    // Generate new token pair
+    const newTokens = generateTokenPair(user);
+
+    // Store new refresh token
+    const refreshTokenHash = await bcrypt.hash(newTokens.refreshToken, 10);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    await db.RefreshToken.create({
+      user_id: user.id,
+      token_hash: refreshTokenHash,
+      expires_at: expiresAt
     });
+
+    return {
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role.name,
+        permissions: user.role.permissions.map(p => p.code)
+      },
+      ...newTokens
+    };
   }
 
-  return { message: 'Logged out successfully' };
-}
+  /**
+   * Generate API key for user
+   * @param {string} userId - User ID
+   * @param {string} keyName - Human-readable name for the key
+   * @param {Date} expiresAt - Optional expiration date
+   * @returns {Object} API key object with plain key (only returned once)
+   */
+  async generateApiKey(userId, keyName, expiresAt = null) {
+    // Generate random API key with prefix
+    const randomKey = crypto.randomBytes(32).toString('hex');
+    const apiKey = `diet_ak_${randomKey}`;
 
-/**
- * Refresh access token
- */
-async function refreshAccessToken(refreshToken, ipAddress, userAgent) {
-  if (!refreshToken) {
-    throw new AppError('Refresh token required', 400, 'REFRESH_TOKEN_REQUIRED');
-  }
+    // Hash the key before storing
+    const keyHash = await bcrypt.hash(apiKey, 10);
 
-  // Verify refresh token
-  let decoded;
-  try {
-    decoded = verifyRefreshToken(refreshToken);
-  } catch (error) {
-    throw new AppError('Invalid or expired refresh token', 401, 'INVALID_REFRESH_TOKEN');
-  }
-
-  // Check if token exists in database
-  const tokenHash = hashToken(refreshToken);
-  const storedToken = await db.RefreshToken.findOne({
-    where: { token_hash: tokenHash },
-    include: [{
-      model: db.User,
-      as: 'user',
-      include: [{
-        model: db.Role,
-        as: 'role'
-      }]
-    }]
-  });
-
-  if (!storedToken) {
-    throw new AppError('Refresh token not found', 401, 'REFRESH_TOKEN_NOT_FOUND');
-  }
-
-  // Check if token is revoked
-  if (storedToken.revoked_at) {
-    throw new AppError('Refresh token has been revoked', 401, 'REFRESH_TOKEN_REVOKED');
-  }
-
-  // Check if token is expired
-  if (new Date() > new Date(storedToken.expires_at)) {
-    throw new AppError('Refresh token expired', 401, 'REFRESH_TOKEN_EXPIRED');
-  }
-
-  // Check if user is active
-  if (!storedToken.user.is_active) {
-    throw new AppError('Account is deactivated', 401, 'ACCOUNT_DEACTIVATED');
-  }
-
-  // Generate new access token
-  const accessToken = generateAccessToken(storedToken.user);
-
-  return { accessToken };
-}
-
-/**
- * Create API key
- */
-async function createApiKey(userId, name, expiresAt) {
-  // Generate API key
-  const apiKey = generateApiKey();
-  const keyHash = hashToken(apiKey);
-  const keyPrefix = getApiKeyPrefix(apiKey);
-
-  // Create API key record
-  const apiKeyRecord = await db.ApiKey.create({
-    key_hash: keyHash,
-    key_prefix: keyPrefix,
-    user_id: userId,
-    name: name || 'API Key',
-    expires_at: expiresAt || null,
-    is_active: true,
-    created_by: userId
-  });
-
-  // Return the full API key (this is the only time it's available)
-  return {
-    id: apiKeyRecord.id,
-    key: apiKey, // Full key - show to user ONCE
-    prefix: keyPrefix,
-    name: apiKeyRecord.name,
-    expires_at: apiKeyRecord.expires_at,
-    created_at: apiKeyRecord.created_at,
-    warning: 'Save this API key securely. It will not be shown again.'
-  };
-}
-
-/**
- * List user's API keys
- */
-async function listApiKeys(userId) {
-  const apiKeys = await db.ApiKey.findAll({
-    where: {
+    // Create API key record
+    const apiKeyRecord = await db.ApiKey.create({
       user_id: userId,
+      key_name: keyName,
+      key_hash: keyHash,
+      expires_at: expiresAt,
       is_active: true
-    },
-    attributes: ['id', 'key_prefix', 'name', 'expires_at', 'last_used_at', 'created_at'],
-    order: [['created_at', 'DESC']]
-  });
+    });
 
-  return apiKeys;
-}
-
-/**
- * Revoke API key
- */
-async function revokeApiKey(apiKeyId, userId) {
-  const apiKey = await db.ApiKey.findOne({
-    where: {
-      id: apiKeyId,
-      user_id: userId
-    }
-  });
-
-  if (!apiKey) {
-    throw new AppError('API key not found', 404, 'API_KEY_NOT_FOUND');
+    // Return the plain API key (only time it's visible)
+    return {
+      id: apiKeyRecord.id,
+      key_name: keyName,
+      api_key: apiKey, // Plain key - only shown once
+      expires_at: expiresAt,
+      created_at: apiKeyRecord.created_at
+    };
   }
 
-  await apiKey.update({
-    is_active: false
-  });
+  /**
+   * Validate API key
+   * @param {string} apiKey - API key to validate
+   * @returns {Object} User object if valid
+   */
+  async validateApiKey(apiKey) {
+    // Find all active API keys
+    const apiKeys = await db.ApiKey.findAll({
+      where: { is_active: true },
+      include: [
+        {
+          model: db.User,
+          include: [
+            {
+              model: db.Role,
+              as: 'role',
+              include: [
+                {
+                  model: db.Permission,
+                  as: 'permissions',
+                  through: { attributes: [] }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
 
-  return { message: 'API key revoked successfully' };
+    // Check each key hash
+    for (const keyRecord of apiKeys) {
+      const matches = await bcrypt.compare(apiKey, keyRecord.key_hash);
+      if (matches) {
+        // Check if expired
+        if (keyRecord.expires_at && new Date(keyRecord.expires_at) < new Date()) {
+          throw new Error('API key expired');
+        }
+
+        // Check if user is active
+        if (!keyRecord.User.is_active) {
+          throw new Error('User account is inactive');
+        }
+
+        // Update usage tracking
+        await keyRecord.update({
+          last_used_at: new Date(),
+          usage_count: keyRecord.usage_count + 1
+        });
+
+        return keyRecord.User;
+      }
+    }
+
+    throw new Error('Invalid API key');
+  }
+
+  /**
+   * Revoke API key
+   * @param {string} apiKeyId - API key ID
+   * @param {string} userId - User ID (for authorization)
+   */
+  async revokeApiKey(apiKeyId, userId) {
+    const apiKey = await db.ApiKey.findOne({
+      where: {
+        id: apiKeyId,
+        user_id: userId
+      }
+    });
+
+    if (!apiKey) {
+      throw new Error('API key not found');
+    }
+
+    await apiKey.update({ is_active: false });
+    return true;
+  }
+
+  /**
+   * Increment failed login attempts and lock account if necessary
+   * @param {string} userId - User ID
+   */
+  async incrementFailedAttempts(userId) {
+    const user = await db.User.findByPk(userId);
+
+    const newAttempts = user.failed_login_attempts + 1;
+
+    if (newAttempts >= MAX_LOGIN_ATTEMPTS) {
+      // Lock the account
+      const lockedUntil = new Date();
+      lockedUntil.setMinutes(lockedUntil.getMinutes() + LOCKOUT_DURATION_MINUTES);
+
+      await user.update({
+        failed_login_attempts: newAttempts,
+        locked_until: lockedUntil
+      });
+    } else {
+      await user.update({
+        failed_login_attempts: newAttempts
+      });
+    }
+  }
+
+  /**
+   * Reset failed login attempts
+   * @param {string} userId - User ID
+   */
+  async resetFailedAttempts(userId) {
+    await db.User.update(
+      {
+        failed_login_attempts: 0,
+        locked_until: null
+      },
+      { where: { id: userId } }
+    );
+  }
+
+  /**
+   * List user's API keys
+   * @param {string} userId - User ID
+   * @returns {Array} List of API keys (without plain keys)
+   */
+  async listApiKeys(userId) {
+    const apiKeys = await db.ApiKey.findAll({
+      where: { user_id: userId },
+      attributes: ['id', 'key_name', 'expires_at', 'last_used_at', 'usage_count', 'is_active', 'created_at'],
+      order: [['created_at', 'DESC']]
+    });
+
+    return apiKeys;
+  }
 }
 
-module.exports = {
-  publicRegister,
-  register,
-  login,
-  logout,
-  refreshAccessToken,
-  createApiKey,
-  listApiKeys,
-  revokeApiKey
-};
+module.exports = new AuthService();

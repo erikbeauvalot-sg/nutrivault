@@ -6,28 +6,24 @@ module.exports = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
-        primaryKey: true
+        primaryKey: true,
+        allowNull: false
       },
       username: {
-        type: Sequelize.STRING(50),
-        unique: true,
-        allowNull: false
+        type: Sequelize.STRING(100),
+        allowNull: false,
+        unique: true
       },
       email: {
         type: Sequelize.STRING(255),
+        allowNull: false,
         unique: true,
-        allowNull: false
+        validate: {
+          isEmail: true
+        }
       },
       password_hash: {
         type: Sequelize.STRING(255),
-        allowNull: false
-      },
-      first_name: {
-        type: Sequelize.STRING(100),
-        allowNull: false
-      },
-      last_name: {
-        type: Sequelize.STRING(100),
         allowNull: false
       },
       role_id: {
@@ -40,50 +36,44 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'RESTRICT'
       },
-      is_active: {
-        type: Sequelize.BOOLEAN,
-        defaultValue: true
+      first_name: {
+        type: Sequelize.STRING(100),
+        allowNull: true
       },
-      last_login_at: {
-        type: Sequelize.DATE,
+      last_name: {
+        type: Sequelize.STRING(100),
+        allowNull: true
+      },
+      phone: {
+        type: Sequelize.STRING(20),
         allowNull: true
       },
       failed_login_attempts: {
         type: Sequelize.INTEGER,
+        allowNull: false,
         defaultValue: 0
       },
       locked_until: {
         type: Sequelize.DATE,
         allowNull: true
       },
-      created_by: {
-        type: Sequelize.UUID,
-        allowNull: true,
-        references: {
-          model: 'users',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+      last_login: {
+        type: Sequelize.DATE,
+        allowNull: true
       },
-      updated_by: {
-        type: Sequelize.UUID,
-        allowNull: true,
-        references: {
-          model: 'users',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+      is_active: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
       },
       created_at: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       updated_at: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });

@@ -1,329 +1,518 @@
 /**
- * Document Management Service
+ * Document Service
  *
- * Business logic for file upload and document management
- * Supports polymorphic associations with patients, visits, and users
+ * Business logic for document management with RBAC and audit logging.
+ * Handles file uploads, downloads, and metadata management.
  */
 
-const db = require('../../models');
-const { AppError } = require('../middleware/errorHandler');
-const { logCrudEvent } = require('./audit.service');
-const { deleteFile } = require('../config/multer');
+const db = require('../../../models');
+const Document = db.Document;
+const User = db.User;
+const Patient = db.Patient;
+const Visit = db.Visit;
+const auditService = require('./audit.service');
+const fs = require('fs').promises;
 const path = require('path');
+const { Op } = db.Sequelize;
 
 /**
- * Upload document(s) for a resource
+ * Allowed MIME types for file uploads
  */
-async function uploadDocuments(files, documentData, requestingUser, requestMetadata) {
-  if (!files || files.length === 0) {
-    throw new AppError('No files provided', 400, 'NO_FILES');
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+  'application/rtf'
+];
+
+/**
+ * Maximum file size (10MB)
+ */
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+/**
+ * Upload directory relative to project root
+ */
+const UPLOAD_DIR = 'uploads';
+
+/**
+ * Extract request metadata for audit logging
+ * @param {Object} req - Express request object
+ * @returns {Object} Request metadata
+ */
+function getRequestMetadata(req) {
+  return {
+    ip: req.ip || req.connection.remoteAddress,
+    userAgent: req.get('user-agent'),
+    method: req.method,
+    path: req.originalUrl
+  };
+}
+
+/**
+ * Validate file upload
+ * @param {Object} file - Multer file object
+ * @throws {Error} If file is invalid
+ */
+function validateFile(file) {
+  if (!file) {
+    throw new Error('No file provided');
   }
 
-  const { resource_type, resource_id, document_type, title, description } = documentData;
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error('File size exceeds maximum limit of 10MB');
+  }
 
-  // Validate resource exists and user has access
-  await validateResourceAccess(resource_type, resource_id, requestingUser);
+  if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    throw new Error('File type not allowed. Allowed types: PDF, JPEG, PNG, GIF, DOC, DOCX, TXT, RTF');
+  }
+}
 
-  const documents = [];
+/**
+ * Generate file path for storage
+ * @param {string} resourceType - Type of resource (patient, visit, user)
+ * @param {string} resourceId - Resource ID
+ * @param {string} filename - Original filename
+ * @returns {string} Relative file path
+ */
+function generateFilePath(resourceType, resourceId, filename) {
+  const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+  return path.join(resourceType, date, `${resourceId}_${Date.now()}_${sanitizedFilename}`);
+}
 
+/**
+ * Ensure upload directory exists
+ * @param {string} filePath - Relative file path
+ */
+async function ensureUploadDirectory(filePath) {
+  const fullPath = path.join(process.cwd(), UPLOAD_DIR, path.dirname(filePath));
+  await fs.mkdir(fullPath, { recursive: true });
+}
+
+/**
+ * Upload a document
+ * @param {Object} user - Authenticated user object
+ * @param {Object} file - Multer file object
+ * @param {Object} metadata - Document metadata
+ * @param {string} metadata.resource_type - Type of resource
+ * @param {string} metadata.resource_id - Resource ID
+ * @param {string} metadata.description - Optional description
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Created document
+ */
+async function uploadDocument(user, file, metadata, requestMetadata = {}) {
   try {
-    // Create document records for all uploaded files
-    for (const file of files) {
-      const documentRecord = await db.Document.create({
-        resource_type,
-        resource_id,
-        document_type,
-        original_filename: file.originalname,
-        stored_filename: file.filename,
-        file_path: file.path.replace(/\\/g, '/'), // Normalize path separators
-        mime_type: file.mimetype,
-        file_size: file.size,
-        title: title || file.originalname,
-        description,
-        metadata: {
-          uploaded_at: new Date().toISOString(),
-          uploader_ip: requestMetadata.ip,
-          uploader_user_agent: requestMetadata.userAgent
-        },
-        created_by: requestingUser.id,
-        updated_by: requestingUser.id
-      });
-
-      documents.push(documentRecord);
-
-      // Audit logging
-      await logCrudEvent(
-        'CREATE',
-        'documents',
-        documentRecord.id,
-        requestingUser,
-        requestMetadata,
-        null,
-        documentRecord.toJSON()
-      );
+    // Validate permissions
+    if (!user || !user.role) {
+      throw new Error('Authentication required');
     }
 
-    return documents;
-  } catch (error) {
-    // Cleanup uploaded files on error
-    files.forEach(file => {
-      deleteFile(file.path);
+    // Check upload permission
+    const hasUploadPermission = user.permissions?.some(p => p.code === 'documents.upload');
+    if (!hasUploadPermission && user.role.name !== 'ADMIN') {
+      throw new Error('Insufficient permissions to upload documents');
+    }
+
+    // Validate file
+    validateFile(file);
+
+    // Validate resource exists (only if resource_type and resource_id are provided)
+    if (metadata.resource_type && metadata.resource_id) {
+      await validateResourceExists(metadata.resource_type, metadata.resource_id);
+    }
+
+    // Generate file path and ensure directory exists
+    const filePath = generateFilePath(metadata.resource_type, metadata.resource_id, file.originalname);
+    await ensureUploadDirectory(filePath);
+
+    // Move file to final location
+    const fullFilePath = path.join(process.cwd(), UPLOAD_DIR, filePath);
+    await fs.rename(file.path, fullFilePath);
+
+    // Create document record
+    const document = await Document.create({
+      resource_type: metadata.resource_type,
+      resource_id: metadata.resource_id,
+      file_name: file.originalname,
+      file_path: filePath,
+      file_size: file.size,
+      mime_type: file.mimetype,
+      uploaded_by: user.id,
+      description: metadata.description || null
     });
+
+    // Fetch complete document with uploader info
+    const completeDocument = await Document.findByPk(document.id, {
+      include: [{
+        model: User,
+        as: 'uploader',
+        attributes: ['id', 'username', 'first_name', 'last_name']
+      }]
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      action: 'CREATE',
+      resource_type: 'document',
+      resource_id: document.id,
+      details: {
+        file_name: file.originalname,
+        file_size: file.size,
+        mime_type: file.mimetype,
+        resource_type: metadata.resource_type,
+        resource_id: metadata.resource_id
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return completeDocument;
+  } catch (error) {
+    // Clean up uploaded file if it exists
+    if (file && file.path) {
+      try {
+        await fs.unlink(file.path);
+      } catch (cleanupError) {
+        console.error('Error cleaning up file:', cleanupError);
+      }
+    }
     throw error;
   }
 }
 
 /**
- * Get documents for a resource
+ * Validate that a resource exists
+ * @param {string} resourceType - Type of resource
+ * @param {string} resourceId - Resource ID
+ * @throws {Error} If resource doesn't exist
  */
-async function getDocumentsByResource(resource_type, resource_id, requestingUser, requestMetadata) {
-  // Validate resource exists and user has access
-  await validateResourceAccess(resource_type, resource_id, requestingUser);
-
-  const documents = await db.Document.findAll({
-    where: {
-      resource_type,
-      resource_id
-    },
-    include: [
-      {
-        model: db.User,
-        as: 'creator',
-        attributes: ['id', 'username', 'first_name', 'last_name']
-      }
-    ],
-    order: [['created_at', 'DESC']]
-  });
-
-  // Audit logging (READ events for sensitive resources)
-  if (resource_type === 'patients') {
-    await logCrudEvent(
-      'READ',
-      'documents',
-      null,
-      requestingUser,
-      requestMetadata,
-      null,
-      { resource_type, resource_id, count: documents.length }
-    );
+async function validateResourceExists(resourceType, resourceId) {
+  let model;
+  switch (resourceType) {
+    case 'patient':
+      model = Patient;
+      break;
+    case 'visit':
+      model = Visit;
+      break;
+    case 'user':
+      model = User;
+      break;
+    default:
+      throw new Error('Invalid resource type');
   }
 
-  return documents;
+  const resource = await model.findByPk(resourceId);
+  if (!resource) {
+    throw new Error(`${resourceType} with ID ${resourceId} not found`);
+  }
+}
+
+/**
+ * Get documents with filtering and pagination
+ * @param {Object} user - Authenticated user object
+ * @param {Object} filters - Filter criteria
+ * @param {string} filters.resource_type - Filter by resource type
+ * @param {string} filters.resource_id - Filter by resource ID
+ * @param {string} filters.search - Search by filename or description
+ * @param {number} filters.page - Page number (default 1)
+ * @param {number} filters.limit - Items per page (default 20)
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Documents, total count, and pagination info
+ */
+async function getDocuments(user, filters = {}, requestMetadata = {}) {
+  try {
+    const whereClause = { is_active: true };
+
+    // Apply filters
+    if (filters.resource_type) {
+      whereClause.resource_type = filters.resource_type;
+    }
+
+    if (filters.resource_id) {
+      whereClause.resource_id = filters.resource_id;
+    }
+
+    if (filters.search) {
+      whereClause[Op.or] = [
+        { file_name: { [Op.like]: `%${filters.search}%` } },
+        { description: { [Op.like]: `%${filters.search}%` } }
+      ];
+    }
+
+    // RBAC: Apply role-based filtering
+    if (user && user.role) {
+      if (user.role.name === 'VIEWER') {
+        // VIEWER can only see documents they uploaded or public documents
+        whereClause.uploaded_by = user.id;
+      }
+      // ADMIN, DIETITIAN, ASSISTANT can see all documents
+    }
+
+    const page = parseInt(filters.page) || 1;
+    const limit = parseInt(filters.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await Document.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          as: 'uploader',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        }
+      ],
+      order: [['created_at', 'DESC']],
+      limit,
+      offset
+    });
+
+    return {
+      documents: rows,
+      total: count,
+      page,
+      limit,
+      totalPages: Math.ceil(count / limit)
+    };
+  } catch (error) {
+    throw error;
+  }
 }
 
 /**
  * Get single document by ID
+ * @param {Object} user - Authenticated user object
+ * @param {string} documentId - Document UUID
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Document object
  */
-async function getDocumentById(documentId, requestingUser, requestMetadata) {
-  const document = await db.Document.findByPk(documentId, {
-    include: [
-      {
-        model: db.User,
-        as: 'creator',
-        attributes: ['id', 'username', 'first_name', 'last_name']
-      }
-    ]
-  });
+async function getDocumentById(user, documentId, requestMetadata = {}) {
+  try {
+    const document = await Document.findOne({
+      where: {
+        id: documentId,
+        is_active: true
+      },
+      include: [
+        {
+          model: User,
+          as: 'uploader',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        }
+      ]
+    });
 
-  if (!document) {
-    throw new AppError('Document not found', 404, 'DOCUMENT_NOT_FOUND');
+    if (!document) {
+      throw new Error('Document not found');
+    }
+
+    // RBAC: Check read permissions
+    const hasReadPermission = user.permissions?.some(p => p.code === 'documents.read');
+    if (!hasReadPermission && user.role.name !== 'ADMIN' && document.uploaded_by !== user.id) {
+      throw new Error('Insufficient permissions to view this document');
+    }
+
+    return document;
+  } catch (error) {
+    throw error;
   }
+}
 
-  // Validate user has access to the parent resource
-  await validateResourceAccess(document.resource_type, document.resource_id, requestingUser);
+/**
+ * Download document file
+ * @param {Object} user - Authenticated user object
+ * @param {string} documentId - Document UUID
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Document with file stream info
+ */
+async function downloadDocument(user, documentId, requestMetadata = {}) {
+  try {
+    const document = await getDocumentById(user, documentId, requestMetadata);
 
-  // Audit logging
-  if (document.resource_type === 'patients') {
-    await logCrudEvent(
-      'READ',
-      'documents',
-      documentId,
-      requestingUser,
-      requestMetadata,
-      null,
-      null
-    );
+    // Check download permission
+    const hasDownloadPermission = user.permissions?.some(p => p.code === 'documents.download');
+    if (!hasDownloadPermission && user.role.name !== 'ADMIN' && document.uploaded_by !== user.id) {
+      throw new Error('Insufficient permissions to download this document');
+    }
+
+    const fullFilePath = path.join(process.cwd(), UPLOAD_DIR, document.file_path);
+
+    // Check if file exists
+    try {
+      await fs.access(fullFilePath);
+    } catch (error) {
+      throw new Error('Document file not found on disk');
+    }
+
+    // Audit log download
+    await auditService.log({
+      user_id: user.id,
+      action: 'READ',
+      resource_type: 'document',
+      resource_id: documentId,
+      details: { action: 'download' },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return {
+      document,
+      filePath: fullFilePath
+    };
+  } catch (error) {
+    throw error;
   }
-
-  return document;
 }
 
 /**
  * Update document metadata
+ * @param {Object} user - Authenticated user object
+ * @param {string} documentId - Document UUID
+ * @param {Object} updates - Fields to update
+ * @param {string} updates.description - New description
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated document
  */
-async function updateDocument(documentId, updates, requestingUser, requestMetadata) {
-  const document = await db.Document.findByPk(documentId);
+async function updateDocument(user, documentId, updates, requestMetadata = {}) {
+  try {
+    const document = await getDocumentById(user, documentId, requestMetadata);
 
-  if (!document) {
-    throw new AppError('Document not found', 404, 'DOCUMENT_NOT_FOUND');
-  }
-
-  // Validate user has access to the parent resource
-  await validateResourceAccess(document.resource_type, document.resource_id, requestingUser);
-
-  const oldData = document.toJSON();
-
-  // Only allow updating certain fields
-  const allowedUpdates = ['title', 'description', 'document_type'];
-  const filteredUpdates = {};
-
-  for (const key of allowedUpdates) {
-    if (updates[key] !== undefined) {
-      filteredUpdates[key] = updates[key];
+    // Check update permission
+    const hasUpdatePermission = user.permissions?.some(p => p.code === 'documents.update');
+    if (!hasUpdatePermission && user.role.name !== 'ADMIN' && document.uploaded_by !== user.id) {
+      throw new Error('Insufficient permissions to update this document');
     }
+
+    // Update document
+    await document.update(updates);
+
+    // Fetch updated document
+    const updatedDocument = await getDocumentById(user, documentId, requestMetadata);
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      action: 'UPDATE',
+      resource_type: 'document',
+      resource_id: documentId,
+      details: updates,
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return updatedDocument;
+  } catch (error) {
+    throw error;
   }
-
-  filteredUpdates.updated_by = requestingUser.id;
-
-  await document.update(filteredUpdates);
-
-  // Audit logging
-  await logCrudEvent(
-    'UPDATE',
-    'documents',
-    documentId,
-    requestingUser,
-    requestMetadata,
-    oldData,
-    document.toJSON()
-  );
-
-  return document;
 }
 
 /**
- * Delete document
+ * Delete document (soft delete)
+ * @param {Object} user - Authenticated user object
+ * @param {string} documentId - Document UUID
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<boolean>} Success status
  */
-async function deleteDocument(documentId, requestingUser, requestMetadata) {
-  const document = await db.Document.findByPk(documentId);
+async function deleteDocument(user, documentId, requestMetadata = {}) {
+  try {
+    const document = await getDocumentById(user, documentId, requestMetadata);
 
-  if (!document) {
-    throw new AppError('Document not found', 404, 'DOCUMENT_NOT_FOUND');
+    // Check delete permission
+    const hasDeletePermission = user.permissions?.some(p => p.code === 'documents.delete');
+    if (!hasDeletePermission && user.role.name !== 'ADMIN' && document.uploaded_by !== user.id) {
+      throw new Error('Insufficient permissions to delete this document');
+    }
+
+    // Soft delete
+    await document.update({ is_active: false });
+
+    // Optionally remove file from disk (commented out for audit purposes)
+    // const fullFilePath = path.join(process.cwd(), UPLOAD_DIR, document.file_path);
+    // try {
+    //   await fs.unlink(fullFilePath);
+    // } catch (error) {
+    //   console.error('Error removing file from disk:', error);
+    // }
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      action: 'DELETE',
+      resource_type: 'document',
+      resource_id: documentId,
+      details: { soft_delete: true },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return true;
+  } catch (error) {
+    throw error;
   }
-
-  // Validate user has access to the parent resource
-  await validateResourceAccess(document.resource_type, document.resource_id, requestingUser);
-
-  const documentData = document.toJSON();
-
-  // Delete file from filesystem
-  const fileDeleted = deleteFile(document.file_path);
-  if (!fileDeleted) {
-    console.warn(`Warning: Could not delete file at ${document.file_path}`);
-  }
-
-  // Delete database record
-  await document.destroy();
-
-  // Audit logging
-  await logCrudEvent(
-    'DELETE',
-    'documents',
-    documentId,
-    requestingUser,
-    requestMetadata,
-    documentData,
-    null
-  );
-
-  return { success: true, message: 'Document deleted successfully' };
 }
 
 /**
- * Validate that a resource exists and user has permission to access it
+ * Get document statistics
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Document statistics
  */
-async function validateResourceAccess(resource_type, resource_id, requestingUser) {
-  let resource;
+async function getDocumentStats(user, requestMetadata = {}) {
+  try {
+    // Check read permission
+    const hasReadPermission = user.permissions?.some(p => p.code === 'documents.read');
+    if (!hasReadPermission && user.role.name !== 'ADMIN') {
+      throw new Error('Insufficient permissions to view document statistics');
+    }
 
-  switch (resource_type) {
-    case 'patients':
-      resource = await db.Patient.findByPk(resource_id);
-      if (!resource) {
-        throw new AppError('Patient not found', 404, 'PATIENT_NOT_FOUND');
-      }
+    const whereClause = { is_active: true };
 
-      // Dietitians can only access their assigned patients
-      if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-        if (resource.assigned_dietitian_id !== requestingUser.id) {
-          throw new AppError(
-            'Access denied: Not assigned to this patient',
-            403,
-            'NOT_ASSIGNED_DIETITIAN'
-          );
-        }
-      }
-      break;
+    // Apply role-based filtering
+    if (user.role.name === 'VIEWER') {
+      whereClause.uploaded_by = user.id;
+    }
 
-    case 'visits':
-      resource = await db.Visit.findByPk(resource_id, {
-        include: [{ model: db.Patient, as: 'patient' }]
-      });
-      if (!resource) {
-        throw new AppError('Visit not found', 404, 'VISIT_NOT_FOUND');
-      }
+    const stats = await Document.findAll({
+      where: whereClause,
+      attributes: [
+        'resource_type',
+        [db.Sequelize.fn('COUNT', db.Sequelize.col('id')), 'count'],
+        [db.Sequelize.fn('SUM', db.Sequelize.col('file_size')), 'total_size']
+      ],
+      group: ['resource_type']
+    });
 
-      // Dietitians can only access visits for their assigned patients
-      if (requestingUser.role && requestingUser.role.name === 'DIETITIAN') {
-        if (resource.patient.assigned_dietitian_id !== requestingUser.id) {
-          throw new AppError(
-            'Access denied: Not assigned to this patient',
-            403,
-            'NOT_ASSIGNED_DIETITIAN'
-          );
-        }
-      }
-      break;
+    const totalDocuments = await Document.count({ where: whereClause });
+    const totalSize = await Document.sum('file_size', { where: whereClause });
 
-    case 'users':
-      resource = await db.User.findByPk(resource_id);
-      if (!resource) {
-        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
-      }
-
-      // Users can only access their own profile documents unless admin
-      if (
-        requestingUser.id !== resource_id &&
-        requestingUser.role &&
-        requestingUser.role.name !== 'ADMIN'
-      ) {
-        throw new AppError('Access denied: Can only manage your own documents', 403, 'ACCESS_DENIED');
-      }
-      break;
-
-    default:
-      throw new AppError(`Invalid resource type: ${resource_type}`, 400, 'INVALID_RESOURCE_TYPE');
+    return {
+      totalDocuments,
+      totalSize: totalSize || 0,
+      byType: stats.map(stat => ({
+        resource_type: stat.resource_type,
+        count: parseInt(stat.dataValues.count),
+        total_size: parseInt(stat.dataValues.total_size) || 0
+      }))
+    };
+  } catch (error) {
+    throw error;
   }
-
-  return resource;
-}
-
-/**
- * Get document statistics for a resource
- */
-async function getDocumentStats(resource_type, resource_id, requestingUser) {
-  await validateResourceAccess(resource_type, resource_id, requestingUser);
-
-  const stats = await db.Document.findAll({
-    where: {
-      resource_type,
-      resource_id
-    },
-    attributes: [
-      'document_type',
-      [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count'],
-      [db.sequelize.fn('SUM', db.sequelize.col('file_size')), 'total_size']
-    ],
-    group: ['document_type']
-  });
-
-  return stats;
 }
 
 module.exports = {
-  uploadDocuments,
-  getDocumentsByResource,
+  uploadDocument,
+  getDocuments,
   getDocumentById,
+  downloadDocument,
   updateDocument,
   deleteDocument,
-  getDocumentStats
+  getDocumentStats,
+  ALLOWED_MIME_TYPES,
+  MAX_FILE_SIZE
 };
