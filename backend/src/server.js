@@ -119,19 +119,28 @@ app.use((req, res) => {
 // Sync database and start server
 db.sequelize.sync()
   .then(() => {
-    console.log('Database synchronized');
+    const dbConfig = db.sequelize.config;
+    const dbInfo = dbConfig.dialect === 'sqlite'
+      ? `SQLite: ${dbConfig.storage}`
+      : `PostgreSQL: ${dbConfig.username}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`;
+
+    console.log('✅ Database synchronized');
+    console.log(`📁 Database: ${dbInfo}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`✅ NutriVault POC server running on http://localhost:${PORT}`);
-      console.log(`🌐 Accessible on network at http://0.0.0.0:${PORT}`);
-      console.log(`📊 Health check: http://localhost:${PORT}/health`);
-      console.log(`👥 Patients API: http://localhost:${PORT}/api/patients`);
-      console.log(`📅 Visits API: http://localhost:${PORT}/api/visits`);
-      console.log(`👤 Users API: http://localhost:${PORT}/api/users`);
-      console.log(`💰 Billing API: http://localhost:${PORT}/api/billing`);
+      console.log('\n' + '='.repeat(60));
+      console.log(`🚀 NutriVault Server Running`);
+      console.log('='.repeat(60));
+      console.log(`🌐 Server: http://localhost:${PORT}`);
+      console.log(`🔍 Health: http://localhost:${PORT}/health`);
+      console.log(`📁 Database: ${dbInfo}`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log('='.repeat(60) + '\n');
     });
   })
   .catch(err => {
-    console.error('Unable to sync database:', err);
+    console.error('❌ Unable to sync database:', err);
     process.exit(1);
   });
 

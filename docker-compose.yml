@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  nutrivault:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nutrivault
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env  # Load environment variables from .env file
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DB_DIALECT=${DB_DIALECT:-sqlite}
+      - DB_STORAGE=${DB_STORAGE:-/app/backend/data/nutrivault_prod.db}
+      # PostgreSQL settings (used if DB_DIALECT=postgres)
+      - DB_HOST=${DB_HOST:-localhost}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-nutrivault}
+      - DB_USER=${DB_USER:-nutrivault}
+      - DB_PASSWORD=${DB_PASSWORD}
+      # JWT secrets
+      - JWT_SECRET=${JWT_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+      - BCRYPT_ROUNDS=${BCRYPT_ROUNDS:-12}
+      # CORS
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3001}
+    volumes:
+      # Option 1: Use named Docker volumes (default)
+      - nutrivault-data:/app/backend/data
+      - nutrivault-uploads:/app/backend/uploads
+      - nutrivault-logs:/app/backend/logs
+
+      # Option 2: Use external host directories (uncomment to use)
+      # Mount external configuration directory
+      # - ./external/config:/app/config:ro  # Read-only config
+      # - ./external/.env:/app/.env:ro      # External .env file
+
+      # Mount external database directory
+      # - ./external/data:/app/backend/data
+
+      # Mount external uploads directory
+      # - ./external/uploads:/app/backend/uploads
+
+      # Mount external logs directory
+      # - ./external/logs:/app/backend/logs
+    networks:
+      - nutrivault-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Nginx as reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: nutrivault-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - nutrivault-ssl:/etc/nginx/ssl
+      - nutrivault-certbot:/var/www/certbot
+    depends_on:
+      - nutrivault
+    networks:
+      - nutrivault-network
+    profiles:
+      - with-nginx
+
+volumes:
+  nutrivault-data:
+    driver: local
+  nutrivault-uploads:
+    driver: local
+  nutrivault-logs:
+    driver: local
+  nutrivault-ssl:
+    driver: local
+  nutrivault-certbot:
+    driver: local
+
+networks:
+  nutrivault-network:
+    driver: bridge

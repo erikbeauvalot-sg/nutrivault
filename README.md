@@ -126,6 +126,35 @@ nutrivault/
 └── docs/                    # Documentation
 ```
 
+## Production Deployment
+
+### Docker Deployment (Recommended)
+
+The easiest way to deploy NutriVault is using Docker:
+
+```bash
+# Quick start (Docker volumes)
+./docker-start.sh
+
+# OR: With external storage (recommended for production)
+./setup-external-storage.sh
+docker-compose -f docker-compose.external-storage.yml up -d
+```
+
+**Documentation:**
+- **[DOCKER.md](DOCKER.md)** - Complete Docker guide
+- **[DOCKER_EXTERNAL_STORAGE.md](DOCKER_EXTERNAL_STORAGE.md)** - External storage setup (recommended for production)
+
+### Traditional Deployment
+
+For non-Docker deployment:
+- **[QUICKSTART_PRODUCTION.md](QUICKSTART_PRODUCTION.md)** - Quick production setup guide
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Comprehensive deployment documentation
+
+Automated deployment scripts:
+- `./deploy.sh` - Initial deployment
+- `./update.sh` - Update existing deployment
+
 ## Development
 
 ### Available Scripts

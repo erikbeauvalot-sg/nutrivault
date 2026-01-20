@@ -53,3 +53,7 @@ temp_uploads/
 uploads/
 
 *.OLD
+
+# External storage directory (Docker external storage)
+external/
+!external/.gitkeep
