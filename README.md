@@ -64,8 +64,11 @@ A comprehensive nutrition practice management system for dietitians, assistants,
    ```
 
 4. **Set up database**
+
+   ⚠️ **IMPORTANT**: Database commands MUST be run from the root directory, not `/backend/`
+
    ```bash
-   cd backend
+   # Run from project root (nutrivault/)
    npm run db:migrate
    npm run db:seed
    ```
@@ -98,23 +101,21 @@ nutrivault/
 │   │   ├── middleware/      # Authentication, validation, RBAC
 │   │   ├── routes/          # API route definitions
 │   │   ├── services/        # Business logic layer
-│   │   └── utils/          # Helper utilities
-│   ├── config/             # Database and app configuration
-│   ├── migrations/         # Database schema migrations
-│   ├── models/             # Sequelize models
-│   └── seeders/            # Database seed data
-├── frontend/               # React application
+│   │   └── auth/            # JWT utilities
+│   └── data/                # SQLite database files (dev)
+├── frontend/                # React application
 │   ├── src/
-│   │   ├── components/     # Reusable UI components
-│   │   ├── pages/          # Page components
-│   │   ├── services/       # API service layer
-│   │   ├── contexts/       # React contexts
-│   │   └── locales/        # Translation files
-│   ├── public/             # Static assets
-│   └── tests/              # Frontend tests
-├── docs/                   # Documentation
-├── utils/                  # Shared utilities
-└── config/                 # Shared configuration
+│   │   ├── components/      # Reusable UI components
+│   │   ├── pages/           # Page components
+│   │   ├── services/        # API service layer
+│   │   ├── contexts/        # React contexts
+│   │   └── locales/         # Translation files (i18n)
+│   └── public/              # Static assets
+├── models/                  # Sequelize models (ROOT level!)
+├── migrations/              # Database migrations (ROOT level!)
+├── seeders/                 # Database seeders (ROOT level!)
+├── config/                  # Database configuration
+└── docs/                    # Documentation
 ```
 
 ## Development
@@ -122,18 +123,22 @@ nutrivault/
 ### Available Scripts
 
 ```bash
-# Backend
-cd backend
-npm run dev          # Start development server with hot reload
+# Database (MUST run from root directory)
 npm run db:migrate   # Run database migrations
 npm run db:seed      # Seed database with initial data
-npm test            # Run backend tests
+npm run db:reset     # Complete reset (undo all → migrate → seed)
 
-# Frontend
+# Backend (run from backend/ directory)
+cd backend
+npm run dev          # Start development server with hot reload
+npm start            # Production server
+npm test             # Run backend tests
+
+# Frontend (run from frontend/ directory)
 cd frontend
-npm run dev         # Start development server
-npm run build       # Build for production
-npm run preview     # Preview production build
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run preview      # Preview production build
 ```
 
 ### Testing
@@ -157,6 +162,29 @@ The application supports English and French languages. All user-facing strings u
 1. Add keys to `frontend/src/locales/en.json`
 2. Add corresponding translations to `frontend/src/locales/fr.json`
 3. Use `t('key')` in components
+
+### Troubleshooting
+
+**Error: Cannot find "config/config.json" when running migrations**
+
+This happens when you try to run database commands from the `/backend/` directory.
+
+**Solution**: Always run database commands from the project root:
+```bash
+# Wrong (from backend/)
+cd backend
+npm run db:migrate  # ❌ Will fail
+
+# Correct (from project root)
+cd /path/to/nutrivault
+npm run db:migrate  # ✅ Works
+```
+
+**Why?** The Sequelize configuration (`.sequelizerc`) is located at the root level and points to:
+- Models: `/models/` (not `/backend/models/`)
+- Migrations: `/migrations/` (not `/backend/migrations/`)
+- Seeders: `/seeders/` (not `/backend/seeders/`)
+- Config: `/config/database.js` (not `/backend/config/config.json`)
 
 ## API Documentation
 
@@ -218,4 +246,4 @@ For support and questions:
 
 ---
 
-**Last Updated**: January 11, 2026
+**Last Updated**: January 20, 2026
