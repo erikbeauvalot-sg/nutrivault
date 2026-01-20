@@ -76,10 +76,24 @@ echo ""
 echo "Waiting for application to be ready..."
 sleep 5
 
-# Check if migrations need to be run
-echo "Setting up database..."
-docker-compose exec nutrivault npm run db:migrate
-docker-compose exec nutrivault npm run db:seed
+# Check if database already exists
+echo "Checking database status..."
+if docker-compose exec nutrivault sh -c '[ -f /app/backend/data/nutrivault_prod.db ]'; then
+    echo -e "${YELLOW}Database file already exists${NC}"
+    read -p "Do you want to reset the database? (y/N) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo "Resetting database..."
+        docker-compose exec nutrivault npm run db:reset
+    else
+        echo "Skipping database setup (using existing database)"
+        echo "If you need to run new migrations, use: docker-compose exec nutrivault npm run db:migrate"
+    fi
+else
+    echo "Setting up new database..."
+    docker-compose exec nutrivault npm run db:migrate
+    docker-compose exec nutrivault npm run db:seed
+fi
 
 echo -e "${GREEN}✓ Database initialized${NC}"
 echo ""
