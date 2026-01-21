@@ -92,12 +92,12 @@ Construire les fondations de NutriVault avec un système d'authentification robu
 - ✅ Redirection vers liste patients après création
 
 **Tâches techniques:**
-- [ ] Créer modèle Patient avec migrations
-- [ ] Route POST /api/patients
-- [ ] Validation express-validator
-- [ ] Composant React CreatePatientModal
-- [ ] Intégration API frontend
-- [ ] Tests CRUD patients
+- [x] Créer modèle Patient avec migrations
+- [x] Route POST /api/patients
+- [x] Validation express-validator
+- [x] Composant React CreatePatientModal
+- [x] Intégration API frontend
+- [x] Tests CRUD patients
 
 #### US-2.2: Liste patients avec recherche (3 points)
 **En tant que** diététicien
