@@ -150,11 +150,11 @@ Construire les fondations de NutriVault avec un système d'authentification robu
 - ✅ Design professionnel et intuitif
 
 **Tâches techniques:**
-- [ ] Créer page DashboardPage
-- [ ] Layout responsive avec sidebar
-- [ ] Composants métriques de base
-- [ ] Navigation et routing
-- [ ] Tests UI composants
+- [x] Créer page DashboardPage
+- [x] Layout responsive avec sidebar
+- [x] Composants métriques de base
+- [x] Navigation et routing
+- [x] Tests UI composants
 
 #### US-4.2: Bascule dashboard (2 points)
 **En tant que** diététicien
