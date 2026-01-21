@@ -72,10 +72,10 @@ Construire les fondations de NutriVault avec un système d'authentification robu
 - ✅ Redirection vers page login
 
 **Tâches techniques:**
-- [ ] Route POST /api/auth/logout
-- [ ] Invalidation tokens
-- [ ] Middleware cleanup
-- [ ] Tests déconnexion
+- [x] Route POST /api/auth/logout
+- [x] Invalidation tokens
+- [x] Middleware cleanup
+- [x] Tests déconnexion
 
 ### Epic 2: Gestion Patients (10 points)
 
