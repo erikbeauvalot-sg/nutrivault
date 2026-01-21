@@ -2494,6 +2494,107 @@ ps aux | grep vite
 
 ---
 
+## Git Branch Management
+
+### Issue 35: Establishing User Story Branch Management Practices
+
+**Problem**: Development work was completed directly on main branch without dedicated feature branches for each User Story (US), making it difficult to track changes and manage parallel development work.
+
+**Root Cause**: Lack of established git workflow practices for User Story development. Previous work (US-1.1 dietitian registration, US-1.2 login implementation) was done directly on main branch without creating dedicated feature branches.
+
+**Solution**: Establish standardized git branch management practices for all User Stories:
+
+**Branch Naming Convention**:
+- Format: `feature/US-X.Y-description`
+- Examples:
+  - `feature/US-1.1-dietitian-registration`
+  - `feature/US-1.2-dietitian-login`
+  - `feature/US-2.1-patient-management`
+
+**Branch Creation Workflow**:
+```bash
+# 1. Ensure main branch is up to date
+git checkout main
+git pull origin main
+
+# 2. Create and switch to feature branch
+git checkout -b feature/US-X.Y-description
+
+# 3. Push branch to remote (optional, for collaboration)
+git push -u origin feature/US-X.Y-description
+```
+
+**Development Workflow**:
+```bash
+# Work on feature branch
+git add .
+git commit -m "feat: implement US-X.Y feature description
+
+- Add specific changes
+- Update tests
+- Update documentation"
+
+# Regular pushes during development
+git push origin feature/US-X.Y-description
+```
+
+**Merge Workflow**:
+```bash
+# When feature is complete and tested:
+git checkout main
+git pull origin main
+
+# Merge feature branch
+git merge feature/US-X.Y-description --no-ff -m "feat: complete US-X.Y description
+
+- Summary of changes
+- Testing completed
+- Closes US-X.Y"
+
+# Push merged changes
+git push origin main
+
+# Clean up feature branch
+git branch -d feature/US-X.Y-description
+git push origin --delete feature/US-X.Y-description
+```
+
+**Prevention**:
+- **Mandatory Branch Creation**: Every User Story must start with dedicated feature branch creation
+- **Branch Naming Standards**: Use consistent `feature/US-X.Y-description` format for all User Stories
+- **Regular Commits**: Commit frequently with clear, descriptive messages following Conventional Commits
+- **Pull Request Reviews**: Use pull requests for merging feature branches (when collaborating)
+- **Branch Cleanup**: Delete merged feature branches to keep repository clean
+- **Main Branch Protection**: Never commit directly to main branch for feature development
+
+**Diagnostic Checklist** for Branch Management:
+```bash
+# Check current branch
+git branch --show-current
+
+# List all branches
+git branch -a
+
+# Check if branch exists on remote
+git ls-remote --heads origin feature/US-X.Y-description
+
+# Verify main branch is clean before creating new feature branch
+git status
+```
+
+**Benefits**:
+- **Parallel Development**: Multiple User Stories can be developed simultaneously without conflicts
+- **Change Tracking**: Clear history of what changed for each User Story
+- **Easy Rollback**: Feature branches can be abandoned if User Story requirements change
+- **Code Review**: Pull requests enable proper code review process
+- **Clean History**: Main branch remains stable with meaningful merge commits
+
+**Lesson**: Git branch management is essential for organized development workflow. Every User Story should have its own feature branch to enable parallel development, proper change tracking, and clean merge history.
+
+**Reference**: This practice should be applied to all future User Stories (US-2.x, US-3.x, etc.) to maintain consistent development workflow.
+
+---
+
 **Last Updated**: January 17, 2026
 
 ```</xai:function_call">**Last Updated**: January 10, 2026
