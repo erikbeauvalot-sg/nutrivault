@@ -130,10 +130,10 @@ Construire les fondations de NutriVault avec un système d'authentification robu
 - ✅ Gestion erreurs et confirmation
 
 **Tâches techniques:**
-- [ ] Route PUT /api/patients/:id
-- [ ] Composant EditPatientModal
-- [ ] Validation permissions (owner only)
-- [ ] Tests modifications
+- [x] Route PUT /api/patients/:id
+- [x] Composant EditPatientModal
+- [x] Validation permissions (owner only)
+- [x] Tests modifications
 
 ### Epic 4: Dashboard de Base (5 points)
 
