@@ -54,10 +54,10 @@ Construire les fondations de NutriVault avec un système d'authentification robu
 - ✅ Redirection vers dashboard après connexion
 
 **Tâches techniques:**
-- [ ] Implémenter route POST /api/auth/login
-- [ ] Créer service JWT avec tokens
-- [ ] Middleware authentification
-- [ ] Gestion refresh token
+- [x] Implémenter route POST /api/auth/login
+- [x] Créer service JWT avec tokens
+- [x] Middleware authentification
+- [x] Gestion refresh token
 - [ ] Tests authentification
 
 #### US-1.3: Déconnexion sécurisée (1 point)
