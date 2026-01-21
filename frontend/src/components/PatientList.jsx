@@ -3,11 +3,23 @@ import { Table, Button, Badge, Form, InputGroup, Pagination, Card, Dropdown } fr
 import { useTranslation } from 'react-i18next';
 import './PatientList.css';
 
-function PatientList({ patients, loading, onEdit, onDelete, onViewDetails, onScheduleVisit }) {
+function PatientList({ 
+  patients, 
+  loading, 
+  onEdit, 
+  onDelete, 
+  onViewDetails, 
+  onScheduleVisit,
+  searchTerm = '',
+  statusFilter = 'all',
+  currentPage = 1,
+  totalPages = 1,
+  totalPatients = 0,
+  onSearchChange,
+  onStatusFilterChange,
+  onPageChange
+}) {
   const { t } = useTranslation();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState('last_name');
   const [sortDirection, setSortDirection] = useState('asc');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -22,46 +34,8 @@ function PatientList({ patients, loading, onEdit, onDelete, onViewDetails, onSch
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Filter and sort patients
-  const filteredAndSortedPatients = patients
-    .filter(patient => {
-      const matchesSearch = !searchTerm ||
-        `${patient.first_name} ${patient.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (patient.email && patient.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (patient.phone && patient.phone.includes(searchTerm));
-
-      const matchesStatus = statusFilter === 'all' ||
-        (statusFilter === 'active' && patient.is_active) ||
-        (statusFilter === 'inactive' && !patient.is_active);
-
-      return matchesSearch && matchesStatus;
-    })
-    .sort((a, b) => {
-      let aValue = a[sortField];
-      let bValue = b[sortField];
-
-      // Handle null/undefined values
-      if (aValue == null && bValue == null) return 0;
-      if (aValue == null) return sortDirection === 'asc' ? -1 : 1;
-      if (bValue == null) return sortDirection === 'asc' ? 1 : -1;
-
-      // Handle string sorting
-      if (typeof aValue === 'string') {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
-      }
-
-      if (sortDirection === 'asc') {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
-      }
-    });
-
-  // Pagination
-  const totalPages = Math.ceil(filteredAndSortedPatients.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedPatients = filteredAndSortedPatients.slice(startIndex, startIndex + itemsPerPage);
+  // Use patients directly (server-side filtering/pagination)
+  const displayPatients = patients;
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -99,13 +73,13 @@ function PatientList({ patients, loading, onEdit, onDelete, onViewDetails, onSch
               type="text"
               placeholder={t('patients.searchPlaceholder', 'Search by name, email, or phone')}
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
             />
           </InputGroup>
 
           <Form.Select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => onStatusFilterChange && onStatusFilterChange(e.target.value)}
             className="patient-status-filter"
           >
             <option value="all">{t('common.all', 'All')}</option>
@@ -116,7 +90,7 @@ function PatientList({ patients, loading, onEdit, onDelete, onViewDetails, onSch
 
         <div className="text-muted patient-results-count">
           {t('patients.showingResults', {
-            count: paginatedPatients.length,
+            count: displayPatients.length,
             total: filteredAndSortedPatients.length,
             defaultValue: 'Showing {{count}} of {{total}} patients'
           })}
@@ -127,11 +101,11 @@ function PatientList({ patients, loading, onEdit, onDelete, onViewDetails, onSch
       {isMobile ? (
         // Mobile Card View
         <div className="patient-cards-container">
-          {paginatedPatients.length === 0 ? (
+          {displayPatients.length === 0 ? (
             <Card className="text-center py-4">
               <Card.Body>
                 <div className="text-muted">
-                  {filteredAndSortedPatients.length === 0 && patients.length > 0 ? (
+                  {displayPatients.length === 0 && patients.length > 0 ? (
                     <div>
                       <strong>{t('patients.noResults', 'No patients match your search criteria')}</strong>
                       <br />
@@ -148,7 +122,7 @@ function PatientList({ patients, loading, onEdit, onDelete, onViewDetails, onSch
               </Card.Body>
             </Card>
           ) : (
-            paginatedPatients.map(patient => (
+            displayPatients.map(patient => (
               <Card
                 key={patient.id}
                 className="patient-card mb-3"
@@ -247,11 +221,11 @@ function PatientList({ patients, loading, onEdit, onDelete, onViewDetails, onSch
               </tr>
             </thead>
             <tbody>
-              {paginatedPatients.length === 0 ? (
+              {displayPatients.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="text-center py-4">
                     <div className="text-muted">
-                      {filteredAndSortedPatients.length === 0 && patients.length > 0 ? (
+                      {displayPatients.length === 0 && patients.length > 0 ? (
                         <div>
                           <strong>{t('patients.noResults', 'No patients match your search criteria')}</strong>
                           <br />
@@ -268,7 +242,7 @@ function PatientList({ patients, loading, onEdit, onDelete, onViewDetails, onSch
                   </td>
                 </tr>
               ) : (
-                paginatedPatients.map(patient => (
+                displayPatients.map(patient => (
                   <tr
                     key={patient.id}
                     onClick={() => onViewDetails && onViewDetails(patient)}
@@ -345,11 +319,11 @@ function PatientList({ patients, loading, onEdit, onDelete, onViewDetails, onSch
         <div className="d-flex justify-content-center mt-3">
           <Pagination>
             <Pagination.First
-              onClick={() => setCurrentPage(1)}
+              onClick={() => onPageChange && onPageChange(1)}
               disabled={currentPage === 1}
             />
             <Pagination.Prev
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              onClick={() => onPageChange && onPageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
             />
 
@@ -361,7 +335,7 @@ function PatientList({ patients, loading, onEdit, onDelete, onViewDetails, onSch
                 <Pagination.Item
                   key={pageNumber}
                   active={pageNumber === currentPage}
-                  onClick={() => setCurrentPage(pageNumber)}
+                  onClick={() => onPageChange && onPageChange(pageNumber)}
                 >
                   {pageNumber}
                 </Pagination.Item>
@@ -369,11 +343,11 @@ function PatientList({ patients, loading, onEdit, onDelete, onViewDetails, onSch
             })}
 
             <Pagination.Next
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              onClick={() => onPageChange && onPageChange(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
             />
             <Pagination.Last
-              onClick={() => setCurrentPage(totalPages)}
+              onClick={() => onPageChange && onPageChange(totalPages)}
               disabled={currentPage === totalPages}
             />
           </Pagination>

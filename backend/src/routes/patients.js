@@ -241,6 +241,25 @@ router.get(
   '/',
   authenticate,
   requirePermission('patients.read'),
+  query('search')
+    .optional()
+    .isLength({ min: 1 })
+    .withMessage('Search must be at least 1 character'),
+  query('is_active')
+    .optional()
+    .custom((value) => {
+      if (value === '') return true; // Allow empty string for "all"
+      if (value === 'true' || value === 'false') return true;
+      throw new Error('is_active must be true, false, or empty');
+    }),
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Page must be a positive integer'),
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('Limit must be between 1 and 100'),
   patientController.getAllPatients
 );
 

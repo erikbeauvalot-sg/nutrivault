@@ -112,11 +112,11 @@ Construire les fondations de NutriVault avec un système d'authentification robu
 - ✅ Isolation données (patients du diététicien uniquement)
 
 **Tâches techniques:**
-- [ ] Route GET /api/patients avec filtres
-- [ ] Composant PatientsPage avec table
-- [ ] Recherche et pagination frontend
-- [ ] Middleware RBAC pour isolation
-- [ ] Tests requêtes filtrées
+- [x] Route GET /api/patients avec filtres
+- [x] Composant PatientsPage avec table
+- [x] Recherche et pagination frontend
+- [x] Middleware RBAC pour isolation
+- [x] Tests requêtes filtrées
 
 #### US-2.3: Modification patient (2 points)
 **En tant que** diététicien
