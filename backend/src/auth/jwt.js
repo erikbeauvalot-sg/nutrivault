@@ -6,13 +6,15 @@ const JWT_ACCESS_EXPIRATION = process.env.JWT_ACCESS_EXPIRATION || '30m';
 const JWT_REFRESH_EXPIRATION = process.env.JWT_REFRESH_EXPIRATION || '30d';
 const JWT_ISSUER = process.env.JWT_ISSUER || 'nutrivault';
 
-// Validate required environment variables on module load
-if (!JWT_SECRET || JWT_SECRET.length < 32) {
-  throw new Error('JWT_SECRET must be defined and at least 32 characters long');
-}
+// Validate required environment variables (deferred validation)
+function validateEnvironment() {
+  if (!JWT_SECRET || JWT_SECRET.length < 32) {
+    throw new Error('JWT_SECRET must be defined and at least 32 characters long');
+  }
 
-if (!REFRESH_TOKEN_SECRET || REFRESH_TOKEN_SECRET.length < 32) {
-  throw new Error('REFRESH_TOKEN_SECRET must be defined and at least 32 characters long');
+  if (!REFRESH_TOKEN_SECRET || REFRESH_TOKEN_SECRET.length < 32) {
+    throw new Error('REFRESH_TOKEN_SECRET must be defined and at least 32 characters long');
+  }
 }
 
 /**
@@ -119,6 +121,9 @@ function verifyRefreshToken(token) {
  * @returns {Object} Object containing accessToken and refreshToken
  */
 function generateTokenPair(user) {
+  // Validate environment variables on first use
+  validateEnvironment();
+
   const accessToken = signAccessToken(user.id, {
     role_id: user.role_id,
     username: user.username

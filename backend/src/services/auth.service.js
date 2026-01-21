@@ -426,6 +426,104 @@ class AuthService {
 
     return apiKeys;
   }
+
+  /**
+   * Register a new dietitian user
+   * @param {Object} userData - User registration data
+   * @param {string} userData.username - Username
+   * @param {string} userData.email - Email address
+   * @param {string} userData.password - Plain text password
+   * @param {string} userData.firstName - First name
+   * @param {string} userData.lastName - Last name
+   * @param {string} userData.phone - Phone number (optional)
+   * @returns {Object} Created user object with tokens
+   */
+  async register(userData) {
+    const { username, email, password, firstName, lastName, phone } = userData;
+
+    try {
+      console.log('📝 REGISTER ATTEMPT:', { username, email, firstName, lastName });
+
+      // Check if username already exists
+      const existingUsername = await db.User.findOne({
+        where: { username }
+      });
+
+      if (existingUsername) {
+        throw new Error('Username already exists');
+      }
+
+      // Check if email already exists
+      const existingEmail = await db.User.findOne({
+        where: { email }
+      });
+
+      if (existingEmail) {
+        throw new Error('Email already exists');
+      }
+
+      // Get DIETITIAN role
+      const dietitianRole = await db.Role.findOne({
+        where: { name: 'DIETITIAN' }
+      });
+
+      if (!dietitianRole) {
+        throw new Error('DIETITIAN role not found. Please run database seeders first.');
+      }
+
+      // Hash password
+      const saltRounds = 12;
+      const passwordHash = await bcrypt.hash(password, saltRounds);
+
+      // Create user
+      const newUser = await db.User.create({
+        username,
+        email,
+        password_hash: passwordHash,
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone || null,
+        role_id: dietitianRole.id,
+        is_active: true,
+        failed_login_attempts: 0,
+        locked_until: null,
+        last_login: null
+      });
+
+      console.log('✅ USER CREATED:', { id: newUser.id, username: newUser.username });
+
+      // Generate tokens for immediate login
+      const tokens = await generateTokenPair(newUser);
+
+      // Fetch user with role and permissions for response
+      const userWithRole = await db.User.findOne({
+        where: { id: newUser.id },
+        include: [
+          {
+            model: db.Role,
+            as: 'role',
+            include: [
+              {
+                model: db.Permission,
+                as: 'permissions',
+                through: { attributes: [] }
+              }
+            ]
+          }
+        ]
+      });
+
+      return {
+        user: userWithRole,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken
+      };
+
+    } catch (error) {
+      console.error('❌ REGISTER ERROR:', error.message);
+      throw error;
+    }
+  }
 }
 
 module.exports = new AuthService();

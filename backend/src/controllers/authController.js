@@ -68,6 +68,70 @@ class AuthController {
   }
 
   /**
+   * Register - POST /api/auth/register
+   * @param {Object} req.body.username - Username
+   * @param {Object} req.body.email - Email address
+   * @param {Object} req.body.password - Password
+   * @param {Object} req.body.firstName - First name
+   * @param {Object} req.body.lastName - Last name
+   * @param {Object} req.body.phone - Phone number (optional)
+   * @returns {Object} { success, data: { user, accessToken, refreshToken } }
+   */
+  async register(req, res, next) {
+    try {
+      // Validate request
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          details: errors.array()
+        });
+      }
+
+      const { username, email, password, firstName, lastName, phone } = req.body;
+
+      const result = await authService.register({
+        username,
+        email,
+        password,
+        firstName,
+        lastName,
+        phone
+      });
+
+      res.status(201).json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      // Handle specific registration errors
+      if (error.message === 'Username already exists') {
+        return res.status(409).json({
+          success: false,
+          error: 'Username already exists'
+        });
+      }
+
+      if (error.message === 'Email already exists') {
+        return res.status(409).json({
+          success: false,
+          error: 'Email already exists'
+        });
+      }
+
+      if (error.message.includes('DIETITIAN role not found')) {
+        return res.status(500).json({
+          success: false,
+          error: 'System configuration error. Please contact administrator.'
+        });
+      }
+
+      next(error);
+    }
+  }
+
+  /**
    * Logout - POST /api/auth/logout
    * @param {Object} req.body.refreshToken - Refresh token to invalidate
    * @returns {Object} { success }

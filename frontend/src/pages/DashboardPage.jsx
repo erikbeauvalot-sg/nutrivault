@@ -16,6 +16,7 @@ import userService from '../services/userService';
 const DashboardPage = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const [dashboardMode, setDashboardMode] = useState('day'); // 'day' or 'office'
   const [stats, setStats] = useState({
     totalPatients: 0,
     totalVisits: 0,
@@ -27,9 +28,22 @@ const DashboardPage = () => {
 
   useEffect(() => {
     fetchStats();
+    
+    // Load dashboard mode preference
+    const savedMode = localStorage.getItem('nutrivault_dashboard_mode');
+    if (savedMode && (savedMode === 'day' || savedMode === 'office')) {
+      setDashboardMode(savedMode);
+    }
   }, []);
 
-  const fetchStats = async () => {
+  // Save dashboard mode preference when it changes
+  useEffect(() => {
+    localStorage.setItem('nutrivault_dashboard_mode', dashboardMode);
+  }, [dashboardMode]);
+
+  const toggleDashboardMode = () => {
+    setDashboardMode(prevMode => prevMode === 'day' ? 'office' : 'day');
+  };
     try {
       // Fetch patients count
       const patientsResponse = await api.get('/api/patients');
@@ -79,7 +93,27 @@ const DashboardPage = () => {
   return (
     <Layout>
       <Container fluid>
-        <h1 className="mb-4">{t('dashboard.welcomeBack', { username: user?.username })} 👋</h1>
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h1>{t('dashboard.welcomeBack', { username: user?.username })} 👋</h1>
+          <div className="dashboard-toggle">
+            <div className="btn-group" role="group">
+              <button
+                type="button"
+                className={`btn ${dashboardMode === 'day' ? 'btn-primary' : 'btn-outline-primary'}`}
+                onClick={() => setDashboardMode('day')}
+              >
+                🌅 {t('dashboard.myDay', 'Ma Journée')}
+              </button>
+              <button
+                type="button"
+                className={`btn ${dashboardMode === 'office' ? 'btn-primary' : 'btn-outline-primary'}`}
+                onClick={() => setDashboardMode('office')}
+              >
+                🏢 {t('dashboard.myOffice', 'Mon Cabinet')}
+              </button>
+            </div>
+          </div>
+        </div>
 
         <Row className="g-4 mb-4">
           <Col md={4}>

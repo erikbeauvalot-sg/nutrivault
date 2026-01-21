@@ -21,18 +21,45 @@ const PatientsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showExportModal, setShowExportModal] = useState(false);
+  
+  // Filter state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalPatients, setTotalPatients] = useState(0);
 
   useEffect(() => {
     fetchPatients();
-  }, []);
+  }, [searchTerm, statusFilter, currentPage]);
 
   const fetchPatients = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/patients');
-      // Handle both POC format and new API format
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (searchTerm.trim()) {
+        params.append('search', searchTerm.trim());
+      }
+      if (statusFilter !== 'all') {
+        params.append('is_active', statusFilter === 'active');
+      }
+      params.append('page', currentPage.toString());
+      params.append('limit', '10'); // Match PatientList itemsPerPage
+      
+      const queryString = params.toString();
+      const url = `/api/patients${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await api.get(url);
+      
+      // Handle API response format
       const patientsData = response.data.data || response.data;
+      const paginationData = response.data.pagination || {};
+      
       setPatients(Array.isArray(patientsData) ? patientsData : []);
+      setTotalPages(paginationData.totalPages || 1);
+      setTotalPatients(paginationData.totalCount || patientsData.length || 0);
       setError(null);
     } catch (err) {
       setError('Failed to load patients: ' + (err.response?.data?.error || err.message));
@@ -70,9 +97,18 @@ const PatientsPage = () => {
     navigate('/visits', { state: { selectedPatient: patient } });
   };
 
-  const handleViewDetails = (patient) => {
-    // Navigate to patient detail page
-    navigate(`/patients/${patient.id}`);
+  const handleSearchChange = (search) => {
+    setSearchTerm(search);
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
+  const handleStatusFilterChange = (status) => {
+    setStatusFilter(status);
+    setCurrentPage(1); // Reset to first page when filtering
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
   };
 
   // Check if user can create patients (ADMIN, DIETITIAN)
@@ -133,6 +169,14 @@ const PatientsPage = () => {
             onDelete={canDeletePatients ? handleDeletePatient : null}
             onViewDetails={handleViewDetails}
             onScheduleVisit={handleScheduleVisit}
+            searchTerm={searchTerm}
+            statusFilter={statusFilter}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalPatients={totalPatients}
+            onSearchChange={handleSearchChange}
+            onStatusFilterChange={handleStatusFilterChange}
+            onPageChange={handlePageChange}
           />
         </div>
       </Container>
