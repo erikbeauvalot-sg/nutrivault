@@ -17,6 +17,7 @@ db.User = require('./User')(sequelize, DataTypes);
 db.Permission = require('./Permission')(sequelize, DataTypes);
 db.RolePermission = require('./RolePermission')(sequelize, DataTypes);
 db.Patient = require('./Patient')(sequelize, DataTypes);
+db.PatientTag = require('./PatientTag')(sequelize, DataTypes);
 db.Visit = require('./Visit')(sequelize, DataTypes);
 db.VisitMeasurement = require('./VisitMeasurement')(sequelize, DataTypes);
 db.Billing = require('./Billing')(sequelize, DataTypes);
@@ -70,6 +71,16 @@ db.User.hasMany(db.Patient, {
   as: 'assigned_patients'
 });
 
+// Patient - PatientTag relationship (tags for patient segmentation)
+db.PatientTag.belongsTo(db.Patient, {
+  foreignKey: 'patient_id',
+  as: 'tagged_patient'
+});
+db.Patient.hasMany(db.PatientTag, {
+  foreignKey: 'patient_id',
+  as: 'tags'
+});
+
 // Visit - Patient relationship
 db.Visit.belongsTo(db.Patient, {
   foreignKey: 'patient_id',
@@ -87,7 +98,7 @@ db.Visit.belongsTo(db.User, {
 });
 db.User.hasMany(db.Visit, {
   foreignKey: 'dietitian_id',
-  as: 'visits'
+  as: 'dietitian_visits'
 });
 
 // VisitMeasurement - Visit relationship

@@ -310,8 +310,26 @@ async function createPatient(patientData, user, requestMetadata = {}) {
       }
     }
 
+    // Extract tags from patient data if present
+    const { tags, ...patientFields } = patientData;
+
     // Create patient
-    const patient = await Patient.create(patientData);
+    const patient = await Patient.create(patientFields);
+
+    // Handle tags if provided
+    if (tags && Array.isArray(tags) && tags.length > 0) {
+      const patientTagService = require('./patientTag.service');
+      for (const tagName of tags) {
+        if (tagName && tagName.trim()) {
+          try {
+            await patientTagService.addTag(patient.id, tagName.trim(), user, requestMetadata);
+          } catch (tagError) {
+            console.warn(`Failed to add tag "${tagName}" to patient:`, tagError.message);
+            // Continue with other tags, don't fail the entire patient creation
+          }
+        }
+      }
+    }
 
     // Audit log
     await auditService.log({
@@ -403,11 +421,26 @@ async function updatePatient(patientId, updateData, user, requestMetadata = {}) 
       }
     }
 
+    // Extract tags from update data if present
+    const { tags, ...patientFields } = updateData;
+
     // Capture before state
     const beforeData = patient.toJSON();
 
     // Update patient
-    await patient.update(updateData);
+    await patient.update(patientFields);
+
+    // Handle tags if provided
+    if (tags !== undefined) {
+      const patientTagService = require('./patientTag.service');
+      try {
+        // Update patient tags (replace all existing tags with new ones)
+        await patientTagService.updatePatientTags(patient.id, tags || [], user, requestMetadata);
+      } catch (tagError) {
+        console.warn('Failed to update patient tags:', tagError.message);
+        // Continue with patient update, don't fail the entire operation
+      }
+    }
 
     // Audit log
     await auditService.log({

@@ -44,6 +44,8 @@ const DashboardPage = () => {
   const toggleDashboardMode = () => {
     setDashboardMode(prevMode => prevMode === 'day' ? 'office' : 'day');
   };
+
+  const fetchStats = async () => {
     try {
       // Fetch patients count
       const patientsResponse = await api.get('/api/patients');

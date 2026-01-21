@@ -36,7 +36,7 @@ const InvoiceDetailPage = () => {
     try {
       setLoading(true);
       const response = await billingService.getInvoiceById(id);
-      const invoiceData = response.data;
+      const invoiceData = response.data.data || response.data;
       setInvoice(invoiceData);
       setPayments(invoiceData.payments || []);
       setError(null);

@@ -91,7 +91,7 @@ function PatientList({
         <div className="text-muted patient-results-count">
           {t('patients.showingResults', {
             count: displayPatients.length,
-            total: filteredAndSortedPatients.length,
+            total: totalPatients,
             defaultValue: 'Showing {{count}} of {{total}} patients'
           })}
         </div>

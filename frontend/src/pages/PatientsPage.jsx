@@ -92,6 +92,10 @@ const PatientsPage = () => {
     navigate(`/patients/${patient.id}/edit`);
   };
 
+  const handleViewDetails = (patient) => {
+    navigate(`/patients/${patient.id}`);
+  };
+
   const handleScheduleVisit = (patient) => {
     // Navigate to visits page with patient pre-selected
     navigate('/visits', { state: { selectedPatient: patient } });

@@ -7,12 +7,15 @@ import { useState, useEffect } from 'react';
 import { Modal, Button, Form, Row, Col, Alert } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import userService from '../services/userService';
+import PatientTagsManager from './PatientTagsManager';
+import * as patientTagService from '../services/patientTagService';
 
 const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dietitians, setDietitians] = useState([]);
+  const [patientTags, setPatientTags] = useState([]);
 
   useEffect(() => {
     if (show) {
@@ -28,6 +31,20 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
     } catch (err) {
       console.error('Failed to fetch dietitians:', err);
       setDietitians([]);
+    }
+  };
+
+  const fetchPatientTags = async (patientId) => {
+    try {
+      const response = await patientTagService.getPatientTags(patientId);
+      const tags = response.data?.data || response.data || [];
+      const tagNames = Array.isArray(tags) ? tags.map(tag => tag.tag_name) : [];
+      setPatientTags(tagNames);
+      return tagNames;
+    } catch (err) {
+      console.error('Failed to fetch patient tags:', err);
+      setPatientTags([]);
+      return [];
     }
   };
   const [formData, setFormData] = useState({
@@ -67,47 +84,60 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
 
     // Administrative
     assigned_dietitian_id: '',
-    notes: ''
+    notes: '',
+
+    // Tags
+    tags: []
   });
 
   useEffect(() => {
     if (patient && show) {
-      // Pre-populate form with patient data
-      setFormData({
-        first_name: patient.first_name || '',
-        last_name: patient.last_name || '',
-        email: patient.email || '',
-        phone: patient.phone || '',
-        date_of_birth: patient.date_of_birth ? patient.date_of_birth.split('T')[0] : '',
-        gender: patient.gender || '',
-        address: patient.address || '',
-        city: patient.city || '',
-        state: patient.state || '',
-        zip_code: patient.zip_code || '',
-        emergency_contact_name: patient.emergency_contact_name || '',
-        emergency_contact_phone: patient.emergency_contact_phone || '',
+      // Load patient tags first, then set form data
+      const loadPatientData = async () => {
+        const tags = await fetchPatientTags(patient.id);
 
-        medical_record_number: patient.medical_record_number || '',
-        insurance_provider: patient.insurance_provider || '',
-        insurance_policy_number: patient.insurance_policy_number || '',
-        primary_care_physician: patient.primary_care_physician || '',
-        allergies: patient.allergies || '',
-        current_medications: patient.current_medications || '',
-        medical_notes: patient.medical_notes || '',
-        height_cm: patient.height_cm || '',
-        weight_kg: patient.weight_kg || '',
-        blood_type: patient.blood_type || '',
+        // Pre-populate form with patient data
+        setFormData({
+          first_name: patient.first_name || '',
+          last_name: patient.last_name || '',
+          email: patient.email || '',
+          phone: patient.phone || '',
+          date_of_birth: patient.date_of_birth ? patient.date_of_birth.split('T')[0] : '',
+          gender: patient.gender || '',
+          address: patient.address || '',
+          city: patient.city || '',
+          state: patient.state || '',
+          zip_code: patient.zip_code || '',
+          emergency_contact_name: patient.emergency_contact_name || '',
+          emergency_contact_phone: patient.emergency_contact_phone || '',
 
-        dietary_preferences: patient.dietary_preferences || '',
-        food_preferences: patient.food_preferences || '',
-        nutritional_goals: patient.nutritional_goals || '',
-        exercise_habits: patient.exercise_habits || '',
-        smoking_status: patient.smoking_status || '',
-        alcohol_consumption: patient.alcohol_consumption || '',
+          medical_record_number: patient.medical_record_number || '',
+          insurance_provider: patient.insurance_provider || '',
+          insurance_policy_number: patient.insurance_policy_number || '',
+          primary_care_physician: patient.primary_care_physician || '',
+          allergies: patient.allergies || '',
+          current_medications: patient.current_medications || '',
+          medical_notes: patient.medical_notes || '',
+          height_cm: patient.height_cm || '',
+          weight_kg: patient.weight_kg || '',
+          blood_type: patient.blood_type || '',
 
-        assigned_dietitian_id: patient.assigned_dietitian_id || '',
-        notes: patient.notes || ''
-      });
+          dietary_preferences: patient.dietary_preferences || '',
+          food_preferences: patient.food_preferences || '',
+          nutritional_goals: patient.nutritional_goals || '',
+          exercise_habits: patient.exercise_habits || '',
+          smoking_status: patient.smoking_status || '',
+          alcohol_consumption: patient.alcohol_consumption || '',
+
+          assigned_dietitian_id: patient.assigned_dietitian_id || '',
+          notes: patient.notes || '',
+
+          // Tags
+          tags: tags
+        });
+      };
+
+      loadPatientData();
       setError(null);
     }
   }, [patient, show]);
@@ -119,6 +149,13 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
       [name]: value
     }));
     setError(null);
+  };
+
+  const handleTagsChange = (newTags) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: newTags
+    }));
   };
 
   const validateForm = () => {
@@ -609,6 +646,18 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
                 onChange={handleInputChange}
                 placeholder={t('patients.additionalNotesPlaceholder')}
               />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>{t('patients.patientTags')}</Form.Label>
+              <PatientTagsManager
+                patientId={patient?.id}
+                initialTags={formData.tags}
+                onTagsChange={handleTagsChange}
+                disabled={loading}
+              />
+              <Form.Text className="text-muted">
+                {t('patients.tagsHelp')}
+              </Form.Text>
             </Form.Group>
           </div>
         </Form>

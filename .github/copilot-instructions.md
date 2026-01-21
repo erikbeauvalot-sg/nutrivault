@@ -1,6 +1,8 @@
 The following instructions are only to be applied when performing a code review.
+## Methodology
+All instrutions are stored in the ./_bmad and ./_bmad-output folder. Please follow the instructions relevant to the file you are reviewing.
 
-## README updates
+<!-- ## README updates
 
 - [ ] The new file should be added to the `README.md`.
 
@@ -63,4 +65,4 @@ The following instructions are only to be applied when performing a code review.
 - [ ] Follow any plan file specific instructions stored in the /plan directory.
 - [ ] for now the plan file that is being used is : /plan/feature-nutrivault-complete-system-1.md
 - [ ] Make sure you update the status of the plan file if needed.
-
+ -->

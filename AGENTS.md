@@ -1,4 +1,4 @@
-# Repository Guidelines
+<!-- # Repository Guidelines
 
 ## Project Structure & Module Organization
 - `backend/` contains the Express API, Sequelize models, migrations, seeders, and tests (`backend/tests/`, `backend/test-*.js`).
@@ -30,4 +30,4 @@
 ## Security & Configuration Tips
 - Never commit secrets; use `.env` files in `backend/` and `frontend/`.
 - Verify database paths in `config/database.js` if migrations fail.
-- Clean up dev ports before running server-based tests: `lsof -ti:3001 | xargs kill -9` (and 5173).
+- Clean up dev ports before running server-based tests: `lsof -ti:3001 | xargs kill -9` (and 5173). -->

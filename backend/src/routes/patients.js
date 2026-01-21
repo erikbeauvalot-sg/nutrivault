@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 const { body, param, query, validationResult } = require('express-validator');
 const patientController = require('../controllers/patientController');
+const patientTagController = require('../controllers/patientTagController');
 const authenticate = require('../middleware/authenticate');
 const { requirePermission } = require('../middleware/rbac');
 
@@ -327,6 +328,85 @@ router.delete(
   requirePermission('patients.delete'),
   patientIdValidation,
   patientController.deletePatient
+);
+
+/**
+ * Patient Tags Routes
+ */
+
+/**
+ * GET /api/patients/tags - Get all available tags
+ * Requires: patients.read permission
+ */
+router.get(
+  '/tags',
+  authenticate,
+  requirePermission('patients.read'),
+  patientTagController.getAllTags
+);
+
+/**
+ * GET /api/patients/:patientId/tags - Get tags for a specific patient
+ * Requires: patients.read permission
+ */
+router.get(
+  '/:patientId/tags',
+  authenticate,
+  requirePermission('patients.read'),
+  param('patientId').isUUID().withMessage('Invalid patient ID'),
+  validate,
+  patientTagController.getPatientTags
+);
+
+/**
+ * POST /api/patients/:patientId/tags - Add a tag to a patient
+ * Requires: patients.update permission
+ */
+router.post(
+  '/:patientId/tags',
+  authenticate,
+  requirePermission('patients.update'),
+  patientTagController.validateAddTag,
+  validate,
+  patientTagController.addTag
+);
+
+/**
+ * PUT /api/patients/:patientId/tags - Update all tags for a patient
+ * Requires: patients.update permission
+ */
+router.put(
+  '/:patientId/tags',
+  authenticate,
+  requirePermission('patients.update'),
+  patientTagController.validateUpdateTags,
+  validate,
+  patientTagController.updatePatientTags
+);
+
+/**
+ * DELETE /api/patients/:patientId/tags/:tagName - Remove a tag from a patient
+ * Requires: patients.update permission
+ */
+router.delete(
+  '/:patientId/tags/:tagName',
+  authenticate,
+  requirePermission('patients.update'),
+  param('patientId').isUUID().withMessage('Invalid patient ID'),
+  param('tagName').isLength({ min: 1, max: 50 }).withMessage('Invalid tag name'),
+  validate,
+  patientTagController.removeTag
+);
+
+/**
+ * GET /api/patients/tags/all - Get all available tags in the system
+ * Requires: patients.read permission
+ */
+router.get(
+  '/tags/all',
+  authenticate,
+  requirePermission('patients.read'),
+  patientTagController.getAllTags
 );
 
 module.exports = router;

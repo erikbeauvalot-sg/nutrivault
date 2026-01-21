@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { Modal, Button, Form, Row, Col, ProgressBar, Alert } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import userService from '../services/userService';
+import PatientTagsManager from './PatientTagsManager';
 
 const CreatePatientModal = ({ show, onHide, onSubmit }) => {
   const { t } = useTranslation();
@@ -69,7 +70,10 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
 
     // Administrative
     assigned_dietitian_id: '',
-    notes: ''
+    notes: '',
+
+    // Tags
+    tags: []
   });
 
   const totalSteps = 4;
@@ -81,6 +85,13 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
       [name]: value
     }));
     setError(null);
+  };
+
+  const handleTagsChange = (newTags) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: newTags
+    }));
   };
 
   const validateStep = (step) => {
@@ -586,6 +597,18 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
                 onChange={handleInputChange}
                 placeholder="Any additional notes about the patient..."
               />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Patient Tags</Form.Label>
+              <PatientTagsManager
+                patientId={null} // null for new patient
+                initialTags={formData.tags}
+                onTagsChange={handleTagsChange}
+                disabled={loading}
+              />
+              <Form.Text className="text-muted">
+                Add tags to categorize and filter patients (e.g., diabetic, vegetarian, senior)
+              </Form.Text>
             </Form.Group>
           </div>
         );
