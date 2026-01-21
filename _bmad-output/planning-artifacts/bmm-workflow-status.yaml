@@ -40,7 +40,7 @@ workflow_status:
     name: "Planning"
     workflows:
       - id: "prd"
-        status: "pending"
+        status: "completed"
         agent: "pm"
         command: "/bmad:bmm:workflows:create-prd"
       - id: "create-ux-design"
@@ -51,11 +51,11 @@ workflow_status:
     name: "Solutioning"
     workflows:
       - id: "create-architecture"
-        status: "pending"
+        status: "completed"
         agent: "architect"
         command: "/bmad:bmm:workflows:create-architecture"
       - id: "create-epics-and-stories"
-        status: "pending"
+        status: "completed"
         agent: "pm"
         command: "/bmad:bmm:workflows:create-epics-and-stories"
       - id: "test-design"
@@ -63,13 +63,13 @@ workflow_status:
         agent: "tea"
         command: "/bmad:bmm:workflows:test-design"
       - id: "implementation-readiness"
-        status: "pending"
+        status: "completed"
         agent: "architect"
         command: "/bmad:bmm:workflows:implementation-readiness"
   - phase: 4
     name: "Implementation"
     workflows:
       - id: "sprint-planning"
-        status: "pending"
+        status: "completed"
         agent: "sm"
         command: "/bmad:bmm:workflows:sprint-planning"
