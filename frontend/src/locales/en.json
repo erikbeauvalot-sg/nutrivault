@@ -469,6 +469,12 @@
   "billing": {
     "title": "Billing Management",
     "subtitle": "Manage invoices and track payments",
+    "invoices": "Invoices",
+    "patientInvoices": "Patient Invoices",
+    "loadingInvoices": "Loading invoices...",
+    "noInvoices": "No invoices",
+    "noInvoicesForPatient": "No invoices found for this patient",
+    "createFirstInvoice": "Create first invoice",
     "createInvoice": "Create Invoice",
     "editInvoice": "Edit Invoice",
     "recordPayment": "Record Payment",

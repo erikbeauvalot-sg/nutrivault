@@ -475,6 +475,12 @@
   "billing": {
     "title": "Gestion de la facturation",
     "subtitle": "Gérer les factures et suivre les paiements",
+    "invoices": "Factures",
+    "patientInvoices": "Factures du patient",
+    "loadingInvoices": "Chargement des factures...",
+    "noInvoices": "Aucune facture",
+    "noInvoicesForPatient": "Aucune facture trouvée pour ce patient",
+    "createFirstInvoice": "Créer la première facture",
     "createInvoice": "Créer une facture",
     "editInvoice": "Modifier la facture",
     "recordPayment": "Enregistrer le paiement",

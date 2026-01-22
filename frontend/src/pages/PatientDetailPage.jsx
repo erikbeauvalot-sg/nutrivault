@@ -11,8 +11,10 @@ import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import DocumentListComponent from '../components/DocumentListComponent';
 import MeasurementCharts from '../components/MeasurementCharts';
+import InvoiceList from '../components/InvoiceList';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import * as gdprService from '../services/gdprService';
+import * as billingService from '../services/billingService';
 import api from '../services/api';
 import './PatientDetailPage.css';
 
@@ -35,7 +37,9 @@ const PatientDetailPage = () => {
   const [patient, setPatient] = useState(null);
   const [visits, setVisits] = useState([]);
   const [documents, setDocuments] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('complete');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -46,6 +50,7 @@ const PatientDetailPage = () => {
     if (id) {
       fetchPatientDetails();
       fetchPatientDocuments();
+      fetchPatientInvoices();
     }
   }, [id]);
 
@@ -73,6 +78,20 @@ const PatientDetailPage = () => {
     } catch (err) {
       console.error('Error fetching patient documents:', err);
       // Don't set error for documents failure
+    }
+  };
+
+  const fetchPatientInvoices = async () => {
+    try {
+      setInvoicesLoading(true);
+      const response = await billingService.getInvoices({ patient_id: id, limit: 1000 });
+      const invoicesData = response.data?.data || response.data || [];
+      setInvoices(Array.isArray(invoicesData) ? invoicesData : []);
+    } catch (err) {
+      console.error('Error fetching patient invoices:', err);
+      // Don't set error for invoices failure
+    } finally {
+      setInvoicesLoading(false);
     }
   };
 
@@ -143,6 +162,33 @@ const PatientDetailPage = () => {
 
   const handleAddPayment = () => {
     navigate('/billing/create', { state: { selectedPatient: patient } });
+  };
+
+  const handleViewInvoice = (invoice) => {
+    navigate(`/billing/${invoice.id}`);
+  };
+
+  const handleEditInvoice = (invoice) => {
+    navigate(`/billing/${invoice.id}/edit`);
+  };
+
+  const handleRecordPayment = (invoice) => {
+    navigate(`/billing/${invoice.id}/record-payment`);
+  };
+
+  const handleDeleteInvoice = async (invoiceId) => {
+    if (!window.confirm(t('billing.confirmDeleteInvoice') || 'Are you sure you want to delete this invoice?')) {
+      return;
+    }
+
+    try {
+      await billingService.deleteInvoice(invoiceId);
+      // Refresh invoices list
+      fetchPatientInvoices();
+    } catch (err) {
+      console.error('Error deleting invoice:', err);
+      setError(t('errors.failedToDeleteInvoice', { error: err.response?.data?.error || err.message }));
+    }
   };
 
 
@@ -987,6 +1033,57 @@ const PatientDetailPage = () => {
                   onDocumentDeleted={fetchPatientDocuments}
                   showResourceColumn={false}
                 />
+              </Tab>
+
+              {/* Invoices Tab */}
+              <Tab eventKey="invoices" title={`💰 ${t('billing.invoices', 'Factures')} (${invoices.length})`}>
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h5 className="mb-0">{t('billing.patientInvoices', 'Factures du patient')}</h5>
+                  <Button
+                    variant="outline-primary"
+                    size="sm"
+                    onClick={handleAddPayment}
+                  >
+                    ➕ {t('billing.createInvoice', 'Créer une facture')}
+                  </Button>
+                </div>
+                {invoicesLoading ? (
+                  <div className="text-center py-5">
+                    <Spinner animation="border" role="status">
+                      <span className="visually-hidden">{t('common.loading')}</span>
+                    </Spinner>
+                    <p className="mt-2">{t('billing.loadingInvoices', 'Chargement des factures...')}</p>
+                  </div>
+                ) : invoices.length === 0 ? (
+                  <Card className="text-center py-5">
+                    <Card.Body>
+                      <div className="mb-3">💰</div>
+                      <h6>{t('billing.noInvoices', 'Aucune facture')}</h6>
+                      <p className="text-muted">
+                        {t('billing.noInvoicesForPatient', 'Aucune facture trouvée pour ce patient')}
+                      </p>
+                      <Button variant="outline-primary" onClick={handleAddPayment}>
+                        ➕ {t('billing.createFirstInvoice', 'Créer la première facture')}
+                      </Button>
+                    </Card.Body>
+                  </Card>
+                ) : (
+                  <InvoiceList
+                    invoices={invoices}
+                    loading={false}
+                    filters={{}}
+                    pagination={null}
+                    onFilterChange={() => {}}
+                    onPageChange={() => {}}
+                    onView={handleViewInvoice}
+                    onEdit={handleEditInvoice}
+                    onRecordPayment={handleRecordPayment}
+                    onDelete={handleDeleteInvoice}
+                    canCreate={canEditPatient}
+                    canUpdate={canEditPatient}
+                    canDelete={canEditPatient}
+                  />
+                )}
               </Tab>
             </Tabs>
           </Card.Body>
