@@ -262,6 +262,34 @@ router.post(
 );
 
 /**
+ * POST /api/billing/:id/send-email - Send invoice by email
+ * Requires: billing.update permission
+ * ADMIN, DIETITIAN, and ASSISTANT can send invoice emails
+ */
+router.post(
+  '/:id/send-email',
+  authenticate,
+  requirePermission('billing.update'),
+  invoiceIdValidation,
+  validate,
+  billingController.sendInvoiceEmail
+);
+
+/**
+ * POST /api/billing/:id/mark-paid - Mark invoice as paid
+ * Requires: billing.update permission
+ * ADMIN, DIETITIAN, and ASSISTANT can mark invoices as paid
+ */
+router.post(
+  '/:id/mark-paid',
+  authenticate,
+  requirePermission('billing.update'),
+  invoiceIdValidation,
+  validate,
+  billingController.markAsPaid
+);
+
+/**
  * DELETE /api/billing/:id - Delete invoice (soft delete)
  * Requires: billing.delete permission
  * Only ADMIN can delete invoices

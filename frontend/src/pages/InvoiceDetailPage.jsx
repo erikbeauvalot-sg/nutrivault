@@ -21,6 +21,9 @@ const InvoiceDetailPage = () => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   useEffect(() => {
     if (id && hasPermission('billing.read')) {
@@ -189,6 +192,40 @@ const InvoiceDetailPage = () => {
     navigate('/billing');
   };
 
+  const handleSendEmail = async () => {
+    try {
+      setSendingEmail(true);
+      setError(null);
+      await billingService.sendInvoiceEmail(id);
+      setSuccessMessage(t('billing.emailSentSuccessfully'));
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setError(t('billing.failedToSendEmail') + ': ' + (err.response?.data?.error || err.message));
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const handleMarkAsPaid = async () => {
+    if (!window.confirm(t('billing.confirmMarkAsPaid'))) {
+      return;
+    }
+
+    try {
+      setMarkingPaid(true);
+      setError(null);
+      await billingService.markAsPaid(id);
+      setSuccessMessage(t('billing.markedAsPaidSuccessfully'));
+      // Refresh invoice data
+      await fetchInvoiceDetails();
+    } catch (err) {
+      setError(t('billing.failedToMarkAsPaid') + ': ' + (err.response?.data?.error || err.message));
+    } finally {
+      setMarkingPaid(false);
+    }
+  };
+
   const getStatusBadgeVariant = (status) => {
     switch (status) {
       case 'DRAFT': return 'secondary';
@@ -261,6 +298,18 @@ const InvoiceDetailPage = () => {
   return (
     <Layout>
       <Container className="py-4">
+        {/* Success/Error Messages */}
+        {successMessage && (
+          <Alert variant="success" dismissible onClose={() => setSuccessMessage(null)}>
+            {successMessage}
+          </Alert>
+        )}
+        {error && (
+          <Alert variant="danger" dismissible onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+
         {/* Header */}
         <Row className="mb-4">
           <Col>
@@ -337,12 +386,34 @@ const InvoiceDetailPage = () => {
               </Card.Header>
               <Card.Body>
                 {hasPermission('billing.update') && invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
+                  <>
+                    <Button
+                      variant="success"
+                      className="w-100 mb-2"
+                      onClick={() => navigate(`/billing/${id}/record-payment`)}
+                    >
+                      💳 {t('billing.recordPayment')}
+                    </Button>
+
+                    <Button
+                      variant="warning"
+                      className="w-100 mb-2"
+                      onClick={handleMarkAsPaid}
+                      disabled={markingPaid || invoice.amount_due <= 0}
+                    >
+                      {markingPaid ? '⏳' : '✅'} {t('billing.markAsPaid')}
+                    </Button>
+                  </>
+                )}
+
+                {invoice.patient?.email && (
                   <Button
-                    variant="success"
+                    variant="info"
                     className="w-100 mb-2"
-                    onClick={() => navigate(`/billing/${id}/record-payment`)}
+                    onClick={handleSendEmail}
+                    disabled={sendingEmail}
                   >
-                    💳 {t('billing.recordPayment')}
+                    {sendingEmail ? '⏳' : '📧'} {t('billing.sendEmail')}
                   </Button>
                 )}
 

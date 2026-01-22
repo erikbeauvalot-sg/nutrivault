@@ -159,3 +159,45 @@ exports.deleteInvoice = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * POST /api/billing/:id/send-email - Send invoice by email
+ */
+exports.sendInvoiceEmail = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const requestMetadata = getRequestMetadata(req);
+
+    const result = await billingService.sendInvoiceEmail(id, user, requestMetadata);
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Invoice email sent successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/billing/:id/mark-paid - Mark invoice as paid
+ */
+exports.markAsPaid = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const requestMetadata = getRequestMetadata(req);
+
+    const invoice = await billingService.markAsPaid(id, user, requestMetadata);
+
+    res.json({
+      success: true,
+      data: invoice,
+      message: 'Invoice marked as paid successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};

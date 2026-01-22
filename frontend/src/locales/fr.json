@@ -519,7 +519,14 @@
     "amount": "Montant",
     "paid": "Payé",
     "confirmDeleteInvoice": "Êtes-vous sûr de vouloir supprimer cette facture ?",
-    "noPermission": "Vous n'avez pas la permission de consulter les informations de facturation."
+    "noPermission": "Vous n'avez pas la permission de consulter les informations de facturation.",
+    "sendEmail": "Envoyer par email",
+    "markAsPaid": "Marquer comme payé",
+    "emailSentSuccessfully": "Email de facture envoyé avec succès",
+    "markedAsPaidSuccessfully": "Facture marquée comme payée avec succès",
+    "confirmMarkAsPaid": "Êtes-vous sûr de vouloir marquer cette facture comme payée ? Cela enregistrera le solde restant complet comme paiement.",
+    "failedToSendEmail": "Échec de l'envoi de l'email",
+    "failedToMarkAsPaid": "Échec de la mise à jour du statut de la facture"
   },
   "users": {
     "title": "Gestion des utilisateurs",

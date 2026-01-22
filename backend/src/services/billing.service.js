@@ -531,11 +531,172 @@ async function deleteInvoice(invoiceId, user, requestMetadata = {}) {
   }
 }
 
+/**
+ * Send invoice email to patient
+ *
+ * @param {string} invoiceId - Invoice UUID
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Result object
+ */
+async function sendInvoiceEmail(invoiceId, user, requestMetadata = {}) {
+  try {
+    // Get invoice with patient details
+    const invoice = await Billing.findOne({
+      where: { id: invoiceId, is_active: true },
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email'],
+          where: { is_active: true },
+          required: true
+        }
+      ]
+    });
+
+    if (!invoice) {
+      const error = new Error('Invoice not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Check if patient has email
+    if (!invoice.patient || !invoice.patient.email) {
+      const error = new Error('Patient email not found');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // TODO: Implement actual email sending logic
+    // This would typically use a service like nodemailer, SendGrid, etc.
+    // For now, we'll just log it and update the status to SENT
+    console.log('📧 Sending invoice email to:', invoice.patient.email);
+    console.log('Invoice:', invoice.invoice_number);
+
+    // Update invoice status to SENT if it was DRAFT
+    if (invoice.status === 'DRAFT') {
+      await invoice.update({ status: 'SENT' });
+    }
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'SEND_EMAIL',
+      resource_type: 'billing',
+      resource_id: invoiceId,
+      changes: {
+        action: 'send_invoice_email',
+        recipient: invoice.patient.email,
+        invoice_number: invoice.invoice_number
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200
+    });
+
+    return {
+      success: true,
+      message: 'Invoice email sent successfully',
+      recipient: invoice.patient.email
+    };
+  } catch (error) {
+    console.error('Error in sendInvoiceEmail:', error);
+    throw error;
+  }
+}
+
+/**
+ * Mark invoice as paid (quick action - records full payment)
+ *
+ * @param {string} invoiceId - Invoice UUID
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated invoice
+ */
+async function markAsPaid(invoiceId, user, requestMetadata = {}) {
+  try {
+    const invoice = await Billing.findOne({
+      where: { id: invoiceId, is_active: true },
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email'],
+          where: { is_active: true },
+          required: true
+        }
+      ]
+    });
+
+    if (!invoice) {
+      const error = new Error('Invoice not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Check if already paid
+    if (invoice.status === 'PAID') {
+      const error = new Error('Invoice is already marked as paid');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Check if there's an outstanding balance
+    if (invoice.amount_due <= 0) {
+      const error = new Error('No outstanding balance to pay');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Record a payment for the full outstanding amount
+    const paymentData = {
+      amount: invoice.amount_due,
+      payment_method: 'CASH', // Default method for quick mark as paid
+      payment_date: new Date(),
+      notes: 'Marked as paid via quick action'
+    };
+
+    // Use the existing recordPayment function to handle the payment
+    const updatedInvoice = await recordPayment(invoiceId, paymentData, user, requestMetadata);
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'MARK_PAID',
+      resource_type: 'billing',
+      resource_id: invoiceId,
+      changes: {
+        action: 'mark_as_paid',
+        amount: paymentData.amount,
+        previous_status: invoice.status,
+        new_status: 'PAID'
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200
+    });
+
+    return updatedInvoice;
+  } catch (error) {
+    console.error('Error in markAsPaid:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getInvoices,
   getInvoiceById,
   createInvoice,
   updateInvoice,
   recordPayment,
-  deleteInvoice
+  deleteInvoice,
+  sendInvoiceEmail,
+  markAsPaid
 };

@@ -66,3 +66,36 @@ export const deleteInvoice = async (id) => {
   const response = await api.delete(`/api/billing/${id}`);
   return response.data;
 };
+
+/**
+ * Send invoice by email to patient
+ * @param {string} id - Invoice UUID
+ * @returns {Promise<object>} Response with success message
+ */
+export const sendInvoiceEmail = async (id) => {
+  const response = await api.post(`/api/billing/${id}/send-email`);
+  return response.data;
+};
+
+/**
+ * Mark invoice as paid (quick action)
+ * @param {string} id - Invoice UUID
+ * @returns {Promise<object>} Updated invoice
+ */
+export const markAsPaid = async (id) => {
+  const response = await api.post(`/api/billing/${id}/mark-paid`);
+  return response.data;
+};
+
+/**
+ * Export invoices to CSV
+ * @param {object} filters - Filter parameters (start_date, end_date, status)
+ * @returns {Promise<Blob>} CSV file as blob
+ */
+export const exportInvoicesCSV = async (filters = {}) => {
+  const response = await api.get('/api/billing/export/csv', {
+    params: filters,
+    responseType: 'blob'
+  });
+  return response.data;
+};
