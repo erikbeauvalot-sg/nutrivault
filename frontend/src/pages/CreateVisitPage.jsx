@@ -107,8 +107,22 @@ const CreateVisitPage = () => {
   };
 
   const setToNow = () => {
-    const now = new Date();
-    const formattedNow = now.toISOString().slice(0, 16);
+    // Get current time in Paris timezone (Europe/Paris)
+    const nowInParis = new Date().toLocaleString('en-US', {
+      timeZone: 'Europe/Paris',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+
+    // Parse the formatted string to create a proper datetime-local format (YYYY-MM-DDTHH:mm)
+    const [datePart, timePart] = nowInParis.split(', ');
+    const [month, day, year] = datePart.split('/');
+    const formattedNow = `${year}-${month}-${day}T${timePart}`;
+
     setFormData(prev => ({ ...prev, visit_date: formattedNow }));
   };
 
@@ -276,9 +290,9 @@ const CreateVisitPage = () => {
                                 variant="outline-secondary"
                                 size="sm"
                                 onClick={setToNow}
-                                title="Set to current time"
+                                title={t('visits.setToNow', 'Set to current time (Paris)')}
                               >
-                                🕐 Now
+                                🕐 {t('visits.now', 'Maintenant')}
                               </Button>
                             </div>
                           </Form.Group>

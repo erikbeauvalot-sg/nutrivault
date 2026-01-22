@@ -431,7 +431,9 @@
     "finishAndInvoiceStep2": "Générer automatiquement une facture",
     "finishAndInvoiceStep3": "Envoyer la facture par email au patient",
     "finishAndInvoiceNoEmail": "La facture sera créée mais pas envoyée (patient sans email)",
-    "finishAndInvoiceContinue": "Voulez-vous continuer ?"
+    "finishAndInvoiceContinue": "Voulez-vous continuer ?",
+    "now": "Maintenant",
+    "setToNow": "Définir à l'heure actuelle (Paris)"
   },
   "dashboard": {
     "title": "Tableau de bord",

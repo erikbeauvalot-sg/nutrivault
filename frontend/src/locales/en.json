@@ -426,7 +426,9 @@
     "finishAndInvoiceStep2": "Automatically generate an invoice",
     "finishAndInvoiceStep3": "Send the invoice by email to the patient",
     "finishAndInvoiceNoEmail": "Invoice will be created but not sent (patient has no email)",
-    "finishAndInvoiceContinue": "Do you want to continue?"
+    "finishAndInvoiceContinue": "Do you want to continue?",
+    "now": "Now",
+    "setToNow": "Set to current time (Paris)"
   },
   "dashboard": {
     "title": "Dashboard",
