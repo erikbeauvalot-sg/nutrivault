@@ -1,0 +1,306 @@
+/**
+ * AgendaPage Styles
+ * Calendar and agenda view styling with status-based colors
+ */
+
+.agenda-page {
+  min-height: calc(100vh - 100px);
+}
+
+/* Toolbar Styles */
+.agenda-toolbar {
+  padding: 1rem 0;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.date-range-label {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+/* Calendar Container */
+.calendar-container {
+  margin-top: 1rem;
+}
+
+/* Calendar Event Styles */
+.calendar-event {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  padding: 2px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.event-icon {
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.event-title {
+  flex-grow: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  flex-shrink: 0;
+  display: none; /* Hide on small events */
+}
+
+/* Show badge on larger views */
+.rbc-event-content .event-badge {
+  display: inline-block;
+}
+
+/* Status-Based Event Colors (using inline styles from eventStyleGetter) */
+.rbc-event {
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.rbc-event:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+/* Calendar View Customization */
+.rbc-calendar {
+  font-family: inherit;
+}
+
+.rbc-header {
+  padding: 10px 5px;
+  font-weight: 600;
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.rbc-today {
+  background-color: #e7f3ff;
+}
+
+.rbc-off-range-bg {
+  background-color: #f8f9fa;
+}
+
+.rbc-time-slot {
+  min-height: 40px;
+}
+
+.rbc-current-time-indicator {
+  background-color: #dc3545;
+  height: 2px;
+}
+
+/* Time gutter styling */
+.rbc-time-gutter {
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+/* Selected slot styling */
+.rbc-slot-selection {
+  background-color: rgba(13, 110, 253, 0.2);
+  border: 1px dashed #0d6efd;
+}
+
+/* Mobile List View */
+.mobile-list-view {
+  padding: 0;
+}
+
+.visit-list-item {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.visit-list-item:hover {
+  background-color: #f8f9fa;
+}
+
+.visit-list-item .fw-bold {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.visit-list-item .text-muted {
+  font-size: 0.875rem;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .agenda-toolbar {
+    padding: 0.5rem 0;
+  }
+
+  .date-range-label {
+    font-size: 1rem;
+  }
+
+  .agenda-toolbar .btn-group {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
+  .agenda-toolbar .btn {
+    flex: 1;
+  }
+
+  .calendar-container {
+    display: none; /* Hide calendar on mobile */
+  }
+
+  .mobile-list-view {
+    display: block;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-list-view {
+    display: none; /* Hide list view on desktop */
+  }
+}
+
+/* Month view event styling */
+.rbc-month-view .rbc-event {
+  padding: 2px 4px;
+}
+
+.rbc-month-view .event-badge {
+  display: none; /* Hide status badge in month view to save space */
+}
+
+/* Week and day view event styling */
+.rbc-time-slot .rbc-event {
+  padding: 4px 6px;
+}
+
+/* Agenda view (if enabled) */
+.rbc-agenda-view {
+  font-size: 0.9rem;
+}
+
+.rbc-agenda-view table {
+  border: 1px solid #dee2e6;
+}
+
+.rbc-agenda-date-cell,
+.rbc-agenda-time-cell {
+  padding: 8px;
+  border-right: 1px solid #dee2e6;
+}
+
+.rbc-agenda-event-cell {
+  padding: 8px;
+}
+
+/* Loading state */
+.agenda-page .spinner-border {
+  width: 3rem;
+  height: 3rem;
+}
+
+/* Empty state */
+.agenda-page .alert-info {
+  margin: 2rem auto;
+  max-width: 500px;
+}
+
+/* Event details modal customization */
+.modal-body .row {
+  margin-bottom: 0;
+}
+
+.modal-body .col-4 {
+  padding-right: 0.5rem;
+}
+
+.modal-body .col-8 {
+  padding-left: 0.5rem;
+}
+
+/* Print styles */
+@media print {
+  .agenda-toolbar,
+  .agenda-page button {
+    display: none;
+  }
+
+  .rbc-calendar {
+    height: auto !important;
+  }
+
+  .rbc-event {
+    page-break-inside: avoid;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .rbc-event {
+    border-width: 2px;
+  }
+
+  .rbc-today {
+    background-color: #cfe2ff;
+    border: 2px solid #0d6efd;
+  }
+}
+
+/* Dark mode support (if implemented) */
+@media (prefers-color-scheme: dark) {
+  .rbc-header {
+    background-color: #343a40;
+    color: #f8f9fa;
+    border-color: #495057;
+  }
+
+  .rbc-today {
+    background-color: #1e3a5f;
+  }
+
+  .rbc-off-range-bg {
+    background-color: #212529;
+  }
+
+  .date-range-label {
+    color: #f8f9fa;
+  }
+}
+
+/* Accessibility improvements */
+.rbc-event:focus {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+}
+
+.rbc-day-slot .rbc-time-slot:focus {
+  outline: 1px dashed #0d6efd;
+}
+
+/* Animation for event hover */
+@keyframes eventPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(13, 110, 253, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(13, 110, 253, 0);
+  }
+}
+
+.rbc-event.pulse {
+  animation: eventPulse 1s ease-out;
+}

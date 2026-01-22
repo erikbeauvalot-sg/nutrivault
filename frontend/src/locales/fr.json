@@ -39,6 +39,7 @@
   "navigation": {
     "dashboard": "Tableau de bord",
     "patients": "Patients",
+    "agenda": "Agenda",
     "visits": "Visites",
     "billing": "Facturation",
     "reports": "Rapports",
@@ -250,6 +251,26 @@
       "addFailed": "Échec de l'ajout de l'étiquette",
       "removeFailed": "Échec de la suppression de l'étiquette"
     }
+  },
+  "agenda": {
+    "title": "Agenda et Calendrier",
+    "todayButton": "Aujourd'hui",
+    "dayView": "Jour",
+    "weekView": "Semaine",
+    "monthView": "Mois",
+    "noEventsToday": "Aucun rendez-vous",
+    "selectTimeSlot": "Cliquer pour planifier",
+    "eventDetails": "Détails du rendez-vous",
+    "createFromSlot": "Planifier rendez-vous",
+    "loadingEvents": "Chargement...",
+    "viewFullDetails": "Voir détails complets",
+    "status": "Statut",
+    "duration": "Durée",
+    "visitType": "Type de visite",
+    "quickCreate": "Planification rapide",
+    "goToDate": "Aller à la date",
+    "listView": "Vue liste",
+    "calendarView": "Vue calendrier"
   },
   "visits": {
     "title": "Visites",

@@ -37,6 +37,7 @@
   "navigation": {
     "dashboard": "Dashboard",
     "patients": "Patients",
+    "agenda": "Agenda",
     "visits": "Visits",
     "billing": "Billing",
     "reports": "Reports",
@@ -246,6 +247,26 @@
       "addFailed": "Failed to add tag",
       "removeFailed": "Failed to remove tag"
     }
+  },
+  "agenda": {
+    "title": "Agenda & Calendar",
+    "todayButton": "Today",
+    "dayView": "Day",
+    "weekView": "Week",
+    "monthView": "Month",
+    "noEventsToday": "No appointments scheduled",
+    "selectTimeSlot": "Click to schedule",
+    "eventDetails": "Appointment Details",
+    "createFromSlot": "Schedule Appointment",
+    "loadingEvents": "Loading...",
+    "viewFullDetails": "View Full Details",
+    "status": "Status",
+    "duration": "Duration",
+    "visitType": "Visit Type",
+    "quickCreate": "Quick Schedule",
+    "goToDate": "Go to Date",
+    "listView": "List View",
+    "calendarView": "Calendar View"
   },
   "visits": {
     "title": "Visits",

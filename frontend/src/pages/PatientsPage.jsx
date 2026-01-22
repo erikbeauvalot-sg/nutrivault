@@ -50,6 +50,8 @@ const PatientsPage = () => {
       
       const queryString = params.toString();
       const url = `/api/patients${queryString ? `?${queryString}` : ''}`;
+
+      console.log('Fetching patients from URL:', url);
       
       const response = await api.get(url);
       
