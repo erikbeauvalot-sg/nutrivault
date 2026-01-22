@@ -279,7 +279,7 @@ const PatientDetailPage = () => {
                           <Col sm={5}><strong>{t('patients.statusLabel', 'Status:')}</strong></Col>
                           <Col sm={7}>
                             <Badge bg={patient.is_active ? 'success' : 'secondary'}>
-                              {patient.is_active ? 'Active' : 'Inactive'}
+                              {patient.is_active ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
                             </Badge>
                           </Col>
                         </Row>
