@@ -12,6 +12,7 @@ const User = db.User;
 const Patient = db.Patient;
 const Visit = db.Visit;
 const auditService = require('./audit.service');
+const emailService = require('./email.service');
 const fs = require('fs').promises;
 const path = require('path');
 const { Op } = db.Sequelize;
@@ -736,8 +737,18 @@ async function sendDocumentToPatient(user, documentId, patientId, shareData = {}
       ]
     });
 
-    // TODO: Implement actual email/portal sending logic
-    console.log(`📄 Document shared with patient: ${patient.email}`);
+    // Send email notification if sent_via is email
+    if (shareData.sent_via === 'email' || !shareData.sent_via) {
+      console.log(`📄 Sending document share email to: ${patient.email}`);
+      await emailService.sendDocumentShareEmail(
+        document,
+        patient,
+        user,
+        shareData.notes
+      );
+    } else {
+      console.log(`📄 Document shared with patient via ${shareData.sent_via}: ${patient.email}`);
+    }
 
     // Audit log
     await auditService.log({

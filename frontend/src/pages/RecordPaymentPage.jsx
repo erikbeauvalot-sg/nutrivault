@@ -72,7 +72,7 @@ const RecordPaymentPage = () => {
     }
 
     if (invoice && amount > invoice.amount_due) {
-      setError(t('billing.paymentAmountExceedsBalance', `Payment amount cannot exceed the outstanding balance of $${invoice.amount_due.toFixed(2)}`));
+      setError(t('billing.paymentAmountExceedsBalance', `Payment amount cannot exceed the outstanding balance of ${invoice.amount_due.toFixed(2)} €`));
       return false;
     }
 

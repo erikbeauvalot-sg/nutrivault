@@ -36,7 +36,7 @@ const RecordPaymentModal = ({ show, onHide, onSubmit, invoice }) => {
     }
 
     if (invoice && amount > invoice.amount_due) {
-      setError(`Payment amount cannot exceed the outstanding balance of $${invoice.amount_due.toFixed(2)}`);
+      setError(`Payment amount cannot exceed the outstanding balance of ${invoice.amount_due.toFixed(2)} €`);
       return false;
     }
 

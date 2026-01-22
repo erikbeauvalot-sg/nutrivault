@@ -11,6 +11,7 @@ const Patient = db.Patient;
 const Visit = db.Visit;
 const User = db.User;
 const auditService = require('./audit.service');
+const emailService = require('./email.service');
 const { Op } = db.Sequelize;
 
 /**
@@ -568,11 +569,9 @@ async function sendInvoiceEmail(invoiceId, user, requestMetadata = {}) {
       throw error;
     }
 
-    // TODO: Implement actual email sending logic
-    // This would typically use a service like nodemailer, SendGrid, etc.
-    // For now, we'll just log it and update the status to SENT
+    // Send invoice email
     console.log('📧 Sending invoice email to:', invoice.patient.email);
-    console.log('Invoice:', invoice.invoice_number);
+    const emailResult = await emailService.sendInvoiceEmail(invoice, invoice.patient);
 
     // Update invoice status to SENT if it was DRAFT
     if (invoice.status === 'DRAFT') {

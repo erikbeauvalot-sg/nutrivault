@@ -216,7 +216,7 @@ const BillingPage = () => {
                       <p>{currentInvoice.patient?.first_name} {currentInvoice.patient?.last_name}</p>
                       
                       <h5>{t('billing.amount', 'Amount')}</h5>
-                      <p className="h4">${currentInvoice.amount?.toFixed(2)}</p>
+                      <p className="h4">{currentInvoice.amount?.toFixed(2)} €</p>
                       
                       <h5>{t('billing.dueDate', 'Due Date')}</h5>
                       <p>{new Date(currentInvoice.due_date).toLocaleDateString()}</p>
