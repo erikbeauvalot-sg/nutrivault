@@ -31,7 +31,8 @@
     "paid": "Paid",
     "pending": "Pending",
     "overdue": "Overdue",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "comingSoon": "Soon"
   },
   "navigation": {
     "dashboard": "Dashboard",

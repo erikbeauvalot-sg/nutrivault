@@ -43,7 +43,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           >
             <span className="sidebar-icon">{item.icon}</span>
             <span className="sidebar-label">{item.label}</span>
-            {item.disabled && <span className="badge bg-secondary ms-auto">Soon</span>}
+            {item.disabled && <span className="badge bg-secondary ms-auto">{t('common.comingSoon')}</span>}
           </Nav.Link>
         ))}
       </Nav>
