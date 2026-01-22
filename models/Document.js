@@ -42,6 +42,22 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
+    tags: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'Array of tags for document organization and search'
+    },
+    category: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: 'Document category: recipes, guides, templates, educational, etc.'
+    },
+    is_template: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: 'Whether this document is a reusable template from the library'
+    },
     is_active: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

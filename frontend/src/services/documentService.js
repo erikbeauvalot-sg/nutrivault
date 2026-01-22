@@ -95,6 +95,78 @@ export const getDocumentsForResource = async (resourceType, resourceId) => {
 };
 
 /**
+ * Search documents with advanced filters
+ * @param {object} filters - Search filters (tags, category, is_template, search, page, limit)
+ * @returns {Promise<object>} Documents array and pagination info
+ */
+export const searchDocuments = async (filters = {}) => {
+  const response = await api.get('/api/documents/search', { params: filters });
+  return response.data;
+};
+
+/**
+ * Add tags to a document
+ * @param {string} id - Document UUID
+ * @param {string[]} tags - Array of tags to add
+ * @returns {Promise<object>} Updated document
+ */
+export const addTags = async (id, tags) => {
+  const response = await api.post(`/api/documents/${id}/tags`, { tags });
+  return response.data;
+};
+
+/**
+ * Remove tags from a document
+ * @param {string} id - Document UUID
+ * @param {string[]} tags - Array of tags to remove
+ * @returns {Promise<object>} Updated document
+ */
+export const removeTags = async (id, tags) => {
+  const response = await api.delete(`/api/documents/${id}/tags`, { data: { tags } });
+  return response.data;
+};
+
+/**
+ * Send document to a patient
+ * @param {string} id - Document UUID
+ * @param {string} patientId - Patient UUID
+ * @param {object} options - Send options (sent_via, notes)
+ * @returns {Promise<object>} Document share record
+ */
+export const sendToPatient = async (id, patientId, options = {}) => {
+  const response = await api.post(`/api/documents/${id}/send-to-patient`, {
+    patient_id: patientId,
+    ...options
+  });
+  return response.data;
+};
+
+/**
+ * Send document to multiple patients
+ * @param {string} id - Document UUID
+ * @param {string[]} patientIds - Array of patient UUIDs
+ * @param {object} options - Send options (sent_via, notes)
+ * @returns {Promise<object>} Results with successful and failed sends
+ */
+export const sendToGroup = async (id, patientIds, options = {}) => {
+  const response = await api.post(`/api/documents/${id}/send-to-group`, {
+    patient_ids: patientIds,
+    ...options
+  });
+  return response.data;
+};
+
+/**
+ * Get document sharing history
+ * @param {string} id - Document UUID
+ * @returns {Promise<array>} Array of document share records
+ */
+export const getDocumentShares = async (id) => {
+  const response = await api.get(`/api/documents/${id}/shares`);
+  return response.data;
+};
+
+/**
  * Helper function to create FormData for file upload
  * @param {File} file - File object
  * @param {string} resourceType - Type of resource

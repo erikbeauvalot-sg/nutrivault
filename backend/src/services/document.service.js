@@ -7,6 +7,7 @@
 
 const db = require('../../../models');
 const Document = db.Document;
+const DocumentShare = db.DocumentShare;
 const User = db.User;
 const Patient = db.Patient;
 const Visit = db.Visit;
@@ -505,6 +506,365 @@ async function getDocumentStats(user, requestMetadata = {}) {
   }
 }
 
+/**
+ * Search documents with advanced filters (tags, category, templates)
+ * @param {Object} user - Authenticated user object
+ * @param {Object} filters - Search filters
+ * @param {string[]} filters.tags - Array of tags to filter by
+ * @param {string} filters.category - Category to filter by
+ * @param {boolean} filters.is_template - Filter templates only
+ * @param {string} filters.search - Search by filename or description
+ * @param {number} filters.page - Page number (default 1)
+ * @param {number} filters.limit - Items per page (default 20)
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Documents, total count, and pagination info
+ */
+async function searchDocuments(user, filters = {}, requestMetadata = {}) {
+  try {
+    const whereClause = { is_active: true };
+
+    // Filter by category
+    if (filters.category) {
+      whereClause.category = filters.category;
+    }
+
+    // Filter by template flag
+    if (filters.is_template !== undefined) {
+      whereClause.is_template = filters.is_template;
+    }
+
+    // Filter by tags (PostgreSQL JSON contains operator)
+    if (filters.tags && Array.isArray(filters.tags) && filters.tags.length > 0) {
+      // For PostgreSQL, check if any of the provided tags exist in the tags JSON array
+      whereClause.tags = {
+        [Op.contains]: filters.tags
+      };
+    }
+
+    // Search by filename or description
+    if (filters.search) {
+      whereClause[Op.or] = [
+        { file_name: { [Op.like]: `%${filters.search}%` } },
+        { description: { [Op.like]: `%${filters.search}%` } }
+      ];
+    }
+
+    // RBAC: Apply role-based filtering
+    if (user && user.role) {
+      if (user.role.name === 'VIEWER') {
+        whereClause.uploaded_by = user.id;
+      }
+    }
+
+    const page = parseInt(filters.page) || 1;
+    const limit = parseInt(filters.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await Document.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          as: 'uploader',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        }
+      ],
+      order: [['created_at', 'DESC']],
+      limit,
+      offset
+    });
+
+    return {
+      documents: rows,
+      total: count,
+      page,
+      limit,
+      totalPages: Math.ceil(count / limit)
+    };
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Add tags to a document
+ * @param {Object} user - Authenticated user object
+ * @param {string} documentId - Document UUID
+ * @param {string[]} newTags - Array of tags to add
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated document
+ */
+async function addTagsToDocument(user, documentId, newTags, requestMetadata = {}) {
+  try {
+    const document = await getDocumentById(user, documentId, requestMetadata);
+
+    // Check update permission
+    const hasUpdatePermission = user.permissions?.some(p => p.code === 'documents.update');
+    if (!hasUpdatePermission && user.role.name !== 'ADMIN' && document.uploaded_by !== user.id) {
+      throw new Error('Insufficient permissions to update this document');
+    }
+
+    // Merge existing tags with new tags (avoid duplicates)
+    const existingTags = document.tags || [];
+    const updatedTags = [...new Set([...existingTags, ...newTags])];
+
+    await document.update({ tags: updatedTags });
+
+    // Fetch updated document
+    const updatedDocument = await getDocumentById(user, documentId, requestMetadata);
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      action: 'UPDATE',
+      resource_type: 'document',
+      resource_id: documentId,
+      details: { action: 'add_tags', added_tags: newTags, final_tags: updatedTags },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return updatedDocument;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Remove tags from a document
+ * @param {Object} user - Authenticated user object
+ * @param {string} documentId - Document UUID
+ * @param {string[]} tagsToRemove - Array of tags to remove
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated document
+ */
+async function removeTagsFromDocument(user, documentId, tagsToRemove, requestMetadata = {}) {
+  try {
+    const document = await getDocumentById(user, documentId, requestMetadata);
+
+    // Check update permission
+    const hasUpdatePermission = user.permissions?.some(p => p.code === 'documents.update');
+    if (!hasUpdatePermission && user.role.name !== 'ADMIN' && document.uploaded_by !== user.id) {
+      throw new Error('Insufficient permissions to update this document');
+    }
+
+    // Remove specified tags
+    const existingTags = document.tags || [];
+    const updatedTags = existingTags.filter(tag => !tagsToRemove.includes(tag));
+
+    await document.update({ tags: updatedTags });
+
+    // Fetch updated document
+    const updatedDocument = await getDocumentById(user, documentId, requestMetadata);
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      action: 'UPDATE',
+      resource_type: 'document',
+      resource_id: documentId,
+      details: { action: 'remove_tags', removed_tags: tagsToRemove, final_tags: updatedTags },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return updatedDocument;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Send document to a patient
+ * @param {Object} user - Authenticated user object
+ * @param {string} documentId - Document UUID
+ * @param {string} patientId - Patient UUID
+ * @param {Object} shareData - Share metadata
+ * @param {string} shareData.sent_via - Delivery method (email, portal, etc.)
+ * @param {string} shareData.notes - Optional notes about why this was shared
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Document share record
+ */
+async function sendDocumentToPatient(user, documentId, patientId, shareData = {}, requestMetadata = {}) {
+  try {
+    // Verify document exists and user has access
+    const document = await getDocumentById(user, documentId, requestMetadata);
+
+    // Verify patient exists
+    const patient = await Patient.findOne({
+      where: { id: patientId, is_active: true }
+    });
+
+    if (!patient) {
+      throw new Error('Patient not found');
+    }
+
+    // Check if user has permission to share documents
+    const hasSharePermission = user.permissions?.some(p => p.code === 'documents.share');
+    if (!hasSharePermission && user.role.name !== 'ADMIN') {
+      throw new Error('Insufficient permissions to share documents');
+    }
+
+    // Create document share record
+    const documentShare = await DocumentShare.create({
+      document_id: documentId,
+      patient_id: patientId,
+      shared_by: user.id,
+      sent_via: shareData.sent_via || 'email',
+      sent_at: new Date(),
+      notes: shareData.notes || null
+    });
+
+    // Fetch complete share record with associations
+    const completeShare = await DocumentShare.findByPk(documentShare.id, {
+      include: [
+        {
+          model: Document,
+          as: 'document',
+          attributes: ['id', 'file_name', 'description', 'category']
+        },
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email']
+        },
+        {
+          model: User,
+          as: 'sharedByUser',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        }
+      ]
+    });
+
+    // TODO: Implement actual email/portal sending logic
+    console.log(`📄 Document shared with patient: ${patient.email}`);
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      action: 'SHARE',
+      resource_type: 'document',
+      resource_id: documentId,
+      details: {
+        action: 'share_with_patient',
+        patient_id: patientId,
+        sent_via: shareData.sent_via || 'email',
+        notes: shareData.notes
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return completeShare;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Send document to multiple patients
+ * @param {Object} user - Authenticated user object
+ * @param {string} documentId - Document UUID
+ * @param {string[]} patientIds - Array of patient UUIDs
+ * @param {Object} shareData - Share metadata
+ * @param {string} shareData.sent_via - Delivery method (email, portal, etc.)
+ * @param {string} shareData.notes - Optional notes about why this was shared
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Array of document share records and error log
+ */
+async function sendDocumentToGroup(user, documentId, patientIds, shareData = {}, requestMetadata = {}) {
+  try {
+    // Verify document exists and user has access
+    const document = await getDocumentById(user, documentId, requestMetadata);
+
+    // Check if user has permission to share documents
+    const hasSharePermission = user.permissions?.some(p => p.code === 'documents.share');
+    if (!hasSharePermission && user.role.name !== 'ADMIN') {
+      throw new Error('Insufficient permissions to share documents');
+    }
+
+    const results = {
+      successful: [],
+      failed: []
+    };
+
+    // Send to each patient
+    for (const patientId of patientIds) {
+      try {
+        const share = await sendDocumentToPatient(user, documentId, patientId, shareData, requestMetadata);
+        results.successful.push(share);
+      } catch (error) {
+        results.failed.push({
+          patient_id: patientId,
+          error: error.message
+        });
+      }
+    }
+
+    // Audit log for group send
+    await auditService.log({
+      user_id: user.id,
+      action: 'SHARE',
+      resource_type: 'document',
+      resource_id: documentId,
+      details: {
+        action: 'share_with_group',
+        total_patients: patientIds.length,
+        successful: results.successful.length,
+        failed: results.failed.length,
+        sent_via: shareData.sent_via || 'email'
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return results;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Get document sharing history
+ * @param {Object} user - Authenticated user object
+ * @param {string} documentId - Document UUID
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Array>} Array of document share records
+ */
+async function getDocumentShares(user, documentId, requestMetadata = {}) {
+  try {
+    // Verify document exists and user has access
+    const document = await getDocumentById(user, documentId, requestMetadata);
+
+    // Check read permission
+    const hasReadPermission = user.permissions?.some(p => p.code === 'documents.read');
+    if (!hasReadPermission && user.role.name !== 'ADMIN' && document.uploaded_by !== user.id) {
+      throw new Error('Insufficient permissions to view document shares');
+    }
+
+    const shares = await DocumentShare.findAll({
+      where: { document_id: documentId },
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email']
+        },
+        {
+          model: User,
+          as: 'sharedByUser',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        }
+      ],
+      order: [['sent_at', 'DESC']]
+    });
+
+    return shares;
+  } catch (error) {
+    throw error;
+  }
+}
+
 module.exports = {
   uploadDocument,
   getDocuments,
@@ -513,6 +873,12 @@ module.exports = {
   updateDocument,
   deleteDocument,
   getDocumentStats,
+  searchDocuments,
+  addTagsToDocument,
+  removeTagsFromDocument,
+  sendDocumentToPatient,
+  sendDocumentToGroup,
+  getDocumentShares,
   ALLOWED_MIME_TYPES,
   MAX_FILE_SIZE
 };

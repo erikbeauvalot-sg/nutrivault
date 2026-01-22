@@ -22,6 +22,7 @@ db.Visit = require('./Visit')(sequelize, DataTypes);
 db.VisitMeasurement = require('./VisitMeasurement')(sequelize, DataTypes);
 db.Billing = require('./Billing')(sequelize, DataTypes);
 db.Document = require('./Document')(sequelize, DataTypes);
+db.DocumentShare = require('./DocumentShare')(sequelize, DataTypes);
 db.AuditLog = require('./AuditLog')(sequelize, DataTypes);
 db.RefreshToken = require('./RefreshToken')(sequelize, DataTypes);
 db.ApiKey = require('./ApiKey')(sequelize, DataTypes);
@@ -140,6 +141,36 @@ db.Document.belongsTo(db.User, {
 db.User.hasMany(db.Document, {
   foreignKey: 'uploaded_by',
   as: 'uploaded_documents'
+});
+
+// DocumentShare - Document relationship
+db.DocumentShare.belongsTo(db.Document, {
+  foreignKey: 'document_id',
+  as: 'document'
+});
+db.Document.hasMany(db.DocumentShare, {
+  foreignKey: 'document_id',
+  as: 'shares'
+});
+
+// DocumentShare - Patient relationship
+db.DocumentShare.belongsTo(db.Patient, {
+  foreignKey: 'patient_id',
+  as: 'patient'
+});
+db.Patient.hasMany(db.DocumentShare, {
+  foreignKey: 'patient_id',
+  as: 'shared_documents'
+});
+
+// DocumentShare - User (shared_by) relationship
+db.DocumentShare.belongsTo(db.User, {
+  foreignKey: 'shared_by',
+  as: 'sharedByUser'
+});
+db.User.hasMany(db.DocumentShare, {
+  foreignKey: 'shared_by',
+  as: 'documents_shared'
 });
 
 // RefreshToken - User relationship

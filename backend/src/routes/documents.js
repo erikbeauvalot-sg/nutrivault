@@ -102,6 +102,102 @@ const queryValidation = [
     .withMessage('Limit must be between 1 and 100')
 ];
 
+/**
+ * Validation rules for advanced search
+ */
+const searchValidation = [
+  query('tags')
+    .optional()
+    .custom((value) => {
+      if (Array.isArray(value)) {
+        return value.every(tag => typeof tag === 'string' && tag.length <= 50);
+      }
+      return typeof value === 'string' && value.length <= 50;
+    })
+    .withMessage('Tags must be strings with max length 50'),
+
+  query('category')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('Category must be less than 100 characters'),
+
+  query('is_template')
+    .optional()
+    .isBoolean()
+    .withMessage('is_template must be a boolean'),
+
+  query('search')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('Search term must be less than 100 characters'),
+
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Page must be a positive integer'),
+
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('Limit must be between 1 and 100')
+];
+
+/**
+ * Validation rules for tag operations
+ */
+const tagsValidation = [
+  body('tags')
+    .isArray({ min: 1 })
+    .withMessage('Tags must be a non-empty array'),
+
+  body('tags.*')
+    .isString()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Each tag must be a string between 1 and 50 characters')
+];
+
+/**
+ * Validation rules for sending to patient
+ */
+const sendToPatientValidation = [
+  body('patient_id')
+    .isUUID()
+    .withMessage('patient_id must be a valid UUID'),
+
+  body('sent_via')
+    .optional()
+    .isIn(['email', 'portal', 'sms', 'other'])
+    .withMessage('sent_via must be email, portal, sms, or other'),
+
+  body('notes')
+    .optional()
+    .isLength({ max: 500 })
+    .withMessage('Notes must be less than 500 characters')
+];
+
+/**
+ * Validation rules for sending to group
+ */
+const sendToGroupValidation = [
+  body('patient_ids')
+    .isArray({ min: 1 })
+    .withMessage('patient_ids must be a non-empty array'),
+
+  body('patient_ids.*')
+    .isUUID()
+    .withMessage('Each patient_id must be a valid UUID'),
+
+  body('sent_via')
+    .optional()
+    .isIn(['email', 'portal', 'sms', 'other'])
+    .withMessage('sent_via must be email, portal, sms, or other'),
+
+  body('notes')
+    .optional()
+    .isLength({ max: 500 })
+    .withMessage('Notes must be less than 500 characters')
+];
+
 // GET /api/documents - Get all documents
 router.get(
   '/',
@@ -118,6 +214,16 @@ router.get(
   authenticate,
   requirePermission('documents.read'),
   documentController.getDocumentStats
+);
+
+// GET /api/documents/search - Search documents with advanced filters
+router.get(
+  '/search',
+  authenticate,
+  requirePermission('documents.read'),
+  searchValidation,
+  validate,
+  documentController.searchDocuments
 );
 
 // GET /api/documents/:id - Get single document
@@ -169,6 +275,60 @@ router.delete(
   documentIdValidation,
   validate,
   documentController.deleteDocument
+);
+
+// POST /api/documents/:id/tags - Add tags to document
+router.post(
+  '/:id/tags',
+  authenticate,
+  requirePermission('documents.update'),
+  documentIdValidation,
+  tagsValidation,
+  validate,
+  documentController.addTags
+);
+
+// DELETE /api/documents/:id/tags - Remove tags from document
+router.delete(
+  '/:id/tags',
+  authenticate,
+  requirePermission('documents.update'),
+  documentIdValidation,
+  tagsValidation,
+  validate,
+  documentController.removeTags
+);
+
+// POST /api/documents/:id/send-to-patient - Send document to patient
+router.post(
+  '/:id/send-to-patient',
+  authenticate,
+  requirePermission('documents.share'),
+  documentIdValidation,
+  sendToPatientValidation,
+  validate,
+  documentController.sendToPatient
+);
+
+// POST /api/documents/:id/send-to-group - Send document to group
+router.post(
+  '/:id/send-to-group',
+  authenticate,
+  requirePermission('documents.share'),
+  documentIdValidation,
+  sendToGroupValidation,
+  validate,
+  documentController.sendToGroup
+);
+
+// GET /api/documents/:id/shares - Get document sharing history
+router.get(
+  '/:id/shares',
+  authenticate,
+  requirePermission('documents.read'),
+  documentIdValidation,
+  validate,
+  documentController.getShares
 );
 
 module.exports = router;

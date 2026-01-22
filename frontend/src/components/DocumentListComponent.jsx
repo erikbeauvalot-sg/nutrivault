@@ -26,11 +26,22 @@ const DocumentListComponent = ({
   const [pagination, setPagination] = useState(null);
   const [downloading, setDownloading] = useState(null);
   const [previewDocument, setPreviewDocument] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
   }, [resourceType, resourceId, filters]);
+
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        window.URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const fetchDocuments = async () => {
     try {
@@ -76,14 +87,36 @@ const DocumentListComponent = ({
     }
   };
 
-  const handlePreview = (document) => {
-    setPreviewDocument(document);
-    setShowPreviewModal(true);
+  const handlePreview = async (document) => {
+    try {
+      setLoadingPreview(true);
+      setPreviewDocument(document);
+      setShowPreviewModal(true);
+
+      // Download the file blob with authentication
+      const blob = await documentService.downloadDocument(document.id);
+
+      // Create a local blob URL for preview
+      const url = window.URL.createObjectURL(blob);
+      setPreviewUrl(url);
+    } catch (err) {
+      setError(t('documents.downloadError', 'Failed to load preview'));
+      console.error('Error loading preview:', err);
+      setShowPreviewModal(false);
+    } finally {
+      setLoadingPreview(false);
+    }
   };
 
   const handleClosePreview = () => {
     setShowPreviewModal(false);
     setPreviewDocument(null);
+
+    // Clean up blob URL to free memory
+    if (previewUrl) {
+      window.URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
   };
 
   const handleFilterChange = (field, value) => {
@@ -322,18 +355,25 @@ const DocumentListComponent = ({
         </Modal.Title>
       </Modal.Header>
       <Modal.Body className="text-center">
-        {previewDocument && (
+        {loadingPreview ? (
+          <div className="py-5">
+            <Spinner animation="border" role="status">
+              <span className="visually-hidden">{t('common.loading')}</span>
+            </Spinner>
+            <p className="mt-2">{t('documents.loading', 'Loading preview...')}</p>
+          </div>
+        ) : previewDocument && previewUrl ? (
           <div>
             {previewDocument.mime_type.startsWith('image/') ? (
               <img
-                src={documentService.getDocumentPreviewUrl(previewDocument.id)}
+                src={previewUrl}
                 alt={previewDocument.file_name}
                 className="img-fluid"
                 style={{ maxHeight: '70vh', maxWidth: '100%' }}
               />
             ) : previewDocument.mime_type === 'application/pdf' ? (
               <iframe
-                src={documentService.getDocumentPreviewUrl(previewDocument.id)}
+                src={previewUrl}
                 title={previewDocument.file_name}
                 style={{ width: '100%', height: '70vh', border: 'none' }}
               />
@@ -345,12 +385,12 @@ const DocumentListComponent = ({
                   variant="outline-primary"
                   onClick={() => handleDownload(previewDocument)}
                 >
-                  ⬇️ {t('documents.download', 'Download')} {t('documents.instead', 'instead')}
+                  ⬇️ {t('documents.download', 'Download')}
                 </Button>
               </div>
             )}
           </div>
-        )}
+        ) : null}
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={handleClosePreview}>

@@ -217,4 +217,185 @@ exports.deleteDocument = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/documents/search - Search documents with advanced filters
+ */
+exports.searchDocuments = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const filters = {
+      tags: req.query.tags ? (Array.isArray(req.query.tags) ? req.query.tags : [req.query.tags]) : undefined,
+      category: req.query.category,
+      is_template: req.query.is_template ? req.query.is_template === 'true' : undefined,
+      search: req.query.search,
+      page: req.query.page,
+      limit: req.query.limit
+    };
+    const requestMetadata = getRequestMetadata(req);
+
+    const result = await documentService.searchDocuments(user, filters, requestMetadata);
+
+    res.json({
+      success: true,
+      data: result.documents,
+      pagination: {
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/documents/:id/tags - Add tags to document
+ */
+exports.addTags = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const { tags } = req.body;
+    const requestMetadata = getRequestMetadata(req);
+
+    if (!tags || !Array.isArray(tags) || tags.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Tags array is required'
+      });
+    }
+
+    const document = await documentService.addTagsToDocument(user, id, tags, requestMetadata);
+
+    res.json({
+      success: true,
+      data: document,
+      message: 'Tags added successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/documents/:id/tags - Remove tags from document
+ */
+exports.removeTags = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const { tags } = req.body;
+    const requestMetadata = getRequestMetadata(req);
+
+    if (!tags || !Array.isArray(tags) || tags.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Tags array is required'
+      });
+    }
+
+    const document = await documentService.removeTagsFromDocument(user, id, tags, requestMetadata);
+
+    res.json({
+      success: true,
+      data: document,
+      message: 'Tags removed successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/documents/:id/send-to-patient - Send document to a patient
+ */
+exports.sendToPatient = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const { patient_id, sent_via, notes } = req.body;
+    const requestMetadata = getRequestMetadata(req);
+
+    if (!patient_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'patient_id is required'
+      });
+    }
+
+    const share = await documentService.sendDocumentToPatient(
+      user,
+      id,
+      patient_id,
+      { sent_via, notes },
+      requestMetadata
+    );
+
+    res.status(201).json({
+      success: true,
+      data: share,
+      message: 'Document sent to patient successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/documents/:id/send-to-group - Send document to multiple patients
+ */
+exports.sendToGroup = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const { patient_ids, sent_via, notes } = req.body;
+    const requestMetadata = getRequestMetadata(req);
+
+    if (!patient_ids || !Array.isArray(patient_ids) || patient_ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'patient_ids array is required'
+      });
+    }
+
+    const results = await documentService.sendDocumentToGroup(
+      user,
+      id,
+      patient_ids,
+      { sent_via, notes },
+      requestMetadata
+    );
+
+    res.status(201).json({
+      success: true,
+      data: results,
+      message: `Document sent to ${results.successful.length} out of ${patient_ids.length} patients`
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/documents/:id/shares - Get document sharing history
+ */
+exports.getShares = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const requestMetadata = getRequestMetadata(req);
+
+    const shares = await documentService.getDocumentShares(user, id, requestMetadata);
+
+    res.json({
+      success: true,
+      data: shares
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.upload = upload;
