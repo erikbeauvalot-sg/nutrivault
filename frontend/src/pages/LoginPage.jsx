@@ -1,6 +1,7 @@
 /**
  * Login Page Component
  * Authentication form with username/password and "Remember Me"
+ * Implements route prefetching for better UX (US-9.2)
  */
 
 import { useState } from 'react';
@@ -9,6 +10,7 @@ import { useForm } from 'react-hook-form';
 import { Container, Card, Form, Button, Alert } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
+import usePrefetchRoutes from '../hooks/usePrefetchRoutes';
 import './LoginPage.css';
 
 const LoginPage = () => {
@@ -17,6 +19,9 @@ const LoginPage = () => {
   const { t } = useTranslation();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Prefetch critical routes while user is on login page (US-9.2)
+  usePrefetchRoutes(true);
 
   const {
     register,

@@ -1,31 +1,50 @@
 /**
  * App Component
  * Main application router with protected routes
+ * Implements lazy loading for performance optimization (US-9.2)
  */
 
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { Spinner } from 'react-bootstrap';
 import { useAuth } from './contexts/AuthContext';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import PatientsPage from './pages/PatientsPage';
-import CreatePatientPage from './pages/CreatePatientPage';
-import EditPatientPage from './pages/EditPatientPage';
-import PatientDetailPage from './pages/PatientDetailPage';
-import AgendaPage from './pages/AgendaPage';
-import VisitsPage from './pages/VisitsPage';
-import CreateVisitPage from './pages/CreateVisitPage';
-import EditVisitPage from './pages/EditVisitPage';
-import VisitDetailPage from './pages/VisitDetailPage';
-import UsersPage from './pages/UsersPage';
-import BillingPage from './pages/BillingPage';
-import CreateInvoicePage from './pages/CreateInvoicePage';
-import EditInvoicePage from './pages/EditInvoicePage';
-import RecordPaymentPage from './pages/RecordPaymentPage';
-import InvoiceDetailPage from './pages/InvoiceDetailPage';
-import ReportsPage from './pages/ReportsPage';
-import DocumentsPage from './pages/DocumentsPage';
-import DocumentUploadPage from './pages/DocumentUploadPage';
 import ProtectedRoute from './components/ProtectedRoute';
+
+// Eager load: Login page (first page users see)
+import LoginPage from './pages/LoginPage';
+
+// Lazy load: All other pages (loaded on demand)
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const PatientsPage = lazy(() => import('./pages/PatientsPage'));
+const CreatePatientPage = lazy(() => import('./pages/CreatePatientPage'));
+const EditPatientPage = lazy(() => import('./pages/EditPatientPage'));
+const PatientDetailPage = lazy(() => import('./pages/PatientDetailPage'));
+const AgendaPage = lazy(() => import('./pages/AgendaPage'));
+const VisitsPage = lazy(() => import('./pages/VisitsPage'));
+const CreateVisitPage = lazy(() => import('./pages/CreateVisitPage'));
+const EditVisitPage = lazy(() => import('./pages/EditVisitPage'));
+const VisitDetailPage = lazy(() => import('./pages/VisitDetailPage'));
+const UsersPage = lazy(() => import('./pages/UsersPage'));
+const BillingPage = lazy(() => import('./pages/BillingPage'));
+const CreateInvoicePage = lazy(() => import('./pages/CreateInvoicePage'));
+const EditInvoicePage = lazy(() => import('./pages/EditInvoicePage'));
+const RecordPaymentPage = lazy(() => import('./pages/RecordPaymentPage'));
+const InvoiceDetailPage = lazy(() => import('./pages/InvoiceDetailPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
+const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
+const DocumentUploadPage = lazy(() => import('./pages/DocumentUploadPage'));
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+    <div className="text-center">
+      <Spinner animation="border" variant="primary" role="status">
+        <span className="visually-hidden">Loading...</span>
+      </Spinner>
+      <p className="mt-3 text-muted">Loading page...</p>
+    </div>
+  </div>
+);
 
 function App() {
   const { loading, isAuthenticated } = useAuth();
@@ -42,24 +61,25 @@ function App() {
   }
 
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route
-        path="/login"
-        element={
-          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
-        }
-      />
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        {/* Public Routes */}
+        <Route
+          path="/login"
+          element={
+            isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
+          }
+        />
 
-      {/* Protected Routes */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
-        }
-      />
+        {/* Protected Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
 
       <Route
         path="/patients"
@@ -235,6 +255,7 @@ function App() {
         element={<Navigate to="/" replace />}
       />
     </Routes>
+    </Suspense>
   );
 }
 
