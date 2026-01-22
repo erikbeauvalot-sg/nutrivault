@@ -469,7 +469,7 @@ const PatientDetailPage = () => {
 
               {/* Medical Information Tab */}
               {canViewMedicalData && (
-                <Tab eventKey="medical" title="Medical Information">
+                <Tab eventKey="medical" title={t('patients.medicalInformationTab')}>
                   <Row>
                     <Col md={6}>
                       <Card className="mb-3">
@@ -544,7 +544,7 @@ const PatientDetailPage = () => {
 
               {/* Dietary Information Tab */}
               {canViewMedicalData && (
-                <Tab eventKey="dietary" title="Dietary Information">
+                <Tab eventKey="dietary" title={t('patients.dietaryInformationTab')}>
                   <Row>
                     <Col md={6}>
                       <Card className="mb-3">
