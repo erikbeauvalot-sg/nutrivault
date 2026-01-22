@@ -10,7 +10,6 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import DocumentListComponent from '../components/DocumentListComponent';
-import DocumentUploadModal from '../components/DocumentUploadModal';
 import MeasurementCharts from '../components/MeasurementCharts';
 import api from '../services/api';
 import './PatientDetailPage.css';
@@ -37,7 +36,6 @@ const PatientDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('complete');
-  const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -911,7 +909,7 @@ const PatientDetailPage = () => {
                   <Button
                     variant="outline-primary"
                     size="sm"
-                    onClick={() => setShowDocumentUploadModal(true)}
+                    onClick={() => navigate(`/documents/upload?resourceType=patient&resourceId=${id}`)}
                   >
                     <i className="fas fa-upload me-1"></i>
                     Upload Document
@@ -927,16 +925,6 @@ const PatientDetailPage = () => {
           </Card.Body>
         </Card>
 
-        {/* Document Upload Modal */}
-        <DocumentUploadModal
-          show={showDocumentUploadModal}
-          onHide={() => setShowDocumentUploadModal(false)}
-          onUploadSuccess={() => {
-            setShowDocumentUploadModal(false);
-            fetchPatientDocuments();
-          }}
-          selectedResource={{ resourceType: 'patients', resourceId: id }}
-        />
       </Container>
     </Layout>
   );

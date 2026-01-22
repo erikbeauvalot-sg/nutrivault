@@ -6,9 +6,9 @@
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Alert, Spinner, Badge } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
-import DocumentUploadModal from '../components/DocumentUploadModal';
 import DocumentListComponent from '../components/DocumentListComponent';
 import DocumentStatisticsWidget from '../components/DocumentStatisticsWidget';
 import * as documentService from '../services/documentService';
@@ -16,13 +16,12 @@ import * as documentService from '../services/documentService';
 const DocumentsPage = () => {
   const { t } = useTranslation();
   const { user, hasPermission } = useAuth();
+  const navigate = useNavigate();
 
   const [documents, setDocuments] = useState([]);
   const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [selectedResource, setSelectedResource] = useState(null);
 
   useEffect(() => {
     if (hasPermission('documents.read')) {
@@ -57,20 +56,13 @@ const DocumentsPage = () => {
     }
   };
 
-  const handleUploadSuccess = () => {
-    setShowUploadModal(false);
-    fetchDocuments();
-    fetchStatistics();
-  };
-
   const handleDocumentDeleted = () => {
     fetchDocuments();
     fetchStatistics();
   };
 
   const handleResourceSelect = (resourceType, resourceId) => {
-    setSelectedResource({ resourceType, resourceId });
-    setShowUploadModal(true);
+    navigate(`/documents/upload?resourceType=${resourceType}&resourceId=${resourceId}`);
   };
 
   if (loading) {
@@ -101,7 +93,7 @@ const DocumentsPage = () => {
               {hasPermission('documents.create') && (
                 <Button
                   variant="primary"
-                  onClick={() => setShowUploadModal(true)}
+                  onClick={() => navigate('/documents/upload')}
                 >
                   <i className="fas fa-upload me-2"></i>
                   {t('documents.uploadDocument')}
@@ -145,17 +137,6 @@ const DocumentsPage = () => {
             </Card>
           </Col>
         </Row>
-
-        {/* Upload Modal */}
-        <DocumentUploadModal
-          show={showUploadModal}
-          onHide={() => {
-            setShowUploadModal(false);
-            setSelectedResource(null);
-          }}
-          onUploadSuccess={handleUploadSuccess}
-          selectedResource={selectedResource}
-        />
       </Container>
     </Layout>
   );

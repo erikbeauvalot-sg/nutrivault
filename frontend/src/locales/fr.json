@@ -33,7 +33,8 @@
     "paid": "Payé",
     "pending": "En attente",
     "overdue": "En retard",
-    "refresh": "Actualiser"
+    "refresh": "Actualiser",
+    "comingSoon": "Bientôt disponible"
   },
   "navigation": {
     "dashboard": "Tableau de bord",
@@ -671,7 +672,19 @@
     "descriptionPlaceholder": "Ajouter une description pour ces documents...",
     "patientDocuments": "Docs patients",
     "visitDocuments": "Docs visites",
-    "instead": "à la place",
+    "uploadRejected": "Certains fichiers ont été rejetés. Veuillez vérifier le type et la taille des fichiers.",
+    "noFilesSelected": "Veuillez sélectionner des fichiers à téléverser",
+    "resourceRequired": "Veuillez spécifier un type de ressource et un ID",
+    "uploadSubtitle": "Téléverser des documents et les associer à des patients, visites ou utilisateurs",
+    "resourceAssociation": "Association de ressource",
+    "resourceType": "Type de ressource",
+    "resourceId": "ID de ressource",
+    "resourceIdPlaceholder": "Entrez l'ID de ressource",
+    "fileUpload": "Téléversement de fichier",
+    "dropFilesHere": "Déposez les fichiers ici...",
+    "selectedFiles": "Fichiers sélectionnés",
+    "uploadSummary": "Résumé du téléversement",
+    "filesSelected": "Fichiers sélectionnés",
     "download": "Télécharger"
   },
     "totalUsers": "Utilisateurs totaux",

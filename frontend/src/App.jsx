@@ -23,6 +23,7 @@ import RecordPaymentPage from './pages/RecordPaymentPage';
 import InvoiceDetailPage from './pages/InvoiceDetailPage';
 import ReportsPage from './pages/ReportsPage';
 import DocumentsPage from './pages/DocumentsPage';
+import DocumentUploadPage from './pages/DocumentUploadPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -199,6 +200,15 @@ function App() {
         element={
           <ProtectedRoute>
             <DocumentsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/documents/upload"
+        element={
+          <ProtectedRoute>
+            <DocumentUploadPage />
           </ProtectedRoute>
         }
       />
