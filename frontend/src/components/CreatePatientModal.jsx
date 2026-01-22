@@ -149,7 +149,7 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
         handleClose();
       }
     } catch (err) {
-      setError('Failed to create patient: ' + (err.message || 'Unknown error'));
+      setError(t('errors.failedToCreatePatient', { error: err.message || t('common.unknownError') }));
     } finally {
       setLoading(false);
     }

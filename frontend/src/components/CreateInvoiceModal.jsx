@@ -42,7 +42,7 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
       setPatients(Array.isArray(patientsData) ? patientsData : []);
     } catch (err) {
       console.error('Failed to fetch patients:', err);
-      setError('Failed to load patients');
+      setError(t('errors.failedToLoadPatients'));
     } finally {
       setLoading(false);
     }
@@ -137,7 +137,7 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
       await onSubmit(submitData);
       onHide();
     } catch (err) {
-      setError(err.message || 'Failed to create invoice');
+      setError(err.message || t('errors.failedToCreateInvoice'));
     } finally {
       setSubmitting(false);
     }

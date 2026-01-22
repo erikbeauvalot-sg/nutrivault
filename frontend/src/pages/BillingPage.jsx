@@ -81,7 +81,7 @@ const BillingPage = () => {
       setCurrentInvoice(response.data);
       setError(null);
     } catch (err) {
-      setError('Failed to load invoice: ' + (err.response?.data?.error || err.message));
+      setError(t('errors.failedToLoadInvoice', { error: err.response?.data?.error || err.message }));
       console.error('Error fetching invoice:', err);
     } finally {
       setInvoiceLoading(false);
@@ -97,7 +97,7 @@ const BillingPage = () => {
       setPagination(response.data.pagination || null);
       setError(null);
     } catch (err) {
-      setError('Failed to load invoices: ' + (err.response?.data?.error || err.message));
+      setError(t('errors.failedToLoadInvoices', { error: err.response?.data?.error || err.message }));
       console.error('Error fetching invoices:', err);
     } finally {
       setLoading(false);
@@ -126,7 +126,7 @@ const BillingPage = () => {
   };
 
   const handleDeleteInvoice = async (invoiceId) => {
-    if (!window.confirm('Are you sure you want to delete this invoice?')) {
+    if (!window.confirm(t('billing.confirmDeleteInvoice'))) {
       return;
     }
 
@@ -134,7 +134,7 @@ const BillingPage = () => {
       await billingService.deleteInvoice(invoiceId);
       fetchInvoices(); // Refresh list
     } catch (err) {
-      setError('Failed to delete invoice: ' + (err.response?.data?.error || err.message));
+      setError(t('errors.failedToDeleteInvoice', { error: err.response?.data?.error || err.message }));
     }
   };
 

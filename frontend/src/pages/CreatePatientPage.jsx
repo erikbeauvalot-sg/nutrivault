@@ -9,6 +9,7 @@ import { Container, Row, Col, Card, Tab, Tabs, Button, Form, Alert } from 'react
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
+import PatientTagsManager from '../components/PatientTagsManager';
 import userService from '../services/userService';
 import api from '../services/api';
 
@@ -21,6 +22,7 @@ const CreatePatientPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dietitians, setDietitians] = useState([]);
+  const [tags, setTags] = useState([]);
 
   const [formData, setFormData] = useState({
     // Personal Information
@@ -89,6 +91,11 @@ const CreatePatientPage = () => {
     setError(null);
   };
 
+  const handleTagsChange = (newTags) => {
+    setTags(newTags);
+    setError(null);
+  };
+
   const handleBack = () => {
     navigate('/patients');
   };
@@ -123,6 +130,9 @@ const CreatePatientPage = () => {
           value === '' ? null : value
         ])
       );
+
+      // Add tags to the submission data
+      submitData.tags = tags;
 
       const response = await api.post('/api/patients', submitData);
       const newPatient = response.data.data || response.data;
@@ -647,6 +657,21 @@ const CreatePatientPage = () => {
                     </Col>
 
                     <Col md={6}>
+                      <Card className="mb-3">
+                        <Card.Header className="bg-warning">
+                          <h6 className="mb-0">{t('patients.patientTags')}</h6>
+                        </Card.Header>
+                        <Card.Body>
+                          <PatientTagsManager
+                            tags={tags}
+                            onTagsChange={handleTagsChange}
+                          />
+                          <Form.Text className="text-muted">
+                            {t('patients.tagsHelp', 'Add tags to categorize and organize patients')}
+                          </Form.Text>
+                        </Card.Body>
+                      </Card>
+
                       <Card className="mb-3">
                         <Card.Header className="bg-warning">
                           <h6 className="mb-0">{t('patients.additionalNotes')}</h6>

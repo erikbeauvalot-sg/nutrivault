@@ -62,7 +62,7 @@ const EditInvoiceModal = ({ show, onHide, onSubmit, invoice }) => {
       setPatients(Array.isArray(patientsData) ? patientsData : []);
     } catch (err) {
       console.error('Failed to fetch patients:', err);
-      setError('Failed to load patients');
+      setError(t('errors.failedToLoadPatients'));
     } finally {
       setLoading(false);
     }
@@ -129,7 +129,7 @@ const EditInvoiceModal = ({ show, onHide, onSubmit, invoice }) => {
       onHide();
     } catch (err) {
       console.error('Failed to update invoice:', err);
-      setError(err.response?.data?.message || 'Failed to update invoice');
+      setError(err.response?.data?.message || t('errors.failedToUpdateInvoice'));
     } finally {
       setSubmitting(false);
     }

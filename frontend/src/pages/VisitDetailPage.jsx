@@ -36,7 +36,7 @@ const VisitDetailPage = () => {
       setVisit(visitData);
       setError(null);
     } catch (err) {
-      setError('Failed to load visit: ' + (err.response?.data?.error || err.message));
+      setError(t('errors.failedToLoadVisit', { error: err.response?.data?.error || err.message }));
       console.error('Error fetching visit details:', err);
     } finally {
       setLoading(false);

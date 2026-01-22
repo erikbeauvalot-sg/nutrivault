@@ -161,7 +161,7 @@ const CreateVisitPage = () => {
     } catch (err) {
       const errorMsg = err.response?.data?.details
         ? err.response.data.details.map(d => d.msg).join(', ')
-        : err.response?.data?.error || 'Failed to create visit';
+        : err.response?.data?.error || t('errors.failedToCreateVisit');
       setError(errorMsg);
       console.error('Error creating visit:', err);
     } finally {

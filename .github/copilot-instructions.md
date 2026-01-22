@@ -2,6 +2,15 @@ The following instructions are only to be applied when performing a code review.
 ## Methodology
 All instrutions are stored in the ./_bmad and ./_bmad-output folder. Please follow the instructions relevant to the file you are reviewing.
 
+
+follow the PRD : /Users/erik/Documents/Dev/AI/Antigravity/nutrivault/_bmad-output/planning-artifacts/prd.md
+follow the sprint planning : /Users/erik/Documents/Dev/AI/Antigravity/nutrivault/_bmad-output/implementation-artifacts/sprint-1-planning.md
+follow the implementation readiness : /Users/erik/Documents/Dev/AI/Antigravity/nutrivault/_bmad-output/implementation-artifacts/implementation-readiness.md
+follow the repository guidelines : /Users/erik/Documents/Dev/AI/Antigravity/nutrivault/AGENTS.md
+
+## Checklist
+
+
 <!-- ## README updates
 
 - [ ] The new file should be added to the `README.md`.

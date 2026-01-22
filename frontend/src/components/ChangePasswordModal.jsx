@@ -107,7 +107,7 @@ const ChangePasswordModal = ({ show, onHide, userId, username, isAdmin, onSucces
       }, 1500);
     } catch (err) {
       console.error('Error changing password:', err);
-      setError(err.response?.data?.error || 'Failed to change password');
+      setError(err.response?.data?.error || t('errors.failedToChangePassword'));
     } finally {
       setLoading(false);
     }

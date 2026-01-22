@@ -62,7 +62,7 @@ const PatientsPage = () => {
       setTotalPatients(paginationData.totalCount || patientsData.length || 0);
       setError(null);
     } catch (err) {
-      setError('Failed to load patients: ' + (err.response?.data?.error || err.message));
+      setError(t('errors.failedToLoadPatients', { error: err.response?.data?.error || err.message }));
       console.error('Error fetching patients:', err);
     } finally {
       setLoading(false);
@@ -71,7 +71,7 @@ const PatientsPage = () => {
 
 
   const handleDeletePatient = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this patient?')) {
+    if (!window.confirm(t('patients.confirmDelete'))) {
       return;
     }
 
@@ -80,7 +80,7 @@ const PatientsPage = () => {
       setPatients(patients.filter(p => p.id !== id));
       setError(null);
     } catch (err) {
-      setError('Failed to delete patient: ' + (err.response?.data?.error || err.message));
+      setError(t('errors.failedToDeletePatient', { error: err.response?.data?.error || err.message }));
     }
   };
 
@@ -155,7 +155,7 @@ const PatientsPage = () => {
 
         {error && (
           <div className="alert alert-danger alert-dismissible fade show" role="alert">
-            <strong>Error:</strong> {error}
+            <strong>{t('common.error')}:</strong> {error}
             <button
               type="button"
               className="btn-close"

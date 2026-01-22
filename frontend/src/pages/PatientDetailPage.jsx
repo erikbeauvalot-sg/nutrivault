@@ -94,7 +94,7 @@ const PatientDetailPage = () => {
       fetchPatientDetails();
     } catch (err) {
       console.error('Error deleting visit:', err);
-      setError('Failed to delete visit: ' + (err.response?.data?.error || err.message));
+      setError(t('errors.failedToDeleteVisit', { error: err.response?.data?.error || err.message }));
     }
   };
 

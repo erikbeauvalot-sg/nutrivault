@@ -239,7 +239,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave, preSelectedPatient }) =
       return true;
     } catch (err) {
       console.error('Error creating patient:', err);
-      setError('Failed to create patient: ' + (err.message || 'Unknown error'));
+      setError(t('errors.failedToCreatePatient', { error: err.message || t('common.unknownError') }));
       return false;
     } finally {
       setLoading(false);
@@ -295,9 +295,9 @@ const VisitModal = ({ show, onHide, mode, visit, onSave, preSelectedPatient }) =
       console.error('🔥 Error saving visit:', err);
       console.error('🔥 Full error response:', err.response?.data);
       // Get detailed error message from backend if available
-      const errorMsg = err.response?.data?.details 
+      const errorMsg = err.response?.data?.details
         ? err.response.data.details.map(d => d.msg).join(', ')
-        : err.response?.data?.error || 'Failed to save visit';
+        : err.response?.data?.error || t('errors.failedToSaveVisit');
       setError(errorMsg);
     } finally {
       setLoading(false);
@@ -325,7 +325,7 @@ const VisitModal = ({ show, onHide, mode, visit, onSave, preSelectedPatient }) =
       onHide();
     } catch (err) {
       console.error('Error saving measurements:', err);
-      setError(err.response?.data?.error || 'Failed to save measurements');
+      setError(err.response?.data?.error || t('errors.failedToSaveMeasurements'));
     } finally {
       setLoading(false);
     }

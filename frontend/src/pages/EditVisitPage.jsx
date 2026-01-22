@@ -266,7 +266,7 @@ const EditVisitPage = () => {
 
       setActiveTab('measurements');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to save measurements');
+      setError(err.response?.data?.error || t('errors.failedToSaveMeasurements'));
       console.error('Error saving measurements:', err);
     } finally {
       setSaving(false);
@@ -303,7 +303,7 @@ const EditVisitPage = () => {
   };
 
   const handleDeleteMeasurement = async (measurementId) => {
-    if (!window.confirm('Are you sure you want to delete this measurement?')) {
+    if (!window.confirm(t('visits.confirmDeleteMeasurement'))) {
       return;
     }
 
@@ -311,7 +311,7 @@ const EditVisitPage = () => {
       await visitService.deleteMeasurement(id, measurementId);
       await fetchVisitData();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to delete measurement');
+      setError(err.response?.data?.error || t('errors.failedToDeleteMeasurement'));
       console.error('Error deleting measurement:', err);
     }
   };

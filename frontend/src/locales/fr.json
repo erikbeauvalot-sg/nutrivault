@@ -250,6 +250,7 @@
     "visitUpdated": "Visite mise à jour avec succès",
     "visitDeleted": "Visite supprimée avec succès",
     "confirmDelete": "Êtes-vous sûr de vouloir supprimer cette visite ?",
+    "confirmDeleteMeasurement": "Êtes-vous sûr de vouloir supprimer cette mesure ?",
     "deleteWarning": "Cette action ne peut pas être annulée.",
     "tableView": "Vue tableau",
     "timelineView": "Vue chronologique",
@@ -443,7 +444,8 @@
     "showingResults": "Affichage de {{count}} sur {{total}} factures",
     "searchPlaceholder": "Rechercher par numéro de facture ou patient",
     "amount": "Montant",
-    "paid": "Payé"
+    "paid": "Payé",
+    "confirmDeleteInvoice": "Êtes-vous sûr de vouloir supprimer cette facture ?"
   },
   "users": {
     "title": "Gestion des utilisateurs",
@@ -546,7 +548,28 @@
     "network": "Erreur réseau. Veuillez vérifier votre connexion.",
     "unauthorized": "Vous n'êtes pas autorisé à effectuer cette action.",
     "notFound": "La ressource demandée n'a pas été trouvée.",
-    "serverError": "Erreur serveur. Veuillez réessayer plus tard."
+    "serverError": "Erreur serveur. Veuillez réessayer plus tard.",
+    "failedToLoadPatients": "Échec du chargement des patients",
+    "failedToDeletePatient": "Échec de la suppression du patient",
+    "failedToLoadInvoice": "Échec du chargement de la facture",
+    "failedToLoadInvoices": "Échec du chargement des factures",
+    "failedToDeleteInvoice": "Échec de la suppression de la facture",
+    "failedToDeleteMeasurement": "Échec de la suppression de la mesure",
+    "failedToDeleteVisit": "Échec de la suppression de la visite",
+    "failedToCreatePatient": "Échec de la création du patient: {{error}}",
+    "failedToSaveVisit": "Échec de la sauvegarde de la visite",
+    "failedToSaveMeasurements": "Échec de la sauvegarde des mesures",
+    "failedToCreateVisit": "Échec de la création de la visite",
+    "failedToSaveUser": "Échec de la sauvegarde de l'utilisateur",
+    "failedToChangePassword": "Échec du changement de mot de passe",
+    "failedToRecordPayment": "Échec de l'enregistrement du paiement",
+    "failedToLoadStats": "Échec du chargement des statistiques",
+    "failedToLoad": "Échec du chargement des documents",
+    "failedToLoadVisit": "Échec du chargement de la visite: {{error}}",
+    "failedToCreateInvoice": "Échec de la création de la facture",
+    "failedToUpdateInvoice": "Échec de la mise à jour de la facture",
+    "failedToLoadDocuments": "Échec du chargement des documents",
+    "unknownError": "Erreur inconnue"
   },
   "language": {
     "selectLanguage": "Sélectionner la langue",

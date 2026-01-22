@@ -142,7 +142,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
     } catch (err) {
       console.error('🔥 Error saving user:', err);
       console.error('🔥 Full response:', err.response?.data);
-      setError(err.response?.data?.error || 'Failed to save user');
+      setError(err.response?.data?.error || t('errors.failedToSaveUser'));
     } finally {
       setLoading(false);
     }

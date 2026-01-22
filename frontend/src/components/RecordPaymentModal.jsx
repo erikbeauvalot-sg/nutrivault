@@ -67,7 +67,7 @@ const RecordPaymentModal = ({ show, onHide, onSubmit, invoice }) => {
       await onSubmit(submitData);
       onHide();
     } catch (err) {
-      setError(err.message || 'Failed to record payment');
+      setError(err.message || t('errors.failedToRecordPayment'));
     } finally {
       setSubmitting(false);
     }

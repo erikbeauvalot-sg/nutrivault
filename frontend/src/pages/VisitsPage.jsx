@@ -101,14 +101,14 @@ const VisitsPage = () => {
   };
 
   const handleDelete = async (visitId) => {
-    if (!window.confirm('Are you sure you want to delete this visit?')) return;
+    if (!window.confirm(t('visits.confirmDelete'))) return;
 
     try {
       await visitService.deleteVisit(visitId);
       fetchVisits();
     } catch (err) {
       console.error('Error deleting visit:', err);
-      alert(err.response?.data?.error || 'Failed to delete visit');
+      alert(err.response?.data?.error || t('errors.failedToDeleteVisit'));
     }
   };
 

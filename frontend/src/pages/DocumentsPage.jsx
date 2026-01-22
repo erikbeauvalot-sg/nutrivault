@@ -39,7 +39,7 @@ const DocumentsPage = () => {
       setDocuments(Array.isArray(data) ? data : []);
       setError(null);
     } catch (err) {
-      setError(t('documents.failedToLoad') || 'Failed to load documents');
+      setError(t('documents.failedToLoad') || t('errors.failedToLoadDocuments'));
       console.error('Error fetching documents:', err);
     } finally {
       setLoading(false);

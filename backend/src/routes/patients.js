@@ -265,73 +265,9 @@ router.get(
 );
 
 /**
- * GET /api/patients/:id - Get patient by ID
- * Requires: patients.read permission
- * RBAC enforced in service layer (dietitian filtering)
- */
-router.get(
-  '/:id',
-  authenticate,
-  requirePermission('patients.read'),
-  patientIdValidation,
-  patientController.getPatientById
-);
-
-/**
- * GET /api/patients/:id/details - Get patient details with visits and measurements
- * Requires: patients.read permission
- * RBAC enforced in service layer (dietitian filtering)
- * Used for graphical patient dashboard view
- */
-router.get(
-  '/:id/details',
-  authenticate,
-  requirePermission('patients.read'),
-  patientIdValidation,
-  patientController.getPatientDetails
-);
-
-/**
- * POST /api/patients - Create new patient
- * Requires: patients.create permission
- * Only ADMIN and DIETITIAN can create patients
- */
-router.post(
-  '/',
-  authenticate,
-  requirePermission('patients.create'),
-  createPatientValidation,
-  patientController.createPatient
-);
-
-/**
- * PUT /api/patients/:id - Update patient
- * Requires: patients.update permission
- * Only ADMIN and DIETITIAN can update patients
- */
-router.put(
-  '/:id',
-  authenticate,
-  requirePermission('patients.update'),
-  updatePatientValidation,
-  patientController.updatePatient
-);
-
-/**
- * DELETE /api/patients/:id - Delete patient (soft delete)
- * Requires: patients.delete permission
- * Only ADMIN and DIETITIAN can delete patients
- */
-router.delete(
-  '/:id',
-  authenticate,
-  requirePermission('patients.delete'),
-  patientIdValidation,
-  patientController.deletePatient
-);
-
-/**
  * Patient Tags Routes
+ * NOTE: These specific routes MUST come before the /:id parameterized routes
+ * to prevent Express from matching "tags" as a patient ID
  */
 
 /**
@@ -399,14 +335,74 @@ router.delete(
 );
 
 /**
- * GET /api/patients/tags/all - Get all available tags in the system
+ * Patient CRUD Routes
+ * NOTE: These parameterized routes come AFTER specific routes
+ */
+
+/**
+ * GET /api/patients/:id - Get patient by ID
  * Requires: patients.read permission
+ * RBAC enforced in service layer (dietitian filtering)
  */
 router.get(
-  '/tags/all',
+  '/:id',
   authenticate,
   requirePermission('patients.read'),
-  patientTagController.getAllTags
+  patientIdValidation,
+  patientController.getPatientById
+);
+
+/**
+ * GET /api/patients/:id/details - Get patient details with visits and measurements
+ * Requires: patients.read permission
+ * RBAC enforced in service layer (dietitian filtering)
+ * Used for graphical patient dashboard view
+ */
+router.get(
+  '/:id/details',
+  authenticate,
+  requirePermission('patients.read'),
+  patientIdValidation,
+  patientController.getPatientDetails
+);
+
+/**
+ * POST /api/patients - Create new patient
+ * Requires: patients.create permission
+ * Only ADMIN and DIETITIAN can create patients
+ */
+router.post(
+  '/',
+  authenticate,
+  requirePermission('patients.create'),
+  createPatientValidation,
+  patientController.createPatient
+);
+
+/**
+ * PUT /api/patients/:id - Update patient
+ * Requires: patients.update permission
+ * Only ADMIN and DIETITIAN can update patients
+ */
+router.put(
+  '/:id',
+  authenticate,
+  requirePermission('patients.update'),
+  updatePatientValidation,
+  patientController.updatePatient
+);
+
+/**
+ * DELETE /api/patients/:id - Delete patient (soft delete)
+ * Requires: patients.delete permission
+ * Only ADMIN and DIETITIAN can delete patients
+ */
+router.delete(
+  '/:id',
+  authenticate,
+  requirePermission('patients.delete'),
+  patientIdValidation,
+  patientController.deletePatient
 );
 
 module.exports = router;
