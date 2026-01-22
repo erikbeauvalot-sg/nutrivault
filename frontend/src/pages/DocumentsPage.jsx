@@ -90,7 +90,7 @@ const DocumentsPage = () => {
                 <h1 className="mb-1">{t('documents.title')}</h1>
                 <p className="text-muted mb-0">{t('documents.subtitle')}</p>
               </div>
-              {hasPermission('documents.create') && (
+              {hasPermission('documents.upload') && (
                 <Button
                   variant="primary"
                   onClick={() => navigate('/documents/upload')}

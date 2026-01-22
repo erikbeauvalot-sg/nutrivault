@@ -17,7 +17,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { path: '/patients', icon: '👥', label: t('navigation.patients') },
     { path: '/visits', icon: '📅', label: t('navigation.visits') },
     { path: '/billing', icon: '💰', label: t('navigation.billing') },
-    { path: '/documents', icon: '📄', label: t('documents.title'), disabled: true },
+    { path: '/documents', icon: '📄', label: t('documents.title'), disabled: false },
     { path: '/reports', icon: '📈', label: t('navigation.reports') },
     { path: '/users', icon: '👤', label: t('navigation.users') },
   ];

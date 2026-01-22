@@ -117,7 +117,7 @@ const DocumentUploadPage = () => {
     return documentService.getFileTypeIcon(file.type);
   };
 
-  if (!hasPermission('documents.create')) {
+  if (!hasPermission('documents.upload')) {
     return (
       <Layout>
         <Container className="py-4">
