@@ -12,8 +12,6 @@ import Layout from '../components/layout/Layout';
 import DocumentListComponent from '../components/DocumentListComponent';
 import DocumentUploadModal from '../components/DocumentUploadModal';
 import MeasurementCharts from '../components/MeasurementCharts';
-import VisitModal from '../components/VisitModal';
-import CreateInvoiceModal from '../components/CreateInvoiceModal';
 import api from '../services/api';
 import './PatientDetailPage.css';
 
@@ -30,8 +28,6 @@ const PatientDetailPage = () => {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('complete');
   const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
-  const [showVisitModal, setShowVisitModal] = useState(false);
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -99,50 +95,14 @@ const PatientDetailPage = () => {
   };
 
   const handleAddVisit = () => {
-    setShowVisitModal(true);
+    navigate('/visits/create', { state: { selectedPatient: patient } });
   };
 
   const handleAddPayment = () => {
-    setShowInvoiceModal(true);
+    navigate('/billing/create', { state: { selectedPatient: patient } });
   };
 
-  const handleVisitModalSave = async (visitData) => {
-    try {
-      // Pre-populate with current patient and dietitian
-      const visitPayload = {
-        ...visitData,
-        patient_id: patient.id,
-        dietitian_id: patient.assigned_dietitian?.id || user.id, // Use assigned dietitian or current user
-        visit_date: visitData.visit_date || new Date().toISOString().split('T')[0], // Default to today
-        visit_time: visitData.visit_time || new Date().toTimeString().slice(0, 5), // Default to current time
-      };
 
-      await api.post('/api/visits', visitPayload);
-      setShowVisitModal(false);
-      // Refresh patient details to show new visit
-      fetchPatientDetails();
-    } catch (err) {
-      console.error('Error creating visit:', err);
-      throw new Error('Failed to create visit: ' + (err.response?.data?.error || err.message));
-    }
-  };
-
-  const handleInvoiceModalSubmit = async (invoiceData) => {
-    try {
-      // Pre-populate with current patient
-      const invoicePayload = {
-        ...invoiceData,
-        patient_id: patient.id,
-      };
-
-      await api.post('/api/billing', invoicePayload);
-      setShowInvoiceModal(false);
-      // Could refresh billing data if shown on this page
-    } catch (err) {
-      console.error('Error creating invoice:', err);
-      throw new Error('Failed to create invoice: ' + (err.response?.data?.error || err.message));
-    }
-  };
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -178,10 +138,10 @@ const PatientDetailPage = () => {
       <Layout>
         <Container fluid>
           <Alert variant="danger">
-            <Alert.Heading>Error Loading Patient</Alert.Heading>
+            <Alert.Heading>{t('patients.errorLoadingPatient')}</Alert.Heading>
             <p>{error}</p>
             <Button variant="outline-danger" onClick={handleBack}>
-              Back to Patients
+              {t('patients.backToPatients')}
             </Button>
           </Alert>
         </Container>
@@ -194,10 +154,10 @@ const PatientDetailPage = () => {
       <Layout>
         <Container fluid>
           <Alert variant="warning">
-            <Alert.Heading>Patient Not Found</Alert.Heading>
-            <p>The requested patient could not be found.</p>
+            <Alert.Heading>{t('patients.patientNotFound')}</Alert.Heading>
+            <p>{t('patients.patientNotFoundMessage')}</p>
             <Button variant="outline-warning" onClick={handleBack}>
-              Back to Patients
+              {t('patients.backToPatients')}
             </Button>
           </Alert>
         </Container>
@@ -273,19 +233,19 @@ const PatientDetailPage = () => {
                   <Col md={6}>
                     <Card className="mb-3">
                       <Card.Header className="bg-primary text-white">
-                        <h6 className="mb-0">👤 Personal Information</h6>
+                        <h6 className="mb-0">{t('patients.personalInfoHeading')}</h6>
                       </Card.Header>
                       <Card.Body>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Full Name:</strong></Col>
+                          <Col sm={5}><strong>{t('patients.fullNameLabel')}</strong></Col>
                           <Col sm={7}>{patient.first_name} {patient.last_name}</Col>
                         </Row>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Email:</strong></Col>
+                          <Col sm={5}><strong>{t('patients.emailLabel')}</strong></Col>
                           <Col sm={7}>{patient.email || '-'}</Col>
                         </Row>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Phone:</strong></Col>
+                          <Col sm={5}><strong>{t('patients.phoneLabel')}</strong></Col>
                           <Col sm={7}>{patient.phone || '-'}</Col>
                         </Row>
                         <Row className="mb-2">
@@ -966,23 +926,6 @@ const PatientDetailPage = () => {
             fetchPatientDocuments();
           }}
           selectedResource={{ resourceType: 'patients', resourceId: id }}
-        />
-
-        {/* Visit Modal */}
-        <VisitModal
-          show={showVisitModal}
-          onHide={() => setShowVisitModal(false)}
-          mode="create"
-          onSave={handleVisitModalSave}
-          preSelectedPatient={patient}
-        />
-
-        {/* Invoice Modal */}
-        <CreateInvoiceModal
-          show={showInvoiceModal}
-          onHide={() => setShowInvoiceModal(false)}
-          onSubmit={handleInvoiceModalSubmit}
-          preSelectedPatient={patient}
         />
       </Container>
     </Layout>

@@ -10,9 +10,6 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import InvoiceList from '../components/InvoiceList';
-import CreateInvoiceModal from '../components/CreateInvoiceModal';
-import EditInvoiceModal from '../components/EditInvoiceModal';
-import RecordPaymentModal from '../components/RecordPaymentModal';
 import ExportModal from '../components/ExportModal';
 import * as billingService from '../services/billingService';
 
@@ -38,11 +35,7 @@ const BillingPage = () => {
   const [pagination, setPagination] = useState(null);
 
   // Modal states
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
 
   // Individual invoice view state
   const [currentInvoice, setCurrentInvoice] = useState(null);
@@ -104,27 +97,6 @@ const BillingPage = () => {
     }
   };
 
-  const handleCreateInvoice = async (invoiceData) => {
-    try {
-      await billingService.createInvoice(invoiceData);
-      setShowCreateModal(false);
-      fetchInvoices(); // Refresh list
-    } catch (err) {
-      throw new Error('Failed to create invoice: ' + (err.response?.data?.error || err.message));
-    }
-  };
-
-  const handleRecordPayment = async (paymentData) => {
-    try {
-      await billingService.recordPayment(selectedInvoice.id, paymentData);
-      setShowPaymentModal(false);
-      setSelectedInvoice(null);
-      fetchInvoices(); // Refresh list
-    } catch (err) {
-      throw new Error('Failed to record payment: ' + (err.response?.data?.error || err.message));
-    }
-  };
-
   const handleDeleteInvoice = async (invoiceId) => {
     if (!window.confirm(t('billing.confirmDeleteInvoice'))) {
       return;
@@ -143,23 +115,11 @@ const BillingPage = () => {
   };
 
   const handleEditInvoice = (invoice) => {
-    setSelectedInvoice(invoice);
-    setShowEditModal(true);
-  };
-
-  const handleUpdateInvoice = async (invoiceId, invoiceData) => {
-    try {
-      await billingService.updateInvoice(invoiceId, invoiceData);
-      await fetchInvoices(); // Refresh the list
-    } catch (err) {
-      console.error('Failed to update invoice:', err);
-      throw err; // Re-throw to let the modal handle the error
-    }
+    navigate(`/billing/${invoice.id}/edit`);
   };
 
   const handleRecordPaymentClick = (invoice) => {
-    setSelectedInvoice(invoice);
-    setShowPaymentModal(true);
+    navigate(`/billing/${invoice.id}/record-payment`);
   };
 
   const handleFilterChange = (newFilters) => {
@@ -175,7 +135,7 @@ const BillingPage = () => {
       <Layout>
         <Container>
           <Alert variant="danger">
-            You don't have permission to view billing information.
+            {t('billing.noPermission')}
           </Alert>
         </Container>
       </Layout>
@@ -204,7 +164,7 @@ const BillingPage = () => {
             {hasPermission('billing.create') && (
               <Button
                 variant="primary"
-                onClick={() => setShowCreateModal(true)}
+                onClick={() => navigate('/billing/create')}
               >
                 <i className="fas fa-plus me-2"></i>
                 {t('billing.createInvoice', 'Create Invoice')}
@@ -309,32 +269,6 @@ const BillingPage = () => {
         )}
 
         {/* Modals */}
-        <CreateInvoiceModal
-          show={showCreateModal}
-          onHide={() => setShowCreateModal(false)}
-          onSubmit={handleCreateInvoice}
-        />
-
-        <EditInvoiceModal
-          show={showEditModal}
-          onHide={() => {
-            setShowEditModal(false);
-            setSelectedInvoice(null);
-          }}
-          onSubmit={handleUpdateInvoice}
-          invoice={selectedInvoice}
-        />
-
-        <RecordPaymentModal
-          show={showPaymentModal}
-          onHide={() => {
-            setShowPaymentModal(false);
-            setSelectedInvoice(null);
-          }}
-          onSubmit={handleRecordPayment}
-          invoice={selectedInvoice}
-        />
-
         <ExportModal
           show={showExportModal}
           onHide={() => setShowExportModal(false)}

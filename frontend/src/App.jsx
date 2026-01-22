@@ -17,6 +17,9 @@ import EditVisitPage from './pages/EditVisitPage';
 import VisitDetailPage from './pages/VisitDetailPage';
 import UsersPage from './pages/UsersPage';
 import BillingPage from './pages/BillingPage';
+import CreateInvoicePage from './pages/CreateInvoicePage';
+import EditInvoicePage from './pages/EditInvoicePage';
+import RecordPaymentPage from './pages/RecordPaymentPage';
 import InvoiceDetailPage from './pages/InvoiceDetailPage';
 import ReportsPage from './pages/ReportsPage';
 import DocumentsPage from './pages/DocumentsPage';
@@ -142,6 +145,33 @@ function App() {
         element={
           <ProtectedRoute>
             <BillingPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/billing/create"
+        element={
+          <ProtectedRoute>
+            <CreateInvoicePage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/billing/:id/edit"
+        element={
+          <ProtectedRoute>
+            <EditInvoicePage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/billing/:id/record-payment"
+        element={
+          <ProtectedRoute>
+            <RecordPaymentPage />
           </ProtectedRoute>
         }
       />

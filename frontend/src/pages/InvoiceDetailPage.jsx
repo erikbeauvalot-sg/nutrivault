@@ -9,8 +9,6 @@ import { Container, Row, Col, Card, Button, Badge, Alert, Spinner, Table } from 
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
-import RecordPaymentModal from '../components/RecordPaymentModal';
-import EditInvoiceModal from '../components/EditInvoiceModal';
 import * as billingService from '../services/billingService';
 
 const InvoiceDetailPage = () => {
@@ -23,8 +21,6 @@ const InvoiceDetailPage = () => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     if (id && hasPermission('billing.read')) {
@@ -45,26 +41,6 @@ const InvoiceDetailPage = () => {
       console.error('Error fetching invoice details:', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleRecordPayment = async (paymentData) => {
-    try {
-      await billingService.recordPayment(id, paymentData);
-      setShowPaymentModal(false);
-      fetchInvoiceDetails(); // Refresh data
-    } catch (err) {
-      throw new Error('Failed to record payment: ' + (err.response?.data?.error || err.message));
-    }
-  };
-
-  const handleEditInvoice = async (invoiceData) => {
-    try {
-      await billingService.updateInvoice(id, invoiceData);
-      setShowEditModal(false);
-      fetchInvoiceDetails(); // Refresh data
-    } catch (err) {
-      throw new Error('Failed to update invoice: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -301,7 +277,7 @@ const InvoiceDetailPage = () => {
             {hasPermission('billing.update') && invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
               <Button
                 variant="success"
-                onClick={() => setShowPaymentModal(true)}
+                onClick={() => navigate(`/billing/${id}/record-payment`)}
                 className="me-2"
               >
                 💳 {t('billing.recordPayment')}
@@ -364,7 +340,7 @@ const InvoiceDetailPage = () => {
                   <Button
                     variant="success"
                     className="w-100 mb-2"
-                    onClick={() => setShowPaymentModal(true)}
+                    onClick={() => navigate(`/billing/${id}/record-payment`)}
                   >
                     💳 {t('billing.recordPayment')}
                   </Button>
@@ -374,7 +350,7 @@ const InvoiceDetailPage = () => {
                   <Button
                     variant="outline-primary"
                     className="w-100 mb-2"
-                    onClick={() => setShowEditModal(true)}
+                    onClick={() => navigate(`/billing/${id}/edit`)}
                   >
                     ✏️ {t('common.edit')}
                   </Button>
@@ -432,22 +408,6 @@ const InvoiceDetailPage = () => {
             )}
           </Card.Body>
         </Card>
-
-        {/* Record Payment Modal */}
-        <RecordPaymentModal
-          show={showPaymentModal}
-          onHide={() => setShowPaymentModal(false)}
-          onSubmit={handleRecordPayment}
-          invoice={invoice}
-        />
-
-        {/* Edit Invoice Modal */}
-        <EditInvoiceModal
-          show={showEditModal}
-          onHide={() => setShowEditModal(false)}
-          onSubmit={handleEditInvoice}
-          invoice={invoice}
-        />
       </Container>
     </Layout>
   );

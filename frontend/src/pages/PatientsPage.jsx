@@ -97,8 +97,8 @@ const PatientsPage = () => {
   };
 
   const handleScheduleVisit = (patient) => {
-    // Navigate to visits page with patient pre-selected
-    navigate('/visits', { state: { selectedPatient: patient } });
+    // Navigate directly to visit creation page with patient pre-selected
+    navigate('/visits/create', { state: { selectedPatient: patient } });
   };
 
   const handleSearchChange = (search) => {

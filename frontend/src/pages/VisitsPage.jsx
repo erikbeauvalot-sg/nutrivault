@@ -11,7 +11,6 @@ import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import visitService from '../services/visitService';
 import { getPatients } from '../services/patientService';
-import VisitModal from '../components/VisitModal';
 import ExportModal from '../components/ExportModal';
 import './VisitsPage.css';
 
@@ -33,10 +32,6 @@ const VisitsPage = () => {
   });
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'timeline'
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('create');
-  const [selectedVisit, setSelectedVisit] = useState(null);
-  const [preSelectedPatient, setPreSelectedPatient] = useState(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -122,15 +117,6 @@ const VisitsPage = () => {
 
   const handleEditClick = (visitId) => {
     navigate(`/visits/${visitId}/edit`);
-  };
-
-  const handleModalSave = () => {
-    fetchVisits();
-  };
-
-  const handleModalHide = () => {
-    setShowModal(false);
-    setSelectedVisit(null);
   };
 
   const getStatusBadge = (status) => {
@@ -557,15 +543,6 @@ const VisitsPage = () => {
             </Card.Body>
           </Card>
         )}
-
-        <VisitModal
-          show={showModal}
-          onHide={handleModalHide}
-          mode={modalMode}
-          visit={selectedVisit}
-          onSave={handleModalSave}
-          preSelectedPatient={preSelectedPatient}
-        />
 
         <ExportModal
           show={showExportModal}

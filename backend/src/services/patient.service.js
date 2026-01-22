@@ -37,11 +37,13 @@ async function getPatients(user, filters = {}, requestMetadata = {}) {
 
     // Apply additional filters
     if (filters.search) {
+      // Sanitize search input to prevent LIKE injection
+      const sanitizedSearch = filters.search.replace(/[%_]/g, '\\$&');
       whereClause[Op.or] = [
-        { first_name: { [Op.like]: `%${filters.search}%` } },
-        { last_name: { [Op.like]: `%${filters.search}%` } },
-        { email: { [Op.like]: `%${filters.search}%` } },
-        { phone: { [Op.like]: `%${filters.search}%` } }
+        { first_name: { [Op.like]: `%${sanitizedSearch}%` } },
+        { last_name: { [Op.like]: `%${sanitizedSearch}%` } },
+        { email: { [Op.like]: `%${sanitizedSearch}%` } },
+        { phone: { [Op.like]: `%${sanitizedSearch}%` } }
       ];
     }
 
