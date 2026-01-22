@@ -74,6 +74,14 @@ app.use('/api/documents', documentRoutes);
 const exportRoutes = require('./routes/export');
 app.use('/api/export', exportRoutes);
 
+// Alerts routes (protected - authentication required)
+const alertsRoutes = require('./routes/alerts');
+app.use('/api/alerts', alertsRoutes);
+
+// GDPR routes (protected - RBAC enforced in routes file)
+const gdprRoutes = require('./routes/gdpr');
+app.use('/api/gdpr', gdprRoutes);
+
 // Basic error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);

@@ -884,5 +884,27 @@
     "noData": "Aucune donnée disponible",
     "loadingStats": "Chargement des statistiques...",
     "statsError": "Erreur lors du chargement des statistiques"
+  },
+  "gdpr": {
+    "actions": "RGPD",
+    "exportJSON": "Exporter les données (JSON)",
+    "exportCSV": "Exporter les données (CSV)",
+    "deletePermanently": "Supprimer définitivement",
+    "exportSuccess": "Données du patient exportées avec succès",
+    "exportFailed": "Échec de l'export des données du patient",
+    "deleteSuccess": "Patient supprimé définitivement",
+    "deleteFailed": "Échec de la suppression du patient",
+    "confirmDeleteTitle": "Confirmer la suppression définitive",
+    "warningTitle": "ATTENTION : Cette action est irréversible !",
+    "deleteWarning": "La suppression définitive de ce patient supprimera toutes les données associées, y compris :",
+    "deleteItem1": "Informations personnelles",
+    "deleteItem2": "Historique des visites et mesures",
+    "deleteItem3": "Dossiers de facturation et factures",
+    "deleteItem4": "Documents téléchargés",
+    "deleteItem5": "Journaux d'audit (sauf journal de suppression)",
+    "deleteConfirmMessage": "Cette action n'est requise que pour les demandes RGPD \"Droit à l'oubli\".",
+    "patientToDelete": "Patient à supprimer",
+    "deleting": "Suppression...",
+    "confirmDelete": "Oui, supprimer définitivement"
   }
 }

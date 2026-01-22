@@ -5,13 +5,14 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Tab, Tabs, Button, Badge, Alert, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Card, Tab, Tabs, Button, Badge, Alert, Spinner, Dropdown, Modal } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import DocumentListComponent from '../components/DocumentListComponent';
 import MeasurementCharts from '../components/MeasurementCharts';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
+import * as gdprService from '../services/gdprService';
 import api from '../services/api';
 import './PatientDetailPage.css';
 
@@ -37,6 +38,9 @@ const PatientDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('complete');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -78,6 +82,36 @@ const PatientDetailPage = () => {
 
   const handleEditPatient = () => {
     navigate(`/patients/${id}/edit`);
+  };
+
+  const handleExportData = async (format) => {
+    try {
+      setIsExporting(true);
+      setError(null);
+      await gdprService.exportPatientData(id, format);
+      alert(t('gdpr.exportSuccess', 'Patient data exported successfully'));
+    } catch (err) {
+      setError(t('gdpr.exportFailed') + ': ' + (err.response?.data?.error || err.message));
+      console.error('Export error:', err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDeletePermanently = async () => {
+    try {
+      setIsDeleting(true);
+      setError(null);
+      await gdprService.deletePatientPermanently(id);
+      alert(t('gdpr.deleteSuccess', 'Patient permanently deleted'));
+      navigate('/patients');
+    } catch (err) {
+      setError(t('gdpr.deleteFailed') + ': ' + (err.response?.data?.error || err.message));
+      console.error('Delete error:', err);
+      setShowDeleteModal(false);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleViewVisit = (visitId) => {
@@ -226,6 +260,38 @@ const PatientDetailPage = () => {
                 >
                   {t('patients.editPatient')}
                 </Button>
+              )}
+              {canEditPatient && (
+                <Dropdown>
+                  <Dropdown.Toggle
+                    variant="secondary"
+                    id="gdpr-actions"
+                    style={{ minHeight: '38px' }}
+                  >
+                    🔒 {t('gdpr.actions', 'RGPD')}
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu>
+                    <Dropdown.Item
+                      onClick={() => handleExportData('json')}
+                      disabled={isExporting}
+                    >
+                      📄 {t('gdpr.exportJSON', 'Export Data (JSON)')}
+                    </Dropdown.Item>
+                    <Dropdown.Item
+                      onClick={() => handleExportData('csv')}
+                      disabled={isExporting}
+                    >
+                      📊 {t('gdpr.exportCSV', 'Export Data (CSV)')}
+                    </Dropdown.Item>
+                    <Dropdown.Divider />
+                    <Dropdown.Item
+                      onClick={() => setShowDeleteModal(true)}
+                      className="text-danger"
+                    >
+                      🗑️ {t('gdpr.deletePermanently', 'Delete Permanently')}
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
               )}
             </div>
           </div>
@@ -925,6 +991,59 @@ const PatientDetailPage = () => {
             </Tabs>
           </Card.Body>
         </Card>
+
+        {/* Delete Permanently Modal */}
+        <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered>
+          <Modal.Header closeButton className="bg-danger text-white">
+            <Modal.Title>⚠️ {t('gdpr.confirmDeleteTitle', 'Confirm Permanent Deletion')}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Alert variant="danger">
+              <Alert.Heading>{t('gdpr.warningTitle', 'WARNING: This action cannot be undone!')}</Alert.Heading>
+              <p>{t('gdpr.deleteWarning', 'Permanently deleting this patient will remove all associated data including:')}</p>
+              <ul>
+                <li>{t('gdpr.deleteItem1', 'Personal information')}</li>
+                <li>{t('gdpr.deleteItem2', 'Visit history and measurements')}</li>
+                <li>{t('gdpr.deleteItem3', 'Billing records and invoices')}</li>
+                <li>{t('gdpr.deleteItem4', 'Uploaded documents')}</li>
+                <li>{t('gdpr.deleteItem5', 'Audit logs (except deletion log)')}</li>
+              </ul>
+              <p className="mb-0">
+                <strong>{t('gdpr.deleteConfirmMessage', 'This action is required only for RGPD "Right to be Forgotten" requests.')}</strong>
+              </p>
+            </Alert>
+            <p>
+              {t('gdpr.patientToDelete', 'Patient to delete')}:{' '}
+              <strong>{patient?.first_name} {patient?.last_name}</strong>
+              {patient?.email && ` (${patient.email})`}
+            </p>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button
+              variant="secondary"
+              onClick={() => setShowDeleteModal(false)}
+              disabled={isDeleting}
+            >
+              {t('common.cancel', 'Cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDeletePermanently}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Spinner animation="border" size="sm" className="me-2" />
+                  {t('gdpr.deleting', 'Deleting...')}
+                </>
+              ) : (
+                <>
+                  🗑️ {t('gdpr.confirmDelete', 'Yes, Delete Permanently')}
+                </>
+              )}
+            </Button>
+          </Modal.Footer>
+        </Modal>
 
       </Container>
     </Layout>

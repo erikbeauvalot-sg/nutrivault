@@ -869,5 +869,27 @@
     "title": "Reports & Export",
     "loadingStats": "Loading statistics...",
     "loadError": "Failed to load statistics"
+  },
+  "gdpr": {
+    "actions": "GDPR",
+    "exportJSON": "Export Data (JSON)",
+    "exportCSV": "Export Data (CSV)",
+    "deletePermanently": "Delete Permanently",
+    "exportSuccess": "Patient data exported successfully",
+    "exportFailed": "Failed to export patient data",
+    "deleteSuccess": "Patient permanently deleted",
+    "deleteFailed": "Failed to delete patient",
+    "confirmDeleteTitle": "Confirm Permanent Deletion",
+    "warningTitle": "WARNING: This action cannot be undone!",
+    "deleteWarning": "Permanently deleting this patient will remove all associated data including:",
+    "deleteItem1": "Personal information",
+    "deleteItem2": "Visit history and measurements",
+    "deleteItem3": "Billing records and invoices",
+    "deleteItem4": "Uploaded documents",
+    "deleteItem5": "Audit logs (except deletion log)",
+    "deleteConfirmMessage": "This action is required only for GDPR \"Right to be Forgotten\" requests.",
+    "patientToDelete": "Patient to delete",
+    "deleting": "Deleting...",
+    "confirmDelete": "Yes, Delete Permanently"
   }
 }
