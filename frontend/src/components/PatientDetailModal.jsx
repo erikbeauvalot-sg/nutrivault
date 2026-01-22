@@ -38,6 +38,16 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const getStatusText = (status) => {
+    const statusMap = {
+      SCHEDULED: t('visits.scheduled'),
+      COMPLETED: t('visits.completed'),
+      CANCELLED: t('visits.cancelled'),
+      NO_SHOW: t('visits.noShow')
+    };
+    return statusMap[status] || status;
+  };
+
   useEffect(() => {
     if (show && patientId) {
       fetchPatientDetails();
@@ -453,7 +463,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                             visit.status === 'SCHEDULED' ? 'warning' :
                             visit.status === 'CANCELLED' ? 'danger' : 'secondary'
                           }>
-                            {visit.status}
+                            {getStatusText(visit.status)}
                           </Badge>
                         </Col>
                       </Row>

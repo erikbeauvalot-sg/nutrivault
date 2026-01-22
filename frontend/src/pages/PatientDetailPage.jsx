@@ -21,6 +21,16 @@ const PatientDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const getStatusText = (status) => {
+    const statusMap = {
+      SCHEDULED: t('visits.scheduled'),
+      COMPLETED: t('visits.completed'),
+      CANCELLED: t('visits.cancelled'),
+      NO_SHOW: t('visits.noShow')
+    };
+    return statusMap[status] || status;
+  };
+
   const [patient, setPatient] = useState(null);
   const [visits, setVisits] = useState([]);
   const [documents, setDocuments] = useState([]);
@@ -644,7 +654,7 @@ const PatientDetailPage = () => {
                                   <td>{visit.notes || '-'}</td>
                                   <td>
                                     <Badge bg={visit.status === 'completed' ? 'success' : 'warning'}>
-                                      {visit.status || 'Scheduled'}
+                                      {getStatusText(visit.status) || t('visits.scheduled')}
                                     </Badge>
                                   </td>
                                   <td onClick={(e) => e.stopPropagation()}>
@@ -691,7 +701,7 @@ const PatientDetailPage = () => {
                                 </div>
                                 <div className="visit-card-status">
                                   <Badge bg={visit.status === 'completed' ? 'success' : 'warning'}>
-                                    {visit.status || 'Scheduled'}
+                                    {getStatusText(visit.status) || t('visits.scheduled')}
                                   </Badge>
                                 </div>
                               </div>

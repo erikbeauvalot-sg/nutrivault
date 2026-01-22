@@ -19,6 +19,16 @@ const EditInvoicePage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
+  const getStatusText = (status) => {
+    const statusMap = {
+      SCHEDULED: t('visits.scheduled'),
+      COMPLETED: t('visits.completed'),
+      CANCELLED: t('visits.cancelled'),
+      NO_SHOW: t('visits.noShow')
+    };
+    return statusMap[status] || status;
+  };
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -258,7 +268,7 @@ const EditInvoicePage = () => {
                           {visits.map(visit => (
                             <option key={visit.id} value={visit.id}>
                               {new Date(visit.visit_date).toLocaleDateString()} - {visit.visit_type}
-                              {visit.status && ` (${visit.status})`}
+                              {visit.status && ` (${getStatusText(visit.status)})`}
                             </option>
                           ))}
                         </Form.Select>

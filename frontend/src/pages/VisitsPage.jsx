@@ -126,7 +126,13 @@ const VisitsPage = () => {
       CANCELLED: 'secondary',
       NO_SHOW: 'danger'
     };
-    return <Badge bg={variants[status] || 'secondary'}>{status}</Badge>;
+    const statusText = {
+      SCHEDULED: t('visits.scheduled'),
+      COMPLETED: t('visits.completed'),
+      CANCELLED: t('visits.cancelled'),
+      NO_SHOW: t('visits.noShow')
+    };
+    return <Badge bg={variants[status] || 'secondary'}>{statusText[status] || status}</Badge>;
   };
 
   const formatDate = (dateString) => {
