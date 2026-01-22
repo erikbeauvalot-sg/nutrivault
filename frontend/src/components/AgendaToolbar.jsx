@@ -5,7 +5,7 @@
 
 import { Button, ButtonGroup, Row, Col } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { format } from 'date-fns';
+import { format, startOfWeek, endOfWeek } from 'date-fns';
 import { enUS, fr } from 'date-fns/locale';
 
 const AgendaToolbar = ({
@@ -23,20 +23,21 @@ const AgendaToolbar = ({
   const getDateRangeLabel = () => {
     if (!date) return '';
 
+    // Ensure date is a Date object
+    const currentDate = date instanceof Date ? date : new Date(date);
+
     switch (view) {
       case 'day':
-        return format(date, 'EEEE, MMMM d, yyyy', { locale });
+        return format(currentDate, 'EEEE, MMMM d, yyyy', { locale });
       case 'week': {
-        const weekStart = new Date(date);
-        weekStart.setDate(date.getDate() - date.getDay());
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
+        const weekStart = startOfWeek(currentDate, { locale });
+        const weekEnd = endOfWeek(currentDate, { locale });
         return `${format(weekStart, 'MMM d', { locale })} - ${format(weekEnd, 'MMM d, yyyy', { locale })}`;
       }
       case 'month':
-        return format(date, 'MMMM yyyy', { locale });
+        return format(currentDate, 'MMMM yyyy', { locale });
       default:
-        return format(date, 'MMMM yyyy', { locale });
+        return format(currentDate, 'MMMM yyyy', { locale });
     }
   };
 

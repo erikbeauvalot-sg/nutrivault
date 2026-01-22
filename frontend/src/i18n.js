@@ -19,8 +19,8 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    // lng: 'fr', // Remove forced initial language - let detector handle it
-    fallbackLng: 'fr', // French as fallback if no language detected
+    // lng: 'en', // Remove forced initial language - let detector handle it
+    fallbackLng: 'en', // English as fallback if no language detected
     debug: process.env.NODE_ENV === 'development',
 
     interpolation: {

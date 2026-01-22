@@ -134,6 +134,13 @@ const AgendaPage = () => {
   };
 
   const handleNavigate = (action, newDate) => {
+    // Handle calls from react-big-calendar (action is a Date object)
+    if (action instanceof Date) {
+      setDate(action);
+      return;
+    }
+
+    // Handle calls from custom AgendaToolbar (action is a string)
     if (action === 'TODAY') {
       setDate(new Date());
     } else if (action === 'PREV') {
@@ -287,13 +294,13 @@ const AgendaPage = () => {
             <Card.Body>
               {!isMobile ? (
                 <>
-                  <AgendaToolbar
+                  {/* <AgendaToolbar
                     view={view}
                     onViewChange={handleViewChange}
                     date={date}
                     onNavigate={handleNavigate}
                     onCreateVisit={isMobile ? handleCreateVisit : null}
-                  />
+                  /> */}
                   <CalendarView
                     events={events}
                     onEventClick={handleEventClick}
