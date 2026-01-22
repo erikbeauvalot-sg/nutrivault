@@ -13,6 +13,7 @@ import DocumentListComponent from '../components/DocumentListComponent';
 import MeasurementCharts from '../components/MeasurementCharts';
 import InvoiceList from '../components/InvoiceList';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
+import { getBMICategory } from '../utils/bmiUtils';
 import * as gdprService from '../services/gdprService';
 import * as billingService from '../services/billingService';
 import api from '../services/api';
@@ -942,13 +943,32 @@ const PatientDetailPage = () => {
                                 </tr>
                               </thead>
                               <tbody>
-                                {allMeasurements.map((m, idx) => (
+                                {allMeasurements.map((m, idx) => {
+                                  const bmiCategory = m.bmi ? getBMICategory(m.bmi, t) : null;
+                                  return (
                                   <tr key={idx}>
                                     <td>{formatDateTime(m.visit_date)}</td>
                                     <td>{m.visit_type || 'General'}</td>
                                     <td>{m.weight_kg || '-'}</td>
                                     <td>{m.height_cm || '-'}</td>
-                                    <td>{m.bmi ? m.bmi.toFixed(1) : '-'}</td>
+                                    <td>
+                                      {m.bmi ? (
+                                        <div>
+                                          <strong>{m.bmi.toFixed(1)}</strong>
+                                          {bmiCategory && (
+                                            <div>
+                                              <Badge
+                                                bg={bmiCategory.variant}
+                                                className="mt-1"
+                                                style={bmiCategory.customBg ? { backgroundColor: bmiCategory.customBg } : {}}
+                                              >
+                                                {bmiCategory.category}
+                                              </Badge>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : '-'}
+                                    </td>
                                     <td>{m.blood_pressure_systolic || '-'}</td>
                                     <td>{m.blood_pressure_diastolic || '-'}</td>
                                     <td>{m.heart_rate_bpm || '-'}</td>
@@ -958,7 +978,8 @@ const PatientDetailPage = () => {
                                     <td>{m.muscle_mass_kg || '-'}</td>
                                     <td>{m.notes || '-'}</td>
                                   </tr>
-                                ))}
+                                  );
+                                })}
                               </tbody>
                             </table>
                             <div className="mt-3">

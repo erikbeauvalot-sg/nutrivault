@@ -913,6 +913,16 @@
     "loadingStats": "Chargement des statistiques...",
     "statsError": "Erreur lors du chargement des statistiques"
   },
+  "bmi": {
+    "underweight": "Sous poids",
+    "idealWeight": "Poids idéal",
+    "overweight": "Surpoids",
+    "obesityModerate": "Obésité modérée",
+    "obesitySevere": "Obésité sévère",
+    "obesityMorbid": "Obésité morbide",
+    "category": "Catégorie BMI",
+    "value": "Valeur BMI"
+  },
   "gdpr": {
     "actions": "RGPD",
     "exportJSON": "Exporter les données (JSON)",

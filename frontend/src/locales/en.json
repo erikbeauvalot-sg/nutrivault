@@ -898,6 +898,16 @@
     "loadingStats": "Loading statistics...",
     "loadError": "Failed to load statistics"
   },
+  "bmi": {
+    "underweight": "Underweight",
+    "idealWeight": "Ideal Weight",
+    "overweight": "Overweight",
+    "obesityModerate": "Moderate Obesity",
+    "obesitySevere": "Severe Obesity",
+    "obesityMorbid": "Morbid Obesity",
+    "category": "BMI Category",
+    "value": "BMI Value"
+  },
   "gdpr": {
     "actions": "GDPR",
     "exportJSON": "Export Data (JSON)",
