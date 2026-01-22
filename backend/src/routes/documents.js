@@ -145,31 +145,9 @@ router.post(
   '/',
   authenticate,
   requirePermission('documents.upload'),
-  upload.single('file'),
   uploadValidation,
   validate,
-  async (req, res, next) => {
-    try {
-      const user = req.user;
-      const file = req.file;
-      const metadata = {
-        resource_type: req.body.resource_type,
-        resource_id: req.body.resource_id,
-        description: req.body.description
-      };
-      const requestMetadata = getRequestMetadata(req);
-
-      const document = await documentService.uploadDocument(user, file, metadata, requestMetadata);
-
-      res.status(201).json({
-        success: true,
-        data: document,
-        message: 'Document uploaded successfully'
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
+  ...documentController.uploadDocument
 );
 
 // PUT /api/documents/:id - Update document metadata
