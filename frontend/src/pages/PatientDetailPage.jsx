@@ -126,7 +126,7 @@ const PatientDetailPage = () => {
         <Container fluid>
           <div className="text-center py-5">
             <Spinner animation="border" variant="primary" />
-            <div className="mt-2">Loading patient details...</div>
+            <div className="mt-2">{t('patients.loadingPatientDetails', 'Loading patient details...')}</div>
           </div>
         </Container>
       </Layout>
@@ -249,7 +249,7 @@ const PatientDetailPage = () => {
                           <Col sm={7}>{patient.phone || '-'}</Col>
                         </Row>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Date of Birth:</strong></Col>
+                          <Col sm={5}><strong>{t('patients.dateOfBirthLabel', 'Date of Birth:')}</strong></Col>
                           <Col sm={7}>{formatDate(patient.date_of_birth)}</Col>
                         </Row>
                         <Row className="mb-2">
@@ -295,16 +295,16 @@ const PatientDetailPage = () => {
                           <Col sm={7}>{patient.state || '-'}</Col>
                         </Row>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>ZIP Code:</strong></Col>
+                          <Col sm={5}><strong>{t('patients.zipCode', 'ZIP Code:')}</strong></Col>
                           <Col sm={7}>{patient.zip_code || '-'}</Col>
                         </Row>
                         <hr />
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Emergency Contact:</strong></Col>
+                          <Col sm={5}><strong>{t('patients.emergencyContactName', 'Emergency Contact:')}</strong></Col>
                           <Col sm={7}>{patient.emergency_contact_name || '-'}</Col>
                         </Row>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Emergency Phone:</strong></Col>
+                          <Col sm={5}><strong>{t('patients.emergencyContactPhone', 'Emergency Phone:')}</strong></Col>
                           <Col sm={7}>{patient.emergency_contact_phone || '-'}</Col>
                         </Row>
                       </Card.Body>
@@ -328,7 +328,7 @@ const PatientDetailPage = () => {
                         </Row>
                         <hr />
                         <Row className="mb-2">
-                          <Col><strong>Medical Notes:</strong></Col>
+                          <Col><strong>{t('patients.medicalNotes', 'Medical Notes:')}</strong></Col>
                         </Row>
                         <Row>
                           <Col>
@@ -337,7 +337,7 @@ const PatientDetailPage = () => {
                                 {patient.medical_notes}
                               </div>
                             ) : (
-                              <div className="text-muted fst-italic">No medical notes recorded</div>
+                              <div className="text-muted fst-italic">{t('patients.noMedicalNotesRecorded', 'No medical notes recorded')}</div>
                             )}
                           </Col>
                         </Row>
@@ -350,7 +350,7 @@ const PatientDetailPage = () => {
                       </Card.Header>
                       <Card.Body>
                         <Row className="mb-2">
-                          <Col><strong>Dietary Preferences:</strong></Col>
+                          <Col><strong>{t('patients.dietaryPreferences', 'Dietary Preferences:')}</strong></Col>
                         </Row>
                         <Row className="mb-3">
                           <Col>
@@ -359,7 +359,7 @@ const PatientDetailPage = () => {
                                 {patient.dietary_preferences}
                               </div>
                             ) : (
-                              <div className="text-muted fst-italic">No dietary preferences recorded</div>
+                              <div className="text-muted fst-italic">{t('patients.noDietaryPreferencesRecorded', 'No dietary preferences recorded')}</div>
                             )}
                           </Col>
                         </Row>
@@ -372,7 +372,7 @@ const PatientDetailPage = () => {
                       </Card.Header>
                       <Card.Body>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Assigned Dietitian:</strong></Col>
+                          <Col sm={5}><strong>{t('patients.assignedDietitian', 'Assigned Dietitian:')}</strong></Col>
                           <Col sm={7}>
                             {patient.assigned_dietitian
                               ? `${patient.assigned_dietitian.first_name} ${patient.assigned_dietitian.last_name}`
@@ -385,7 +385,7 @@ const PatientDetailPage = () => {
                           <Col sm={7}>{formatDateTime(patient.created_at)}</Col>
                         </Row>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Last Updated:</strong></Col>
+                          <Col sm={5}><strong>{t('patients.lastUpdated', 'Last Updated:')}</strong></Col>
                           <Col sm={7}>{formatDateTime(patient.updated_at)}</Col>
                         </Row>
                       </Card.Body>
@@ -400,7 +400,7 @@ const PatientDetailPage = () => {
                   <Col md={6}>
                     <Card className="mb-3">
                       <Card.Header>
-                        <h5 className="mb-0">Basic Information</h5>
+                        <h5 className="mb-0">{t('patients.basicInformation', 'Basic Information')}</h5>
                       </Card.Header>
                       <Card.Body>
                         <Row>
@@ -416,7 +416,7 @@ const PatientDetailPage = () => {
                           <Col sm={8}>{patient.phone || '-'}</Col>
                         </Row>
                         <Row className="mt-2">
-                          <Col sm={4}><strong>Date of Birth:</strong></Col>
+                          <Col sm={4}><strong>{t('patients.dateOfBirthLabel', 'Date of Birth:')}</strong></Col>
                           <Col sm={8}>{formatDate(patient.date_of_birth)}</Col>
                         </Row>
                         <Row className="mt-2">
@@ -424,7 +424,7 @@ const PatientDetailPage = () => {
                           <Col sm={8}>{patient.gender || '-'}</Col>
                         </Row>
                         <Row className="mt-2">
-                          <Col sm={4}><strong>Blood Type:</strong></Col>
+                          <Col sm={4}><strong>{t('patients.bloodType', 'Blood Type:')}</strong></Col>
                           <Col sm={8}>{patient.blood_type || '-'}</Col>
                         </Row>
                       </Card.Body>
@@ -449,11 +449,11 @@ const PatientDetailPage = () => {
                           <Col sm={8}>{patient.state || '-'}</Col>
                         </Row>
                         <Row className="mt-2">
-                          <Col sm={4}><strong>ZIP Code:</strong></Col>
+                          <Col sm={4}><strong>{t('patients.zipCode', 'ZIP Code:')}</strong></Col>
                           <Col sm={8}>{patient.zip_code || '-'}</Col>
                         </Row>
                         <Row className="mt-2">
-                          <Col sm={4}><strong>Emergency Contact:</strong></Col>
+                          <Col sm={4}><strong>{t('patients.emergencyContactName', 'Emergency Contact:')}</strong></Col>
                           <Col sm={8}>
                             {patient.emergency_contact_name || '-'}
                             {patient.emergency_contact_phone && (
@@ -474,11 +474,11 @@ const PatientDetailPage = () => {
                     <Col md={6}>
                       <Card className="mb-3">
                         <Card.Header>
-                          <h5 className="mb-0">Medical Details</h5>
+                          <h5 className="mb-0">{t('patients.medicalDetails', 'Medical Details')}</h5>
                         </Card.Header>
                         <Card.Body>
                           <Row>
-                            <Col sm={5}><strong>Medical Record #:</strong></Col>
+                            <Col sm={5}><strong>{t('patients.medicalRecordNumber', 'Medical Record #:')}</strong></Col>
                             <Col sm={7}>{patient.medical_record_number || '-'}</Col>
                           </Row>
                           <Row className="mt-2">
@@ -499,7 +499,7 @@ const PatientDetailPage = () => {
                             </Col>
                           </Row>
                           <Row className="mt-2">
-                            <Col sm={5}><strong>Primary Care Physician:</strong></Col>
+                            <Col sm={5}><strong>{t('patients.primaryCarePhysician', 'Primary Care Physician:')}</strong></Col>
                             <Col sm={7}>{patient.primary_care_physician || '-'}</Col>
                           </Row>
                         </Card.Body>
@@ -508,7 +508,7 @@ const PatientDetailPage = () => {
                     <Col md={6}>
                       <Card className="mb-3">
                         <Card.Header>
-                          <h5 className="mb-0">Medical History</h5>
+                          <h5 className="mb-0">{t('patients.medicalHistory', 'Medical History')}</h5>
                         </Card.Header>
                         <Card.Body>
                           <Row>
@@ -520,7 +520,7 @@ const PatientDetailPage = () => {
                             </Col>
                           </Row>
                           <Row className="mt-3">
-                            <Col sm={4}><strong>Current Medications:</strong></Col>
+                            <Col sm={4}><strong>{t('patients.currentMedications', 'Current Medications:')}</strong></Col>
                             <Col sm={8}>
                               {patient.current_medications ? (
                                 <div style={{ whiteSpace: 'pre-wrap' }}>{patient.current_medications}</div>
@@ -768,7 +768,7 @@ const PatientDetailPage = () => {
                 <Tab eventKey="raw-measurements" title={`🔧 Raw Data`}>
                   <Card>
                     <Card.Header className="bg-dark text-white">
-                      <h5 className="mb-0">Raw Measurement Data (Development Only)</h5>
+                      <h5 className="mb-0">{t('patients.rawMeasurementData', 'Raw Measurement Data (Development Only)')}</h5>
                       <p className="text-muted mb-0 small">
                         All measurements from completed visits
                       </p>

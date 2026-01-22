@@ -215,8 +215,13 @@
     "generalDietaryPreferences": "General dietary preferences...",
     "completeProfileTab": "Complete Profile",
     "loadingPatientData": "Loading patient data...",
+    "loadingPatientDetails": "Loading patient details...",
     "noPermissionEdit": "You do not have permission to edit patients.",
     "editPatientTitle": "Edit Patient",
+    "lastUpdated": "Last Updated",
+    "noMedicalNotesRecorded": "No medical notes recorded",
+    "noDietaryPreferencesRecorded": "No dietary preferences recorded",
+    "rawMeasurementData": "Raw Measurement Data (Development Only)",
     "tags": {
       "label": "Patient Tags",
       "noTags": "No tags assigned",

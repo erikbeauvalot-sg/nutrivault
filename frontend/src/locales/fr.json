@@ -219,8 +219,13 @@
     "generalDietaryPreferences": "Préférences alimentaires générales...",
     "completeProfileTab": "Profil complet",
     "loadingPatientData": "Chargement des données du patient...",
+    "loadingPatientDetails": "Chargement des détails du patient...",
     "noPermissionEdit": "Vous n'avez pas la permission de modifier les patients.",
     "editPatientTitle": "Modifier le patient",
+    "lastUpdated": "Dernière mise à jour",
+    "noMedicalNotesRecorded": "Aucune note médicale enregistrée",
+    "noDietaryPreferencesRecorded": "Aucune préférence alimentaire enregistrée",
+    "rawMeasurementData": "Données de mesure brutes (développement uniquement)",
     "tags": {
       "label": "Étiquettes du patient",
       "noTags": "Aucune étiquette assignée",
