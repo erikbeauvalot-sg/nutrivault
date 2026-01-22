@@ -19,11 +19,17 @@ function PatientList({
   onStatusFilterChange,
   onPageChange
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [sortField, setSortField] = useState('last_name');
   const [sortDirection, setSortDirection] = useState('asc');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const itemsPerPage = 10;
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const locale = i18n.language === 'fr' ? 'fr-FR' : 'en-US';
+    return new Date(dateString).toLocaleDateString(locale);
+  };
 
   // Handle responsive layout
   useEffect(() => {
@@ -158,7 +164,7 @@ function PatientList({
                   )}
                   {patient.date_of_birth && (
                     <div className="small text-muted mb-2">
-                      🎂 {new Date(patient.date_of_birth).toLocaleDateString()}
+                      🎂 {formatDate(patient.date_of_birth)}
                     </div>
                   )}
 
@@ -263,7 +269,7 @@ function PatientList({
                     <td>{patient.phone || '-'}</td>
                     <td>
                       {patient.date_of_birth
-                        ? new Date(patient.date_of_birth).toLocaleDateString()
+                        ? formatDate(patient.date_of_birth)
                         : '-'
                       }
                     </td>

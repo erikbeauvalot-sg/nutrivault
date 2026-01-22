@@ -201,3 +201,146 @@ exports.markAsPaid = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * POST /api/billing/batch/send-invoices - Send multiple invoices by email
+ */
+exports.sendInvoiceBatch = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { invoice_ids } = req.body;
+    const requestMetadata = getRequestMetadata(req);
+
+    if (!invoice_ids || !Array.isArray(invoice_ids) || invoice_ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'invoice_ids array is required and must not be empty'
+      });
+    }
+
+    const result = await billingService.sendInvoiceBatch(invoice_ids, user, requestMetadata);
+
+    res.json({
+      success: true,
+      data: result,
+      message: `Batch send completed: ${result.successful.length} successful, ${result.failed.length} failed`
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/billing/batch/send-reminders - Send payment reminders for multiple invoices
+ */
+exports.sendReminderBatch = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { invoice_ids } = req.body;
+    const requestMetadata = getRequestMetadata(req);
+
+    if (!invoice_ids || !Array.isArray(invoice_ids) || invoice_ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'invoice_ids array is required and must not be empty'
+      });
+    }
+
+    const result = await billingService.sendReminderBatch(invoice_ids, user, requestMetadata);
+
+    res.json({
+      success: true,
+      data: result,
+      message: `Batch reminders completed: ${result.successful.length} successful, ${result.failed.length} failed`
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PATCH /api/billing/:id/status - Change invoice status (admin override)
+ */
+exports.changeInvoiceStatus = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const { status } = req.body;
+    const requestMetadata = getRequestMetadata(req);
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        error: 'Status is required'
+      });
+    }
+
+    const invoice = await billingService.changeInvoiceStatus(id, status, user, requestMetadata);
+
+    res.json({
+      success: true,
+      data: invoice,
+      message: 'Invoice status changed successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PATCH /api/billing/:id/payment-amount - Update payment amount (admin override)
+ */
+exports.updatePaymentAmount = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const { amount_paid } = req.body;
+    const requestMetadata = getRequestMetadata(req);
+
+    if (amount_paid === undefined || amount_paid === null) {
+      return res.status(400).json({
+        success: false,
+        error: 'amount_paid is required'
+      });
+    }
+
+    const invoice = await billingService.updatePaymentAmount(id, amount_paid, user, requestMetadata);
+
+    res.json({
+      success: true,
+      data: invoice,
+      message: 'Payment amount updated successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PATCH /api/billing/payments/:paymentId/status - Change payment status
+ */
+exports.changePaymentStatus = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { paymentId } = req.params;
+    const { status } = req.body;
+    const requestMetadata = getRequestMetadata(req);
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        error: 'Status is required'
+      });
+    }
+
+    const result = await billingService.changePaymentStatus(paymentId, status, user, requestMetadata);
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Payment status changed successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -99,3 +99,63 @@ export const exportInvoicesCSV = async (filters = {}) => {
   });
   return response.data;
 };
+
+/**
+ * Send multiple invoices by email (batch operation)
+ * @param {Array<string>} invoiceIds - Array of invoice UUIDs
+ * @returns {Promise<object>} Results with successful and failed arrays
+ */
+export const sendInvoiceBatch = async (invoiceIds) => {
+  const response = await api.post('/api/billing/batch/send-invoices', {
+    invoice_ids: invoiceIds
+  });
+  return response.data;
+};
+
+/**
+ * Send payment reminders for multiple invoices (batch operation)
+ * @param {Array<string>} invoiceIds - Array of invoice UUIDs
+ * @returns {Promise<object>} Results with successful and failed arrays
+ */
+export const sendReminderBatch = async (invoiceIds) => {
+  const response = await api.post('/api/billing/batch/send-reminders', {
+    invoice_ids: invoiceIds
+  });
+  return response.data;
+};
+
+/**
+ * Change invoice status (admin override)
+ * Allows changing invoice status even if already PAID
+ * @param {string} id - Invoice UUID
+ * @param {string} status - New status (DRAFT, SENT, PAID, OVERDUE, CANCELLED)
+ * @returns {Promise<object>} Updated invoice
+ */
+export const changeInvoiceStatus = async (id, status) => {
+  const response = await api.patch(`/api/billing/${id}/status`, { status });
+  return response.data;
+};
+
+/**
+ * Update payment amount (admin override)
+ * Updates amount_paid and recalculates amount_due and status
+ * @param {string} id - Invoice UUID
+ * @param {number} amountPaid - New total amount paid
+ * @returns {Promise<object>} Updated invoice
+ */
+export const updatePaymentAmount = async (id, amountPaid) => {
+  const response = await api.patch(`/api/billing/${id}/payment-amount`, { amount_paid: amountPaid });
+  return response.data;
+};
+
+/**
+ * Change payment status (PAID/CANCELLED)
+ * Changes payment status and recalculates invoice amounts
+ * @param {string} paymentId - Payment UUID
+ * @param {string} status - New status (PAID, CANCELLED)
+ * @returns {Promise<object>} Updated payment and invoice
+ */
+export const changePaymentStatus = async (paymentId, status) => {
+  const response = await api.patch(`/api/billing/payments/${paymentId}/status`, { status });
+  return response.data;
+};

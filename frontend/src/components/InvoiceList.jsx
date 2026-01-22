@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Badge, Form, InputGroup, Pagination, Dropdown, Card } from 'react-bootstrap';
+import { Table, Button, Badge, Form, InputGroup, Pagination, Dropdown, Card, Alert, Spinner, ButtonGroup } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
+import * as billingService from '../services/billingService';
+import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import './InvoiceList.css';
 
 function InvoiceList({
@@ -19,9 +21,14 @@ function InvoiceList({
   canUpdate,
   canDelete
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { hasPermission } = useAuth();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Multi-select state
+  const [selectedInvoices, setSelectedInvoices] = useState([]);
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [batchResult, setBatchResult] = useState(null);
 
   // Handle responsive layout
   useEffect(() => {
@@ -51,8 +58,7 @@ function InvoiceList({
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString();
+    return utilFormatDate(dateString, i18n.language);
   };
 
   const handleStatusFilterChange = (status) => {
@@ -61,6 +67,83 @@ function InvoiceList({
 
   const handleSearchChange = (search) => {
     onFilterChange({ search });
+  };
+
+  //Multi-select handlers
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedInvoices(invoices.map(inv => inv.id));
+    } else {
+      setSelectedInvoices([]);
+    }
+  };
+
+  const handleSelectInvoice = (invoiceId) => {
+    setSelectedInvoices(prev => {
+      if (prev.includes(invoiceId)) {
+        return prev.filter(id => id !== invoiceId);
+      } else {
+        return [...prev, invoiceId];
+      }
+    });
+  };
+
+  const handleBatchSendInvoices = async () => {
+    if (selectedInvoices.length === 0) return;
+
+    if (!window.confirm(t('billing.confirmBatchSendInvoices', {
+      count: selectedInvoices.length,
+      defaultValue: `Send ${selectedInvoices.length} invoice(s) by email?`
+    }))) {
+      return;
+    }
+
+    try {
+      setBatchLoading(true);
+      setBatchResult(null);
+      const result = await billingService.sendInvoiceBatch(selectedInvoices);
+      setBatchResult({
+        type: 'sendInvoices',
+        ...result.data
+      });
+      setSelectedInvoices([]);
+    } catch (err) {
+      setBatchResult({
+        type: 'error',
+        message: err.response?.data?.error || err.message
+      });
+    } finally {
+      setBatchLoading(false);
+    }
+  };
+
+  const handleBatchSendReminders = async () => {
+    if (selectedInvoices.length === 0) return;
+
+    if (!window.confirm(t('billing.confirmBatchSendReminders', {
+      count: selectedInvoices.length,
+      defaultValue: `Send payment reminders for ${selectedInvoices.length} invoice(s)?`
+    }))) {
+      return;
+    }
+
+    try {
+      setBatchLoading(true);
+      setBatchResult(null);
+      const result = await billingService.sendReminderBatch(selectedInvoices);
+      setBatchResult({
+        type: 'sendReminders',
+        ...result.data
+      });
+      setSelectedInvoices([]);
+    } catch (err) {
+      setBatchResult({
+        type: 'error',
+        message: err.response?.data?.error || err.message
+      });
+    } finally {
+      setBatchLoading(false);
+    }
   };
 
   const renderPagination = () => {
@@ -133,6 +216,64 @@ function InvoiceList({
 
   return (
     <div>
+      {/* Batch Actions Bar */}
+      {selectedInvoices.length > 0 && canUpdate && (
+        <Alert variant="info" className="mb-3 d-flex align-items-center justify-content-between">
+          <div>
+            <strong>{t('billing.selectedCount', { count: selectedInvoices.length, defaultValue: `${selectedInvoices.length} invoice(s) selected` })}</strong>
+          </div>
+          <ButtonGroup>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleBatchSendInvoices}
+              disabled={batchLoading}
+            >
+              {batchLoading ? <Spinner animation="border" size="sm" /> : '📧'} {t('billing.batchSendInvoices', 'Send Invoices')}
+            </Button>
+            <Button
+              variant="warning"
+              size="sm"
+              onClick={handleBatchSendReminders}
+              disabled={batchLoading}
+            >
+              {batchLoading ? <Spinner animation="border" size="sm" /> : '🔔'} {t('billing.batchSendReminders', 'Send Reminders')}
+            </Button>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={() => setSelectedInvoices([])}
+            >
+              {t('common.cancel', 'Cancel')}
+            </Button>
+          </ButtonGroup>
+        </Alert>
+      )}
+
+      {/* Batch Operation Results */}
+      {batchResult && (
+        <Alert
+          variant={batchResult.type === 'error' ? 'danger' : 'success'}
+          dismissible
+          onClose={() => setBatchResult(null)}
+          className="mb-3"
+        >
+          {batchResult.type === 'error' ? (
+            <div>{batchResult.message}</div>
+          ) : (
+            <div>
+              <strong>{t('billing.batchOperationComplete', 'Batch operation complete')}</strong>
+              <ul className="mb-0 mt-2">
+                <li>✅ {t('billing.successfulCount', { count: batchResult.successful?.length || 0, defaultValue: `${batchResult.successful?.length || 0} successful` })}</li>
+                {batchResult.failed?.length > 0 && (
+                  <li>❌ {t('billing.failedCount', { count: batchResult.failed.length, defaultValue: `${batchResult.failed.length} failed` })}</li>
+                )}
+              </ul>
+            </div>
+          )}
+        </Alert>
+      )}
+
       {/* Search and Filter Controls */}
       <div className="invoice-list-controls mb-3">
         <div className="invoice-list-filters">
@@ -277,6 +418,16 @@ function InvoiceList({
           <Table striped bordered hover>
             <thead className="table-dark">
               <tr>
+                {canUpdate && (
+                  <th style={{ width: '40px' }}>
+                    <Form.Check
+                      type="checkbox"
+                      checked={selectedInvoices.length === invoices.length && invoices.length > 0}
+                      onChange={handleSelectAll}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </th>
+                )}
                 <th>{t('billing.invoiceNumber', 'Invoice #')}</th>
                 <th>{t('billing.patient', 'Patient')}</th>
                 <th>{t('billing.date', 'Date')}</th>
@@ -291,7 +442,7 @@ function InvoiceList({
             <tbody>
               {invoices.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-4">
+                  <td colSpan={canUpdate ? "10" : "9"} className="text-center py-4">
                     <div className="text-muted">
                       <strong>{t('billing.noInvoices', 'No invoices found')}</strong>
                       <br />
@@ -307,6 +458,15 @@ function InvoiceList({
                     style={{ cursor: 'pointer' }}
                     className="invoice-row"
                   >
+                    {canUpdate && (
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <Form.Check
+                          type="checkbox"
+                          checked={selectedInvoices.includes(invoice.id)}
+                          onChange={() => handleSelectInvoice(invoice.id)}
+                        />
+                      </td>
+                    )}
                     <td>
                       <strong>{invoice.invoice_number}</strong>
                     </td>

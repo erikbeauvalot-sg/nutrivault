@@ -7,6 +7,8 @@
 
 const db = require('../../../models');
 const Billing = db.Billing;
+const Payment = db.Payment;
+const InvoiceEmail = db.InvoiceEmail;
 const Patient = db.Patient;
 const Visit = db.Visit;
 const User = db.User;
@@ -143,6 +145,36 @@ async function getInvoiceById(invoiceId, user, requestMetadata = {}) {
           model: Visit,
           as: 'visit',
           attributes: ['id', 'visit_date', 'status', 'notes'],
+          required: false
+        },
+        {
+          model: Payment,
+          as: 'payments',
+          attributes: ['id', 'amount', 'payment_method', 'payment_date', 'notes', 'status', 'recorded_by', 'created_at'],
+          include: [
+            {
+              model: User,
+              as: 'recorder',
+              attributes: ['id', 'username', 'first_name', 'last_name'],
+              required: false
+            }
+          ],
+          order: [['payment_date', 'DESC']],
+          required: false
+        },
+        {
+          model: InvoiceEmail,
+          as: 'email_history',
+          attributes: ['id', 'sent_to', 'sent_at', 'sent_by', 'status', 'error_message', 'created_at'],
+          include: [
+            {
+              model: User,
+              as: 'sender',
+              attributes: ['id', 'username', 'first_name', 'last_name'],
+              required: false
+            }
+          ],
+          order: [['sent_at', 'DESC']],
           required: false
         }
       ]
@@ -449,6 +481,18 @@ async function recordPayment(invoiceId, paymentData, user, requestMetadata = {})
 
     await invoice.update(updates);
 
+    // Create Payment record
+    const payment = await Payment.create({
+      billing_id: invoiceId,
+      amount: paymentAmount,
+      payment_method: paymentData.payment_method || 'CASH',
+      payment_date: paymentData.payment_date || new Date(),
+      notes: paymentData.notes || null,
+      recorded_by: user.id
+    });
+
+    console.log(`✅ Payment record created: ${payment.id} for €${paymentAmount}`);
+
     // Audit log
     await auditService.log({
       user_id: user.id,
@@ -571,10 +615,30 @@ async function sendInvoiceEmail(invoiceId, user, requestMetadata = {}) {
 
     // Send invoice email
     console.log('📧 Sending invoice email to:', invoice.patient.email);
-    const emailResult = await emailService.sendInvoiceEmail(invoice, invoice.patient);
 
-    // Update invoice status to SENT if it was DRAFT
-    if (invoice.status === 'DRAFT') {
+    let emailStatus = 'SUCCESS';
+    let errorMessage = null;
+
+    try {
+      const emailResult = await emailService.sendInvoiceEmail(invoice, invoice.patient);
+    } catch (emailError) {
+      emailStatus = 'FAILED';
+      errorMessage = emailError.message;
+      console.error('❌ Email send failed:', emailError);
+    }
+
+    // Log email send in invoice_emails table
+    await InvoiceEmail.create({
+      billing_id: invoiceId,
+      sent_to: invoice.patient.email,
+      sent_at: new Date(),
+      sent_by: user.id,
+      status: emailStatus,
+      error_message: errorMessage
+    });
+
+    // Update invoice status to SENT if it was DRAFT and email succeeded
+    if (invoice.status === 'DRAFT' && emailStatus === 'SUCCESS') {
       await invoice.update({ status: 'SENT' });
     }
 
@@ -588,14 +652,21 @@ async function sendInvoiceEmail(invoiceId, user, requestMetadata = {}) {
       changes: {
         action: 'send_invoice_email',
         recipient: invoice.patient.email,
-        invoice_number: invoice.invoice_number
+        invoice_number: invoice.invoice_number,
+        status: emailStatus
       },
       ip_address: requestMetadata.ip,
       user_agent: requestMetadata.userAgent,
       request_method: requestMetadata.method,
       request_path: requestMetadata.path,
-      status_code: 200
+      status_code: emailStatus === 'SUCCESS' ? 200 : 500
     });
+
+    if (emailStatus === 'FAILED') {
+      const error = new Error('Failed to send invoice email');
+      error.statusCode = 500;
+      throw error;
+    }
 
     return {
       success: true,
@@ -689,6 +760,524 @@ async function markAsPaid(invoiceId, user, requestMetadata = {}) {
   }
 }
 
+/**
+ * Send multiple invoices by email (batch operation)
+ *
+ * @param {Array<string>} invoiceIds - Array of invoice UUIDs
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Results with successful and failed invoice IDs
+ */
+async function sendInvoiceBatch(invoiceIds, user, requestMetadata = {}) {
+  try {
+    const results = {
+      successful: [],
+      failed: [],
+      totalRequested: invoiceIds.length
+    };
+
+    console.log(`📧 Batch sending ${invoiceIds.length} invoices`);
+
+    for (const invoiceId of invoiceIds) {
+      try {
+        const result = await sendInvoiceEmail(invoiceId, user, requestMetadata);
+        results.successful.push({
+          invoice_id: invoiceId,
+          recipient: result.recipient
+        });
+      } catch (error) {
+        console.error(`❌ Failed to send invoice ${invoiceId}:`, error.message);
+        results.failed.push({
+          invoice_id: invoiceId,
+          error: error.message
+        });
+      }
+    }
+
+    // Audit log for batch operation
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'BATCH_SEND_INVOICES',
+      resource_type: 'billing',
+      details: {
+        total_requested: results.totalRequested,
+        successful_count: results.successful.length,
+        failed_count: results.failed.length,
+        invoice_ids: invoiceIds
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200
+    });
+
+    return results;
+  } catch (error) {
+    console.error('Error in sendInvoiceBatch:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send payment reminders for overdue invoices (batch operation)
+ *
+ * @param {Array<string>} invoiceIds - Array of invoice UUIDs
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Results with successful and failed invoice IDs
+ */
+async function sendReminderBatch(invoiceIds, user, requestMetadata = {}) {
+  try {
+    const results = {
+      successful: [],
+      failed: [],
+      totalRequested: invoiceIds.length
+    };
+
+    console.log(`🔔 Batch sending reminders for ${invoiceIds.length} invoices`);
+
+    for (const invoiceId of invoiceIds) {
+      try {
+        // Fetch invoice with patient details
+        const invoice = await Billing.findOne({
+          where: { id: invoiceId, is_active: true },
+          include: [
+            {
+              model: Patient,
+              as: 'patient',
+              attributes: ['id', 'first_name', 'last_name', 'email'],
+              where: { is_active: true },
+              required: true
+            }
+          ]
+        });
+
+        if (!invoice) {
+          throw new Error('Invoice not found');
+        }
+
+        // Check if patient has email
+        if (!invoice.patient || !invoice.patient.email) {
+          throw new Error('Patient has no email address');
+        }
+
+        // Check if invoice is actually overdue or unpaid
+        if (invoice.status === 'PAID') {
+          throw new Error('Invoice is already paid');
+        }
+
+        // Send reminder email
+        await emailService.sendPaymentReminderEmail(invoice, invoice.patient);
+
+        // Update invoice metadata to track reminder sent
+        const remindersSent = invoice.reminders_sent || 0;
+        await invoice.update({
+          reminders_sent: remindersSent + 1,
+          last_reminder_date: new Date()
+        });
+
+        results.successful.push({
+          invoice_id: invoiceId,
+          recipient: invoice.patient.email,
+          invoice_number: invoice.invoice_number
+        });
+
+        // Audit log for individual reminder
+        await auditService.log({
+          user_id: user.id,
+          username: user.username,
+          action: 'SEND_REMINDER',
+          resource_type: 'billing',
+          resource_id: invoiceId,
+          details: {
+            invoice_number: invoice.invoice_number,
+            patient_id: invoice.patient_id,
+            recipient: invoice.patient.email,
+            reminders_sent: remindersSent + 1
+          },
+          ip_address: requestMetadata.ip,
+          user_agent: requestMetadata.userAgent
+        });
+      } catch (error) {
+        console.error(`❌ Failed to send reminder for invoice ${invoiceId}:`, error.message);
+        results.failed.push({
+          invoice_id: invoiceId,
+          error: error.message
+        });
+      }
+    }
+
+    // Audit log for batch operation
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'BATCH_SEND_REMINDERS',
+      resource_type: 'billing',
+      details: {
+        total_requested: results.totalRequested,
+        successful_count: results.successful.length,
+        failed_count: results.failed.length,
+        invoice_ids: invoiceIds
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200
+    });
+
+    return results;
+  } catch (error) {
+    console.error('Error in sendReminderBatch:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update payment amount (admin override)
+ * Allows modifying the amount_paid and recalculates amount_due and status
+ *
+ * @param {string} invoiceId - Invoice UUID
+ * @param {number} newAmountPaid - New total amount paid
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated invoice
+ */
+async function updatePaymentAmount(invoiceId, newAmountPaid, user, requestMetadata = {}) {
+  try {
+    const invoice = await Billing.findOne({
+      where: { id: invoiceId, is_active: true },
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email'],
+          where: { is_active: true },
+          required: true
+        }
+      ]
+    });
+
+    if (!invoice) {
+      const error = new Error('Invoice not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const amount = parseFloat(newAmountPaid);
+    if (isNaN(amount) || amount < 0) {
+      const error = new Error('Invalid payment amount');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const amountTotal = parseFloat(invoice.amount_total);
+    if (amount > amountTotal) {
+      const error = new Error('Payment amount cannot exceed total amount');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const oldAmountPaid = parseFloat(invoice.amount_paid);
+    const oldAmountDue = parseFloat(invoice.amount_due);
+    const oldStatus = invoice.status;
+
+    // Calculate new amount_due
+    const newAmountDue = Math.max(0, amountTotal - amount);
+
+    // Determine new status
+    let newStatus = invoice.status;
+    if (newAmountDue === 0 && amount >= amountTotal) {
+      newStatus = 'PAID';
+    } else if (newAmountDue > 0) {
+      // Check if overdue
+      if (new Date() > new Date(invoice.due_date)) {
+        newStatus = 'OVERDUE';
+      } else if (oldStatus === 'PAID') {
+        // If was paid but now has balance, set to SENT
+        newStatus = 'SENT';
+      }
+    }
+
+    // Update invoice
+    await invoice.update({
+      amount_paid: amount,
+      amount_due: newAmountDue,
+      status: newStatus
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'UPDATE_PAYMENT_AMOUNT',
+      resource_type: 'billing',
+      resource_id: invoiceId,
+      changes: {
+        action: 'update_payment_amount',
+        old_amount_paid: oldAmountPaid,
+        new_amount_paid: amount,
+        old_amount_due: oldAmountDue,
+        new_amount_due: newAmountDue,
+        old_status: oldStatus,
+        new_status: newStatus,
+        invoice_number: invoice.invoice_number
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200
+    });
+
+    console.log(`✅ Invoice ${invoice.invoice_number} payment updated: €${oldAmountPaid} → €${amount}`);
+
+    return invoice;
+  } catch (error) {
+    console.error('Error in updatePaymentAmount:', error);
+    throw error;
+  }
+}
+
+/**
+ * Change invoice status (admin override)
+ * Allows changing invoice status even if already PAID
+ *
+ * @param {string} invoiceId - Invoice UUID
+ * @param {string} newStatus - New status (DRAFT, SENT, PAID, OVERDUE, CANCELLED)
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated invoice
+ */
+async function changeInvoiceStatus(invoiceId, newStatus, user, requestMetadata = {}) {
+  try {
+    const invoice = await Billing.findOne({
+      where: { id: invoiceId, is_active: true },
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email'],
+          where: { is_active: true },
+          required: true
+        }
+      ]
+    });
+
+    if (!invoice) {
+      const error = new Error('Invoice not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Validate new status
+    const validStatuses = ['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED'];
+    if (!validStatuses.includes(newStatus)) {
+      const error = new Error('Invalid status value');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const oldStatus = invoice.status;
+
+    // Don't update if status is the same
+    if (oldStatus === newStatus) {
+      return invoice;
+    }
+
+    // Update status
+    await invoice.update({
+      status: newStatus
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'CHANGE_STATUS',
+      resource_type: 'billing',
+      resource_id: invoiceId,
+      changes: {
+        action: 'change_invoice_status',
+        old_status: oldStatus,
+        new_status: newStatus,
+        invoice_number: invoice.invoice_number
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200
+    });
+
+    console.log(`✅ Invoice ${invoice.invoice_number} status changed: ${oldStatus} → ${newStatus}`);
+
+    return invoice;
+  } catch (error) {
+    console.error('Error in changeInvoiceStatus:', error);
+    throw error;
+  }
+}
+
+/**
+ * Change payment status (PAID/CANCELLED)
+ * When cancelled, recalculates invoice amounts to exclude this payment
+ *
+ * @param {string} paymentId - Payment UUID
+ * @param {string} newStatus - New status (PAID, CANCELLED)
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated payment and invoice
+ */
+async function changePaymentStatus(paymentId, newStatus, user, requestMetadata = {}) {
+  try {
+    // Validate status
+    const validStatuses = ['PAID', 'CANCELLED'];
+    if (!validStatuses.includes(newStatus)) {
+      const error = new Error('Invalid payment status');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Find payment with invoice details
+    const payment = await Payment.findOne({
+      where: { id: paymentId },
+      include: [
+        {
+          model: Billing,
+          as: 'invoice',
+          required: true,
+          include: [
+            {
+              model: Patient,
+              as: 'patient',
+              attributes: ['id', 'first_name', 'last_name', 'email'],
+              where: { is_active: true },
+              required: true
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!payment) {
+      const error = new Error('Payment not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const oldStatus = payment.status;
+
+    // Don't update if status is the same
+    if (oldStatus === newStatus) {
+      return { payment, invoice: payment.invoice };
+    }
+
+    // Update payment status
+    await payment.update({ status: newStatus });
+
+    // Recalculate invoice amounts
+    // Get all PAID payments for this invoice
+    const allPayments = await Payment.findAll({
+      where: {
+        billing_id: payment.billing_id,
+        status: 'PAID'
+      }
+    });
+
+    // Calculate total paid amount (only PAID payments)
+    const totalPaid = allPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+    const invoice = payment.invoice;
+    const amountTotal = parseFloat(invoice.amount_total);
+    const newAmountDue = Math.max(0, amountTotal - totalPaid);
+
+    // Determine new invoice status
+    let newInvoiceStatus = invoice.status;
+    if (newAmountDue === 0 && totalPaid >= amountTotal) {
+      newInvoiceStatus = 'PAID';
+    } else if (newAmountDue > 0) {
+      // Check if overdue
+      if (new Date() > new Date(invoice.due_date)) {
+        newInvoiceStatus = 'OVERDUE';
+      } else if (invoice.status === 'PAID') {
+        // If was paid but now has balance, set to SENT
+        newInvoiceStatus = 'SENT';
+      }
+    }
+
+    // Update invoice
+    await invoice.update({
+      amount_paid: totalPaid,
+      amount_due: newAmountDue,
+      status: newInvoiceStatus
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'CHANGE_PAYMENT_STATUS',
+      resource_type: 'payment',
+      resource_id: paymentId,
+      changes: {
+        action: 'change_payment_status',
+        old_status: oldStatus,
+        new_status: newStatus,
+        payment_amount: parseFloat(payment.amount),
+        invoice_id: payment.billing_id,
+        invoice_number: invoice.invoice_number,
+        new_amount_paid: totalPaid,
+        new_amount_due: newAmountDue,
+        new_invoice_status: newInvoiceStatus
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200
+    });
+
+    console.log(`✅ Payment ${paymentId} status changed: ${oldStatus} → ${newStatus}`);
+    console.log(`   Invoice ${invoice.invoice_number} updated: €${invoice.amount_paid} paid, €${newAmountDue} due`);
+
+    // Reload invoice with all payments to return complete data
+    const updatedInvoice = await Billing.findOne({
+      where: { id: payment.billing_id },
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email'],
+          where: { is_active: true },
+          required: true
+        },
+        {
+          model: Payment,
+          as: 'payments',
+          attributes: ['id', 'amount', 'payment_method', 'payment_date', 'notes', 'status', 'recorded_by', 'created_at'],
+          include: [
+            {
+              model: User,
+              as: 'recorder',
+              attributes: ['id', 'username', 'first_name', 'last_name'],
+              required: false
+            }
+          ],
+          order: [['payment_date', 'DESC']],
+          required: false
+        }
+      ]
+    });
+
+    return { payment, invoice: updatedInvoice };
+  } catch (error) {
+    console.error('Error in changePaymentStatus:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getInvoices,
   getInvoiceById,
@@ -697,5 +1286,10 @@ module.exports = {
   recordPayment,
   deleteInvoice,
   sendInvoiceEmail,
-  markAsPaid
+  markAsPaid,
+  sendInvoiceBatch,
+  sendReminderBatch,
+  changeInvoiceStatus,
+  updatePaymentAmount,
+  changePaymentStatus
 };

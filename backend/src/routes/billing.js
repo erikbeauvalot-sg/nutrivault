@@ -303,4 +303,109 @@ router.delete(
   billingController.deleteInvoice
 );
 
+/**
+ * POST /api/billing/batch/send-invoices - Send multiple invoices by email
+ * Requires: billing.update permission
+ * Batch operation to send invoice emails to multiple patients
+ */
+router.post(
+  '/batch/send-invoices',
+  authenticate,
+  requirePermission('billing.update'),
+  [
+    body('invoice_ids')
+      .isArray({ min: 1 })
+      .withMessage('invoice_ids must be a non-empty array'),
+    body('invoice_ids.*')
+      .isUUID()
+      .withMessage('Each invoice_id must be a valid UUID')
+  ],
+  validate,
+  billingController.sendInvoiceBatch
+);
+
+/**
+ * POST /api/billing/batch/send-reminders - Send payment reminders for multiple invoices
+ * Requires: billing.update permission
+ * Batch operation to send payment reminder emails for overdue invoices
+ */
+router.post(
+  '/batch/send-reminders',
+  authenticate,
+  requirePermission('billing.update'),
+  [
+    body('invoice_ids')
+      .isArray({ min: 1 })
+      .withMessage('invoice_ids must be a non-empty array'),
+    body('invoice_ids.*')
+      .isUUID()
+      .withMessage('Each invoice_id must be a valid UUID')
+  ],
+  validate,
+  billingController.sendReminderBatch
+);
+
+/**
+ * PATCH /api/billing/:id/status - Change invoice status (admin override)
+ * Requires: billing.update permission
+ * Allows changing invoice status even if already PAID
+ */
+router.patch(
+  '/:id/status',
+  authenticate,
+  requirePermission('billing.update'),
+  [
+    param('id')
+      .isUUID()
+      .withMessage('Invalid invoice ID format'),
+    body('status')
+      .isIn(['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED'])
+      .withMessage('Status must be one of: DRAFT, SENT, PAID, OVERDUE, CANCELLED')
+  ],
+  validate,
+  billingController.changeInvoiceStatus
+);
+
+/**
+ * PATCH /api/billing/:id/payment-amount - Update payment amount (admin override)
+ * Requires: billing.update permission
+ * Updates amount_paid and recalculates amount_due and status
+ */
+router.patch(
+  '/:id/payment-amount',
+  authenticate,
+  requirePermission('billing.update'),
+  [
+    param('id')
+      .isUUID()
+      .withMessage('Invalid invoice ID format'),
+    body('amount_paid')
+      .isFloat({ min: 0 })
+      .withMessage('amount_paid must be a positive number')
+  ],
+  validate,
+  billingController.updatePaymentAmount
+);
+
+/**
+ * PATCH /api/billing/payments/:paymentId/status - Change payment status
+ * Requires: billing.update permission
+ * Changes payment status (PAID/CANCELLED) and recalculates invoice amounts
+ */
+router.patch(
+  '/payments/:paymentId/status',
+  authenticate,
+  requirePermission('billing.update'),
+  [
+    param('paymentId')
+      .isUUID()
+      .withMessage('Invalid payment ID format'),
+    body('status')
+      .isIn(['PAID', 'CANCELLED'])
+      .withMessage('Status must be either PAID or CANCELLED')
+  ],
+  validate,
+  billingController.changePaymentStatus
+);
+
 module.exports = router;

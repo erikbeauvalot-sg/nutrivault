@@ -11,11 +11,12 @@ import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import DocumentListComponent from '../components/DocumentListComponent';
 import MeasurementCharts from '../components/MeasurementCharts';
+import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import api from '../services/api';
 import './PatientDetailPage.css';
 
 const PatientDetailPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
@@ -113,13 +114,13 @@ const PatientDetailPage = () => {
 
 
   const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString();
+    return utilFormatDate(dateString, i18n.language);
   };
 
   const formatDateTime = (dateString) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleString();
+    const locale = i18n.language === 'fr' ? 'fr-FR' : 'en-US';
+    return new Date(dateString).toLocaleString(locale);
   };
 
   // Check permissions

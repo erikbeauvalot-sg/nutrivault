@@ -14,10 +14,16 @@ import { getPatients } from '../services/patientService';
 import visitService from '../services/visitService';
 
 const EditInvoicePage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const locale = i18n.language === 'fr' ? 'fr-FR' : 'en-US';
+    return new Date(dateString).toLocaleDateString(locale);
+  };
 
   const getStatusText = (status) => {
     const statusMap = {
@@ -267,7 +273,7 @@ const EditInvoicePage = () => {
                           <option value="">{t('billing.noVisit', 'No associated visit')}</option>
                           {visits.map(visit => (
                             <option key={visit.id} value={visit.id}>
-                              {new Date(visit.visit_date).toLocaleDateString()} - {visit.visit_type}
+                              {formatDate(visit.visit_date)} - {visit.visit_type}
                               {visit.status && ` (${getStatusText(visit.status)})`}
                             </option>
                           ))}
@@ -294,7 +300,7 @@ const EditInvoicePage = () => {
                       <Form.Group className="mb-3">
                         <Form.Label>{t('billing.amount', 'Amount')} *</Form.Label>
                         <InputGroup>
-                          <InputGroup.Text>$</InputGroup.Text>
+                          <InputGroup.Text>€</InputGroup.Text>
                           <Form.Control
                             type="number"
                             step="0.01"
@@ -366,12 +372,12 @@ const EditInvoicePage = () => {
               <Card.Body>
                 <div className="small text-muted">
                   <div><strong>{t('billing.invoiceNumber', 'Invoice #')}:</strong> {invoice.invoice_number}</div>
-                  <div><strong>{t('billing.status', 'Status')}:</strong>
+                  <div><strong>{t('billing.statusLabel', 'Status')}:</strong>
                     <Badge bg={invoice.status === 'PAID' ? 'success' : invoice.status === 'OVERDUE' ? 'danger' : 'warning'} className="ms-2">
                       {invoice.status}
                     </Badge>
                   </div>
-                  <div><strong>{t('billing.created', 'Created')}:</strong> {new Date(invoice.created_at).toLocaleDateString()}</div>
+                  <div><strong>{t('billing.created', 'Created')}:</strong> {formatDate(invoice.created_at)}</div>
                 </div>
               </Card.Body>
             </Card>

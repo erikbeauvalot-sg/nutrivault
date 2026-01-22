@@ -21,6 +21,8 @@ db.PatientTag = require('./PatientTag')(sequelize, DataTypes);
 db.Visit = require('./Visit')(sequelize, DataTypes);
 db.VisitMeasurement = require('./VisitMeasurement')(sequelize, DataTypes);
 db.Billing = require('./Billing')(sequelize, DataTypes);
+db.Payment = require('./Payment')(sequelize, DataTypes);
+db.InvoiceEmail = require('./InvoiceEmail')(sequelize, DataTypes);
 db.Document = require('./Document')(sequelize, DataTypes);
 db.DocumentShare = require('./DocumentShare')(sequelize, DataTypes);
 db.AuditLog = require('./AuditLog')(sequelize, DataTypes);
@@ -131,6 +133,46 @@ db.Billing.belongsTo(db.Visit, {
 db.Visit.hasOne(db.Billing, {
   foreignKey: 'visit_id',
   as: 'billing'
+});
+
+// Payment - Billing relationship
+db.Payment.belongsTo(db.Billing, {
+  foreignKey: 'billing_id',
+  as: 'invoice'
+});
+db.Billing.hasMany(db.Payment, {
+  foreignKey: 'billing_id',
+  as: 'payments'
+});
+
+// Payment - User (recorded_by) relationship
+db.Payment.belongsTo(db.User, {
+  foreignKey: 'recorded_by',
+  as: 'recorder'
+});
+db.User.hasMany(db.Payment, {
+  foreignKey: 'recorded_by',
+  as: 'recorded_payments'
+});
+
+// InvoiceEmail - Billing relationship
+db.InvoiceEmail.belongsTo(db.Billing, {
+  foreignKey: 'billing_id',
+  as: 'invoice'
+});
+db.Billing.hasMany(db.InvoiceEmail, {
+  foreignKey: 'billing_id',
+  as: 'email_history'
+});
+
+// InvoiceEmail - User (sent_by) relationship
+db.InvoiceEmail.belongsTo(db.User, {
+  foreignKey: 'sent_by',
+  as: 'sender'
+});
+db.User.hasMany(db.InvoiceEmail, {
+  foreignKey: 'sent_by',
+  as: 'sent_invoice_emails'
 });
 
 // Document - User (uploaded_by) relationship

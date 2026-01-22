@@ -5,14 +5,15 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Tab, Tabs, Button, Badge, Alert, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Card, Tab, Tabs, Button, Badge, Alert, Spinner, Modal } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
+import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import visitService from '../services/visitService';
 
 const VisitDetailPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
@@ -21,6 +22,9 @@ const VisitDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  const [finishingVisit, setFinishingVisit] = useState(false);
+  const [finishSuccess, setFinishSuccess] = useState(null);
 
   useEffect(() => {
     if (id) {
@@ -51,14 +55,43 @@ const VisitDetailPage = () => {
     navigate(`/visits/${id}/edit`);
   };
 
+  const handleFinishAndInvoice = async () => {
+    try {
+      setFinishingVisit(true);
+      setError(null);
+
+      const response = await visitService.finishAndInvoice(id);
+      const result = response.data.data || response.data;
+
+      // Show success message
+      setFinishSuccess({
+        message: result.message,
+        emailSent: result.emailSent,
+        invoice: result.invoice
+      });
+
+      // Refresh visit details
+      await fetchVisitDetails();
+
+      // Close modal
+      setShowFinishModal(false);
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || t('visits.finishAndInvoiceError'));
+      console.error('Error finishing visit and generating invoice:', err);
+      setShowFinishModal(false);
+    } finally {
+      setFinishingVisit(false);
+    }
+  };
+
   const formatDateTime = (dateString) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleString();
+    const locale = i18n.language === 'fr' ? 'fr-FR' : 'en-US';
+    return new Date(dateString).toLocaleString(locale);
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString();
+    return utilFormatDate(dateString, i18n.language);
   };
 
   const getStatusBadge = (status) => {
@@ -79,6 +112,7 @@ const VisitDetailPage = () => {
 
   // Check permissions
   const canEditVisit = user?.role === 'ADMIN' || user?.role === 'DIETITIAN';
+  const canFinishVisit = canEditVisit && visit?.status === 'SCHEDULED';
 
   if (loading) {
     return (
@@ -144,7 +178,16 @@ const VisitDetailPage = () => {
               </span>
             </div>
           </Col>
-          <Col xs="auto">
+          <Col xs="auto" className="d-flex gap-2">
+            {canFinishVisit && (
+              <Button
+                variant="success"
+                onClick={() => setShowFinishModal(true)}
+                disabled={finishingVisit}
+              >
+                ✅ {t('visits.finishAndInvoice')}
+              </Button>
+            )}
             {canEditVisit && (
               <Button variant="primary" onClick={handleEdit}>
                 {t('visits.editVisit')}
@@ -152,6 +195,29 @@ const VisitDetailPage = () => {
             )}
           </Col>
         </Row>
+
+        {/* Success Alert */}
+        {finishSuccess && (
+          <Alert
+            variant="success"
+            dismissible
+            onClose={() => setFinishSuccess(null)}
+            className="mb-4"
+          >
+            <Alert.Heading>✅ {t('visits.visitCompleted')}</Alert.Heading>
+            <p>{finishSuccess.message}</p>
+            {finishSuccess.emailSent && (
+              <p className="mb-0">
+                📧 {t('visits.invoiceEmailSent')}
+              </p>
+            )}
+            {!finishSuccess.emailSent && finishSuccess.invoice && (
+              <p className="mb-0 text-warning">
+                ⚠️ {t('visits.invoiceCreatedNoEmail')}
+              </p>
+            )}
+          </Alert>
+        )}
 
         {/* Visit Details Tabs */}
         <Card>
@@ -413,6 +479,65 @@ const VisitDetailPage = () => {
             </Tabs>
           </Card.Body>
         </Card>
+
+        {/* Finish & Invoice Confirmation Modal */}
+        <Modal
+          show={showFinishModal}
+          onHide={() => setShowFinishModal(false)}
+          centered
+        >
+          <Modal.Header closeButton>
+            <Modal.Title>
+              ✅ {t('visits.finishAndInvoice')}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Alert variant="info" className="mb-3">
+              <strong>{t('visits.finishAndInvoiceConfirmTitle')}</strong>
+            </Alert>
+            <p>{t('visits.finishAndInvoiceConfirmMessage')}</p>
+            <ul>
+              <li>{t('visits.finishAndInvoiceStep1')}</li>
+              <li>{t('visits.finishAndInvoiceStep2')}</li>
+              {visit?.patient?.email && (
+                <li>{t('visits.finishAndInvoiceStep3')}</li>
+              )}
+              {!visit?.patient?.email && (
+                <li className="text-warning">
+                  ⚠️ {t('visits.finishAndInvoiceNoEmail')}
+                </li>
+              )}
+            </ul>
+            <p className="mb-0">
+              <strong>{t('visits.finishAndInvoiceContinue')}</strong>
+            </p>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button
+              variant="secondary"
+              onClick={() => setShowFinishModal(false)}
+              disabled={finishingVisit}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="success"
+              onClick={handleFinishAndInvoice}
+              disabled={finishingVisit}
+            >
+              {finishingVisit ? (
+                <>
+                  <Spinner animation="border" size="sm" className="me-2" />
+                  {t('visits.finishing')}
+                </>
+              ) : (
+                <>
+                  ✅ {t('visits.finishAndInvoice')}
+                </>
+              )}
+            </Button>
+          </Modal.Footer>
+        </Modal>
       </Container>
     </Layout>
   );

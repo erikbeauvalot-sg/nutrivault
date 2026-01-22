@@ -5,25 +5,33 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Button, Badge, Alert, Spinner, Table } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Badge, Alert, Spinner, Table, Modal, Form } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import * as billingService from '../services/billingService';
 
 const InvoiceDetailPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, hasPermission } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [invoice, setInvoice] = useState(null);
   const [payments, setPayments] = useState([]);
+  const [emailHistory, setEmailHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [markingPaid, setMarkingPaid] = useState(false);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [newStatus, setNewStatus] = useState('');
+  const [changingStatus, setChangingStatus] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [showPaymentStatusModal, setShowPaymentStatusModal] = useState(false);
+  const [newPaymentStatus, setNewPaymentStatus] = useState('');
+  const [changingPaymentStatus, setChangingPaymentStatus] = useState(false);
 
   useEffect(() => {
     if (id && hasPermission('billing.read')) {
@@ -38,6 +46,7 @@ const InvoiceDetailPage = () => {
       const invoiceData = response.data.data || response.data;
       setInvoice(invoiceData);
       setPayments(invoiceData.payments || []);
+      setEmailHistory(invoiceData.email_history || []);
       setError(null);
     } catch (err) {
       setError(t('billing.failedToLoad') + ': ' + (err.response?.data?.error || err.message));
@@ -226,6 +235,66 @@ const InvoiceDetailPage = () => {
     }
   };
 
+  const handleOpenStatusModal = () => {
+    setNewStatus(invoice.status);
+    setShowStatusModal(true);
+  };
+
+  const handleChangeStatus = async () => {
+    if (!newStatus || newStatus === invoice.status) {
+      setShowStatusModal(false);
+      return;
+    }
+
+    try {
+      setChangingStatus(true);
+      setError(null);
+      await billingService.changeInvoiceStatus(id, newStatus);
+      setSuccessMessage(t('billing.statusChangedSuccessfully', `Status changed to ${newStatus}`));
+      setShowStatusModal(false);
+      // Refresh invoice data
+      await fetchInvoiceDetails();
+    } catch (err) {
+      setError(t('billing.failedToChangeStatus', 'Failed to change status') + ': ' + (err.response?.data?.error || err.message));
+      setShowStatusModal(false);
+    } finally {
+      setChangingStatus(false);
+    }
+  };
+
+  const handleOpenPaymentStatusModal = (payment) => {
+    setSelectedPayment(payment);
+    setNewPaymentStatus(payment.status || 'PAID');
+    setShowPaymentStatusModal(true);
+  };
+
+  const handleChangePaymentStatus = async () => {
+    if (!selectedPayment || !newPaymentStatus) {
+      setError(t('billing.invalidPaymentStatus', 'Invalid payment status'));
+      return;
+    }
+
+    try {
+      setChangingPaymentStatus(true);
+      setError(null);
+      await billingService.changePaymentStatus(selectedPayment.id, newPaymentStatus);
+      setSuccessMessage(t('billing.paymentStatusChanged', `Payment status changed to ${newPaymentStatus}`));
+      setShowPaymentStatusModal(false);
+      setSelectedPayment(null);
+      // Refresh invoice data
+      await fetchInvoiceDetails();
+    } catch (err) {
+      setError(t('billing.failedToChangePaymentStatus', 'Failed to change payment status') + ': ' + (err.response?.data?.error || err.message));
+      setShowPaymentStatusModal(false);
+    } finally {
+      setChangingPaymentStatus(false);
+    }
+  };
+
+  const getPaymentStatusBadgeVariant = (status) => {
+    return status === 'PAID' ? 'success' : 'danger';
+  };
+
   const getStatusBadgeVariant = (status) => {
     switch (status) {
       case 'DRAFT': return 'secondary';
@@ -246,7 +315,40 @@ const InvoiceDetailPage = () => {
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString();
+    const locale = i18n.language === 'fr' ? 'fr-FR' : 'en-US';
+    return new Date(dateString).toLocaleDateString(locale);
+  };
+
+  const formatDateTime = (dateString) => {
+    if (!dateString) return '-';
+    const locale = i18n.language === 'fr' ? 'fr-FR' : 'en-US';
+    return new Date(dateString).toLocaleString(locale);
+  };
+
+  // Combine payments and email history into a unified timeline
+  const getHistory = () => {
+    const history = [];
+
+    // Add payments
+    payments.forEach(payment => {
+      history.push({
+        type: 'payment',
+        date: payment.payment_date,
+        data: payment
+      });
+    });
+
+    // Add emails
+    emailHistory.forEach(email => {
+      history.push({
+        type: 'email',
+        date: email.sent_at,
+        data: email
+      });
+    });
+
+    // Sort by date (most recent first)
+    return history.sort((a, b) => new Date(b.date) - new Date(a.date));
   };
 
   if (loading) {
@@ -362,7 +464,7 @@ const InvoiceDetailPage = () => {
                   <Col md={6}>
                     <dl className="row">
                       <dt className="col-sm-5">{t('billing.amount')}:</dt>
-                      <dd className="col-sm-7 fw-bold">{formatCurrency(invoice.amount)}</dd>
+                      <dd className="col-sm-7 fw-bold">{formatCurrency(invoice.amount_total)}</dd>
 
                       <dt className="col-sm-5">{t('billing.amountPaid')}:</dt>
                       <dd className="col-sm-7">{formatCurrency(invoice.amount_paid)}</dd>
@@ -418,13 +520,23 @@ const InvoiceDetailPage = () => {
                 )}
 
                 {hasPermission('billing.update') && (
-                  <Button
-                    variant="outline-primary"
-                    className="w-100 mb-2"
-                    onClick={() => navigate(`/billing/${id}/edit`)}
-                  >
-                    ✏️ {t('common.edit')}
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline-primary"
+                      className="w-100 mb-2"
+                      onClick={() => navigate(`/billing/${id}/edit`)}
+                    >
+                      ✏️ {t('common.edit')}
+                    </Button>
+
+                    <Button
+                      variant="outline-warning"
+                      className="w-100 mb-2"
+                      onClick={handleOpenStatusModal}
+                    >
+                      🔄 {t('billing.changeStatus', 'Change Status')}
+                    </Button>
+                  </>
                 )}
 
                 <Button
@@ -447,38 +559,246 @@ const InvoiceDetailPage = () => {
           </Col>
         </Row>
 
-        {/* Payment History */}
+        {/* Payment & Email History */}
         <Card>
           <Card.Header>
-            <h5 className="mb-0">{t('billing.paymentHistory')}</h5>
+            <h5 className="mb-0">{t('billing.history', 'History')}</h5>
           </Card.Header>
           <Card.Body>
-            {payments.length === 0 ? (
-              <p className="text-muted">{t('billing.noPayments')}</p>
+            {getHistory().length === 0 ? (
+              <p className="text-muted">{t('billing.noHistory', 'No activity yet')}</p>
             ) : (
               <Table responsive hover>
                 <thead>
                   <tr>
-                    <th>{t('billing.paymentDate')}</th>
-                    <th>{t('billing.amount')}</th>
-                    <th>{t('billing.paymentMethod')}</th>
-                    <th>{t('billing.notes')}</th>
+                    <th>{t('billing.date', 'Date')}</th>
+                    <th>{t('billing.type', 'Type')}</th>
+                    <th>{t('billing.details', 'Details')}</th>
+                    <th>{t('billing.statusLabel')}</th>
+                    {hasPermission('billing.update') && <th>{t('common.actions')}</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {payments.map((payment) => (
-                    <tr key={payment.id}>
-                      <td>{formatDate(payment.payment_date)}</td>
-                      <td>{formatCurrency(payment.amount)}</td>
-                      <td>{payment.payment_method}</td>
-                      <td>{payment.notes || '-'}</td>
-                    </tr>
-                  ))}
+                  {getHistory().map((item, index) => {
+                    if (item.type === 'payment') {
+                      const payment = item.data;
+                      return (
+                        <tr key={`payment-${payment.id}`} style={{ opacity: payment.status === 'CANCELLED' ? 0.6 : 1 }}>
+                          <td>{formatDateTime(payment.payment_date)}</td>
+                          <td>
+                            <Badge bg="success">💳 {t('billing.payment', 'Payment')}</Badge>
+                          </td>
+                          <td>
+                            <strong>{formatCurrency(payment.amount)}</strong>
+                            {payment.status === 'CANCELLED' && (
+                              <span className="text-muted small ms-2">({t('billing.notCounted', 'not counted')})</span>
+                            )}
+                            <div className="small text-muted">
+                              {payment.payment_method && `${payment.payment_method}`}
+                              {payment.notes && ` - ${payment.notes}`}
+                            </div>
+                          </td>
+                          <td>
+                            <Badge bg={getPaymentStatusBadgeVariant(payment.status)}>
+                              {t(`billing.paymentStatus.${payment.status}`, payment.status)}
+                            </Badge>
+                          </td>
+                          {hasPermission('billing.update') && (
+                            <td>
+                              <Button
+                                size="sm"
+                                variant="outline-secondary"
+                                onClick={() => handleOpenPaymentStatusModal(payment)}
+                              >
+                                🔄 {t('billing.changeStatus')}
+                              </Button>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    } else {
+                      const email = item.data;
+                      return (
+                        <tr key={`email-${email.id}`}>
+                          <td>{formatDateTime(email.sent_at)}</td>
+                          <td>
+                            <Badge bg="info">📧 {t('billing.emailSent', 'Email Sent')}</Badge>
+                          </td>
+                          <td>
+                            <div className="small">
+                              {t('billing.sentTo', 'Sent to')}: <strong>{email.sent_to}</strong>
+                            </div>
+                            {email.sender && (
+                              <div className="small text-muted">
+                                {t('billing.sentBy', 'By')}: {email.sender.first_name} {email.sender.last_name}
+                              </div>
+                            )}
+                            {email.error_message && (
+                              <div className="small text-danger">
+                                {t('billing.error', 'Error')}: {email.error_message}
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            <Badge bg={email.status === 'SUCCESS' ? 'success' : 'danger'}>
+                              {email.status === 'SUCCESS' ? '✓ ' + t('billing.sent', 'Sent') : '✗ ' + t('billing.failed', 'Failed')}
+                            </Badge>
+                          </td>
+                          {hasPermission('billing.update') && <td>-</td>}
+                        </tr>
+                      );
+                    }
+                  })}
                 </tbody>
               </Table>
             )}
           </Card.Body>
         </Card>
+
+        {/* Change Payment Status Modal */}
+        <Modal show={showPaymentStatusModal} onHide={() => setShowPaymentStatusModal(false)} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>🔄 {t('billing.changePaymentStatus', 'Change Payment Status')}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {selectedPayment && (
+              <>
+                <Alert variant="warning" className="small">
+                  <strong>{t('billing.changePaymentStatusWarning', 'Warning:')}</strong>{' '}
+                  {t('billing.changePaymentStatusMessage', 'Changing the payment status to CANCELLED will exclude this payment from the invoice balance calculation.')}
+                </Alert>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>{t('billing.paymentAmount', 'Payment Amount')}</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formatCurrency(selectedPayment.amount)}
+                    disabled
+                    readOnly
+                  />
+                </Form.Group>
+
+                <Form.Group className="mb-3">
+                  <Form.Label>{t('billing.paymentDate', 'Payment Date')}</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formatDate(selectedPayment.payment_date)}
+                    disabled
+                    readOnly
+                  />
+                </Form.Group>
+
+                <Form.Group>
+                  <Form.Label>
+                    {t('billing.currentStatus', 'Current Status')}: <Badge bg={getPaymentStatusBadgeVariant(selectedPayment.status)}>{t(`billing.paymentStatus.${selectedPayment.status}`, selectedPayment.status)}</Badge>
+                  </Form.Label>
+                </Form.Group>
+
+                <Form.Group className="mt-3">
+                  <Form.Label>{t('billing.newStatus', 'New Status')}</Form.Label>
+                  <Form.Select
+                    value={newPaymentStatus}
+                    onChange={(e) => setNewPaymentStatus(e.target.value)}
+                    disabled={changingPaymentStatus}
+                  >
+                    <option value="PAID">{t('billing.paymentStatus.PAID', 'Paid')}</option>
+                    <option value="CANCELLED">{t('billing.paymentStatus.CANCELLED', 'Cancelled')}</option>
+                  </Form.Select>
+                  <Form.Text className="text-muted">
+                    {t('billing.selectNewPaymentStatus', 'Select the new status for this payment')}
+                  </Form.Text>
+                </Form.Group>
+              </>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button
+              variant="secondary"
+              onClick={() => setShowPaymentStatusModal(false)}
+              disabled={changingPaymentStatus}
+            >
+              {t('common.cancel', 'Cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleChangePaymentStatus}
+              disabled={changingPaymentStatus}
+            >
+              {changingPaymentStatus ? (
+                <>
+                  <Spinner animation="border" size="sm" className="me-2" />
+                  {t('common.updating', 'Updating...')}
+                </>
+              ) : (
+                <>
+                  🔄 {t('billing.changeStatus', 'Change Status')}
+                </>
+              )}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Change Status Modal */}
+        <Modal show={showStatusModal} onHide={() => setShowStatusModal(false)} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>🔄 {t('billing.changeStatus', 'Change Invoice Status')}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Alert variant="info" className="small">
+              <strong>{t('billing.changeStatusWarning', 'Warning:')}</strong>{' '}
+              {t('billing.changeStatusMessage', 'Changing the invoice status will affect reporting and workflows. Use with caution.')}
+            </Alert>
+
+            <Form.Group>
+              <Form.Label>
+                {t('billing.currentStatus', 'Current Status')}: <Badge bg={getStatusBadgeVariant(invoice.status)}>{invoice.status}</Badge>
+              </Form.Label>
+            </Form.Group>
+
+            <Form.Group className="mt-3">
+              <Form.Label>{t('billing.newStatus', 'New Status')}</Form.Label>
+              <Form.Select
+                value={newStatus}
+                onChange={(e) => setNewStatus(e.target.value)}
+                disabled={changingStatus}
+              >
+                <option value="DRAFT">{t('billing.status.draft', 'Draft')}</option>
+                <option value="SENT">{t('billing.status.sent', 'Sent')}</option>
+                <option value="PAID">{t('billing.status.paid', 'Paid')}</option>
+                <option value="OVERDUE">{t('billing.status.overdue', 'Overdue')}</option>
+                <option value="CANCELLED">{t('billing.status.cancelled', 'Cancelled')}</option>
+              </Form.Select>
+              <Form.Text className="text-muted">
+                {t('billing.selectNewStatus', 'Select the new status for this invoice')}
+              </Form.Text>
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button
+              variant="secondary"
+              onClick={() => setShowStatusModal(false)}
+              disabled={changingStatus}
+            >
+              {t('common.cancel', 'Cancel')}
+            </Button>
+            <Button
+              variant="warning"
+              onClick={handleChangeStatus}
+              disabled={changingStatus || newStatus === invoice.status}
+            >
+              {changingStatus ? (
+                <>
+                  <Spinner animation="border" size="sm" className="me-2" />
+                  {t('common.changing', 'Changing...')}
+                </>
+              ) : (
+                <>
+                  🔄 {t('billing.changeStatus', 'Change Status')}
+                </>
+              )}
+            </Button>
+          </Modal.Footer>
+        </Modal>
       </Container>
     </Layout>
   );

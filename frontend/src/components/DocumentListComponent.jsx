@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { Card, Table, Button, Badge, Alert, Spinner, Form, Row, Col, InputGroup, Pagination, Modal } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
+import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import * as documentService from '../services/documentService';
 
 const DocumentListComponent = ({
@@ -14,7 +15,7 @@ const DocumentListComponent = ({
   showUploadButton = true,
   onUploadClick
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -128,8 +129,7 @@ const DocumentListComponent = ({
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString();
+    return utilFormatDate(dateString, i18n.language);
   };
 
   const formatFileSize = (bytes) => {
