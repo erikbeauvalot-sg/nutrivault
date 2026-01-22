@@ -906,7 +906,8 @@
     "obesitySevere": "Severe Obesity",
     "obesityMorbid": "Morbid Obesity",
     "category": "BMI Category",
-    "value": "BMI Value"
+    "value": "BMI Value",
+    "notAvailable": "Weight and height required"
   },
   "gdpr": {
     "actions": "GDPR",

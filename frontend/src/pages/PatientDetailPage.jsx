@@ -13,7 +13,7 @@ import DocumentListComponent from '../components/DocumentListComponent';
 import MeasurementCharts from '../components/MeasurementCharts';
 import InvoiceList from '../components/InvoiceList';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
-import { getBMICategory } from '../utils/bmiUtils';
+import { getBMICategory, calculateBMI } from '../utils/bmiUtils';
 import * as gdprService from '../services/gdprService';
 import * as billingService from '../services/billingService';
 import api from '../services/api';
@@ -602,6 +602,36 @@ const PatientDetailPage = () => {
                           <Row>
                             <Col sm={5}><strong>{t('patients.medicalRecordNumber', 'Medical Record #:')}</strong></Col>
                             <Col sm={7}>{patient.medical_record_number || '-'}</Col>
+                          </Row>
+                          <Row className="mt-2">
+                            <Col sm={5}><strong>{t('patients.bmi', 'BMI:')}</strong></Col>
+                            <Col sm={7}>
+                              {patient.weight_kg && patient.height_cm ? (
+                                <>
+                                  <div className="mb-1">
+                                    <strong style={{ fontSize: '1.1rem' }}>
+                                      {calculateBMI(patient.weight_kg, patient.height_cm)}
+                                    </strong>
+                                  </div>
+                                  {(() => {
+                                    const bmi = calculateBMI(patient.weight_kg, patient.height_cm);
+                                    const category = getBMICategory(bmi, t);
+                                    return (
+                                      <Badge
+                                        bg={category.variant}
+                                        style={category.customBg ? { backgroundColor: category.customBg } : {}}
+                                      >
+                                        {category.category}
+                                      </Badge>
+                                    );
+                                  })()}
+                                </>
+                              ) : (
+                                <span className="text-muted">
+                                  {t('bmi.notAvailable', 'Poids et taille requis')}
+                                </span>
+                              )}
+                            </Col>
                           </Row>
                           <Row className="mt-2">
                             <Col sm={5}><strong>{t('patients.heightCm', 'Height:')}</strong></Col>

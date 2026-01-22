@@ -921,7 +921,8 @@
     "obesitySevere": "Obésité sévère",
     "obesityMorbid": "Obésité morbide",
     "category": "Catégorie BMI",
-    "value": "Valeur BMI"
+    "value": "Valeur BMI",
+    "notAvailable": "Poids et taille requis"
   },
   "gdpr": {
     "actions": "RGPD",
