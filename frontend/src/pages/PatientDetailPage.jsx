@@ -315,7 +315,7 @@ const PatientDetailPage = () => {
                   <Col md={6}>
                     <Card className="mb-3">
                       <Card.Header className="bg-danger text-white">
-                        <h6 className="mb-0">🏥 Medical Information</h6>
+                        <h6 className="mb-0">🏥 {t('patients.medicalInfo')}</h6>
                       </Card.Header>
                       <Card.Body>
                         <Row className="mb-2">
@@ -346,7 +346,7 @@ const PatientDetailPage = () => {
 
                     <Card className="mb-3">
                       <Card.Header className="bg-success text-white">
-                        <h6 className="mb-0">🥗 Dietary Information</h6>
+                        <h6 className="mb-0">🥗 {t('patients.dietaryInfo')}</h6>
                       </Card.Header>
                       <Card.Body>
                         <Row className="mb-2">
@@ -528,7 +528,7 @@ const PatientDetailPage = () => {
                             </Col>
                           </Row>
                           <Row className="mt-3">
-                            <Col sm={4}><strong>Medical Conditions:</strong></Col>
+                            <Col sm={4}><strong>{t('patients.medicalConditions')}:</strong></Col>
                             <Col sm={8}>
                               {patient.medical_conditions ? (
                                 <div style={{ whiteSpace: 'pre-wrap' }}>{patient.medical_conditions}</div>
@@ -549,11 +549,11 @@ const PatientDetailPage = () => {
                     <Col md={6}>
                       <Card className="mb-3">
                         <Card.Header>
-                          <h5 className="mb-0">Dietary Preferences</h5>
+                          <h5 className="mb-0">{t('patients.dietaryPreferences')}</h5>
                         </Card.Header>
                         <Card.Body>
                           <Row>
-                            <Col sm={5}><strong>Dietary Restrictions:</strong></Col>
+                            <Col sm={5}><strong>{t('patients.dietaryRestrictions')}:</strong></Col>
                             <Col sm={7}>
                               {patient.dietary_restrictions ? (
                                 <div style={{ whiteSpace: 'pre-wrap' }}>{patient.dietary_restrictions}</div>
@@ -561,7 +561,7 @@ const PatientDetailPage = () => {
                             </Col>
                           </Row>
                           <Row className="mt-3">
-                            <Col sm={5}><strong>Food Preferences:</strong></Col>
+                            <Col sm={5}><strong>{t('patients.foodPreferences')}:</strong></Col>
                             <Col sm={7}>
                               {patient.food_preferences ? (
                                 <div style={{ whiteSpace: 'pre-wrap' }}>{patient.food_preferences}</div>
@@ -569,7 +569,7 @@ const PatientDetailPage = () => {
                             </Col>
                           </Row>
                           <Row className="mt-3">
-                            <Col sm={5}><strong>Nutritional Goals:</strong></Col>
+                            <Col sm={5}><strong>{t('patients.nutritionalGoals')}:</strong></Col>
                             <Col sm={7}>
                               {patient.nutritional_goals ? (
                                 <div style={{ whiteSpace: 'pre-wrap' }}>{patient.nutritional_goals}</div>
@@ -582,11 +582,11 @@ const PatientDetailPage = () => {
                     <Col md={6}>
                       <Card className="mb-3">
                         <Card.Header>
-                          <h5 className="mb-0">Lifestyle</h5>
+                          <h5 className="mb-0">{t('patients.lifestyle')}</h5>
                         </Card.Header>
                         <Card.Body>
                           <Row>
-                            <Col sm={5}><strong>Exercise Habits:</strong></Col>
+                            <Col sm={5}><strong>{t('patients.exerciseHabits')}:</strong></Col>
                             <Col sm={7}>
                               {patient.exercise_habits ? (
                                 <div style={{ whiteSpace: 'pre-wrap' }}>{patient.exercise_habits}</div>
@@ -594,11 +594,11 @@ const PatientDetailPage = () => {
                             </Col>
                           </Row>
                           <Row className="mt-3">
-                            <Col sm={5}><strong>Smoking Status:</strong></Col>
+                            <Col sm={5}><strong>{t('patients.smokingStatus')}:</strong></Col>
                             <Col sm={7}>{patient.smoking_status || '-'}</Col>
                           </Row>
                           <Row className="mt-3">
-                            <Col sm={5}><strong>Alcohol Consumption:</strong></Col>
+                            <Col sm={5}><strong>{t('patients.alcoholConsumption')}:</strong></Col>
                             <Col sm={7}>{patient.alcohol_consumption || '-'}</Col>
                           </Row>
                         </Card.Body>
@@ -749,12 +749,12 @@ const PatientDetailPage = () => {
               </Tab>
 
               {/* Measurements Tab */}
-              <Tab eventKey="measurements" title={`📊 Measurements`}>
+              <Tab eventKey="measurements" title={`📊 ${t('patients.measurementsTab')}`}>
                 <Card>
                   <Card.Header>
-                    <h5 className="mb-0">Measurement Trends</h5>
+                    <h5 className="mb-0">{t('patients.measurementTrends')}</h5>
                     <p className="text-muted mb-0 small">
-                      Track changes in patient measurements over time
+                      {t('patients.measurementTrendsDescription')}
                     </p>
                   </Card.Header>
                   <Card.Body>

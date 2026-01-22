@@ -191,12 +191,12 @@ const VisitsPage = () => {
             <Row>
               <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Search Patient</Form.Label>
+                  <Form.Label>{t('visits.searchPatient')}</Form.Label>
                   <InputGroup>
                     <InputGroup.Text>🔍</InputGroup.Text>
                     <Form.Control
                       type="text"
-                      placeholder="Search by patient name..."
+                      placeholder={t('visits.searchByPatientName')}
                       value={filters.search}
                       onChange={(e) => handleFilterChange('search', e.target.value)}
                     />
@@ -206,12 +206,12 @@ const VisitsPage = () => {
 
               <Col md={3}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Patient</Form.Label>
+                  <Form.Label>{t('visits.patient')}</Form.Label>
                   <Form.Select
                     value={filters.patient_id}
                     onChange={(e) => handleFilterChange('patient_id', e.target.value)}
                   >
-                    <option value="">All Patients</option>
+                    <option value="">{t('visits.allPatients')}</option>
                     {patients.map(patient => (
                       <option key={patient.id} value={patient.id}>
                         {patient.first_name} {patient.last_name}
@@ -223,16 +223,16 @@ const VisitsPage = () => {
 
               <Col md={3}>
                 <Form.Group className="mb-3">
-                  <Form.Label>Status</Form.Label>
+                  <Form.Label>{t('visits.status')}</Form.Label>
                   <Form.Select
                     value={filters.status}
                     onChange={(e) => handleFilterChange('status', e.target.value)}
                   >
-                    <option value="">All Status</option>
-                    <option value="SCHEDULED">Scheduled</option>
-                    <option value="COMPLETED">Completed</option>
-                    <option value="CANCELLED">Cancelled</option>
-                    <option value="NO_SHOW">No Show</option>
+                    <option value="">{t('visits.allStatus')}</option>
+                    <option value="SCHEDULED">{t('visits.scheduled')}</option>
+                    <option value="COMPLETED">{t('visits.completed')}</option>
+                    <option value="CANCELLED">{t('visits.cancelled')}</option>
+                    <option value="NO_SHOW">{t('visits.noShow')}</option>
                   </Form.Select>
                 </Form.Group>
               </Col>
@@ -243,7 +243,7 @@ const VisitsPage = () => {
                   className="mb-3 w-100"
                   onClick={() => setFilters({ search: '', status: '', patient_id: '', page: 1, limit: 20 })}
                 >
-                  Clear Filters
+                  {t('visits.clearFilters')}
                 </Button>
               </Col>
             </Row>
@@ -258,12 +258,12 @@ const VisitsPage = () => {
               {loading ? (
                 <div className="text-center py-5">
                   <Spinner animation="border" variant="primary" />
-                  <p className="mt-3">Loading visits...</p>
+                  <p className="mt-3">{t('visits.loadingVisits')}</p>
                 </div>
               ) : visits.length === 0 ? (
                 <div className="text-center py-5">
-                  <h3>No visits found</h3>
-                  <p className="text-muted">Try adjusting your filters or create a new visit</p>
+                  <h3>{t('visits.noVisitsFound')}</h3>
+                  <p className="text-muted">{t('visits.adjustFilters')}</p>
                 </div>
               ) : isMobile ? (
                 /* Mobile Card View */
@@ -341,13 +341,13 @@ const VisitsPage = () => {
                     <Table striped bordered hover>
                       <thead>
                         <tr>
-                          <th>Date & Time</th>
-                          <th>Patient</th>
-                          <th>Dietitian</th>
-                          <th>Type</th>
-                          <th>Status</th>
-                          <th>Duration</th>
-                          <th>Actions</th>
+                          <th>{t('visits.dateAndTime')}</th>
+                          <th>{t('visits.patient')}</th>
+                          <th>{t('visits.dietitian')}</th>
+                          <th>{t('visits.type')}</th>
+                          <th>{t('visits.status')}</th>
+                          <th>{t('visits.duration')}</th>
+                          <th>{t('visits.actions')}</th>
                         </tr>
                       </thead>
                       <tbody>

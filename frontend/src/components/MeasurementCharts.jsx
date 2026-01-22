@@ -146,10 +146,10 @@ const MeasurementCharts = ({ visits }) => {
             <Card>
               <Card.Header className="bg-success text-white">
                 <div className="d-flex justify-content-between align-items-center">
-                  <h6 className="mb-0">📊 BMI</h6>
+                  <h6 className="mb-0">📊 {t('patients.bmi')}</h6>
                   {calculatedBMICount > 0 && (
                     <small className="mb-0" style={{ fontSize: '0.75rem', opacity: 0.9 }}>
-                      {calculatedBMICount} auto-calculated
+                      {calculatedBMICount} {t('patients.autoCalculated')}
                     </small>
                   )}
                 </div>
