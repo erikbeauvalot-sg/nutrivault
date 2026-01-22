@@ -3,17 +3,19 @@
  * Dedicated page for uploading documents with drag-and-drop support
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Alert, ProgressBar, Form, Breadcrumb } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
+import { formatDate } from '../utils/dateUtils';
 import * as documentService from '../services/documentService';
+import api from '../services/api';
 
 const DocumentUploadPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -26,6 +28,86 @@ const DocumentUploadPage = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+
+  // Resource lists
+  const [patients, setPatients] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [visits, setVisits] = useState([]);
+  const [loadingResources, setLoadingResources] = useState(false);
+
+  // Load resources when resourceType changes
+  useEffect(() => {
+    if (resourceType === 'patient') {
+      loadPatients();
+    } else if (resourceType === 'user') {
+      loadUsers();
+    } else if (resourceType === 'visit') {
+      loadVisits();
+    }
+  }, [resourceType]);
+
+  const loadPatients = async () => {
+    try {
+      setLoadingResources(true);
+      const response = await api.get('/api/patients?limit=1000'); // Get all patients
+      const data = response.data?.data || response.data;
+      setPatients(Array.isArray(data) ? data : []);
+      console.log('Loaded patients:', data);
+    } catch (err) {
+      console.error('Error loading patients:', err);
+      setError(t('documents.failedToLoadPatients', 'Failed to load patients'));
+    } finally {
+      setLoadingResources(false);
+    }
+  };
+
+  const loadUsers = async () => {
+    try {
+      setLoadingResources(true);
+      const response = await api.get('/api/users?limit=1000'); // Get all users
+      const data = response.data?.data || response.data;
+      setUsers(Array.isArray(data) ? data : []);
+      console.log('Loaded users:', data);
+    } catch (err) {
+      console.error('Error loading users:', err);
+      setError(t('documents.failedToLoadUsers', 'Failed to load users'));
+    } finally {
+      setLoadingResources(false);
+    }
+  };
+
+  const loadVisits = async () => {
+    try {
+      setLoadingResources(true);
+      const response = await api.get('/api/visits?limit=1000'); // Get all visits
+      const data = response.data?.data || response.data;
+      setVisits(Array.isArray(data) ? data : []);
+      console.log('Loaded visits:', data);
+    } catch (err) {
+      console.error('Error loading visits:', err);
+      setError(t('documents.failedToLoadVisits', 'Failed to load visits'));
+    } finally {
+      setLoadingResources(false);
+    }
+  };
+
+  const getResourceDisplayName = (resource, type) => {
+    if (type === 'patient') {
+      return `${resource.first_name} ${resource.last_name}`;
+    } else if (type === 'user') {
+      return `${resource.first_name} ${resource.last_name} (${resource.username})`;
+    } else if (type === 'visit') {
+      const visitDate = formatDate(resource.visit_date, i18n.language);
+      const patientName = resource.patient ? `${resource.patient.first_name} ${resource.patient.last_name}` : '';
+      return `${visitDate} - ${patientName}`;
+    }
+    return '';
+  };
+
+  const handleResourceTypeChange = (newType) => {
+    setResourceType(newType);
+    setResourceId(''); // Reset resource ID when type changes
+  };
 
   // Configure dropzone
   const onDrop = useCallback((acceptedFiles, rejectedFiles) => {
@@ -60,8 +142,10 @@ const DocumentUploadPage = () => {
       return;
     }
 
-    if (!resourceType || !resourceId) {
-      setError(t('documents.resourceRequired', 'Please specify a resource type and ID'));
+    // Resource type and ID are optional - for general library uploads
+    // Only validate if one is set but not the other
+    if ((resourceType && !resourceId) || (!resourceType && resourceId)) {
+      setError(t('documents.resourceIncomplete', 'Please specify both resource type and ID, or leave both empty for library upload'));
       return;
     }
 
@@ -74,8 +158,8 @@ const DocumentUploadPage = () => {
       const uploadPromises = files.map(async (file, index) => {
         const formData = documentService.createUploadFormData(
           file,
-          resourceType,
-          resourceId,
+          resourceType || null,
+          resourceId || null,
           description
         );
 
@@ -177,19 +261,22 @@ const DocumentUploadPage = () => {
           <Col lg={8}>
             <Card className="mb-4">
               <Card.Header>
-                <h5 className="mb-0">{t('documents.resourceAssociation', 'Resource Association')}</h5>
+                <h5 className="mb-0">{t('documents.resourceAssociation', 'Resource Association')} ({t('common.optional')})</h5>
               </Card.Header>
               <Card.Body>
+                <p className="text-muted small mb-3">
+                  {t('documents.resourceAssociationHelp', 'Associate this document with a patient, visit, or user. Leave empty for general library documents.')}
+                </p>
                 <Row>
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>{t('documents.resourceType', 'Resource Type')} *</Form.Label>
+                      <Form.Label>{t('documents.resourceType', 'Resource Type')}</Form.Label>
                       <Form.Select
                         value={resourceType}
-                        onChange={(e) => setResourceType(e.target.value)}
+                        onChange={(e) => handleResourceTypeChange(e.target.value)}
                         disabled={uploading}
                       >
-                        <option value="">{t('common.select', 'Select...')}</option>
+                        <option value="">{t('documents.noAssociation', 'No association (library)')}</option>
                         <option value="patient">{t('patients.patient', 'Patient')}</option>
                         <option value="visit">{t('visits.visit', 'Visit')}</option>
                         <option value="user">{t('users.user', 'User')}</option>
@@ -198,14 +285,41 @@ const DocumentUploadPage = () => {
                   </Col>
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>{t('documents.resourceId', 'Resource ID')} *</Form.Label>
-                      <Form.Control
-                        type="text"
+                      <Form.Label>
+                        {resourceType === 'patient' && t('patients.selectPatient', 'Select Patient')}
+                        {resourceType === 'visit' && t('visits.selectVisit', 'Select Visit')}
+                        {resourceType === 'user' && t('users.selectUser', 'Select User')}
+                        {!resourceType && t('documents.resourceSelection', 'Resource Selection')}
+                      </Form.Label>
+                      <Form.Select
                         value={resourceId}
                         onChange={(e) => setResourceId(e.target.value)}
-                        placeholder={t('documents.resourceIdPlaceholder', 'Enter resource ID')}
-                        disabled={uploading}
-                      />
+                        disabled={uploading || !resourceType || loadingResources}
+                      >
+                        <option value="">{loadingResources ? t('common.loading', 'Loading...') : t('common.select', 'Select...')}</option>
+                        {resourceType === 'patient' && patients.map(patient => (
+                          <option key={patient.id} value={patient.id}>
+                            {getResourceDisplayName(patient, 'patient')}
+                          </option>
+                        ))}
+                        {resourceType === 'user' && users.map(user => (
+                          <option key={user.id} value={user.id}>
+                            {getResourceDisplayName(user, 'user')}
+                          </option>
+                        ))}
+                        {resourceType === 'visit' && visits.map(visit => (
+                          <option key={visit.id} value={visit.id}>
+                            {getResourceDisplayName(visit, 'visit')}
+                          </option>
+                        ))}
+                      </Form.Select>
+                      {resourceType && !loadingResources && (
+                        <Form.Text className="text-muted">
+                          {resourceType === 'patient' && t('documents.selectPatientHelp', 'Select the patient to associate this document with')}
+                          {resourceType === 'visit' && t('documents.selectVisitHelp', 'Select the visit to associate this document with')}
+                          {resourceType === 'user' && t('documents.selectUserHelp', 'Select the user to associate this document with')}
+                        </Form.Text>
+                      )}
                     </Form.Group>
                   </Col>
                 </Row>
@@ -306,9 +420,29 @@ const DocumentUploadPage = () => {
                 <div className="mb-3">
                   <strong>{t('documents.resourceType', 'Resource Type')}:</strong> {resourceType || t('common.none', 'None')}
                 </div>
-                <div className="mb-3">
-                  <strong>{t('documents.resourceId', 'Resource ID')}:</strong> {resourceId || t('common.none', 'None')}
-                </div>
+                {resourceId && resourceType && (
+                  <div className="mb-3">
+                    <strong>
+                      {resourceType === 'patient' && t('patients.patient', 'Patient')}
+                      {resourceType === 'visit' && t('visits.visit', 'Visit')}
+                      {resourceType === 'user' && t('users.user', 'User')}
+                      :
+                    </strong>{' '}
+                    {(() => {
+                      if (resourceType === 'patient') {
+                        const patient = patients.find(p => p.id === resourceId);
+                        return patient ? getResourceDisplayName(patient, 'patient') : '-';
+                      } else if (resourceType === 'visit') {
+                        const visit = visits.find(v => v.id === resourceId);
+                        return visit ? getResourceDisplayName(visit, 'visit') : '-';
+                      } else if (resourceType === 'user') {
+                        const user = users.find(u => u.id === resourceId);
+                        return user ? getResourceDisplayName(user, 'user') : '-';
+                      }
+                      return '-';
+                    })()}
+                  </div>
+                )}
                 <div className="mb-3">
                   <strong>{t('documents.totalSize', 'Total Size')}:</strong> {formatFileSize(files.reduce((total, file) => total + file.size, 0))}
                 </div>
@@ -320,7 +454,7 @@ const DocumentUploadPage = () => {
                 variant="primary"
                 size="lg"
                 onClick={handleUpload}
-                disabled={files.length === 0 || uploading || !resourceType || !resourceId}
+                disabled={files.length === 0 || uploading}
               >
                 {uploading ? t('documents.uploading', 'Uploading...') : t('documents.upload', 'Upload')}
               </Button>

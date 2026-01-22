@@ -13,6 +13,7 @@ const User = db.User;
 const Role = db.Role;
 const auditService = require('./audit.service');
 const billingService = require('./billing.service');
+const emailService = require('./email.service');
 const { Op } = db.Sequelize;
 
 /**
@@ -470,8 +471,168 @@ async function updateVisit(user, visitId, updateData, requestMetadata = {}) {
 }
 
 /**
+ * Finish visit and send invoice (Quick Action)
+ * Completes a visit, generates invoice, and sends email in one action
+ *
+ * @param {Object} user - Authenticated user object
+ * @param {string} visitId - Visit UUID
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated visit and invoice info
+ */
+async function finishAndInvoice(user, visitId, requestMetadata = {}) {
+  try {
+    // Get visit with patient details
+    const visit = await Visit.findByPk(visitId, {
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email'],
+          where: { is_active: true },
+          required: true
+        }
+      ]
+    });
+
+    if (!visit) {
+      const error = new Error('Visit not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Check if visit is already completed
+    if (visit.status === 'COMPLETED') {
+      const error = new Error('Visit is already completed');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Check permissions
+    if (!user || !user.role) {
+      const error = new Error('Authentication required');
+      error.statusCode = 401;
+      throw error;
+    }
+
+    // Update visit to COMPLETED (this will auto-generate invoice)
+    const updatedVisit = await updateVisit(user, visitId, {
+      status: 'COMPLETED'
+    }, requestMetadata);
+
+    // Wait a moment for invoice creation to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Find the generated invoice
+    const invoice = await db.Billing.findOne({
+      where: {
+        visit_id: visitId,
+        is_active: true
+      },
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email']
+        }
+      ],
+      order: [['created_at', 'DESC']]
+    });
+
+    if (!invoice) {
+      console.warn('⚠️  No invoice found after completing visit');
+      return {
+        visit: updatedVisit,
+        invoice: null,
+        emailSent: false,
+        message: 'Visit completed but invoice not found'
+      };
+    }
+
+    // Check if patient has email
+    if (!invoice.patient || !invoice.patient.email) {
+      console.warn('⚠️  Patient has no email address');
+      return {
+        visit: updatedVisit,
+        invoice,
+        emailSent: false,
+        message: 'Visit completed and invoice created, but patient has no email'
+      };
+    }
+
+    // Send invoice email using billing service (this will log to invoice_emails table)
+    console.log(`📧 Sending invoice email for visit ${visitId}`);
+    try {
+      await billingService.sendInvoiceEmail(invoice.id, user, requestMetadata);
+
+      // Audit log for the complete action
+      await auditService.log({
+        user_id: user.id,
+        username: user.username,
+        action: 'FINISH_AND_INVOICE',
+        resource_type: 'visits',
+        resource_id: visitId,
+        changes: {
+          action: 'finish_and_invoice',
+          visit_status: 'COMPLETED',
+          invoice_id: invoice.id,
+          invoice_number: invoice.invoice_number,
+          email_sent: true
+        },
+        ip_address: requestMetadata.ip,
+        user_agent: requestMetadata.userAgent,
+        request_method: requestMetadata.method,
+        request_path: requestMetadata.path,
+        status_code: 200
+      });
+
+      return {
+        visit: updatedVisit,
+        invoice,
+        emailSent: true,
+        message: 'Visit completed, invoice created and email sent successfully'
+      };
+    } catch (emailError) {
+      console.error('❌ Failed to send invoice email:', emailError);
+
+      // Audit log for failed email
+      await auditService.log({
+        user_id: user.id,
+        username: user.username,
+        action: 'FINISH_AND_INVOICE',
+        resource_type: 'visits',
+        resource_id: visitId,
+        changes: {
+          action: 'finish_and_invoice',
+          visit_status: 'COMPLETED',
+          invoice_id: invoice.id,
+          invoice_number: invoice.invoice_number,
+          email_sent: false
+        },
+        ip_address: requestMetadata.ip,
+        user_agent: requestMetadata.userAgent,
+        request_method: requestMetadata.method,
+        request_path: requestMetadata.path,
+        status_code: 500,
+        error_message: emailError.message
+      });
+
+      return {
+        visit: updatedVisit,
+        invoice,
+        emailSent: false,
+        message: 'Visit completed and invoice created, but email failed to send',
+        error: emailError.message
+      };
+    }
+  } catch (error) {
+    console.error('Error in finishAndInvoice:', error);
+    throw error;
+  }
+}
+
+/**
  * Delete visit
- * 
+ *
  * @param {Object} user - Authenticated user object
  * @param {string} visitId - Visit UUID
  * @param {Object} requestMetadata - Request metadata for audit logging
@@ -798,5 +959,6 @@ module.exports = {
   deleteVisit,
   addMeasurements,
   updateMeasurement,
-  deleteMeasurement
+  deleteMeasurement,
+  finishAndInvoice
 };

@@ -30,6 +30,9 @@ const DocumentListComponent = ({
   const [previewUrl, setPreviewUrl] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchDocuments();
@@ -118,6 +121,36 @@ const DocumentListComponent = ({
       window.URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
     }
+  };
+
+  const handleDeleteClick = (document) => {
+    setDocumentToDelete(document);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!documentToDelete) return;
+
+    try {
+      setDeleting(true);
+      setError(null);
+      await documentService.deleteDocument(documentToDelete.id);
+      setShowDeleteModal(false);
+      setDocumentToDelete(null);
+      // Refresh the document list
+      await fetchDocuments();
+    } catch (err) {
+      setError(t('documents.deleteError', 'Failed to delete document') + ': ' + (err.response?.data?.error || err.message));
+      console.error('Error deleting document:', err);
+      setShowDeleteModal(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+    setDocumentToDelete(null);
   };
 
   const handleFilterChange = (field, value) => {
@@ -331,6 +364,13 @@ const DocumentListComponent = ({
                     >
                       {downloading === document.id ? '⏳' : '⬇️'} {t('documents.download', 'Download')}
                     </Button>
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      onClick={() => handleDeleteClick(document)}
+                    >
+                      🗑️ {t('documents.delete', 'Delete')}
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -407,6 +447,66 @@ const DocumentListComponent = ({
             ⬇️ {t('documents.download', 'Download')}
           </Button>
         )}
+      </Modal.Footer>
+    </Modal>
+
+    {/* Delete Confirmation Modal */}
+    <Modal
+      show={showDeleteModal}
+      onHide={handleDeleteCancel}
+      centered
+    >
+      <Modal.Header closeButton className="bg-danger text-white">
+        <Modal.Title>⚠️ {t('documents.confirmDelete', 'Confirm Delete')}</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <Alert variant="warning">
+          <Alert.Heading>{t('documents.deleteWarningTitle', 'Warning')}</Alert.Heading>
+          <p>{t('documents.deleteWarningMessage', 'This action cannot be undone. The document will be permanently deleted.')}</p>
+        </Alert>
+        {documentToDelete && (
+          <div>
+            <p><strong>{t('documents.documentToDelete', 'Document to delete')}:</strong></p>
+            <div className="bg-light p-3 rounded">
+              <div className="d-flex align-items-center mb-2">
+                <span className="me-2">{getFileTypeIcon(documentToDelete.mime_type)}</span>
+                <strong>{documentToDelete.file_name}</strong>
+              </div>
+              {documentToDelete.description && (
+                <p className="text-muted small mb-1">{documentToDelete.description}</p>
+              )}
+              <p className="text-muted small mb-0">
+                {t('documents.size', 'Size')}: {formatFileSize(documentToDelete.file_size)} |
+                {' '}{t('documents.uploadedAt', 'Uploaded')}: {formatDate(documentToDelete.created_at)}
+              </p>
+            </div>
+          </div>
+        )}
+      </Modal.Body>
+      <Modal.Footer>
+        <Button
+          variant="secondary"
+          onClick={handleDeleteCancel}
+          disabled={deleting}
+        >
+          {t('common.cancel', 'Cancel')}
+        </Button>
+        <Button
+          variant="danger"
+          onClick={handleDeleteConfirm}
+          disabled={deleting}
+        >
+          {deleting ? (
+            <>
+              <Spinner animation="border" size="sm" className="me-2" />
+              {t('documents.deleting', 'Deleting...')}
+            </>
+          ) : (
+            <>
+              🗑️ {t('documents.confirmDeleteButton', 'Yes, Delete')}
+            </>
+          )}
+        </Button>
       </Modal.Footer>
     </Modal>
     </>

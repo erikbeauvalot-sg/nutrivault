@@ -97,6 +97,17 @@ export const deleteMeasurement = async (visitId, measurementId) => {
   return response;
 };
 
+/**
+ * Finish visit and generate invoice with email
+ * Completes the visit, auto-generates invoice, and sends email to patient
+ * @param {string} id - Visit UUID
+ * @returns {Promise} API response with visit, invoice, and email status
+ */
+export const finishAndInvoice = async (id) => {
+  const response = await api.post(`/api/visits/${id}/finish-and-invoice`);
+  return response;
+};
+
 export default {
   getVisits,
   getVisitById,
@@ -105,5 +116,6 @@ export default {
   deleteVisit,
   addMeasurements,
   updateMeasurement,
-  deleteMeasurement
+  deleteMeasurement,
+  finishAndInvoice
 };

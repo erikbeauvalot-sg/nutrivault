@@ -337,4 +337,14 @@ router.delete(
   visitController.deleteMeasurement
 );
 
+// POST /api/visits/:id/finish-and-invoice - Complete visit and generate invoice with email
+router.post(
+  '/:id/finish-and-invoice',
+  authenticate,
+  requirePermission('visits.update'),
+  uuidParamValidation,
+  validate,
+  visitController.finishAndInvoice
+);
+
 module.exports = router;

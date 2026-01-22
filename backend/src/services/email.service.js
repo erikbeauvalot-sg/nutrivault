@@ -261,9 +261,99 @@ async function verifyEmailConfig() {
   }
 }
 
+/**
+ * Send payment reminder email for overdue invoice
+ * @param {Object} invoice - Invoice object with patient info
+ * @param {Object} patient - Patient object
+ * @returns {Promise<Object>} Email send result
+ */
+async function sendPaymentReminderEmail(invoice, patient) {
+  const daysOverdue = invoice.due_date
+    ? Math.floor((new Date() - new Date(invoice.due_date)) / (1000 * 60 * 60 * 24))
+    : 0;
+
+  const subject = `Rappel de paiement - Facture #${invoice.invoice_number}`;
+
+  const text = `
+Bonjour ${patient.first_name} ${patient.last_name},
+
+Nous vous rappelons que votre facture suivante est en attente de paiement :
+
+Numéro de facture : ${invoice.invoice_number}
+Date d'échéance : ${invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('fr-FR') : 'N/A'}
+${daysOverdue > 0 ? `Retard : ${daysOverdue} jour(s)` : ''}
+
+Montant dû : ${invoice.amount_due.toFixed(2)} €
+
+Merci de bien vouloir régulariser votre situation dans les plus brefs délais.
+
+Si vous avez déjà effectué le paiement, veuillez ne pas tenir compte de ce message.
+
+Cordialement,
+L'équipe NutriVault
+  `.trim();
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #ff9800; color: white; padding: 20px; text-align: center; }
+    .content { padding: 20px; background-color: #f9f9f9; }
+    .reminder-box { background-color: #fff3cd; border: 2px solid #ff9800; padding: 15px; margin: 20px 0; border-radius: 5px; }
+    .invoice-details { background-color: white; padding: 15px; margin: 20px 0; border-left: 4px solid #ff9800; }
+    .footer { text-align: center; padding: 20px; color: #777; font-size: 12px; }
+    .amount { font-size: 24px; font-weight: bold; color: #ff9800; }
+    .overdue { color: #d32f2f; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔔 Rappel de paiement</h1>
+    </div>
+    <div class="content">
+      <p>Bonjour ${patient.first_name} ${patient.last_name},</p>
+
+      <div class="reminder-box">
+        <p style="margin: 0; font-weight: bold;">⚠️ Nous vous rappelons que votre facture suivante est en attente de paiement.</p>
+      </div>
+
+      <div class="invoice-details">
+        <p><strong>Numéro de facture :</strong> ${invoice.invoice_number}</p>
+        <p><strong>Date d'échéance :</strong> ${invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('fr-FR') : 'N/A'}</p>
+        ${daysOverdue > 0 ? `<p class="overdue"><strong>Retard :</strong> ${daysOverdue} jour(s)</p>` : ''}
+        <hr>
+        <p><strong>Montant dû :</strong> <span class="amount">${invoice.amount_due.toFixed(2)} €</span></p>
+      </div>
+
+      <p>Merci de bien vouloir régulariser votre situation dans les plus brefs délais.</p>
+      <p><em>Si vous avez déjà effectué le paiement, veuillez ne pas tenir compte de ce message.</em></p>
+
+      <p>Cordialement,<br><strong>L'équipe NutriVault</strong></p>
+    </div>
+    <div class="footer">
+      <p>Ceci est un email automatique. Veuillez ne pas répondre à ce message.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  return sendEmail({
+    to: patient.email,
+    subject,
+    text,
+    html
+  });
+}
+
 module.exports = {
   sendEmail,
   sendInvoiceEmail,
   sendDocumentShareEmail,
+  sendPaymentReminderEmail,
   verifyEmailConfig
 };

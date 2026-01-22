@@ -215,3 +215,24 @@ exports.deleteMeasurement = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * POST /api/visits/:id/finish-and-invoice - Complete visit and generate invoice with email
+ */
+exports.finishAndInvoice = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const visitId = req.params.id;
+    const requestMetadata = getRequestMetadata(req);
+
+    const result = await visitService.finishAndInvoice(user, visitId, requestMetadata);
+
+    res.json({
+      success: true,
+      data: result,
+      message: result.message
+    });
+  } catch (error) {
+    next(error);
+  }
+};

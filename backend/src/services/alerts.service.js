@@ -1,0 +1,186 @@
+/**
+ * Alerts Service
+ *
+ * Aggregates and provides actionable alerts for urgent tasks:
+ * - Overdue invoices
+ * - Completed visits without notes
+ * - Patients requiring follow-up
+ */
+
+const db = require('../../../models');
+const Billing = db.Billing;
+const Patient = db.Patient;
+const Visit = db.Visit;
+const { Op } = db.Sequelize;
+
+/**
+ * Get all alerts for the authenticated user
+ *
+ * @param {Object} user - Authenticated user object
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Categorized alerts
+ */
+async function getAlerts(user, requestMetadata = {}) {
+  try {
+    const alerts = {
+      overdue_invoices: [],
+      visits_without_notes: [],
+      patients_followup: [],
+      summary: {
+        total_count: 0,
+        critical_count: 0,
+        warning_count: 0
+      }
+    };
+
+    // 1. Get overdue invoices
+    const overdueInvoices = await Billing.findAll({
+      where: {
+        status: 'OVERDUE',
+        is_active: true
+      },
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email'],
+          where: { is_active: true },
+          required: true
+        }
+      ],
+      order: [['due_date', 'ASC']],
+      limit: 50
+    });
+
+    alerts.overdue_invoices = overdueInvoices.map(invoice => {
+      const daysOverdue = Math.floor((new Date() - new Date(invoice.due_date)) / (1000 * 60 * 60 * 24));
+      return {
+        type: 'OVERDUE_INVOICE',
+        severity: daysOverdue > 30 ? 'critical' : 'warning',
+        invoice_id: invoice.id,
+        invoice_number: invoice.invoice_number,
+        patient_id: invoice.patient_id,
+        patient_name: `${invoice.patient.first_name} ${invoice.patient.last_name}`,
+        amount_due: parseFloat(invoice.amount_due),
+        due_date: invoice.due_date,
+        days_overdue: daysOverdue,
+        message: `Invoice #${invoice.invoice_number} overdue by ${daysOverdue} days`,
+        action: 'send_reminder'
+      };
+    });
+
+    // 2. Get completed visits without clinical notes
+    const visitsWithoutNotes = await Visit.findAll({
+      where: {
+        status: 'COMPLETED',
+        [Op.or]: [
+          { notes: { [Op.is]: null } },
+          { notes: { [Op.eq]: '' } },
+          {
+            [Op.and]: [
+              { chief_complaint: { [Op.is]: null } },
+              { assessment: { [Op.is]: null } },
+              { recommendations: { [Op.is]: null } }
+            ]
+          }
+        ]
+      },
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name'],
+          where: { is_active: true },
+          required: true
+        }
+      ],
+      order: [['visit_date', 'DESC']],
+      limit: 50
+    });
+
+    alerts.visits_without_notes = visitsWithoutNotes.map(visit => ({
+      type: 'VISIT_WITHOUT_NOTES',
+      severity: 'warning',
+      visit_id: visit.id,
+      patient_id: visit.patient_id,
+      patient_name: `${visit.patient.first_name} ${visit.patient.last_name}`,
+      visit_date: visit.visit_date,
+      visit_type: visit.visit_type,
+      message: `Visit on ${new Date(visit.visit_date).toLocaleDateString()} has no clinical notes`,
+      action: 'edit_visit'
+    }));
+
+    // 3. Get patients needing follow-up (completed visits with next_visit_date in the past)
+    const now = new Date();
+    const patientsNeedingFollowup = await Visit.findAll({
+      where: {
+        status: 'COMPLETED',
+        next_visit_date: {
+          [Op.not]: null,
+          [Op.lt]: now
+        }
+      },
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email', 'phone'],
+          where: { is_active: true },
+          required: true
+        }
+      ],
+      order: [['next_visit_date', 'ASC']],
+      limit: 50
+    });
+
+    // Group by patient (only show most urgent per patient)
+    const followupMap = new Map();
+    patientsNeedingFollowup.forEach(visit => {
+      if (!followupMap.has(visit.patient_id)) {
+        const daysOverdue = Math.floor((now - new Date(visit.next_visit_date)) / (1000 * 60 * 60 * 24));
+        followupMap.set(visit.patient_id, {
+          type: 'PATIENT_FOLLOWUP',
+          severity: daysOverdue > 14 ? 'warning' : 'info',
+          patient_id: visit.patient_id,
+          patient_name: `${visit.patient.first_name} ${visit.patient.last_name}`,
+          last_visit_id: visit.id,
+          last_visit_date: visit.visit_date,
+          next_visit_date: visit.next_visit_date,
+          days_overdue: daysOverdue,
+          contact_email: visit.patient.email,
+          contact_phone: visit.patient.phone,
+          message: `Follow-up overdue by ${daysOverdue} days`,
+          action: 'schedule_visit'
+        });
+      }
+    });
+
+    alerts.patients_followup = Array.from(followupMap.values());
+
+    // Calculate summary
+    const criticalCount = alerts.overdue_invoices.filter(a => a.severity === 'critical').length;
+    const warningCount =
+      alerts.overdue_invoices.filter(a => a.severity === 'warning').length +
+      alerts.visits_without_notes.length +
+      alerts.patients_followup.filter(a => a.severity === 'warning').length;
+
+    alerts.summary = {
+      total_count:
+        alerts.overdue_invoices.length +
+        alerts.visits_without_notes.length +
+        alerts.patients_followup.length,
+      critical_count: criticalCount,
+      warning_count: warningCount,
+      info_count: alerts.patients_followup.filter(a => a.severity === 'info').length
+    };
+
+    return alerts;
+  } catch (error) {
+    console.error('Error in getAlerts:', error);
+    throw error;
+  }
+}
+
+module.exports = {
+  getAlerts
+};

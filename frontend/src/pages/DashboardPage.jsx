@@ -9,6 +9,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
+import QuickPatientModal from '../components/QuickPatientModal';
+import AlertsWidget from '../components/AlertsWidget';
 import api from '../services/api';
 import visitService from '../services/visitService';
 import userService from '../services/userService';
@@ -31,6 +33,7 @@ const DashboardPage = () => {
   });
   const [todaysVisits, setTodaysVisits] = useState([]);
   const [loadingVisits, setLoadingVisits] = useState(true);
+  const [showQuickPatientModal, setShowQuickPatientModal] = useState(false);
 
   useEffect(() => {
     fetchStats();
@@ -136,6 +139,14 @@ const DashboardPage = () => {
     }
   };
 
+  const handleQuickPatientCreated = (patient) => {
+    // Refresh stats after creating a patient
+    fetchStats();
+
+    // Navigate to the patient detail page
+    navigate(`/patients/${patient.id}`);
+  };
+
   return (
     <Layout>
       <Container fluid>
@@ -170,10 +181,10 @@ const DashboardPage = () => {
                 <Button
                   variant="success"
                   className="w-100 py-3"
-                  onClick={() => navigate('/patients/create')}
+                  onClick={() => setShowQuickPatientModal(true)}
                 >
-                  <div className="h4 mb-1">➕</div>
-                  <div>{t('dashboard.newPatient')}</div>
+                  <div className="h4 mb-1">⚡</div>
+                  <div>{t('dashboard.quickPatient', 'Patient Flash')}</div>
                 </Button>
               </Col>
               <Col xs={12} sm={4}>
@@ -239,6 +250,13 @@ const DashboardPage = () => {
                     <div className="text-muted small">{t('dashboard.activePatients')}</div>
                   </Card.Body>
                 </Card>
+              </Col>
+            </Row>
+
+            {/* Alerts Widget */}
+            <Row className="mb-4">
+              <Col>
+                <AlertsWidget />
               </Col>
             </Row>
 
@@ -396,6 +414,13 @@ const DashboardPage = () => {
           </>
         )}
       </Container>
+
+      {/* Quick Patient Modal */}
+      <QuickPatientModal
+        show={showQuickPatientModal}
+        onHide={() => setShowQuickPatientModal(false)}
+        onSuccess={handleQuickPatientCreated}
+      />
     </Layout>
   );
 };

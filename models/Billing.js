@@ -67,6 +67,17 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
+    reminders_sent: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      comment: 'Number of payment reminder emails sent'
+    },
+    last_reminder_date: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Timestamp of last payment reminder sent'
+    },
     is_active: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
