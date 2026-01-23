@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import PatientList from '../components/PatientList';
 import ExportModal from '../components/ExportModal';
+import QuickPatientModal from '../components/QuickPatientModal';
 import api from '../services/api';
 
 const PatientsPage = () => {
@@ -21,6 +22,7 @@ const PatientsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showQuickPatientModal, setShowQuickPatientModal] = useState(false);
   
   // Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -87,7 +89,12 @@ const PatientsPage = () => {
   };
 
   const handleCreatePatient = () => {
-    navigate('/patients/create');
+    setShowQuickPatientModal(true);
+  };
+
+  const handlePatientCreated = () => {
+    setShowQuickPatientModal(false);
+    fetchPatients(); // Refresh the patient list
   };
 
   const handleEditPatient = (patient) => {
@@ -192,6 +199,12 @@ const PatientsPage = () => {
         show={showExportModal}
         onHide={() => setShowExportModal(false)}
         dataType="patients"
+      />
+
+      <QuickPatientModal
+        show={showQuickPatientModal}
+        onHide={() => setShowQuickPatientModal(false)}
+        onPatientCreated={handlePatientCreated}
       />
     </Layout>
   );

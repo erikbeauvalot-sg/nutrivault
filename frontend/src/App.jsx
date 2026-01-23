@@ -16,7 +16,6 @@ import LoginPage from './pages/LoginPage';
 // Lazy load: All other pages (loaded on demand)
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const PatientsPage = lazy(() => import('./pages/PatientsPage'));
-const CreatePatientPage = lazy(() => import('./pages/CreatePatientPage'));
 const EditPatientPage = lazy(() => import('./pages/EditPatientPage'));
 const PatientDetailPage = lazy(() => import('./pages/PatientDetailPage'));
 const AgendaPage = lazy(() => import('./pages/AgendaPage'));
@@ -87,15 +86,6 @@ function App() {
         element={
           <ProtectedRoute>
             <PatientsPage />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/patients/create"
-        element={
-          <ProtectedRoute>
-            <CreatePatientPage />
           </ProtectedRoute>
         }
       />
