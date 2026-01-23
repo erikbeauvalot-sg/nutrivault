@@ -162,11 +162,6 @@ function PatientList({
                       📞 {patient.phone}
                     </div>
                   )}
-                  {patient.date_of_birth && (
-                    <div className="small text-muted mb-2">
-                      🎂 {formatDate(patient.date_of_birth)}
-                    </div>
-                  )}
 
                   <div className="d-flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
                     {onScheduleVisit && (
@@ -217,9 +212,6 @@ function PatientList({
                 <th onClick={() => handleSort('phone')} style={{ cursor: 'pointer' }}>
                   {t('patients.phone', 'Phone')} {getSortIcon('phone')}
                 </th>
-                <th onClick={() => handleSort('date_of_birth')} style={{ cursor: 'pointer' }}>
-                  {t('patients.dateOfBirth', 'Date of Birth')} {getSortIcon('date_of_birth')}
-                </th>
                 <th onClick={() => handleSort('is_active')} style={{ cursor: 'pointer' }}>
                   {t('patients.status', 'Status')} {getSortIcon('is_active')}
                 </th>
@@ -229,7 +221,7 @@ function PatientList({
             <tbody>
               {displayPatients.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-4">
+                  <td colSpan="5" className="text-center py-4">
                     <div className="text-muted">
                       {displayPatients.length === 0 && patients.length > 0 ? (
                         <div>
@@ -267,12 +259,6 @@ function PatientList({
                     </td>
                     <td>{patient.email || '-'}</td>
                     <td>{patient.phone || '-'}</td>
-                    <td>
-                      {patient.date_of_birth
-                        ? formatDate(patient.date_of_birth)
-                        : '-'
-                      }
-                    </td>
                     <td>
                       <Badge bg={patient.is_active ? 'success' : 'secondary'}>
                         {patient.is_active ? t('common.active') : t('common.inactive')}
