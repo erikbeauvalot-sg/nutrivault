@@ -47,7 +47,6 @@ export const prefetchRoute = (routeName) => {
   const routeMap = {
     dashboard: () => import('../pages/DashboardPage'),
     patients: () => import('../pages/PatientsPage'),
-    'patient-create': () => import('../pages/CreatePatientPage'),
     'patient-detail': () => import('../pages/PatientDetailPage'),
     agenda: () => import('../pages/AgendaPage'),
     visits: () => import('../pages/VisitsPage'),
