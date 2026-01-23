@@ -250,6 +250,15 @@ router.get(
   userController.getRoles
 );
 
+// GET /api/users/check-email/:email - Check if email is available
+router.get(
+  '/check-email/:email',
+  authenticate,
+  param('email').isEmail().withMessage('Invalid email format'),
+  validate,
+  userController.checkEmailAvailability
+);
+
 // GET /api/users - Get all users (Admin or Dietitian for POC)
 router.get(
   '/',

@@ -152,3 +152,23 @@ exports.deletePatient = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * GET /api/patients/check-email/:email - Check if email is available
+ */
+exports.checkEmailAvailability = async (req, res, next) => {
+  try {
+    const { email } = req.params;
+    const { excludeId } = req.query; // For updates, exclude current patient
+
+    const isAvailable = await patientService.checkEmailAvailability(email, excludeId);
+
+    res.json({
+      success: true,
+      available: isAvailable,
+      email: email.toLowerCase().trim()
+    });
+  } catch (error) {
+    next(error);
+  }
+};

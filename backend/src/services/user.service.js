@@ -662,6 +662,42 @@ async function getRoles() {
   }
 }
 
+/**
+ * Check if email is available for use
+ *
+ * @param {string} email - Email to check
+ * @param {string} excludeId - User ID to exclude from check (for updates)
+ * @returns {Promise<boolean>} True if email is available, false if taken
+ */
+async function checkEmailAvailability(email, excludeId = null) {
+  try {
+    if (!email) {
+      return false; // Empty email not allowed for users
+    }
+
+    // Normalize email
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const whereClause = {
+      email: normalizedEmail
+    };
+
+    // Exclude current user when updating
+    if (excludeId) {
+      whereClause.id = { [Op.ne]: excludeId };
+    }
+
+    const existingUser = await User.findOne({
+      where: whereClause
+    });
+
+    return !existingUser; // Available if no existing user found
+  } catch (error) {
+    console.error('Error checking email availability:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getUsers,
   getUserById,
@@ -671,5 +707,6 @@ module.exports = {
   changePassword,
   toggleUserStatus,
   getDietitians,
-  getRoles
+  getRoles,
+  checkEmailAvailability
 };

@@ -610,11 +610,49 @@ async function deletePatient(patientId, user, requestMetadata = {}) {
   }
 }
 
+/**
+ * Check if email is available for use
+ *
+ * @param {string} email - Email to check
+ * @param {string} excludeId - Patient ID to exclude from check (for updates)
+ * @returns {Promise<boolean>} True if email is available, false if taken
+ */
+async function checkEmailAvailability(email, excludeId = null) {
+  try {
+    if (!email) {
+      return true; // Empty email is allowed
+    }
+
+    // Normalize email
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const whereClause = {
+      email: normalizedEmail,
+      is_active: true
+    };
+
+    // Exclude current patient when updating
+    if (excludeId) {
+      whereClause.id = { [Op.ne]: excludeId };
+    }
+
+    const existingPatient = await Patient.findOne({
+      where: whereClause
+    });
+
+    return !existingPatient; // Available if no existing patient found
+  } catch (error) {
+    console.error('Error checking email availability:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getPatients,
   getPatientById,
   getPatientDetails,
   createPatient,
   updatePatient,
-  deletePatient
+  deletePatient,
+  checkEmailAvailability
 };
