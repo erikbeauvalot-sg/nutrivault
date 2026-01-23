@@ -133,10 +133,18 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
 
       // Build the payload
       const payload = {
-        ...data,
-        validation_rules: Object.keys(validationRules).length > 0 ? JSON.stringify(validationRules) : null,
-        select_options: selectedFieldType === 'select' ? selectOptions : null
+        ...data
       };
+
+      // Add validation_rules only if not empty
+      if (Object.keys(validationRules).length > 0) {
+        payload.validation_rules = JSON.stringify(validationRules);
+      }
+
+      // Add select_options only for select type
+      if (selectedFieldType === 'select') {
+        payload.select_options = selectOptions;
+      }
 
       // Validate select options
       if (selectedFieldType === 'select' && (!selectOptions || selectOptions.length === 0)) {
