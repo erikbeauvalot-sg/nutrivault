@@ -161,24 +161,132 @@ docker-compose logs -f
 docker-compose ps
 ```
 
-### Mise à jour
+### Mise à jour (avec migrations DB)
+
+⚠️ **IMPORTANT** : Toujours sauvegarder avant de mettre à jour !
 
 ```bash
-# Récupérer les modifications
+# 1. SAUVEGARDER AVANT LA MISE À JOUR
+BACKUP_DATE=$(date +%Y%m%d_%H%M%S)
+docker cp nutrivault-backend:/app/data/nutrivault.db ./backup-${BACKUP_DATE}.db
+docker run --rm -v nutrivault-uploads:/data -v $(pwd):/backup alpine tar czf /backup/uploads-${BACKUP_DATE}.tar.gz -C /data .
+
+# 2. Récupérer les modifications
 git pull origin main
 
-# Reconstruire et redémarrer
+# 3. Reconstruire et redémarrer (les migrations se lancent automatiquement)
+docker-compose --env-file .env.production down
+docker-compose --env-file .env.production up -d --build
+
+# 4. Vérifier les migrations
+docker logs nutrivault-backend 2>&1 | grep "migrating\|migrated"
+
+# 5. Vérifier l'application
+curl http://localhost/health
+```
+
+**En cas de problème - Rollback :**
+
+```bash
+# Arrêter l'application
+docker-compose down
+
+# Restaurer la DB
+docker-compose up -d backend
+sleep 3
+docker cp ./backup-${BACKUP_DATE}.db nutrivault-backend:/app/data/nutrivault.db
+docker-compose restart backend
+
+# Restaurer les uploads
+docker run --rm -v nutrivault-uploads:/data -v $(pwd):/backup alpine sh -c "cd /data && tar xzf /backup/uploads-${BACKUP_DATE}.tar.gz"
+
+# Revenir à l'ancienne version du code
+git checkout HEAD~1
 docker-compose --env-file .env.production up -d --build
 ```
 
-### Sauvegarde
+### Sauvegarde complète
 
 ```bash
-# Sauvegarder la base de données
-docker cp nutrivault-backend:/app/data/nutrivault.db ./backup-$(date +%Y%m%d).db
+# Créer un répertoire de sauvegardes
+mkdir -p ~/nutrivault-backups
+BACKUP_DATE=$(date +%Y%m%d_%H%M%S)
 
-# Sauvegarder les uploads
-docker run --rm -v nutrivault-uploads:/data -v $(pwd):/backup alpine tar czf /backup/uploads-$(date +%Y%m%d).tar.gz -C /data .
+# Base de données
+docker cp nutrivault-backend:/app/data/nutrivault.db ~/nutrivault-backups/nutrivault-${BACKUP_DATE}.db
+
+# Uploads
+docker run --rm -v nutrivault-uploads:/data -v ~/nutrivault-backups:/backup alpine tar czf /backup/uploads-${BACKUP_DATE}.tar.gz -C /data .
+
+# Configuration
+cp .env.production ~/nutrivault-backups/.env.production-${BACKUP_DATE}
+
+# Version du code
+git rev-parse HEAD > ~/nutrivault-backups/git-commit-${BACKUP_DATE}.txt
+
+echo "✅ Sauvegarde créée : ~/nutrivault-backups/*-${BACKUP_DATE}*"
+```
+
+### Restauration complète
+
+```bash
+# Définir la date de sauvegarde
+BACKUP_DATE=20260123_143022  # À REMPLACER
+
+# Arrêter l'application
+docker-compose down
+
+# Restaurer la DB
+docker-compose up -d backend
+sleep 3
+docker cp ~/nutrivault-backups/nutrivault-${BACKUP_DATE}.db nutrivault-backend:/app/data/nutrivault.db
+
+# Restaurer les uploads
+docker run --rm -v nutrivault-uploads:/data -v ~/nutrivault-backups:/backup alpine sh -c "cd /data && tar xzf /backup/uploads-${BACKUP_DATE}.tar.gz"
+
+# Restaurer la version du code
+OLD_COMMIT=$(cat ~/nutrivault-backups/git-commit-${BACKUP_DATE}.txt)
+git checkout $OLD_COMMIT
+
+# Reconstruire et redémarrer
+docker-compose --env-file .env.production build
+docker-compose --env-file .env.production up -d
+
+echo "✅ Restauration terminée"
+```
+
+### Scripts automatiques de sauvegarde/restauration
+
+Pour simplifier la gestion, utilisez les scripts fournis :
+
+**Sauvegarde :**
+```bash
+# Sauvegarde complète avec le script
+./backup.sh
+
+# Ou spécifier un répertoire personnalisé
+./backup.sh /chemin/vers/sauvegardes
+```
+
+**Restauration :**
+```bash
+# Lister les sauvegardes disponibles
+ls -1 ~/nutrivault-backups/nutrivault-*.db | sed 's/.*nutrivault-\(.*\)\.db/  \1/'
+
+# Restaurer une sauvegarde spécifique
+BACKUP_DATE=20260123_143022 ./restore.sh
+
+# Ou directement
+./restore.sh 20260123_143022
+```
+
+**Automatiser les sauvegardes (cron) :**
+```bash
+# Ajouter au crontab pour sauvegarder tous les jours à 2h du matin
+crontab -e
+
+# Ajouter cette ligne :
+0 2 * * * cd /chemin/vers/nutrivault && ./backup.sh >> ~/nutrivault-backups/cron.log 2>&1
 ```
 
 ## 🏗️ Architecture

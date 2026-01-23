@@ -715,49 +715,231 @@ docker-compose ps
 docker stats
 ```
 
-### Mise à jour de l'application
+### 🔄 Mise à jour de l'application (avec gestion des migrations)
+
+**IMPORTANT** : Toujours sauvegarder avant une mise à jour car la structure de la base de données peut changer.
+
+#### Procédure complète de mise à jour
 
 ```bash
-# 1. Récupérer les dernières modifications
+# 1. SAUVEGARDER LA BASE DE DONNÉES ET LES FICHIERS
+mkdir -p ~/nutrivault-backups
+BACKUP_DATE=$(date +%Y%m%d_%H%M%S)
+
+# Sauvegarder la base de données
+docker cp nutrivault-backend:/app/data/nutrivault.db ~/nutrivault-backups/nutrivault-${BACKUP_DATE}.db
+
+# Sauvegarder les uploads
+docker run --rm -v nutrivault-uploads:/data -v ~/nutrivault-backups:/backup alpine tar czf /backup/uploads-${BACKUP_DATE}.tar.gz -C /data .
+
+# Sauvegarder la configuration
+cp .env.production ~/nutrivault-backups/.env.production-${BACKUP_DATE}
+
+echo "✅ Sauvegarde créée : ~/nutrivault-backups/*-${BACKUP_DATE}*"
+
+# 2. NOTER LA VERSION ACTUELLE DU CODE
+git rev-parse HEAD > ~/nutrivault-backups/git-commit-${BACKUP_DATE}.txt
+
+# 3. RÉCUPÉRER LES DERNIÈRES MODIFICATIONS
 git pull origin main
 
-# 2. Reconstruire les images
+# 4. RECONSTRUIRE LES IMAGES
 docker-compose --env-file .env.production build
 
-# 3. Redémarrer avec les nouvelles images
+# 5. ARRÊTER L'APPLICATION
+docker-compose --env-file .env.production down
+
+# 6. REDÉMARRER AVEC LES NOUVELLES IMAGES
+# Les migrations se lancent automatiquement au démarrage
 docker-compose --env-file .env.production up -d
+
+# 7. VÉRIFIER LES MIGRATIONS
+docker logs nutrivault-backend 2>&1 | grep "migrating\|migrated"
+
+# 8. VÉRIFIER L'APPLICATION
+docker-compose ps
+curl http://localhost/health
+docker-compose logs -f backend
+```
+
+#### En cas de problème : Rollback complet
+
+Si la nouvelle version pose problème, revenez à l'ancienne version :
+
+```bash
+# 1. ARRÊTER L'APPLICATION
+docker-compose down
+
+# 2. RESTAURER L'ANCIENNE VERSION DU CODE
+BACKUP_DATE=20260123_143022  # Remplacer par votre date de sauvegarde
+OLD_COMMIT=$(cat ~/nutrivault-backups/git-commit-${BACKUP_DATE}.txt)
+git checkout $OLD_COMMIT
+
+# 3. RESTAURER LA BASE DE DONNÉES
+docker cp ~/nutrivault-backups/nutrivault-${BACKUP_DATE}.db nutrivault-backend:/app/data/nutrivault.db
+
+# 4. RESTAURER LES UPLOADS (si nécessaire)
+docker run --rm -v nutrivault-uploads:/data -v ~/nutrivault-backups:/backup alpine sh -c "cd /data && tar xzf /backup/uploads-${BACKUP_DATE}.tar.gz"
+
+# 5. RECONSTRUIRE LES IMAGES AVEC L'ANCIENNE VERSION
+docker-compose --env-file .env.production build
+
+# 6. REDÉMARRER
+docker-compose --env-file .env.production up -d
+
+# 7. VÉRIFIER
+docker-compose ps
+curl http://localhost/health
+```
+
+#### Mise à jour mineure (sans changement de schéma DB)
+
+Si vous savez qu'il n'y a pas de nouvelles migrations :
+
+```bash
+# 1. Sauvegarder quand même (par précaution)
+docker cp nutrivault-backend:/app/data/nutrivault.db ~/nutrivault-backups/nutrivault-$(date +%Y%m%d).db
+
+# 2. Mettre à jour le code
+git pull origin main
+
+# 3. Reconstruire et redémarrer
+docker-compose --env-file .env.production up -d --build
 
 # 4. Vérifier
 docker-compose ps
 docker-compose logs -f
 ```
 
-### Sauvegarde et restauration
+### 💾 Sauvegarde et restauration détaillées
 
-#### Sauvegarde
+#### Sauvegarde complète
 
 ```bash
-# Créer un répertoire de sauvegarde
-mkdir -p ~/nutrivault-backups
+# Script de sauvegarde complète
+BACKUP_DIR=~/nutrivault-backups
+BACKUP_DATE=$(date +%Y%m%d_%H%M%S)
 
-# Sauvegarder la base de données
-docker cp nutrivault-backend:/app/data/nutrivault.db ~/nutrivault-backups/nutrivault-$(date +%Y%m%d).db
+mkdir -p $BACKUP_DIR
 
-# Sauvegarder les uploads
-docker run --rm -v nutrivault-uploads:/data -v ~/nutrivault-backups:/backup alpine tar czf /backup/uploads-$(date +%Y%m%d).tar.gz -C /data .
+echo "🔄 Sauvegarde en cours..."
 
-# Sauvegarder la configuration
-cp .env.production ~/nutrivault-backups/.env.production-$(date +%Y%m%d)
+# 1. Base de données SQLite
+echo "📁 Sauvegarde de la base de données..."
+docker cp nutrivault-backend:/app/data/nutrivault.db $BACKUP_DIR/nutrivault-${BACKUP_DATE}.db
+
+# 2. Fichiers uploadés
+echo "📁 Sauvegarde des fichiers uploadés..."
+docker run --rm \
+  -v nutrivault-uploads:/data \
+  -v $BACKUP_DIR:/backup \
+  alpine tar czf /backup/uploads-${BACKUP_DATE}.tar.gz -C /data .
+
+# 3. Configuration
+echo "📁 Sauvegarde de la configuration..."
+cp .env.production $BACKUP_DIR/.env.production-${BACKUP_DATE}
+
+# 4. Version du code
+echo "📁 Sauvegarde de la version Git..."
+git rev-parse HEAD > $BACKUP_DIR/git-commit-${BACKUP_DATE}.txt
+git log -1 --pretty=format:"%h - %s (%ci)" > $BACKUP_DIR/git-log-${BACKUP_DATE}.txt
+
+# 5. Résumé
+echo ""
+echo "✅ Sauvegarde terminée !"
+echo "📦 Fichiers créés dans : $BACKUP_DIR"
+ls -lh $BACKUP_DIR/*${BACKUP_DATE}*
+echo ""
+echo "💡 Pour restaurer cette sauvegarde, utilisez : BACKUP_DATE=${BACKUP_DATE}"
 ```
 
-#### Restauration
+#### Restauration complète
 
 ```bash
-# Restaurer la base de données
-docker cp ~/nutrivault-backups/nutrivault-20260123.db nutrivault-backend:/app/data/nutrivault.db
+# Définir la date de sauvegarde à restaurer
+BACKUP_DATE=20260123_143022  # À REMPLACER
+BACKUP_DIR=~/nutrivault-backups
 
-# Redémarrer le backend
+echo "🔄 Restauration de la sauvegarde ${BACKUP_DATE}..."
+
+# 1. Arrêter l'application
+echo "⏸️  Arrêt de l'application..."
+docker-compose down
+
+# 2. Restaurer la base de données
+echo "📁 Restauration de la base de données..."
+docker-compose up -d backend
+sleep 5
+docker cp $BACKUP_DIR/nutrivault-${BACKUP_DATE}.db nutrivault-backend:/app/data/nutrivault.db
 docker-compose restart backend
+
+# 3. Restaurer les fichiers uploadés
+echo "📁 Restauration des fichiers uploadés..."
+docker run --rm \
+  -v nutrivault-uploads:/data \
+  -v $BACKUP_DIR:/backup \
+  alpine sh -c "rm -rf /data/* && cd /data && tar xzf /backup/uploads-${BACKUP_DATE}.tar.gz"
+
+# 4. Restaurer la configuration (optionnel)
+echo "📁 Restauration de la configuration..."
+# cp $BACKUP_DIR/.env.production-${BACKUP_DATE} .env.production
+
+# 5. Restaurer la version du code
+if [ -f "$BACKUP_DIR/git-commit-${BACKUP_DATE}.txt" ]; then
+  echo "📁 Restauration de la version du code..."
+  OLD_COMMIT=$(cat $BACKUP_DIR/git-commit-${BACKUP_DATE}.txt)
+  git checkout $OLD_COMMIT
+
+  # Reconstruire les images
+  docker-compose --env-file .env.production build
+fi
+
+# 6. Redémarrer l'application
+echo "🚀 Redémarrage de l'application..."
+docker-compose --env-file .env.production up -d
+
+# 7. Vérifier
+echo ""
+echo "✅ Restauration terminée !"
+echo "🔍 Vérification..."
+sleep 5
+docker-compose ps
+curl http://localhost/health
+```
+
+#### Sauvegarde automatique (cron)
+
+Pour sauvegarder automatiquement tous les jours à 2h du matin :
+
+```bash
+# Créer le script de sauvegarde
+cat > ~/backup-nutrivault.sh << 'EOFBACKUP'
+#!/bin/bash
+BACKUP_DIR=~/nutrivault-backups
+BACKUP_DATE=$(date +%Y%m%d_%H%M%S)
+cd /chemin/vers/nutrivault  # À MODIFIER
+
+mkdir -p $BACKUP_DIR
+
+# Base de données
+docker cp nutrivault-backend:/app/data/nutrivault.db $BACKUP_DIR/nutrivault-${BACKUP_DATE}.db
+
+# Uploads
+docker run --rm -v nutrivault-uploads:/data -v $BACKUP_DIR:/backup alpine tar czf /backup/uploads-${BACKUP_DATE}.tar.gz -C /data .
+
+# Garder seulement les 30 dernières sauvegardes
+find $BACKUP_DIR -name "nutrivault-*.db" -mtime +30 -delete
+find $BACKUP_DIR -name "uploads-*.tar.gz" -mtime +30 -delete
+
+echo "$(date): Backup completed - ${BACKUP_DATE}" >> $BACKUP_DIR/backup.log
+EOFBACKUP
+
+chmod +x ~/backup-nutrivault.sh
+
+# Ajouter au cron
+crontab -e
+# Ajouter cette ligne :
+# 0 2 * * * /home/votreuser/backup-nutrivault.sh
 ```
 
 ### Gestion de la base de données

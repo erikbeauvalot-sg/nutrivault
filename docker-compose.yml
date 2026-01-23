@@ -12,6 +12,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
+      - DB_STORAGE=/app/data/nutrivault.db
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
       - JWT_ACCESS_EXPIRATION=${JWT_ACCESS_EXPIRATION:-30m}
