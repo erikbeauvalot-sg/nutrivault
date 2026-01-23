@@ -35,8 +35,10 @@ services:
     volumes:
       # Persistent data volume for SQLite database
       - nutrivault-data:/app/data
-      # Temporary uploads
-      - nutrivault-uploads:/app/temp_uploads
+      # Temporary uploads (staging area)
+      - nutrivault-temp-uploads:/app/temp_uploads
+      # Final uploaded documents (persistent)
+      - nutrivault-uploads:/app/uploads
       # Logs
       - nutrivault-logs:/app/logs
     networks:
@@ -77,7 +79,10 @@ volumes:
   # Persistent volume for SQLite database
   nutrivault-data:
     driver: local
-  # Volume for uploaded files
+  # Volume for temporary uploads (staging area)
+  nutrivault-temp-uploads:
+    driver: local
+  # Volume for final uploaded documents (persistent)
   nutrivault-uploads:
     driver: local
   # Volume for application logs

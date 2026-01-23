@@ -54,8 +54,8 @@ RUN ln -s /app/models /models && \
 RUN chmod +x /app/scripts/docker-entrypoint.sh
 
 # Create directories for data persistence
-RUN mkdir -p /app/data /app/temp_uploads /app/logs && \
-    chmod 777 /app/data /app/temp_uploads /app/logs
+RUN mkdir -p /app/data /app/temp_uploads /app/uploads /app/logs && \
+    chmod 777 /app/data /app/temp_uploads /app/uploads /app/logs
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

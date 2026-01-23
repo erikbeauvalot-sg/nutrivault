@@ -134,7 +134,20 @@ async function uploadDocument(user, file, metadata, requestMetadata = {}) {
 
     // Move file to final location
     const fullFilePath = path.join(process.cwd(), UPLOAD_DIR, filePath);
-    await fs.rename(file.path, fullFilePath);
+
+    // Use copy + unlink instead of rename to handle cross-device (Docker volume) moves
+    try {
+      await fs.copyFile(file.path, fullFilePath);
+      await fs.unlink(file.path);
+    } catch (renameError) {
+      // If copy fails, try to clean up and throw
+      try {
+        await fs.unlink(file.path);
+      } catch (unlinkError) {
+        // Ignore cleanup errors
+      }
+      throw renameError;
+    }
 
     // Create document record
     const document = await Document.create({
