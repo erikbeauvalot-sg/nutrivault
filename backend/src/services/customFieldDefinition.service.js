@@ -10,6 +10,7 @@ const CustomFieldDefinition = db.CustomFieldDefinition;
 const CustomFieldCategory = db.CustomFieldCategory;
 const PatientCustomFieldValue = db.PatientCustomFieldValue;
 const auditService = require('./audit.service');
+const translationService = require('./customFieldTranslation.service');
 const { Op } = db.Sequelize;
 
 /**
@@ -45,10 +46,11 @@ function parseDefinitionJSON(definition) {
  * Get all active field definitions
  *
  * @param {Object} user - Authenticated user object
+ * @param {string} language - Language code for translations (optional)
  * @param {Object} requestMetadata - Request metadata for audit logging
  * @returns {Promise<Array>} Field definitions
  */
-async function getAllActiveDefinitions(user, requestMetadata = {}) {
+async function getAllActiveDefinitions(user, language = null, requestMetadata = {}) {
   try {
     const definitions = await CustomFieldDefinition.findAll({
       where: { is_active: true },
@@ -62,6 +64,18 @@ async function getAllActiveDefinitions(user, requestMetadata = {}) {
       ]
     });
 
+    // Parse JSON fields
+    let parsedDefinitions = definitions.map(parseDefinitionJSON);
+
+    // Apply translations if language specified and not French (default)
+    if (language && language !== 'fr') {
+      parsedDefinitions = await Promise.all(
+        parsedDefinitions.map(definition =>
+          translationService.applyTranslations(definition, 'field_definition', language)
+        )
+      );
+    }
+
     // Audit log
     await auditService.log({
       user_id: user.id,
@@ -72,8 +86,7 @@ async function getAllActiveDefinitions(user, requestMetadata = {}) {
       ...requestMetadata
     });
 
-    // Parse JSON fields
-    return definitions.map(parseDefinitionJSON);
+    return parsedDefinitions;
   } catch (error) {
     console.error('Error in getAllActiveDefinitions:', error);
     throw error;
@@ -85,10 +98,11 @@ async function getAllActiveDefinitions(user, requestMetadata = {}) {
  *
  * @param {Object} user - Authenticated user object
  * @param {string} categoryId - Category UUID
+ * @param {string} language - Language code for translations (optional)
  * @param {Object} requestMetadata - Request metadata for audit logging
  * @returns {Promise<Array>} Field definitions
  */
-async function getDefinitionsByCategory(user, categoryId, requestMetadata = {}) {
+async function getDefinitionsByCategory(user, categoryId, language = null, requestMetadata = {}) {
   try {
     const definitions = await CustomFieldDefinition.findAll({
       where: {
@@ -97,6 +111,18 @@ async function getDefinitionsByCategory(user, categoryId, requestMetadata = {}) 
       },
       order: [['display_order', 'ASC']]
     });
+
+    // Parse JSON fields
+    let parsedDefinitions = definitions.map(parseDefinitionJSON);
+
+    // Apply translations if language specified and not French (default)
+    if (language && language !== 'fr') {
+      parsedDefinitions = await Promise.all(
+        parsedDefinitions.map(definition =>
+          translationService.applyTranslations(definition, 'field_definition', language)
+        )
+      );
+    }
 
     // Audit log
     await auditService.log({
@@ -108,8 +134,7 @@ async function getDefinitionsByCategory(user, categoryId, requestMetadata = {}) 
       ...requestMetadata
     });
 
-    // Parse JSON fields
-    return definitions.map(parseDefinitionJSON);
+    return parsedDefinitions;
   } catch (error) {
     console.error('Error in getDefinitionsByCategory:', error);
     throw error;
@@ -121,10 +146,11 @@ async function getDefinitionsByCategory(user, categoryId, requestMetadata = {}) 
  *
  * @param {Object} user - Authenticated user object
  * @param {string} definitionId - Definition UUID
+ * @param {string} language - Language code for translations (optional)
  * @param {Object} requestMetadata - Request metadata for audit logging
  * @returns {Promise<Object>} Field definition
  */
-async function getDefinitionById(user, definitionId, requestMetadata = {}) {
+async function getDefinitionById(user, definitionId, language = null, requestMetadata = {}) {
   try {
     const definition = await CustomFieldDefinition.findByPk(definitionId, {
       include: [
@@ -139,6 +165,18 @@ async function getDefinitionById(user, definitionId, requestMetadata = {}) {
       throw new Error('Field definition not found');
     }
 
+    // Parse JSON fields
+    let parsedDefinition = parseDefinitionJSON(definition);
+
+    // Apply translations if language specified and not French (default)
+    if (language && language !== 'fr') {
+      parsedDefinition = await translationService.applyTranslations(
+        parsedDefinition,
+        'field_definition',
+        language
+      );
+    }
+
     // Audit log
     await auditService.log({
       user_id: user.id,
@@ -149,8 +187,7 @@ async function getDefinitionById(user, definitionId, requestMetadata = {}) {
       ...requestMetadata
     });
 
-    // Parse JSON fields
-    return parseDefinitionJSON(definition);
+    return parsedDefinition;
   } catch (error) {
     console.error('Error in getDefinitionById:', error);
     throw error;

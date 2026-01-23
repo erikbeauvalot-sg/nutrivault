@@ -9,6 +9,7 @@ const db = require('../../../models');
 const CustomFieldCategory = db.CustomFieldCategory;
 const CustomFieldDefinition = db.CustomFieldDefinition;
 const auditService = require('./audit.service');
+const translationService = require('./customFieldTranslation.service');
 const { Op } = db.Sequelize;
 
 /**
@@ -17,6 +18,7 @@ const { Op } = db.Sequelize;
  * @param {Object} user - Authenticated user object
  * @param {Object} filters - Filter criteria
  * @param {boolean} filters.is_active - Filter by active status
+ * @param {string} filters.language - Language code for translations (optional)
  * @param {Object} requestMetadata - Request metadata for audit logging
  * @returns {Promise<Array>} Categories
  */
@@ -42,6 +44,31 @@ async function getAllCategories(user, filters = {}, requestMetadata = {}) {
       ]
     });
 
+    // Apply translations if language specified and not French (default)
+    let translatedCategories = categories;
+    if (filters.language && filters.language !== 'fr') {
+      translatedCategories = await Promise.all(
+        categories.map(async (category) => {
+          const translatedCategory = await translationService.applyTranslations(
+            category,
+            'category',
+            filters.language
+          );
+
+          // Also translate field definitions if present
+          if (translatedCategory.field_definitions && translatedCategory.field_definitions.length > 0) {
+            translatedCategory.field_definitions = await Promise.all(
+              translatedCategory.field_definitions.map(definition =>
+                translationService.applyTranslations(definition, 'field_definition', filters.language)
+              )
+            );
+          }
+
+          return translatedCategory;
+        })
+      );
+    }
+
     // Audit log
     await auditService.log({
       user_id: user.id,
@@ -52,7 +79,7 @@ async function getAllCategories(user, filters = {}, requestMetadata = {}) {
       ...requestMetadata
     });
 
-    return categories;
+    return translatedCategories;
   } catch (error) {
     console.error('Error in getAllCategories:', error);
     throw error;
@@ -64,10 +91,11 @@ async function getAllCategories(user, filters = {}, requestMetadata = {}) {
  *
  * @param {Object} user - Authenticated user object
  * @param {string} categoryId - Category UUID
+ * @param {string} language - Language code for translations (optional)
  * @param {Object} requestMetadata - Request metadata for audit logging
  * @returns {Promise<Object>} Category
  */
-async function getCategoryById(user, categoryId, requestMetadata = {}) {
+async function getCategoryById(user, categoryId, language = null, requestMetadata = {}) {
   try {
     const category = await CustomFieldCategory.findByPk(categoryId, {
       include: [
@@ -83,6 +111,25 @@ async function getCategoryById(user, categoryId, requestMetadata = {}) {
       throw new Error('Category not found');
     }
 
+    // Apply translations if language specified and not French (default)
+    let translatedCategory = category;
+    if (language && language !== 'fr') {
+      translatedCategory = await translationService.applyTranslations(
+        category,
+        'category',
+        language
+      );
+
+      // Also translate field definitions if present
+      if (translatedCategory.field_definitions && translatedCategory.field_definitions.length > 0) {
+        translatedCategory.field_definitions = await Promise.all(
+          translatedCategory.field_definitions.map(definition =>
+            translationService.applyTranslations(definition, 'field_definition', language)
+          )
+        );
+      }
+    }
+
     // Audit log
     await auditService.log({
       user_id: user.id,
@@ -93,7 +140,7 @@ async function getCategoryById(user, categoryId, requestMetadata = {}) {
       ...requestMetadata
     });
 
-    return category;
+    return translatedCategory;
   } catch (error) {
     console.error('Error in getCategoryById:', error);
     throw error;

@@ -12,6 +12,7 @@ const express = require('express');
 const router = express.Router();
 const customFieldCategoryController = require('../controllers/customFieldCategoryController');
 const customFieldDefinitionController = require('../controllers/customFieldDefinitionController');
+const customFieldTranslationController = require('../controllers/customFieldTranslationController');
 const authenticate = require('../middleware/authenticate');
 const { requirePermission, requireRole } = require('../middleware/rbac');
 
@@ -183,6 +184,87 @@ router.post(
   requireRole('ADMIN'),
   customFieldDefinitionController.validateReorderFields,
   customFieldDefinitionController.reorderFields
+);
+
+// ===========================================
+// Translation Routes
+// ===========================================
+
+/**
+ * GET /api/custom-fields/:entityType/:entityId/translations
+ * Get all translations for an entity (all languages)
+ * Role: ADMIN only
+ */
+router.get(
+  '/:entityType/:entityId/translations',
+  authenticate,
+  requireRole('ADMIN'),
+  customFieldTranslationController.translationValidation.entityType,
+  customFieldTranslationController.translationValidation.entityId,
+  customFieldTranslationController.getAllTranslations
+);
+
+/**
+ * GET /api/custom-fields/:entityType/:entityId/translations/:languageCode
+ * Get translations for an entity in a specific language
+ * Role: ADMIN only
+ */
+router.get(
+  '/:entityType/:entityId/translations/:languageCode',
+  authenticate,
+  requireRole('ADMIN'),
+  customFieldTranslationController.translationValidation.entityType,
+  customFieldTranslationController.translationValidation.entityId,
+  customFieldTranslationController.translationValidation.languageCode,
+  customFieldTranslationController.getTranslations
+);
+
+/**
+ * POST /api/custom-fields/:entityType/:entityId/translations/:languageCode
+ * Set translations for an entity in a specific language (bulk)
+ * Role: ADMIN only
+ * Body: { name: "...", description: "..." } for categories
+ *       { field_label: "...", help_text: "..." } for definitions
+ */
+router.post(
+  '/:entityType/:entityId/translations/:languageCode',
+  authenticate,
+  requireRole('ADMIN'),
+  customFieldTranslationController.translationValidation.entityType,
+  customFieldTranslationController.translationValidation.entityId,
+  customFieldTranslationController.translationValidation.languageCode,
+  customFieldTranslationController.translationValidation.translations,
+  customFieldTranslationController.setTranslations
+);
+
+/**
+ * PUT /api/custom-fields/:entityType/:entityId/translations/:languageCode/:fieldName
+ * Set a single translation
+ * Role: ADMIN only
+ * Body: { value: "..." }
+ */
+router.put(
+  '/:entityType/:entityId/translations/:languageCode/:fieldName',
+  authenticate,
+  requireRole('ADMIN'),
+  customFieldTranslationController.translationValidation.entityType,
+  customFieldTranslationController.translationValidation.entityId,
+  customFieldTranslationController.translationValidation.languageCode,
+  customFieldTranslationController.translationValidation.fieldName,
+  customFieldTranslationController.translationValidation.value,
+  customFieldTranslationController.setTranslation
+);
+
+/**
+ * DELETE /api/custom-fields/translations/:translationId
+ * Delete a translation
+ * Role: ADMIN only
+ */
+router.delete(
+  '/translations/:translationId',
+  authenticate,
+  requireRole('ADMIN'),
+  customFieldTranslationController.deleteTranslation
 );
 
 module.exports = router;
