@@ -75,6 +75,53 @@ async function getPatients(user, filters = {}, requestMetadata = {}) {
       ]
     });
 
+    // Fetch custom fields marked as "show_in_list" for patients
+    const CustomFieldDefinition = db.CustomFieldDefinition;
+    const PatientCustomFieldValue = db.PatientCustomFieldValue;
+
+    const listFields = await CustomFieldDefinition.findAll({
+      where: {
+        show_in_list: true,
+        is_active: true
+      },
+      attributes: ['id', 'field_name', 'field_label', 'field_type'],
+      order: [['display_order', 'ASC']],
+      limit: 5 // Max 5 custom fields in list view
+    });
+
+    // Attach custom field values to each patient
+    if (listFields.length > 0) {
+      const fieldIds = listFields.map(f => f.id);
+      const patientIds = rows.map(p => p.id);
+
+      // Fetch all custom field values for these patients and fields
+      const values = await PatientCustomFieldValue.findAll({
+        where: {
+          patient_id: patientIds,
+          definition_id: fieldIds
+        },
+        attributes: ['patient_id', 'definition_id', 'value']
+      });
+
+      // Build a map for quick lookup: patientId -> { defId -> value }
+      const valueMap = {};
+      values.forEach(v => {
+        if (!valueMap[v.patient_id]) valueMap[v.patient_id] = {};
+        valueMap[v.patient_id][v.definition_id] = v.value;
+      });
+
+      // Attach custom fields to each patient
+      rows.forEach(patient => {
+        patient.dataValues.custom_fields = listFields.map(field => ({
+          definition_id: field.id,
+          field_name: field.field_name,
+          field_label: field.field_label,
+          field_type: field.field_type,
+          value: valueMap[patient.id]?.[field.id] || null
+        }));
+      });
+    }
+
     // Audit log
     await auditService.log({
       user_id: user.id,

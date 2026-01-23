@@ -232,6 +232,7 @@ async function createDefinition(user, definitionData, requestMetadata = {}) {
       display_order: definitionData.display_order || 0,
       is_active: definitionData.is_active !== undefined ? definitionData.is_active : true,
       show_in_basic_info: definitionData.show_in_basic_info || false,
+      show_in_list: definitionData.show_in_list || false,
       created_by: user.id
     });
 
@@ -293,6 +294,7 @@ async function updateDefinition(user, definitionId, updateData, requestMetadata 
     if (updateData.display_order !== undefined) definition.display_order = updateData.display_order;
     if (updateData.is_active !== undefined) definition.is_active = updateData.is_active;
     if (updateData.show_in_basic_info !== undefined) definition.show_in_basic_info = updateData.show_in_basic_info;
+    if (updateData.show_in_list !== undefined) definition.show_in_list = updateData.show_in_list;
 
     // Validate select options if field_type is select
     if (definition.field_type === 'select') {

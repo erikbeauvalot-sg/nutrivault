@@ -85,6 +85,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: false
     },
+    show_in_list: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
     deleted_at: {
       type: DataTypes.DATE,
       allowNull: true

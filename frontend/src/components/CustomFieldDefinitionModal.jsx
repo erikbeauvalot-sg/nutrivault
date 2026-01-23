@@ -77,7 +77,8 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       help_text: '',
       display_order: 0,
       is_active: true,
-      show_in_basic_info: false
+      show_in_basic_info: false,
+      show_in_list: false
     }
   });
 
@@ -102,7 +103,8 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
         help_text: definition.help_text || '',
         display_order: definition.display_order || 0,
         is_active: definition.is_active !== undefined ? definition.is_active : true,
-        show_in_basic_info: definition.show_in_basic_info || false
+        show_in_basic_info: definition.show_in_basic_info || false,
+        show_in_list: definition.show_in_list || false
       });
       setSelectedFieldType(definition.field_type || 'text');
       setSelectOptions(definition.select_options || []);
@@ -117,7 +119,8 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
         help_text: '',
         display_order: 0,
         is_active: true,
-        show_in_basic_info: false
+        show_in_basic_info: false,
+        show_in_list: false
       });
       setSelectedFieldType('text');
       setSelectOptions([]);
@@ -474,8 +477,17 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
                   label="Show in Basic Information"
                   {...register('show_in_basic_info')}
                 />
-                <Form.Text className="text-muted d-block">
+                <Form.Text className="text-muted d-block mb-3">
                   If checked, this field will be displayed in the Basic Information tab
+                </Form.Text>
+
+                <Form.Check
+                  type="checkbox"
+                  label="Show in List View"
+                  {...register('show_in_list')}
+                />
+                <Form.Text className="text-muted d-block">
+                  If checked, this field will appear as a column in patient list (max 5 fields)
                 </Form.Text>
               </Form.Group>
             </Col>
