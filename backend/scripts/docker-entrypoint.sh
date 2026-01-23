@@ -15,6 +15,13 @@ if [ ! -f "/app/data/nutrivault.db" ]; then
   echo "🆕 Database not found. Will be created on first migration."
 fi
 
+# Consolidate all migrations from both directories
+echo "📦 Consolidating migrations..."
+if [ -d "/app/backend-migrations" ]; then
+  echo "   Copying backend migrations to main migrations folder..."
+  cp -n /app/backend-migrations/*.js /app/migrations/ 2>/dev/null || echo "   Backend migrations already present"
+fi
+
 # Run database migrations
 echo "🔄 Running database migrations..."
 if npm run db:migrate; then
