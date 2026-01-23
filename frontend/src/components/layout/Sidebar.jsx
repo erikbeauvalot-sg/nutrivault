@@ -23,7 +23,10 @@ const Sidebar = ({ isOpen, onClose }) => {
     { path: '/documents', icon: '📄', label: t('documents.title'), disabled: false },
     { path: '/reports', icon: '📈', label: t('navigation.reports') },
     { path: '/users', icon: '👤', label: t('navigation.users') },
-    ...(user?.role === 'ADMIN' ? [{ path: '/settings/custom-fields', icon: '🔧', label: t('navigation.customFields') }] : []),
+    ...(user?.role === 'ADMIN' ? [
+      { path: '/settings/custom-fields', icon: '🔧', label: t('navigation.customFields') },
+      { path: '/settings/roles', icon: '🔐', label: t('navigation.roles', 'Manage Roles') }
+    ] : []),
   ];
 
   const handleNavClick = () => {
