@@ -207,18 +207,6 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                         </Col>
                       </Row>
                     )}
-                    {patient.date_of_birth && (
-                      <Row className="mt-2">
-                        <Col sm={6}>
-                          <strong>🎂 {t('patients.dateOfBirth')}:</strong><br />
-                          {new Date(patient.date_of_birth).toLocaleDateString()}
-                        </Col>
-                        <Col sm={6}>
-                          <strong>{t('patients.age')}:</strong><br />
-                          {Math.floor((new Date() - new Date(patient.date_of_birth)) / (365.25 * 24 * 60 * 60 * 1000))} {t('patients.years')}
-                        </Col>
-                      </Row>
-                    )}
                     {patient.gender && (
                       <Row className="mt-2">
                         <Col>
