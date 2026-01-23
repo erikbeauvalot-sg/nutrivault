@@ -86,6 +86,10 @@ app.use('/api/gdpr', gdprRoutes);
 const customFieldsRoutes = require('./routes/customFields');
 app.use('/api/custom-fields', customFieldsRoutes);
 
+// Role routes (protected - RBAC enforced in routes file)
+const roleRoutes = require('./routes/roles');
+app.use('/api/roles', roleRoutes);
+
 // Basic error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);
