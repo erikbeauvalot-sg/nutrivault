@@ -188,6 +188,59 @@ export const deletePatientCustomField = async (patientId, fieldValueId) => {
   return response.data;
 };
 
+// ===========================================
+// Translation API Calls
+// ===========================================
+
+/**
+ * Get all translations for an entity (all languages)
+ * @param {string} entityType - 'category' or 'field_definition'
+ * @param {string} entityId - Entity UUID
+ * @returns {Promise<object>} Translations grouped by language code
+ */
+export const getAllTranslations = async (entityType, entityId) => {
+  const response = await api.get(`/api/custom-fields/${entityType}/${entityId}/translations`);
+  return response.data;
+};
+
+/**
+ * Get translations for an entity in a specific language
+ * @param {string} entityType - 'category' or 'field_definition'
+ * @param {string} entityId - Entity UUID
+ * @param {string} languageCode - Language code (e.g., 'en', 'es')
+ * @returns {Promise<object>} Translations { name: "...", description: "..." }
+ */
+export const getTranslations = async (entityType, entityId, languageCode) => {
+  const response = await api.get(`/api/custom-fields/${entityType}/${entityId}/translations/${languageCode}`);
+  return response.data;
+};
+
+/**
+ * Set translations for an entity in a specific language (bulk)
+ * @param {string} entityType - 'category' or 'field_definition'
+ * @param {string} entityId - Entity UUID
+ * @param {string} languageCode - Language code (e.g., 'en', 'es')
+ * @param {object} translations - Translations object { name: "...", description: "..." }
+ * @returns {Promise<object>} Save result
+ */
+export const setTranslations = async (entityType, entityId, languageCode, translations) => {
+  const response = await api.post(
+    `/api/custom-fields/${entityType}/${entityId}/translations/${languageCode}`,
+    translations
+  );
+  return response.data;
+};
+
+/**
+ * Delete a translation
+ * @param {string} translationId - Translation UUID
+ * @returns {Promise<void>}
+ */
+export const deleteTranslation = async (translationId) => {
+  const response = await api.delete(`/api/custom-fields/translations/${translationId}`);
+  return response.data;
+};
+
 export default {
   // Categories
   getCategories,
@@ -209,5 +262,11 @@ export default {
   // Patient values
   getPatientCustomFields,
   updatePatientCustomFields,
-  deletePatientCustomField
+  deletePatientCustomField,
+
+  // Translations
+  getAllTranslations,
+  getTranslations,
+  setTranslations,
+  deleteTranslation
 };
