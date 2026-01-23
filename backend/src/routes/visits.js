@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 const { body, param, query, validationResult } = require('express-validator');
 const visitController = require('../controllers/visitController');
+const visitCustomFieldController = require('../controllers/visitCustomFieldController');
 const authenticate = require('../middleware/authenticate');
 const { requirePermission } = require('../middleware/rbac');
 
@@ -345,6 +346,42 @@ router.post(
   uuidParamValidation,
   validate,
   visitController.finishAndInvoice
+);
+
+// GET /api/visits/:visitId/custom-fields - Get custom field values for visit
+router.get(
+  '/:visitId/custom-fields',
+  authenticate,
+  requirePermission('visits.read'),
+  [param('visitId').isUUID().withMessage('Visit ID must be a valid UUID')],
+  validate,
+  visitCustomFieldController.getVisitCustomFields
+);
+
+// PUT /api/visits/:visitId/custom-fields - Bulk update custom field values for visit
+router.put(
+  '/:visitId/custom-fields',
+  authenticate,
+  requirePermission('visits.update'),
+  [
+    param('visitId').isUUID().withMessage('Visit ID must be a valid UUID'),
+    body('fields').isArray().withMessage('Fields must be an array')
+  ],
+  validate,
+  visitCustomFieldController.bulkUpdateVisitFields
+);
+
+// DELETE /api/visits/:visitId/custom-fields/:fieldValueId - Delete custom field value for visit
+router.delete(
+  '/:visitId/custom-fields/:fieldValueId',
+  authenticate,
+  requirePermission('visits.update'),
+  [
+    param('visitId').isUUID().withMessage('Visit ID must be a valid UUID'),
+    param('fieldValueId').isUUID().withMessage('Field value ID must be a valid UUID')
+  ],
+  validate,
+  visitCustomFieldController.deleteVisitCustomField
 );
 
 module.exports = router;

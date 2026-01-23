@@ -29,6 +29,7 @@ async function seedCustomFields() {
       display_order: 1,
       is_active: true,
       color: '#3498db', // Blue
+      entity_types: ['patient'], // Patient-only category
       created_by: adminUser.id
     };
     categories.push(categoryGeneral);
@@ -141,6 +142,7 @@ async function seedCustomFields() {
       display_order: 2,
       is_active: true,
       color: '#2ecc71', // Green
+      entity_types: ['patient'], // Patient-only category
       created_by: adminUser.id
     };
     categories.push(categoryLifestyle);
@@ -225,6 +227,7 @@ async function seedCustomFields() {
       display_order: 3,
       is_active: true,
       color: '#e74c3c', // Red
+      entity_types: ['patient'], // Patient-only category
       created_by: adminUser.id
     };
     categories.push(categoryMedical);
@@ -308,6 +311,7 @@ async function seedCustomFields() {
       display_order: 4,
       is_active: true,
       color: '#9b59b6', // Purple
+      entity_types: ['patient'], // Patient-only category
       created_by: adminUser.id
     };
     categories.push(categoryClinical);

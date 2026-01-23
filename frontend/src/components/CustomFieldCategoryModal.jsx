@@ -37,6 +37,7 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [color, setColor] = useState('#3498db');
+  const [entityTypes, setEntityTypes] = useState(['patient']);
 
   const isEditing = !!category;
 
@@ -61,7 +62,9 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
   useEffect(() => {
     if (category) {
       const categoryColor = category.color || '#3498db';
+      const categoryEntityTypes = category.entity_types || ['patient'];
       setColor(categoryColor);
+      setEntityTypes(categoryEntityTypes);
       reset({
         name: category.name || '',
         description: category.description || '',
@@ -71,6 +74,7 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
       });
     } else {
       setColor('#3498db');
+      setEntityTypes(['patient']);
       reset({
         name: '',
         description: '',
@@ -87,12 +91,25 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
       setError(null);
       setSuccess(false);
 
-      console.log('Submitting category data:', data);
+      // Validate entity_types manually
+      if (!entityTypes || entityTypes.length === 0) {
+        setError('At least one entity type must be selected');
+        setLoading(false);
+        return;
+      }
+
+      // Add entity_types manually since it's not in the form
+      const submitData = {
+        ...data,
+        entity_types: entityTypes
+      };
+
+      console.log('Submitting category data:', submitData);
 
       if (isEditing) {
-        await customFieldService.updateCategory(category.id, data);
+        await customFieldService.updateCategory(category.id, submitData);
       } else {
-        await customFieldService.createCategory(data);
+        await customFieldService.createCategory(submitData);
       }
 
       setSuccess(true);
@@ -114,6 +131,7 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
     reset();
     setError(null);
     setSuccess(false);
+    setEntityTypes(['patient']);
     onHide();
   };
 
@@ -126,6 +144,23 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
     handleColorChange('#3498db');
   };
 
+  const handleEntityTypeChange = (type) => {
+    let newEntityTypes;
+    if (entityTypes.includes(type)) {
+      // Remove the type
+      newEntityTypes = entityTypes.filter(t => t !== type);
+      // Ensure at least one type is selected
+      if (newEntityTypes.length === 0) {
+        return; // Don't allow deselecting all types
+      }
+    } else {
+      // Add the type
+      newEntityTypes = [...entityTypes, type];
+    }
+    console.log('🔄 Entity types changed:', newEntityTypes);
+    setEntityTypes(newEntityTypes);
+  };
+
   return (
     <Modal show={show} onHide={handleClose}>
       <Modal.Header closeButton>
@@ -136,7 +171,7 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
 
       <Form onSubmit={handleSubmit(onSubmit)}>
         <Modal.Body>
-          {/* Hidden input for color to register with react-hook-form */}
+          {/* Hidden input for color */}
           <input type="hidden" {...register('color')} />
 
           {error && (
@@ -195,6 +230,36 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
             </Form.Control.Feedback>
             <Form.Text className="text-muted">
               Lower numbers appear first
+            </Form.Text>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Applies to: *</Form.Label>
+            <div className="d-flex flex-column gap-2">
+              <Form.Check
+                type="checkbox"
+                id="entity-type-patient"
+                label="👤 Patients"
+                checked={entityTypes.includes('patient')}
+                onChange={() => handleEntityTypeChange('patient')}
+              />
+              <Form.Check
+                type="checkbox"
+                id="entity-type-visit"
+                label="📅 Visits"
+                checked={entityTypes.includes('visit')}
+                onChange={() => handleEntityTypeChange('visit')}
+              />
+            </div>
+            {errors.entity_types && (
+              <div className="text-danger small mt-1">
+                {errors.entity_types.message}
+              </div>
+            )}
+            <Form.Text className="text-muted d-block mt-2">
+              <strong>Patient-only:</strong> Static data (family situation, medical history)<br />
+              <strong>Visit-only:</strong> Dynamic measurements (weight, blood pressure this visit)<br />
+              <strong>Both:</strong> Common fields needed in both contexts (notes, observations)
             </Form.Text>
           </Form.Group>
 

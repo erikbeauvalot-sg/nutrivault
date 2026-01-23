@@ -119,6 +119,7 @@ async function createCategory(user, categoryData, requestMetadata = {}) {
       display_order: categoryData.display_order || 0,
       is_active: categoryData.is_active !== undefined ? categoryData.is_active : true,
       color: categoryData.color || '#3498db',
+      entity_types: categoryData.entity_types || ['patient'],
       created_by: user.id
     });
 
@@ -168,6 +169,7 @@ async function updateCategory(user, categoryId, updateData, requestMetadata = {}
     if (updateData.display_order !== undefined) category.display_order = updateData.display_order;
     if (updateData.is_active !== undefined) category.is_active = updateData.is_active;
     if (updateData.color !== undefined) category.color = updateData.color;
+    if (updateData.entity_types !== undefined) category.entity_types = updateData.entity_types;
 
     console.log('Color after assignment:', category.color);
 

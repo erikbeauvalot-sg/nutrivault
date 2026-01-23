@@ -1,56 +1,71 @@
 /**
- * Patient Custom Field Service
+ * Visit Custom Field Service
  *
- * Business logic for managing patient custom field values.
+ * Business logic for managing visit custom field values.
  * Handles CRUD operations with RBAC and audit logging.
- * Follows patient access control: ADMIN sees all, DIETITIAN sees assigned patients only.
+ * Follows visit access control: ADMIN sees all, DIETITIAN sees visits for assigned patients only.
  */
 
 const db = require('../../../models');
-const PatientCustomFieldValue = db.PatientCustomFieldValue;
+const VisitCustomFieldValue = db.VisitCustomFieldValue;
 const CustomFieldDefinition = db.CustomFieldDefinition;
 const CustomFieldCategory = db.CustomFieldCategory;
+const Visit = db.Visit;
 const Patient = db.Patient;
 const auditService = require('./audit.service');
 const { Op } = db.Sequelize;
 
 /**
- * Check if user has access to patient
+ * Check if user has access to visit
  *
  * @param {Object} user - Authenticated user object
- * @param {string} patientId - Patient UUID
+ * @param {string} visitId - Visit UUID
  * @returns {Promise<boolean>} True if user has access
  */
-async function checkPatientAccess(user, patientId) {
+async function checkVisitAccess(user, visitId) {
   if (user.role.name === 'ADMIN') {
     return true;
   }
 
   if (user.role.name === 'DIETITIAN') {
-    const patient = await Patient.findByPk(patientId);
-    return patient && patient.assigned_dietitian_id === user.id;
+    const visit = await Visit.findByPk(visitId, {
+      include: [{
+        model: Patient,
+        as: 'patient'
+      }]
+    });
+
+    if (!visit) {
+      return false;
+    }
+
+    // Dietitian can access if they're assigned to the patient OR if they're the visit dietitian
+    return visit.patient && (
+      visit.patient.assigned_dietitian_id === user.id ||
+      visit.dietitian_id === user.id
+    );
   }
 
   return false;
 }
 
 /**
- * Get all custom field values for a patient
+ * Get all custom field values for a visit
  *
  * @param {Object} user - Authenticated user object
- * @param {string} patientId - Patient UUID
+ * @param {string} visitId - Visit UUID
  * @param {Object} requestMetadata - Request metadata for audit logging
  * @returns {Promise<Array>} Custom field values grouped by category
  */
-async function getPatientCustomFields(user, patientId, requestMetadata = {}) {
+async function getVisitCustomFields(user, visitId, requestMetadata = {}) {
   try {
-    // Check patient access
-    const hasAccess = await checkPatientAccess(user, patientId);
+    // Check visit access
+    const hasAccess = await checkVisitAccess(user, visitId);
     if (!hasAccess) {
-      throw new Error('Access denied to this patient');
+      throw new Error('Access denied to this visit');
     }
 
-    // Get all active categories and definitions where entity_types includes 'patient'
+    // Get all active categories and definitions where entity_types includes 'visit'
     const categories = await CustomFieldCategory.findAll({
       where: {
         is_active: true
@@ -67,15 +82,15 @@ async function getPatientCustomFields(user, patientId, requestMetadata = {}) {
       ]
     });
 
-    // Filter categories to only those that apply to patients
-    const patientCategories = categories.filter(category => {
+    // Filter categories to only those that apply to visits
+    const visitCategories = categories.filter(category => {
       const entityTypes = category.entity_types || ['patient'];
-      return entityTypes.includes('patient');
+      return entityTypes.includes('visit');
     });
 
-    // Get patient's custom field values
-    const patientValues = await PatientCustomFieldValue.findAll({
-      where: { patient_id: patientId },
+    // Get visit's custom field values
+    const visitValues = await VisitCustomFieldValue.findAll({
+      where: { visit_id: visitId },
       include: [
         {
           model: CustomFieldDefinition,
@@ -88,12 +103,12 @@ async function getPatientCustomFields(user, patientId, requestMetadata = {}) {
 
     // Map values to definitions
     const valuesMap = {};
-    patientValues.forEach(value => {
+    visitValues.forEach(value => {
       valuesMap[value.field_definition_id] = value;
     });
 
     // Build response with categories, definitions, and values
-    const result = patientCategories.map(category => ({
+    const result = visitCategories.map(category => ({
       id: category.id,
       name: category.name,
       description: category.description,
@@ -141,34 +156,34 @@ async function getPatientCustomFields(user, patientId, requestMetadata = {}) {
       user_id: user.id,
       username: user.username,
       action: 'READ',
-      resource_type: 'patient_custom_fields',
-      resource_id: patientId,
+      resource_type: 'visit_custom_fields',
+      resource_id: visitId,
       ...requestMetadata
     });
 
     return result;
   } catch (error) {
-    console.error('Error in getPatientCustomFields:', error);
+    console.error('Error in getVisitCustomFields:', error);
     throw error;
   }
 }
 
 /**
- * Set a custom field value for a patient
+ * Set a custom field value for a visit
  *
  * @param {Object} user - Authenticated user object
- * @param {string} patientId - Patient UUID
+ * @param {string} visitId - Visit UUID
  * @param {string} definitionId - Field definition UUID
  * @param {any} value - Field value
  * @param {Object} requestMetadata - Request metadata for audit logging
  * @returns {Promise<Object>} Updated/created field value
  */
-async function setPatientCustomField(user, patientId, definitionId, value, requestMetadata = {}) {
+async function setVisitCustomField(user, visitId, definitionId, value, requestMetadata = {}) {
   try {
-    // Check patient access
-    const hasAccess = await checkPatientAccess(user, patientId);
+    // Check visit access
+    const hasAccess = await checkVisitAccess(user, visitId);
     if (!hasAccess) {
-      throw new Error('Access denied to this patient');
+      throw new Error('Access denied to this visit');
     }
 
     // Get field definition
@@ -183,10 +198,10 @@ async function setPatientCustomField(user, patientId, definitionId, value, reque
       throw new Error(validation.error);
     }
 
-    // Find or create patient custom field value
-    let fieldValue = await PatientCustomFieldValue.findOne({
+    // Find or create visit custom field value
+    let fieldValue = await VisitCustomFieldValue.findOne({
       where: {
-        patient_id: patientId,
+        visit_id: visitId,
         field_definition_id: definitionId
       }
     });
@@ -195,8 +210,8 @@ async function setPatientCustomField(user, patientId, definitionId, value, reque
     const beforeData = fieldValue ? fieldValue.toJSON() : null;
 
     if (isNew) {
-      fieldValue = await PatientCustomFieldValue.create({
-        patient_id: patientId,
+      fieldValue = await VisitCustomFieldValue.create({
+        visit_id: visitId,
         field_definition_id: definitionId,
         updated_by: user.id
       });
@@ -207,46 +222,48 @@ async function setPatientCustomField(user, patientId, definitionId, value, reque
     fieldValue.updated_by = user.id;
     await fieldValue.save();
 
-    // Get patient info for audit log
-    const patient = await Patient.findByPk(patientId);
+    // Get visit info for audit log
+    const visit = await Visit.findByPk(visitId, {
+      include: [{ model: Patient, as: 'patient' }]
+    });
 
     // Audit log
     await auditService.log({
       user_id: user.id,
       username: user.username,
       action: isNew ? 'CREATE' : 'UPDATE',
-      resource_type: 'patient_custom_field_value',
+      resource_type: 'visit_custom_field_value',
       resource_id: fieldValue.id,
       changes: {
         before: beforeData,
         after: fieldValue.toJSON()
       },
-      details: patient ? `Patient: ${patient.first_name} ${patient.last_name}, Field: ${definition.field_label}` : undefined,
+      details: visit ? `Visit for patient: ${visit.patient?.first_name} ${visit.patient?.last_name}, Field: ${definition.field_label}` : undefined,
       ...requestMetadata
     });
 
     return fieldValue;
   } catch (error) {
-    console.error('Error in setPatientCustomField:', error);
+    console.error('Error in setVisitCustomField:', error);
     throw error;
   }
 }
 
 /**
- * Bulk update custom field values for a patient
+ * Bulk update custom field values for a visit
  *
  * @param {Object} user - Authenticated user object
- * @param {string} patientId - Patient UUID
+ * @param {string} visitId - Visit UUID
  * @param {Array} fields - Array of {definition_id, value} objects
  * @param {Object} requestMetadata - Request metadata for audit logging
  * @returns {Promise<Object>} Result
  */
-async function bulkUpdatePatientFields(user, patientId, fields, requestMetadata = {}) {
+async function bulkUpdateVisitFields(user, visitId, fields, requestMetadata = {}) {
   try {
-    // Check patient access
-    const hasAccess = await checkPatientAccess(user, patientId);
+    // Check visit access
+    const hasAccess = await checkVisitAccess(user, visitId);
     if (!hasAccess) {
-      throw new Error('Access denied to this patient');
+      throw new Error('Access denied to this visit');
     }
 
     const transaction = await db.sequelize.transaction();
@@ -267,10 +284,10 @@ async function bulkUpdatePatientFields(user, patientId, fields, requestMetadata 
           throw new Error(`${definition.field_label}: ${validation.error}`);
         }
 
-        // Find or create patient custom field value
-        let fieldValue = await PatientCustomFieldValue.findOne({
+        // Find or create visit custom field value
+        let fieldValue = await VisitCustomFieldValue.findOne({
           where: {
-            patient_id: patientId,
+            visit_id: visitId,
             field_definition_id: field.definition_id
           },
           transaction
@@ -279,8 +296,8 @@ async function bulkUpdatePatientFields(user, patientId, fields, requestMetadata 
         const isNew = !fieldValue;
 
         if (isNew) {
-          fieldValue = await PatientCustomFieldValue.create({
-            patient_id: patientId,
+          fieldValue = await VisitCustomFieldValue.create({
+            visit_id: visitId,
             field_definition_id: field.definition_id,
             updated_by: user.id
           }, { transaction });
@@ -300,18 +317,20 @@ async function bulkUpdatePatientFields(user, patientId, fields, requestMetadata 
 
       await transaction.commit();
 
-      // Get patient info for audit log
-      const patient = await Patient.findByPk(patientId);
+      // Get visit info for audit log
+      const visit = await Visit.findByPk(visitId, {
+        include: [{ model: Patient, as: 'patient' }]
+      });
 
       // Audit log
       await auditService.log({
         user_id: user.id,
         username: user.username,
         action: 'UPDATE',
-        resource_type: 'patient_custom_fields',
-        resource_id: patientId,
+        resource_type: 'visit_custom_fields',
+        resource_id: visitId,
         changes: { after: { fields: results } },
-        details: patient ? `Patient: ${patient.first_name} ${patient.last_name}, Updated ${results.length} fields` : undefined,
+        details: visit ? `Visit for patient: ${visit.patient?.first_name} ${visit.patient?.last_name}, Updated ${results.length} fields` : undefined,
         ...requestMetadata
       });
 
@@ -324,32 +343,32 @@ async function bulkUpdatePatientFields(user, patientId, fields, requestMetadata 
       throw error;
     }
   } catch (error) {
-    console.error('Error in bulkUpdatePatientFields:', error);
+    console.error('Error in bulkUpdateVisitFields:', error);
     throw error;
   }
 }
 
 /**
- * Delete a custom field value for a patient
+ * Delete a custom field value for a visit
  *
  * @param {Object} user - Authenticated user object
- * @param {string} patientId - Patient UUID
+ * @param {string} visitId - Visit UUID
  * @param {string} fieldValueId - Field value UUID
  * @param {Object} requestMetadata - Request metadata for audit logging
  * @returns {Promise<Object>} Result
  */
-async function deletePatientCustomField(user, patientId, fieldValueId, requestMetadata = {}) {
+async function deleteVisitCustomField(user, visitId, fieldValueId, requestMetadata = {}) {
   try {
-    // Check patient access
-    const hasAccess = await checkPatientAccess(user, patientId);
+    // Check visit access
+    const hasAccess = await checkVisitAccess(user, visitId);
     if (!hasAccess) {
-      throw new Error('Access denied to this patient');
+      throw new Error('Access denied to this visit');
     }
 
-    const fieldValue = await PatientCustomFieldValue.findOne({
+    const fieldValue = await VisitCustomFieldValue.findOne({
       where: {
         id: fieldValueId,
-        patient_id: patientId
+        visit_id: visitId
       },
       include: [
         {
@@ -367,31 +386,33 @@ async function deletePatientCustomField(user, patientId, fieldValueId, requestMe
 
     await fieldValue.destroy();
 
-    // Get patient info for audit log
-    const patient = await Patient.findByPk(patientId);
+    // Get visit info for audit log
+    const visit = await Visit.findByPk(visitId, {
+      include: [{ model: Patient, as: 'patient' }]
+    });
 
     // Audit log
     await auditService.log({
       user_id: user.id,
       username: user.username,
       action: 'DELETE',
-      resource_type: 'patient_custom_field_value',
+      resource_type: 'visit_custom_field_value',
       resource_id: fieldValueId,
       changes: { before: beforeData },
-      details: patient ? `Patient: ${patient.first_name} ${patient.last_name}` : undefined,
+      details: visit ? `Visit for patient: ${visit.patient?.first_name} ${visit.patient?.last_name}` : undefined,
       ...requestMetadata
     });
 
     return { message: 'Custom field value deleted successfully' };
   } catch (error) {
-    console.error('Error in deletePatientCustomField:', error);
+    console.error('Error in deleteVisitCustomField:', error);
     throw error;
   }
 }
 
 module.exports = {
-  getPatientCustomFields,
-  setPatientCustomField,
-  bulkUpdatePatientFields,
-  deletePatientCustomField
+  getVisitCustomFields,
+  setVisitCustomField,
+  bulkUpdateVisitFields,
+  deleteVisitCustomField
 };

@@ -268,17 +268,35 @@ const CustomFieldsPage = () => {
                         <th>Name</th>
                         <th>Description</th>
                         <th>Order</th>
+                        <th>Applies to</th>
                         <th>Status</th>
                         <th>Fields</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {categories.map((category) => (
+                      {categories.map((category) => {
+                        const entityTypes = category.entity_types || ['patient'];
+                        const hasPatient = entityTypes.includes('patient');
+                        const hasVisit = entityTypes.includes('visit');
+
+                        return (
                         <tr key={category.id}>
                           <td><strong>{category.name}</strong></td>
                           <td>{category.description || <span className="text-muted">-</span>}</td>
                           <td>{category.display_order}</td>
+                          <td>
+                            {hasPatient && (
+                              <Badge bg="primary" className="me-1">
+                                👤 Patient
+                              </Badge>
+                            )}
+                            {hasVisit && (
+                              <Badge bg="info">
+                                📅 Visit
+                              </Badge>
+                            )}
+                          </td>
                           <td>
                             {category.is_active ? (
                               <Badge bg="success">Active</Badge>
@@ -287,7 +305,7 @@ const CustomFieldsPage = () => {
                             )}
                           </td>
                           <td>
-                            <Badge bg="info">
+                            <Badge bg="secondary">
                               {category.field_definitions?.length || 0} fields
                             </Badge>
                           </td>
@@ -309,7 +327,8 @@ const CustomFieldsPage = () => {
                             </Button>
                           </td>
                         </tr>
-                      ))}
+                      );
+                      })}
                     </tbody>
                   </Table>
                 )}
