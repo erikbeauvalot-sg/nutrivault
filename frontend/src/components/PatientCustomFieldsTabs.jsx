@@ -6,10 +6,12 @@
 import { useState, useEffect } from 'react';
 import { Tabs, Tab, Spinner, Alert, Button, Row, Col, Form } from 'react-bootstrap';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import customFieldService from '../services/customFieldService';
 import CustomFieldInput from './CustomFieldInput';
 
 const PatientCustomFieldsTabs = ({ patientId, editable = false, onUpdate = null }) => {
+  const { i18n } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [customFields, setCustomFields] = useState([]);
@@ -22,12 +24,12 @@ const PatientCustomFieldsTabs = ({ patientId, editable = false, onUpdate = null 
     if (patientId) {
       fetchCustomFields();
     }
-  }, [patientId]);
+  }, [patientId, i18n.language]);
 
   const fetchCustomFields = async () => {
     try {
       setLoading(true);
-      const data = await customFieldService.getPatientCustomFields(patientId);
+      const data = await customFieldService.getPatientCustomFields(patientId, i18n.language);
 
       setCustomFields(data || []);
 

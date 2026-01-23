@@ -13,6 +13,7 @@ const { body, param, validationResult } = require('express-validator');
 const getAllActiveDefinitions = async (req, res) => {
   try {
     const user = req.user;
+    const language = req.query.language || user.language_preference || 'fr';
 
     const requestMetadata = {
       ip_address: req.ip,
@@ -21,7 +22,7 @@ const getAllActiveDefinitions = async (req, res) => {
       request_path: req.originalUrl
     };
 
-    const definitions = await customFieldDefinitionService.getAllActiveDefinitions(user, requestMetadata);
+    const definitions = await customFieldDefinitionService.getAllActiveDefinitions(user, language, requestMetadata);
 
     res.json({
       success: true,
@@ -44,6 +45,7 @@ const getDefinitionsByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
     const user = req.user;
+    const language = req.query.language || user.language_preference || 'fr';
 
     const requestMetadata = {
       ip_address: req.ip,
@@ -52,7 +54,7 @@ const getDefinitionsByCategory = async (req, res) => {
       request_path: req.originalUrl
     };
 
-    const definitions = await customFieldDefinitionService.getDefinitionsByCategory(user, categoryId, requestMetadata);
+    const definitions = await customFieldDefinitionService.getDefinitionsByCategory(user, categoryId, language, requestMetadata);
 
     res.json({
       success: true,
@@ -75,6 +77,7 @@ const getDefinitionById = async (req, res) => {
   try {
     const { id } = req.params;
     const user = req.user;
+    const language = req.query.language || user.language_preference || 'fr';
 
     const requestMetadata = {
       ip_address: req.ip,
@@ -83,7 +86,7 @@ const getDefinitionById = async (req, res) => {
       request_path: req.originalUrl
     };
 
-    const definition = await customFieldDefinitionService.getDefinitionById(user, id, requestMetadata);
+    const definition = await customFieldDefinitionService.getDefinitionById(user, id, language, requestMetadata);
 
     res.json({
       success: true,

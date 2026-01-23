@@ -13,6 +13,7 @@ const visitCustomFieldService = require('../services/visitCustomField.service');
 async function getVisitCustomFields(req, res) {
   try {
     const { visitId } = req.params;
+    const language = req.query.language || req.user.language_preference || 'fr';
     const requestMetadata = {
       ip_address: req.ip,
       user_agent: req.get('user-agent')
@@ -21,6 +22,7 @@ async function getVisitCustomFields(req, res) {
     const customFields = await visitCustomFieldService.getVisitCustomFields(
       req.user,
       visitId,
+      language,
       requestMetadata
     );
 

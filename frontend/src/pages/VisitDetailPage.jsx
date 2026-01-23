@@ -35,7 +35,7 @@ const VisitDetailPage = () => {
       fetchVisitDetails();
       fetchCustomFields();
     }
-  }, [id]);
+  }, [id, i18n.language]);
 
   const fetchVisitDetails = async () => {
     try {
@@ -54,7 +54,7 @@ const VisitDetailPage = () => {
 
   const fetchCustomFields = async () => {
     try {
-      const data = await visitCustomFieldService.getVisitCustomFields(id);
+      const data = await visitCustomFieldService.getVisitCustomFields(id, i18n.language);
       setCustomFieldCategories(data || []);
 
       // Build initial values map

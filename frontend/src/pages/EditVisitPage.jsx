@@ -14,7 +14,7 @@ import visitCustomFieldService from '../services/visitCustomFieldService';
 import CustomFieldInput from '../components/CustomFieldInput';
 
 const EditVisitPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -58,7 +58,7 @@ const EditVisitPage = () => {
   useEffect(() => {
     fetchVisitData();
     fetchCustomFields();
-  }, [id]);
+  }, [id, i18n.language]);
 
   const fetchVisitData = async () => {
     try {
@@ -112,7 +112,7 @@ const EditVisitPage = () => {
 
   const fetchCustomFields = async () => {
     try {
-      const data = await visitCustomFieldService.getVisitCustomFields(id);
+      const data = await visitCustomFieldService.getVisitCustomFields(id, i18n.language);
       setCustomFieldCategories(data || []);
 
       // Build initial values map

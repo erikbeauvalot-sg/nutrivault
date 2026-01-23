@@ -14,6 +14,7 @@ const getPatientCustomFields = async (req, res) => {
   try {
     const { patientId } = req.params;
     const user = req.user;
+    const language = req.query.language || user.language_preference || 'fr';
 
     const requestMetadata = {
       ip_address: req.ip,
@@ -22,7 +23,7 @@ const getPatientCustomFields = async (req, res) => {
       request_path: req.originalUrl
     };
 
-    const fields = await patientCustomFieldService.getPatientCustomFields(user, patientId, requestMetadata);
+    const fields = await patientCustomFieldService.getPatientCustomFields(user, patientId, language, requestMetadata);
 
     res.json({
       success: true,

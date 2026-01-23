@@ -11,7 +11,7 @@ import api from './api';
 
 /**
  * Get all categories
- * @param {object} filters - Filter parameters (is_active, etc.)
+ * @param {object} filters - Filter parameters (is_active, language, etc.)
  * @returns {Promise<Array>} Array of categories
  */
 export const getCategories = async (filters = {}) => {
@@ -30,10 +30,13 @@ export const getCategories = async (filters = {}) => {
 /**
  * Get category by ID
  * @param {string} id - Category UUID
+ * @param {string} language - Optional language code for translations
  * @returns {Promise<object>} Category object
  */
-export const getCategoryById = async (id) => {
-  const response = await api.get(`/api/custom-fields/categories/${id}`);
+export const getCategoryById = async (id, language = null) => {
+  const url = `/api/custom-fields/categories/${id}`;
+  const params = language ? { language } : {};
+  const response = await api.get(url, { params });
   return response.data.data || response.data;
 };
 
@@ -84,30 +87,36 @@ export const reorderCategories = async (order) => {
 
 /**
  * Get all active field definitions
+ * @param {string} language - Optional language code for translations
  * @returns {Promise<Array>} Array of field definitions
  */
-export const getDefinitions = async () => {
-  const response = await api.get('/api/custom-fields/definitions');
+export const getDefinitions = async (language = null) => {
+  const params = language ? { language } : {};
+  const response = await api.get('/api/custom-fields/definitions', { params });
   return response.data.data || response.data;
 };
 
 /**
  * Get definitions by category
  * @param {string} categoryId - Category UUID
+ * @param {string} language - Optional language code for translations
  * @returns {Promise<Array>} Array of field definitions
  */
-export const getDefinitionsByCategory = async (categoryId) => {
-  const response = await api.get(`/api/custom-fields/definitions/category/${categoryId}`);
+export const getDefinitionsByCategory = async (categoryId, language = null) => {
+  const params = language ? { language } : {};
+  const response = await api.get(`/api/custom-fields/definitions/category/${categoryId}`, { params });
   return response.data.data || response.data;
 };
 
 /**
  * Get definition by ID
  * @param {string} id - Definition UUID
+ * @param {string} language - Optional language code for translations
  * @returns {Promise<object>} Definition object
  */
-export const getDefinitionById = async (id) => {
-  const response = await api.get(`/api/custom-fields/definitions/${id}`);
+export const getDefinitionById = async (id, language = null) => {
+  const params = language ? { language } : {};
+  const response = await api.get(`/api/custom-fields/definitions/${id}`, { params });
   return response.data.data || response.data;
 };
 
@@ -159,10 +168,12 @@ export const reorderFields = async (order) => {
 /**
  * Get all custom field values for a patient
  * @param {string} patientId - Patient UUID
+ * @param {string} language - Optional language code for translations
  * @returns {Promise<Array>} Array of custom field values grouped by category
  */
-export const getPatientCustomFields = async (patientId) => {
-  const response = await api.get(`/api/patients/${patientId}/custom-fields`);
+export const getPatientCustomFields = async (patientId, language = null) => {
+  const params = language ? { language } : {};
+  const response = await api.get(`/api/patients/${patientId}/custom-fields`, { params });
   return response.data.data || response.data;
 };
 

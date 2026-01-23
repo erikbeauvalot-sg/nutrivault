@@ -9,11 +9,13 @@ const visitCustomFieldService = {
   /**
    * Get all custom field values for a visit
    * @param {string} visitId - Visit UUID
+   * @param {string} language - Optional language code for translations
    * @returns {Promise} API response with custom field categories and values
    */
-  getVisitCustomFields: async (visitId) => {
+  getVisitCustomFields: async (visitId, language = null) => {
     try {
-      const response = await api.get(`/api/visits/${visitId}/custom-fields`);
+      const params = language ? { language } : {};
+      const response = await api.get(`/api/visits/${visitId}/custom-fields`, { params });
       return response.data.data || response.data || [];
     } catch (error) {
       console.error('Error fetching visit custom fields:', error);
