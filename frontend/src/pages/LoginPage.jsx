@@ -128,12 +128,6 @@ const LoginPage = () => {
                   )}
                 </Button>
               </Form>
-
-              <div className="text-center mt-4">
-                <small className="text-muted">
-                  Default credentials: admin / Admin123!
-                </small>
-              </div>
             </Card.Body>
           </Card>
         </div>

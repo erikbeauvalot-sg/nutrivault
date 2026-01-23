@@ -27,11 +27,15 @@ curl http://localhost/health
 # Voir la section "Création de l'utilisateur admin" ci-dessous
 ```
 
+**Note :** Les permissions système sont maintenant initialisées **automatiquement** lors des migrations de base de données (étape 4). Vous n'avez plus besoin d'exécuter un script séparé.
+
 Accédez à l'application sur **http://localhost**
 
-### 👤 Création de l'utilisateur admin
+### 👤 Gestion de l'utilisateur admin
 
-**IMPORTANT :** L'utilisateur admin n'est pas créé automatiquement. Deux options :
+**IMPORTANT :** L'utilisateur admin n'est pas créé automatiquement.
+
+#### Créer l'utilisateur admin (première fois)
 
 **Option 1 : Script helper (recommandé)**
 
@@ -43,7 +47,26 @@ docker exec nutrivault-backend node /app/scripts/create-admin.js "VotreMotDePass
 docker exec nutrivault-backend node /app/scripts/create-admin.js
 ```
 
-**Option 2 : Script complet**
+**Ce que fait ce script :**
+- Crée le rôle ADMIN s'il n'existe pas
+- **Associe automatiquement toutes les permissions système au rôle ADMIN**
+- Crée l'utilisateur admin avec le mot de passe spécifié
+
+**Note :** Si l'utilisateur admin existe déjà, ce script refusera de le recréer.
+
+#### Réinitialiser le mot de passe admin
+
+Si vous avez oublié le mot de passe ou souhaitez le changer :
+
+```bash
+# Avec un nouveau mot de passe personnalisé
+docker exec nutrivault-backend node /app/scripts/reset-admin-password.js "NouveauMotDePasse123!"
+
+# Avec mot de passe par défaut (à changer après connexion)
+docker exec nutrivault-backend node /app/scripts/reset-admin-password.js
+```
+
+#### Script complet (alternative)
 
 ```bash
 docker exec nutrivault-backend sh -c "cat > /tmp/create-admin.js << 'EOF'
@@ -75,6 +98,30 @@ node /tmp/create-admin.js && rm /tmp/create-admin.js"
 ```
 
 ⚠️ **Remplacez `VOTRE_MOT_DE_PASSE_ICI` par un mot de passe fort !**
+
+### 🔐 Permissions système (Automatiques)
+
+Les permissions système sont **initialisées automatiquement** lors des migrations de base de données (étape 4 du démarrage).
+
+La migration crée automatiquement **26 permissions** et les associe au rôle ADMIN :
+
+- **Patients** (4) : create, read, update, delete
+- **Visits** (4) : create, read, update, delete
+- **Billing** (4) : create, read, update, delete
+- **Documents** (6) : upload, read, download, update, delete, share
+- **Users** (4) : create, read, update, delete
+- **Reports** (2) : view, export
+- **System** (2) : settings, logs
+
+**Aucune action manuelle requise** - les permissions sont créées au premier démarrage du conteneur.
+
+**💡 Déploiements existants :**
+Si vous avez déployé avant cette mise à jour, exécutez simplement les migrations :
+```bash
+docker exec nutrivault-backend npm run db:migrate
+```
+
+⚠️ **Important :** Déconnectez-vous et reconnectez-vous après la création de l'admin pour obtenir un token JWT avec toutes les permissions.
 
 ## 📁 Structure des fichiers Docker
 
@@ -269,12 +316,15 @@ Avant de déployer en production :
 - [ ] CORS configuré avec le bon domaine
 - [ ] Email SMTP configuré et testé
 - [ ] Mot de passe admin fort défini
+- [ ] Utilisateur admin créé avec `create-admin.js`
 - [ ] Permissions du fichier .env : `chmod 600`
 - [ ] Docker et Docker Compose installés
 - [ ] Pare-feu configuré
 - [ ] HTTPS/SSL configuré
 - [ ] Sauvegardes automatiques en place
 - [ ] Monitoring configuré
+
+**Note :** Les permissions système sont créées automatiquement via les migrations
 
 ## 🔗 Liens utiles
 

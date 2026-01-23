@@ -147,7 +147,7 @@ docker-compose ps
 
 ### 7. Créer l'utilisateur administrateur
 
-**IMPORTANT :** Créez maintenant l'utilisateur admin. Deux options disponibles :
+**IMPORTANT :** Créez maintenant l'utilisateur admin.
 
 **Option A : Script helper (recommandé)**
 
@@ -157,6 +157,21 @@ docker exec nutrivault-backend node /app/scripts/create-admin.js "VotreMotDePass
 
 # Avec mot de passe par défaut (à changer après connexion)
 docker exec nutrivault-backend node /app/scripts/create-admin.js
+```
+
+**✨ Ce que fait ce script automatiquement :**
+- Crée le rôle ADMIN s'il n'existe pas encore
+- **Associe automatiquement toutes les 26 permissions au rôle ADMIN**
+- Crée l'utilisateur admin avec le mot de passe fourni
+- **Plus besoin de re-run les migrations !**
+
+**💡 Réinitialisation du mot de passe**
+
+Si l'utilisateur admin existe déjà ou si vous avez oublié le mot de passe :
+
+```bash
+# Réinitialiser avec un nouveau mot de passe
+docker exec nutrivault-backend node /app/scripts/reset-admin-password.js "NouveauMotDePasse123!"
 ```
 
 **Option B : Script inline complet**
@@ -199,6 +214,38 @@ node /app/create-admin.js && rm /app/create-admin.js"
 **⚠️ AVANT D'EXÉCUTER :**
 - Remplacez `CHANGEZ_CE_MOT_DE_PASSE` par votre mot de passe fort
 - Utilisez au moins 12 caractères avec majuscules, minuscules, chiffres et symboles
+
+### 8. Vérifier l'initialisation des permissions
+
+Les **26 permissions système** sont créées **automatiquement** lors des migrations de base de données (étape 4).
+
+Vous pouvez vérifier qu'elles ont bien été créées :
+
+```bash
+docker exec nutrivault-backend node -e "
+const db = require('/models');
+(async () => {
+  const count = await db.Permission.count();
+  console.log('✅ Permissions système:', count);
+  const adminRole = await db.Role.findOne({
+    where: { name: 'ADMIN' },
+    include: [{ model: db.Permission, as: 'permissions' }]
+  });
+  console.log('✅ Permissions ADMIN:', adminRole.permissions.length);
+  process.exit(0);
+})();
+"
+```
+
+**Résultat attendu :**
+```
+✅ Permissions système: 26
+✅ Permissions ADMIN: 26
+```
+
+**💡 Pour les déploiements existants :** Si vous avez déployé avant cette mise à jour, exécutez `docker exec nutrivault-backend npm run db:migrate` pour créer les permissions.
+
+⚠️ **Important :** Déconnectez-vous et reconnectez-vous pour obtenir un nouveau token JWT avec toutes les permissions.
 
 L'application est maintenant accessible sur `http://localhost` (ou votre domaine).
 
@@ -411,6 +458,12 @@ docker exec nutrivault-backend node /app/scripts/create-admin.js "MonMotDePasseS
 docker exec nutrivault-backend node /app/scripts/create-admin.js
 ```
 
+**✨ Améliorations du script :**
+- ✅ Crée automatiquement le rôle ADMIN
+- ✅ **Associe automatiquement toutes les 26 permissions au rôle ADMIN**
+- ✅ Crée l'utilisateur admin
+- ✅ Plus besoin de manipulation manuelle des permissions !
+
 **Méthode 2 : Script complet inline**
 
 ```bash
@@ -493,7 +546,94 @@ docker exec nutrivault-backend node /app/create-admin.js
 - Changez `'VotreMotDePasseSecurise123!'` par un mot de passe fort
 - Utilisez un mot de passe d'au moins 12 caractères avec majuscules, minuscules, chiffres et symboles
 
-#### 4.3 Test de connexion
+**💡 Réinitialisation du mot de passe admin**
+
+Si l'utilisateur admin existe déjà ou si vous avez oublié le mot de passe :
+
+```bash
+# Réinitialiser avec un nouveau mot de passe sécurisé
+docker exec nutrivault-backend node /app/scripts/reset-admin-password.js "NouveauMotDePasseSecurise2024!"
+
+# Ou avec mot de passe par défaut (à changer immédiatement)
+docker exec nutrivault-backend node /app/scripts/reset-admin-password.js
+```
+
+**Résultat attendu :**
+```
+🔍 Recherche de l'utilisateur admin...
+✅ Utilisateur admin trouvé
+   Username: admin
+   Email: admin@nutrivault.local
+
+🔐 Génération du nouveau mot de passe haché...
+💾 Mise à jour du mot de passe...
+
+✅ Mot de passe administrateur réinitialisé avec succès !
+
+📝 Nouvelles informations de connexion :
+   Username: admin
+   Email: admin@nutrivault.local
+   Password: ***
+```
+
+#### 4.3 Vérifier les permissions système (Automatique)
+
+Les permissions système sont **créées automatiquement** lors de l'exécution des migrations de base de données (étape précédente).
+
+**Vérification (optionnel) :**
+
+```bash
+docker exec nutrivault-backend node -e "
+const db = require('/models');
+(async () => {
+  const count = await db.Permission.count();
+  const adminRole = await db.Role.findOne({
+    where: { name: 'ADMIN' },
+    include: [{ model: db.Permission, as: 'permissions' }]
+  });
+  console.log('✅ Total permissions:', count);
+  console.log('✅ Permissions ADMIN:', adminRole.permissions.length);
+  console.log('');
+  console.log('Permissions par ressource:');
+  const grouped = {};
+  adminRole.permissions.forEach(p => {
+    if (!grouped[p.resource]) grouped[p.resource] = [];
+    grouped[p.resource].push(p.action);
+  });
+  Object.keys(grouped).sort().forEach(resource => {
+    console.log('  ' + resource + ':', grouped[resource].sort().join(', '));
+  });
+  process.exit(0);
+})();
+"
+```
+
+**Résultat attendu :**
+```
+✅ Total permissions: 26
+✅ Permissions ADMIN: 26
+
+Permissions par ressource:
+  billing: create, delete, read, update
+  documents: delete, download, read, share, update, upload
+  patients: create, delete, read, update
+  reports: export, view
+  system: logs, settings
+  users: create, delete, read, update
+  visits: create, delete, read, update
+```
+
+**Ce qui a été fait automatiquement :**
+- ✅ 26 permissions système créées via la migration `20260123160000-init-system-permissions`
+- ✅ Toutes les permissions automatiquement associées au rôle ADMIN
+- ✅ Migration idempotente (peut être exécutée plusieurs fois sans problème)
+
+**⚠️ IMPORTANT :** Après la création de l'admin :
+1. **Déconnectez-vous** de l'application si vous êtes déjà connecté
+2. **Reconnectez-vous** avec les identifiants admin
+3. Votre nouveau token JWT inclura maintenant toutes les permissions
+
+#### 4.4 Test de connexion
 
 ```bash
 # Se connecter avec le compte admin créé

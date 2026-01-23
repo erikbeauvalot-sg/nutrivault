@@ -23,7 +23,9 @@ async function createAdmin() {
       console.log('   Username:', existingAdmin.username);
       console.log('   Email:', existingAdmin.email);
       console.log('');
-      console.log('💡 Pour réinitialiser le mot de passe, supprimez d\'abord l\'utilisateur existant.');
+      console.log('💡 Pour réinitialiser le mot de passe, utilisez :');
+      console.log('   docker exec nutrivault-backend node /app/scripts/reset-admin-password.js "NouveauMotDePasse"');
+      console.log('');
       process.exit(0);
     }
     
@@ -38,7 +40,39 @@ async function createAdmin() {
       });
     }
     console.log('✅ Rôle ADMIN trouvé/créé avec ID:', adminRole.id);
-    
+
+    // Associer toutes les permissions au rôle ADMIN
+    console.log('🔍 Vérification des permissions système...');
+    const allPermissions = await db.Permission.findAll();
+
+    if (allPermissions.length > 0) {
+      console.log(`📝 Association de ${allPermissions.length} permissions au rôle ADMIN...`);
+
+      // Vérifier quelles permissions sont déjà associées
+      const existingRolePermissions = await db.RolePermission.findAll({
+        where: { role_id: adminRole.id }
+      });
+      const existingPermissionIds = new Set(existingRolePermissions.map(rp => rp.permission_id));
+
+      // Associer les permissions manquantes
+      const newAssociations = allPermissions
+        .filter(p => !existingPermissionIds.has(p.id))
+        .map(p => ({
+          role_id: adminRole.id,
+          permission_id: p.id
+        }));
+
+      if (newAssociations.length > 0) {
+        await db.RolePermission.bulkCreate(newAssociations);
+        console.log(`✅ ${newAssociations.length} permissions associées au rôle ADMIN`);
+      } else {
+        console.log('✅ Toutes les permissions sont déjà associées');
+      }
+    } else {
+      console.log('⚠️  Aucune permission trouvée dans la base de données');
+      console.log('   Les permissions seront créées lors des migrations');
+    }
+
     console.log('🔐 Hachage du mot de passe...');
     const hashedPassword = await bcrypt.hash(password, 10);
     
