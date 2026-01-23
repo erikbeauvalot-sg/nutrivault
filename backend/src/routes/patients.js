@@ -10,6 +10,7 @@ const router = express.Router();
 const { body, param, query, validationResult } = require('express-validator');
 const patientController = require('../controllers/patientController');
 const patientTagController = require('../controllers/patientTagController');
+const patientCustomFieldController = require('../controllers/patientCustomFieldController');
 const authenticate = require('../middleware/authenticate');
 const { requirePermission } = require('../middleware/rbac');
 
@@ -58,28 +59,6 @@ const createPatientValidation = [
     .trim()
     .isLength({ max: 20 })
     .withMessage('Phone must be less than 20 characters'),
-  
-  body('date_of_birth')
-    .optional({ checkFalsy: true })
-    .isDate()
-    .withMessage('Invalid date format for date_of_birth'),
-  
-  body('gender')
-    .optional({ checkFalsy: true })
-    .isLength({ max: 20 })
-    .withMessage('Gender must be less than 20 characters'),
-
-  body('medical_conditions')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 2000 })
-    .withMessage('Medical conditions must be less than 2000 characters'),
-
-  body('dietary_restrictions')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 1000 })
-    .withMessage('Dietary restrictions must be less than 1000 characters'),
 
   body('assigned_dietitian_id')
     .optional({ checkFalsy: true })
@@ -125,101 +104,13 @@ const updatePatientValidation = [
     .trim()
     .isLength({ max: 20 })
     .withMessage('Phone must be less than 20 characters'),
-  
-  body('date_of_birth')
-    .optional({ checkFalsy: true })
-    .isDate()
-    .withMessage('Invalid date format for date_of_birth'),
-  
+
   body('assigned_dietitian_id')
     .optional({ checkFalsy: true })
     .isUUID()
     .withMessage('assigned_dietitian_id must be a valid UUID'),
-  
-  body('gender')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 20 })
-    .withMessage('Gender must be less than 20 characters'),
-  
-  body('address')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage('Address must be less than 500 characters'),
-  
-  body('city')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 100 })
-    .withMessage('City must be less than 100 characters'),
-  
-  body('state')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 50 })
-    .withMessage('State must be less than 50 characters'),
-  
-  body('zip_code')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 20 })
-    .withMessage('Zip code must be less than 20 characters'),
-  
-  body('emergency_contact_name')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 200 })
-    .withMessage('Emergency contact name must be less than 200 characters'),
-  
-  body('emergency_contact_phone')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 20 })
-    .withMessage('Emergency contact phone must be less than 20 characters'),
-  
-  body('medical_notes')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 2000 })
-    .withMessage('Medical notes must be less than 2000 characters'),
 
-  body('medical_conditions')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 2000 })
-    .withMessage('Medical conditions must be less than 2000 characters'),
-  
-  body('allergies')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 1000 })
-    .withMessage('Allergies must be less than 1000 characters'),
-  
-  body('dietary_preferences')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 1000 })
-    .withMessage('Dietary preferences must be less than 1000 characters'),
-
-  body('dietary_restrictions')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 1000 })
-    .withMessage('Dietary restrictions must be less than 1000 characters'),
-
-  body('blood_type')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 10 })
-    .withMessage('Blood type must be less than 10 characters'),
-
-  body('current_medications')
-    .optional({ checkFalsy: true })
-    .trim()
-    .isLength({ max: 2000 })
-    .withMessage('Current medications must be less than 2000 characters'),
-
+  validate
 ];
 
 const patientIdValidation = [
@@ -332,6 +223,49 @@ router.delete(
   param('tagName').isLength({ min: 1, max: 50 }).withMessage('Invalid tag name'),
   validate,
   patientTagController.removeTag
+);
+
+/**
+ * Patient Custom Fields Routes
+ */
+
+/**
+ * GET /api/patients/:patientId/custom-fields - Get all custom field values for a patient
+ * Requires: patients.read permission
+ */
+router.get(
+  '/:patientId/custom-fields',
+  authenticate,
+  requirePermission('patients.read'),
+  param('patientId').isUUID().withMessage('Invalid patient ID'),
+  validate,
+  patientCustomFieldController.getPatientCustomFields
+);
+
+/**
+ * PUT /api/patients/:patientId/custom-fields - Update custom field values for a patient
+ * Requires: patients.update permission
+ */
+router.put(
+  '/:patientId/custom-fields',
+  authenticate,
+  requirePermission('patients.update'),
+  patientCustomFieldController.validateUpdatePatientCustomFields,
+  validate,
+  patientCustomFieldController.updatePatientCustomFields
+);
+
+/**
+ * DELETE /api/patients/:patientId/custom-fields/:fieldValueId - Delete a custom field value
+ * Requires: patients.update permission
+ */
+router.delete(
+  '/:patientId/custom-fields/:fieldValueId',
+  authenticate,
+  requirePermission('patients.update'),
+  patientCustomFieldController.validateDeletePatientCustomField,
+  validate,
+  patientCustomFieldController.deletePatientCustomField
 );
 
 /**

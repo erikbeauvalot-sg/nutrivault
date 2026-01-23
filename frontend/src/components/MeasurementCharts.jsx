@@ -56,17 +56,17 @@ const MeasurementCharts = ({ visits }) => {
   const calculatedBMICount = measurementData.filter(d => d.bmiCalculated).length;
   const storedBMICount = measurementData.filter(d => d.bmi && !d.bmiCalculated).length;
 
-  console.log('📊 Measurement data extracted:', {
-    totalVisits: visits.length,
-    visitsWithMeasurements: visits.filter(v => v.measurements?.length > 0).length,
-    totalMeasurements: measurementData.length,
-    bmiStats: {
-      stored: storedBMICount,
-      calculated: calculatedBMICount,
-      total: storedBMICount + calculatedBMICount
-    },
-    measurements: measurementData
-  });
+  // console.log('📊 Measurement data extracted:', {
+  //   totalVisits: visits.length,
+  //   visitsWithMeasurements: visits.filter(v => v.measurements?.length > 0).length,
+  //   totalMeasurements: measurementData.length,
+  //   bmiStats: {
+  //     stored: storedBMICount,
+  //     calculated: calculatedBMICount,
+  //     total: storedBMICount + calculatedBMICount
+  //   },
+  //   measurements: measurementData
+  // });
 
   if (measurementData.length === 0) {
     return (

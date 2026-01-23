@@ -1,14 +1,16 @@
 /**
  * EditPatientModal Component
- * Modal form for editing existing patients with pre-populated data
+ * Modal form for editing existing patients with custom fields organized by categories
  */
 
 import { useState, useEffect } from 'react';
-import { Modal, Button, Form, Row, Col, Alert } from 'react-bootstrap';
+import { Modal, Button, Form, Row, Col, Alert, Tab, Tabs, Spinner } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import userService from '../services/userService';
 import PatientTagsManager from './PatientTagsManager';
 import * as patientTagService from '../services/patientTagService';
+import customFieldService from '../services/customFieldService';
+import CustomFieldInput from './CustomFieldInput';
 
 const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
   const { t } = useTranslation();
@@ -17,11 +19,34 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
   const [dietitians, setDietitians] = useState([]);
   const [patientTags, setPatientTags] = useState([]);
 
+  // Custom fields state
+  const [customFieldCategories, setCustomFieldCategories] = useState([]);
+  const [fieldValues, setFieldValues] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [loadingCustomFields, setLoadingCustomFields] = useState(false);
+
+  // Basic patient info
+  const [formData, setFormData] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    assigned_dietitian_id: '',
+    tags: []
+  });
+
   useEffect(() => {
     if (show) {
       fetchDietitians();
+      fetchCustomFields();
     }
   }, [show]);
+
+  useEffect(() => {
+    if (patient && show) {
+      loadPatientData();
+    }
+  }, [patient, show]);
 
   const fetchDietitians = async () => {
     try {
@@ -31,6 +56,30 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
     } catch (err) {
       console.error('Failed to fetch dietitians:', err);
       setDietitians([]);
+    }
+  };
+
+  const fetchCustomFields = async () => {
+    try {
+      setLoadingCustomFields(true);
+      const categoriesResponse = await customFieldService.getCategories({ is_active: true });
+      const categories = categoriesResponse || [];
+
+      const definitionsResponse = await customFieldService.getDefinitions();
+      const definitions = definitionsResponse || [];
+
+      const categoriesWithFields = categories.map(category => ({
+        ...category,
+        fields: definitions.filter(def => def.category_id === category.id && def.is_active)
+          .sort((a, b) => a.display_order - b.display_order)
+      }));
+
+      setCustomFieldCategories(categoriesWithFields);
+    } catch (err) {
+      console.error('Error fetching custom fields:', err);
+      setError('Erreur lors du chargement des champs personnalisés');
+    } finally {
+      setLoadingCustomFields(false);
     }
   };
 
@@ -47,100 +96,36 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
       return [];
     }
   };
-  const [formData, setFormData] = useState({
-    // Personal Information
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    date_of_birth: '',
-    gender: '',
-    address: '',
-    city: '',
-    state: '',
-    zip_code: '',
-    emergency_contact_name: '',
-    emergency_contact_phone: '',
 
-    // Medical Information
-    medical_record_number: '',
-    insurance_provider: '',
-    insurance_policy_number: '',
-    primary_care_physician: '',
-    allergies: '',
-    current_medications: '',
-    medical_notes: '',
-    height_cm: '',
-    weight_kg: '',
-    blood_type: '',
+  const loadPatientData = async () => {
+    try {
+      const tags = await fetchPatientTags(patient.id);
 
-    // Dietary Information
-    dietary_preferences: '',
-    food_preferences: '',
-    nutritional_goals: '',
-    exercise_habits: '',
-    smoking_status: '',
-    alcohol_consumption: '',
+      // Set basic patient info
+      setFormData({
+        first_name: patient.first_name || '',
+        last_name: patient.last_name || '',
+        email: patient.email || '',
+        phone: patient.phone || '',
+        assigned_dietitian_id: patient.assigned_dietitian_id || '',
+        tags: tags
+      });
 
-    // Administrative
-    assigned_dietitian_id: '',
-    notes: '',
+      // Load custom field values
+      const customFieldsResponse = await customFieldService.getPatientCustomFields(patient.id);
+      const customFields = customFieldsResponse || [];
 
-    // Tags
-    tags: []
-  });
-
-  useEffect(() => {
-    if (patient && show) {
-      // Load patient tags first, then set form data
-      const loadPatientData = async () => {
-        const tags = await fetchPatientTags(patient.id);
-
-        // Pre-populate form with patient data
-        setFormData({
-          first_name: patient.first_name || '',
-          last_name: patient.last_name || '',
-          email: patient.email || '',
-          phone: patient.phone || '',
-          date_of_birth: patient.date_of_birth ? patient.date_of_birth.split('T')[0] : '',
-          gender: patient.gender || '',
-          address: patient.address || '',
-          city: patient.city || '',
-          state: patient.state || '',
-          zip_code: patient.zip_code || '',
-          emergency_contact_name: patient.emergency_contact_name || '',
-          emergency_contact_phone: patient.emergency_contact_phone || '',
-
-          medical_record_number: patient.medical_record_number || '',
-          insurance_provider: patient.insurance_provider || '',
-          insurance_policy_number: patient.insurance_policy_number || '',
-          primary_care_physician: patient.primary_care_physician || '',
-          allergies: patient.allergies || '',
-          current_medications: patient.current_medications || '',
-          medical_notes: patient.medical_notes || '',
-          height_cm: patient.height_cm || '',
-          weight_kg: patient.weight_kg || '',
-          blood_type: patient.blood_type || '',
-
-          dietary_preferences: patient.dietary_preferences || '',
-          food_preferences: patient.food_preferences || '',
-          nutritional_goals: patient.nutritional_goals || '',
-          exercise_habits: patient.exercise_habits || '',
-          smoking_status: patient.smoking_status || '',
-          alcohol_consumption: patient.alcohol_consumption || '',
-
-          assigned_dietitian_id: patient.assigned_dietitian_id || '',
-          notes: patient.notes || '',
-
-          // Tags
-          tags: tags
-        });
-      };
-
-      loadPatientData();
+      const valuesMap = {};
+      customFields.forEach(field => {
+        valuesMap[field.field_definition_id] = field.value;
+      });
+      setFieldValues(valuesMap);
       setError(null);
+    } catch (err) {
+      console.error('Error loading patient data:', err);
+      setError('Erreur lors du chargement des données patient');
     }
-  }, [patient, show]);
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -158,42 +143,93 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
     }));
   };
 
-  const validateForm = () => {
-    if (!formData.first_name.trim() || !formData.last_name.trim() || !formData.email.trim()) {
-      setError(t('patients.requiredFields'));
+  const handleFieldChange = (fieldDefinitionId, value) => {
+    setFieldValues(prev => ({
+      ...prev,
+      [fieldDefinitionId]: value
+    }));
+
+    // Clear error for this field
+    setFieldErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[fieldDefinitionId];
+      return newErrors;
+    });
+  };
+
+  const validateBasicForm = () => {
+    if (!formData.first_name.trim() || !formData.last_name.trim()) {
+      setError('Le prénom et le nom sont requis');
       return false;
     }
-    if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      setError(t('patients.validEmail'));
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
+      setError('Format email invalide');
       return false;
     }
-    // Medical record number is now optional
     return true;
+  };
+
+  const validateCustomFields = () => {
+    const errors = {};
+    let hasErrors = false;
+
+    customFieldCategories.forEach(category => {
+      category.fields.forEach(field => {
+        const value = fieldValues[field.id];
+        const validation = field.validateValue ? field.validateValue(value) : { isValid: true };
+
+        if (!validation.isValid) {
+          errors[field.id] = validation.error || 'Valeur invalide';
+          hasErrors = true;
+        }
+      });
+    });
+
+    setFieldErrors(errors);
+    return !hasErrors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) return;
+    if (!validateBasicForm()) return;
+    if (!validateCustomFields()) {
+      setError('Veuillez corriger les erreurs dans les champs');
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      // Convert empty strings to null for optional fields
-      const submitData = Object.fromEntries(
-        Object.entries(formData).map(([key, value]) => [
-          key,
-          value === '' ? null : value
-        ])
-      );
+      // Update basic patient info
+      const basicData = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        email: formData.email || null,
+        phone: formData.phone || null,
+        assigned_dietitian_id: formData.assigned_dietitian_id || null,
+        tags: formData.tags
+      };
 
-      const success = await onSubmit(patient.id, submitData);
+      const success = await onSubmit(patient.id, basicData);
+
       if (success) {
+        // Update custom fields
+        const customFieldsData = Object.keys(fieldValues).map(fieldDefinitionId => ({
+          field_definition_id: fieldDefinitionId,
+          value: fieldValues[fieldDefinitionId]
+        }));
+
+        if (customFieldsData.length > 0) {
+          await customFieldService.updatePatientCustomFields(patient.id, customFieldsData);
+        }
+
         handleClose();
       }
     } catch (err) {
-      setError(t('patients.failedToUpdate') + ': ' + (err.message || t('errors.generic')));
+      console.error('Error updating patient:', err);
+      setError('Échec de la mise à jour: ' + (err.message || 'Erreur inconnue'));
     } finally {
       setLoading(false);
     }
@@ -205,33 +241,11 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
       last_name: '',
       email: '',
       phone: '',
-      date_of_birth: '',
-      gender: '',
-      address: '',
-      city: '',
-      state: '',
-      zip_code: '',
-      emergency_contact_name: '',
-      emergency_contact_phone: '',
-      medical_record_number: '',
-      insurance_provider: '',
-      insurance_policy_number: '',
-      primary_care_physician: '',
-      allergies: '',
-      current_medications: '',
-      medical_notes: '',
-      height_cm: '',
-      weight_kg: '',
-      blood_type: '',
-      dietary_preferences: '',
-      food_preferences: '',
-      nutritional_goals: '',
-      exercise_habits: '',
-      smoking_status: '',
-      alcohol_consumption: '',
       assigned_dietitian_id: '',
-      notes: ''
+      tags: []
     });
+    setFieldValues({});
+    setFieldErrors({});
     setError(null);
     onHide();
   };
@@ -239,7 +253,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
   if (!patient) return null;
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg" centered>
+    <Modal show={show} onHide={handleClose} size="xl" centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>{t('patients.editPatient')}: {patient.first_name} {patient.last_name}</Modal.Title>
       </Modal.Header>
@@ -251,423 +265,151 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
         )}
 
         <Form onSubmit={handleSubmit}>
-          {/* Personal Information Section */}
-          <div className="mb-4">
-            <h5 className="mb-3">{t('patients.personalInfo')}</h5>
-            <Row>
-              <Col md={6}>
+          <Tabs defaultActiveKey="basic-info" className="mb-3">
+            {/* Basic Info Tab */}
+            <Tab eventKey="basic-info" title="📋 Informations de base">
+              <div className="mb-4">
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Prénom *</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="first_name"
+                        value={formData.first_name}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Nom *</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="last_name"
+                        value={formData.last_name}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Email</Form.Label>
+                      <Form.Control
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Téléphone</Form.Label>
+                      <Form.Control
+                        type="tel"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
                 <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.firstName')} *</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="first_name"
-                    value={formData.first_name}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.lastName')} *</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="last_name"
-                    value={formData.last_name}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.email')} *</Form.Label>
-                  <Form.Control
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.phone')}</Form.Label>
-                  <Form.Control
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.dateOfBirth')}</Form.Label>
-                  <Form.Control
-                    type="date"
-                    name="date_of_birth"
-                    value={formData.date_of_birth}
-                    onChange={handleInputChange}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.gender')}</Form.Label>
+                  <Form.Label>Diététicien assigné</Form.Label>
                   <Form.Select
-                    name="gender"
-                    value={formData.gender}
+                    name="assigned_dietitian_id"
+                    value={formData.assigned_dietitian_id}
                     onChange={handleInputChange}
                   >
-                    <option value="">{t('patients.selectGender')}</option>
-                    <option value="Male">{t('patients.male')}</option>
-                    <option value="Female">{t('patients.female')}</option>
-                    <option value="Other">{t('patients.other')}</option>
-                    <option value="Prefer not to say">{t('patients.preferNotToSay')}</option>
+                    <option value="">Sélectionner un diététicien (optionnel)</option>
+                    {dietitians.map(dietitian => (
+                      <option key={dietitian.id} value={dietitian.id}>
+                        {dietitian.first_name} {dietitian.last_name}
+                        {dietitian.email && ` (${dietitian.email})`}
+                      </option>
+                    ))}
                   </Form.Select>
                 </Form.Group>
-              </Col>
-            </Row>
-            <Form.Group className="mb-3">
-              <Form.Label>{t('patients.streetAddress')}</Form.Label>
-              <Form.Control
-                type="text"
-                name="address"
-                value={formData.address}
-                onChange={handleInputChange}
-                placeholder={t('patients.streetAddressPlaceholder')}
-              />
-            </Form.Group>
-            <Row>
-              <Col md={4}>
                 <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.city')}</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
+                  <Form.Label>Tags patient</Form.Label>
+                  <PatientTagsManager
+                    patientId={patient?.id}
+                    initialTags={formData.tags}
+                    onTagsChange={handleTagsChange}
+                    disabled={loading}
                   />
+                  <Form.Text className="text-muted">
+                    Les tags aident à organiser et filtrer les patients
+                  </Form.Text>
                 </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.state')}</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="state"
-                    value={formData.state}
-                    onChange={handleInputChange}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={4}>
-                <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.zipCode')}</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="zip_code"
-                    value={formData.zip_code}
-                    onChange={handleInputChange}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.emergencyContactName')}</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="emergency_contact_name"
-                    value={formData.emergency_contact_name}
-                    onChange={handleInputChange}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.emergencyContactPhone')}</Form.Label>
-                  <Form.Control
-                    type="tel"
-                    name="emergency_contact_phone"
-                    value={formData.emergency_contact_phone}
-                    onChange={handleInputChange}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-          </div>
+              </div>
+            </Tab>
 
-          {/* Medical Information Section */}
-          <div className="mb-4">
-            <h5 className="mb-3">{t('patients.medicalInfo')}</h5>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.medicalRecordNumber')} *</Form.Label>
-                  <Form.Control
-                    type="text"
-                    name="medical_record_number"
-                    value={formData.medical_record_number}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.bloodType')}</Form.Label>
-                  <Form.Select
-                    name="blood_type"
-                    value={formData.blood_type}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">{t('patients.selectBloodType')}</option>
-                    <option value="A+">A+</option>
-                    <option value="A-">A-</option>
-                    <option value="B+">B+</option>
-                    <option value="B-">B-</option>
-                    <option value="AB+">AB+</option>
-                    <option value="AB-">AB-</option>
-                    <option value="O+">O+</option>
-                    <option value="O-">O-</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-            </Row>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.heightCm')}</Form.Label>
-                  <Form.Control
-                    type="number"
-                    name="height_cm"
-                    value={formData.height_cm}
-                    onChange={handleInputChange}
-                    min="0"
-                    step="0.1"
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.weightKg')}</Form.Label>
-                  <Form.Control
-                    type="number"
-                    name="weight_kg"
-                    value={formData.weight_kg}
-                    onChange={handleInputChange}
-                    min="0"
-                    step="0.1"
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
-            <Form.Group className="mb-3">
-              <Form.Label>{t('patients.insuranceProvider')}</Form.Label>
-              <Form.Control
-                type="text"
-                name="insurance_provider"
-                value={formData.insurance_provider}
-                onChange={handleInputChange}
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>{t('patients.insurancePolicyNumber')}</Form.Label>
-              <Form.Control
-                type="text"
-                name="insurance_policy_number"
-                value={formData.insurance_policy_number}
-                onChange={handleInputChange}
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>{t('patients.primaryCarePhysician')}</Form.Label>
-              <Form.Control
-                type="text"
-                name="primary_care_physician"
-                value={formData.primary_care_physician}
-                onChange={handleInputChange}
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>{t('patients.allergies')}</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={2}
-                name="allergies"
-                value={formData.allergies}
-                onChange={handleInputChange}
-                placeholder={t('patients.listAllergies')}
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>{t('patients.currentMedications')}</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={2}
-                name="current_medications"
-                value={formData.current_medications}
-                onChange={handleInputChange}
-                placeholder={t('patients.listMedications')}
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>{t('patients.medicalConditions')}</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={2}
-                name="medical_notes"
-                value={formData.medical_notes}
-                onChange={handleInputChange}
-                placeholder={t('patients.listConditions')}
-              />
-            </Form.Group>
-          </div>
+            {/* Custom Field Categories Tabs */}
+            {loadingCustomFields ? (
+              <Tab eventKey="loading" title="⏳ Chargement..." disabled>
+                <div className="text-center py-5">
+                  <Spinner animation="border" />
+                </div>
+              </Tab>
+            ) : (
+              customFieldCategories.map((category) => (
+                <Tab
+                  key={category.id}
+                  eventKey={`category-${category.id}`}
+                  title={category.name}
+                >
+                  <div className="mb-4">
+                    {category.description && (
+                      <Alert variant="info" className="mb-3">
+                        {category.description}
+                      </Alert>
+                    )}
 
-          {/* Dietary Information Section */}
-          <div className="mb-4">
-            <h5 className="mb-3">{t('patients.dietaryInfo')}</h5>
-            <Form.Group className="mb-3">
-              <Form.Label>{t('patients.dietaryRestrictions')}</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={2}
-                name="dietary_preferences"
-                value={formData.dietary_preferences}
-                onChange={handleInputChange}
-                placeholder={t('patients.dietaryRestrictionsPlaceholder')}
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>{t('patients.foodPreferences')}</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={2}
-                name="food_preferences"
-                value={formData.food_preferences}
-                onChange={handleInputChange}
-                placeholder={t('patients.foodPreferencesPlaceholder')}
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>{t('patients.nutritionalGoals')}</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={2}
-                name="nutritional_goals"
-                value={formData.nutritional_goals}
-                onChange={handleInputChange}
-                placeholder={t('patients.nutritionalGoalsPlaceholder')}
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>{t('patients.exerciseHabits')}</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={2}
-                name="exercise_habits"
-                value={formData.exercise_habits}
-                onChange={handleInputChange}
-                placeholder={t('patients.exerciseHabitsPlaceholder')}
-              />
-            </Form.Group>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.smokingStatus')}</Form.Label>
-                  <Form.Select
-                    name="smoking_status"
-                    value={formData.smoking_status}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">{t('patients.selectStatus')}</option>
-                    <option value="Never">{t('patients.never')}</option>
-                    <option value="Former">{t('patients.former')}</option>
-                    <option value="Current">{t('patients.current')}</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.alcoholConsumption')}</Form.Label>
-                  <Form.Select
-                    name="alcohol_consumption"
-                    value={formData.alcohol_consumption}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">{t('patients.selectFrequency')}</option>
-                    <option value="None">{t('patients.none')}</option>
-                    <option value="Occasional">{t('patients.occasional')}</option>
-                    <option value="Moderate">{t('patients.moderate')}</option>
-                    <option value="Heavy">{t('patients.heavy')}</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-            </Row>
-          </div>
-
-          {/* Administrative Information Section */}
-          <div className="mb-4">
-            <h5 className="mb-3">{t('patients.administrativeInfo')}</h5>
-            <Form.Group className="mb-3">
-              <Form.Label>{t('patients.assignedDietitian')}</Form.Label>
-              <Form.Select
-                name="assigned_dietitian_id"
-                value={formData.assigned_dietitian_id}
-                onChange={handleInputChange}
-              >
-                <option value="">{t('patients.selectDietitianOptional')}</option>
-                {dietitians.map(dietitian => (
-                  <option key={dietitian.id} value={dietitian.id}>
-                    {dietitian.first_name} {dietitian.last_name}
-                    {dietitian.email && ` (${dietitian.email})`}
-                  </option>
-                ))}
-              </Form.Select>
-              <Form.Text className="text-muted">
-                {t('patients.assignLaterHelp')}
-              </Form.Text>
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>{t('patients.additionalNotes')}</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                name="notes"
-                value={formData.notes}
-                onChange={handleInputChange}
-                placeholder={t('patients.additionalNotesPlaceholder')}
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>{t('patients.patientTags')}</Form.Label>
-              <PatientTagsManager
-                patientId={patient?.id}
-                initialTags={formData.tags}
-                onTagsChange={handleTagsChange}
-                disabled={loading}
-              />
-              <Form.Text className="text-muted">
-                {t('patients.tagsHelp')}
-              </Form.Text>
-            </Form.Group>
-          </div>
+                    {category.fields.length === 0 ? (
+                      <Alert variant="warning">
+                        Aucun champ défini pour cette catégorie
+                      </Alert>
+                    ) : (
+                      <Row>
+                        {category.fields.map((field) => (
+                          <Col md={6} key={field.id}>
+                            <Form.Group className="mb-3">
+                              <CustomFieldInput
+                                fieldDefinition={field}
+                                value={fieldValues[field.id] || ''}
+                                onChange={(value) => handleFieldChange(field.id, value)}
+                                disabled={loading}
+                                error={fieldErrors[field.id]}
+                              />
+                              {fieldErrors[field.id] && (
+                                <Form.Text className="text-danger">
+                                  {fieldErrors[field.id]}
+                                </Form.Text>
+                              )}
+                            </Form.Group>
+                          </Col>
+                        ))}
+                      </Row>
+                    )}
+                  </div>
+                </Tab>
+              ))
+            )}
+          </Tabs>
         </Form>
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={handleClose} disabled={loading}>
-          {t('common.cancel')}
+          Annuler
         </Button>
-        <Button variant="primary" onClick={handleSubmit} disabled={loading}>
-          {loading ? t('patients.updating') : t('patients.updatePatient')}
+        <Button variant="primary" onClick={handleSubmit} disabled={loading || loadingCustomFields}>
+          {loading ? 'Mise à jour...' : 'Mettre à jour le patient'}
         </Button>
       </Modal.Footer>
     </Modal>
