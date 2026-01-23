@@ -56,9 +56,11 @@ const EditVisitPage = () => {
   const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
-    fetchVisitData();
-    fetchCustomFields();
-  }, [id, i18n.language]);
+    if (i18n.resolvedLanguage) {
+      fetchVisitData();
+      fetchCustomFields();
+    }
+  }, [id, i18n.resolvedLanguage]);
 
   const fetchVisitData = async () => {
     try {
@@ -112,7 +114,11 @@ const EditVisitPage = () => {
 
   const fetchCustomFields = async () => {
     try {
-      const data = await visitCustomFieldService.getVisitCustomFields(id, i18n.language);
+      let language = i18n.resolvedLanguage || i18n.language;
+      if (!language) {
+        language = localStorage.getItem('i18nextLng') || 'fr';
+      }
+      const data = await visitCustomFieldService.getVisitCustomFields(id, language);
       setCustomFieldCategories(data || []);
 
       // Build initial values map
