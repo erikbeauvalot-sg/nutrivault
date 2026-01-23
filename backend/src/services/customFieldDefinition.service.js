@@ -11,6 +11,7 @@ const CustomFieldCategory = db.CustomFieldCategory;
 const PatientCustomFieldValue = db.PatientCustomFieldValue;
 const auditService = require('./audit.service');
 const translationService = require('./customFieldTranslation.service');
+const formulaEngine = require('./formulaEngine.service');
 const { Op } = db.Sequelize;
 
 /**
@@ -36,6 +37,15 @@ function parseDefinitionJSON(definition) {
       plainDef.select_options = JSON.parse(plainDef.select_options);
     } catch (e) {
       plainDef.select_options = null;
+    }
+  }
+
+  // Parse dependencies if it's a string
+  if (typeof plainDef.dependencies === 'string') {
+    try {
+      plainDef.dependencies = JSON.parse(plainDef.dependencies);
+    } catch (e) {
+      plainDef.dependencies = null;
     }
   }
 
@@ -220,6 +230,49 @@ async function createDefinition(user, definitionData, requestMetadata = {}) {
       }
     }
 
+    // Validate and process calculated fields
+    let dependencies = null;
+    let isCalculated = false;
+    if (definitionData.field_type === 'calculated') {
+      if (!definitionData.formula) {
+        throw new Error('Formula is required for calculated field type');
+      }
+
+      // Validate formula
+      const validation = formulaEngine.validateFormula(definitionData.formula);
+      if (!validation.valid) {
+        throw new Error(`Invalid formula: ${validation.error}`);
+      }
+
+      dependencies = validation.dependencies;
+      isCalculated = true;
+
+      // Check for circular dependencies
+      const allFields = await CustomFieldDefinition.findAll({
+        where: {
+          is_active: true,
+          category_id: definitionData.category_id
+        },
+        attributes: ['field_name', 'dependencies']
+      });
+
+      const fieldMap = {};
+      allFields.forEach(f => {
+        const deps = typeof f.dependencies === 'string' ? JSON.parse(f.dependencies) : f.dependencies;
+        fieldMap[f.field_name] = { dependencies: deps || [] };
+      });
+
+      const circularCheck = formulaEngine.detectCircularDependencies(
+        definitionData.field_name,
+        dependencies,
+        fieldMap
+      );
+
+      if (circularCheck.hasCircular) {
+        throw new Error(`Circular dependency detected: ${circularCheck.cycle.join(' -> ')}`);
+      }
+    }
+
     const definition = await CustomFieldDefinition.create({
       category_id: definitionData.category_id,
       field_name: definitionData.field_name,
@@ -233,6 +286,10 @@ async function createDefinition(user, definitionData, requestMetadata = {}) {
       is_active: definitionData.is_active !== undefined ? definitionData.is_active : true,
       show_in_basic_info: definitionData.show_in_basic_info || false,
       show_in_list: definitionData.show_in_list || false,
+      formula: definitionData.formula || null,
+      dependencies: dependencies,
+      decimal_places: definitionData.decimal_places !== undefined ? definitionData.decimal_places : 2,
+      is_calculated: isCalculated,
       created_by: user.id
     });
 
@@ -295,6 +352,8 @@ async function updateDefinition(user, definitionId, updateData, requestMetadata 
     if (updateData.is_active !== undefined) definition.is_active = updateData.is_active;
     if (updateData.show_in_basic_info !== undefined) definition.show_in_basic_info = updateData.show_in_basic_info;
     if (updateData.show_in_list !== undefined) definition.show_in_list = updateData.show_in_list;
+    if (updateData.formula !== undefined) definition.formula = updateData.formula;
+    if (updateData.decimal_places !== undefined) definition.decimal_places = updateData.decimal_places;
 
     // Validate select options if field_type is select
     if (definition.field_type === 'select') {
@@ -304,6 +363,53 @@ async function updateDefinition(user, definitionId, updateData, requestMetadata 
       if (definition.select_options.length === 0) {
         throw new Error('select_options must have at least one option');
       }
+    }
+
+    // Validate and process calculated fields
+    if (definition.field_type === 'calculated') {
+      if (!definition.formula) {
+        throw new Error('Formula is required for calculated field type');
+      }
+
+      // Validate formula
+      const validation = formulaEngine.validateFormula(definition.formula);
+      if (!validation.valid) {
+        throw new Error(`Invalid formula: ${validation.error}`);
+      }
+
+      definition.dependencies = validation.dependencies;
+      definition.is_calculated = true;
+
+      // Check for circular dependencies
+      const allFields = await CustomFieldDefinition.findAll({
+        where: {
+          is_active: true,
+          category_id: definition.category_id,
+          id: { [Op.ne]: definitionId } // Exclude current field
+        },
+        attributes: ['field_name', 'dependencies']
+      });
+
+      const fieldMap = {};
+      allFields.forEach(f => {
+        const deps = typeof f.dependencies === 'string' ? JSON.parse(f.dependencies) : f.dependencies;
+        fieldMap[f.field_name] = { dependencies: deps || [] };
+      });
+
+      const circularCheck = formulaEngine.detectCircularDependencies(
+        definition.field_name,
+        validation.dependencies,
+        fieldMap
+      );
+
+      if (circularCheck.hasCircular) {
+        throw new Error(`Circular dependency detected: ${circularCheck.cycle.join(' -> ')}`);
+      }
+    } else {
+      // Clear calculated field properties if not calculated
+      definition.formula = null;
+      definition.dependencies = null;
+      definition.is_calculated = false;
     }
 
     await definition.save();

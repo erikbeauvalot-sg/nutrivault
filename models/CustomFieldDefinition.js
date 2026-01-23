@@ -28,10 +28,10 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     field_type: {
-      type: DataTypes.ENUM('text', 'number', 'date', 'select', 'boolean', 'textarea'),
+      type: DataTypes.ENUM('text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated'),
       allowNull: false,
       validate: {
-        isIn: [['text', 'number', 'date', 'select', 'boolean', 'textarea']]
+        isIn: [['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated']]
       }
     },
     is_required: {
@@ -90,6 +90,47 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: false
     },
+    // Calculated field properties
+    formula: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      validate: {
+        isValidFormula(value) {
+          if (this.field_type === 'calculated' && !value) {
+            throw new Error('Formula is required for calculated fields');
+          }
+          if (this.field_type !== 'calculated' && value) {
+            throw new Error('Formula can only be set for calculated fields');
+          }
+        }
+      }
+    },
+    dependencies: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      validate: {
+        isValidDependencies(value) {
+          if (value && !Array.isArray(value)) {
+            throw new Error('Dependencies must be an array');
+          }
+        }
+      }
+    },
+    decimal_places: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 2,
+      validate: {
+        isInt: true,
+        min: 0,
+        max: 4
+      }
+    },
+    is_calculated: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
     deleted_at: {
       type: DataTypes.DATE,
       allowNull: true
@@ -116,6 +157,20 @@ module.exports = (sequelize, DataTypes) => {
       }
     ]
   });
+
+  /**
+   * Calculates the value of a calculated field using its formula
+   * @param {Object} fieldValues - Map of field names to values for dependencies
+   * @returns {Object} - { success: boolean, result: number|null, error: string|null }
+   */
+  CustomFieldDefinition.prototype.calculateValue = function(fieldValues) {
+    if (!this.is_calculated || !this.formula) {
+      return { success: false, result: null, error: 'Not a calculated field or no formula defined' };
+    }
+
+    const formulaEngine = require('../backend/src/services/formulaEngine.service');
+    return formulaEngine.evaluateFormula(this.formula, fieldValues, this.decimal_places || 2);
+  };
 
   /**
    * Validates a value against this field definition's type and rules
@@ -154,6 +209,14 @@ module.exports = (sequelize, DataTypes) => {
 
     // Type-specific validation
     switch (this.field_type) {
+      case 'calculated':
+        // Calculated fields are read-only and automatically computed
+        const numVal = parseFloat(value);
+        if (isNaN(numVal)) {
+          return { isValid: false, error: 'Calculated value must be a number' };
+        }
+        break;
+
       case 'text':
       case 'textarea':
         if (typeof value !== 'string') {
