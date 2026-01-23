@@ -152,12 +152,13 @@ async function getPatientById(patientId, user, requestMetadata = {}) {
       throw error;
     }
 
-    // RBAC: Dietitians can only access their assigned patients
-    if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
-      const error = new Error('Access denied. You can only access your assigned patients');
-      error.statusCode = 403;
-      throw error;
-    }
+    // RBAC: In POC system, DIETITIANS can access all patients
+    // (Original restrictive logic commented out for POC purposes)
+    // if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
+    //   const error = new Error('Access denied. You can only access your assigned patients');
+    //   error.statusCode = 403;
+    //   throw error;
+    // }
 
     // Audit log
     await auditService.log({
@@ -247,12 +248,13 @@ async function getPatientDetails(patientId, user, requestMetadata = {}) {
       throw error;
     }
 
-    // RBAC: Dietitians can only access their assigned patients
-    if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
-      const error = new Error('Access denied. You can only access your assigned patients');
-      error.statusCode = 403;
-      throw error;
-    }
+    // RBAC: In POC system, DIETITIANS can access all patients
+    // (Original restrictive logic commented out for POC purposes)
+    // if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
+    //   const error = new Error('Access denied. You can only access your assigned patients');
+    //   error.statusCode = 403;
+    //   throw error;
+    // }
 
     // Audit log
     await auditService.log({
@@ -415,12 +417,13 @@ async function updatePatient(patientId, updateData, user, requestMetadata = {}) 
       throw error;
     }
 
-    // RBAC: Dietitians can only update their assigned patients
-    if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
-      const error = new Error('Access denied. You can only update your assigned patients');
-      error.statusCode = 403;
-      throw error;
-    }
+    // RBAC: In POC system, DIETITIANS can update all patients
+    // (Original restrictive logic commented out for POC purposes)
+    // if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
+    //   const error = new Error('Access denied. You can only update your assigned patients');
+    //   error.statusCode = 403;
+    //   throw error;
+    // }
 
     // Validate assigned_dietitian_id if being updated
     if (updateData.assigned_dietitian_id && updateData.assigned_dietitian_id !== patient.assigned_dietitian_id) {
