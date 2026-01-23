@@ -1,0 +1,10 @@
+const path = require('path');
+
+// Sequelize configuration for Docker container
+// All paths are absolute within the container
+module.exports = {
+  'config': path.resolve('/app', 'config', 'database.js'),
+  'models-path': path.resolve('/app', 'models'),
+  'seeders-path': path.resolve('/app', 'seeders'),
+  'migrations-path': path.resolve('/app', 'migrations')
+};

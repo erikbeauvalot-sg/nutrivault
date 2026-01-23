@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Container, Row, Col, Card, Tab, Tabs, Button, Badge, Alert, Spinner, Modal } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
@@ -235,10 +235,17 @@ const VisitDetailPage = () => {
                         <Row className="mb-2">
                           <Col sm={5}><strong>{t('visits.patient')}:</strong></Col>
                           <Col sm={7}>
-                            {visit.patient
-                              ? `${visit.patient.first_name} ${visit.patient.last_name}`
-                              : '-'
-                            }
+                            {visit.patient ? (
+                              <Link
+                                to={`/patients/${visit.patient.id}`}
+                                className="text-primary text-decoration-none"
+                                style={{ cursor: 'pointer' }}
+                                onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                                onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                              >
+                                {visit.patient.first_name} {visit.patient.last_name}
+                              </Link>
+                            ) : '-'}
                           </Col>
                         </Row>
                         {visit.patient?.email && (

@@ -17,14 +17,12 @@ export default defineConfig({
     // Target modern browsers for smaller bundles
     target: 'es2015',
 
-    // Enable minification
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remove console.logs in production
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug']
-      }
+    // Enable minification with esbuild (faster than terser, included with Vite)
+    minify: 'esbuild',
+
+    // ESBuild minification options
+    esbuild: {
+      drop: ['console', 'debugger'],  // Remove console.* and debugger in production
     },
 
     // Code splitting and chunking strategy (US-9.2)
