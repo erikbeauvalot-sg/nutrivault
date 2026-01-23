@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import useEmailCheck from '../hooks/useEmailCheck'
 
 function PatientForm({ onSubmit, editingPatient, onCancel }) {
   const { t } = useTranslation()
@@ -15,6 +16,14 @@ function PatientForm({ onSubmit, editingPatient, onCancel }) {
     allergies: '',
     dietary_preferences: ''
   })
+
+  // Email availability check with debouncing
+  const { checking: checkingEmail, available: emailAvailable, error: emailCheckError } = useEmailCheck(
+    formData.email,
+    'patient',
+    editingPatient?.id || null,
+    500
+  )
 
   useEffect(() => {
     if (editingPatient) {
@@ -110,7 +119,26 @@ function PatientForm({ onSubmit, editingPatient, onCancel }) {
               name="email"
               value={formData.email}
               onChange={handleChange}
+              className={formData.email && emailAvailable === false ? 'input-error' : formData.email && emailAvailable === true ? 'input-success' : ''}
             />
+            {checkingEmail && formData.email && (
+              <small className="form-text text-muted">
+                ⏳ {t('patients.checkingEmail', 'Checking email availability...')}
+              </small>
+            )}
+            {emailAvailable === false && formData.email && (
+              <small className="form-text text-danger">
+                ✖ {t('patients.emailTaken', 'This email is already used by another patient')}
+              </small>
+            )}
+            {emailAvailable === true && formData.email && (
+              <small className="form-text text-success">
+                ✓ {t('patients.emailAvailable', 'Email is available')}
+              </small>
+            )}
+            {emailCheckError && (
+              <small className="form-text text-danger">{emailCheckError}</small>
+            )}
           </div>
           <div className="form-group">
             <label>{t('patients.phone')}</label>
@@ -190,7 +218,11 @@ function PatientForm({ onSubmit, editingPatient, onCancel }) {
         </div>
 
         <div className="form-actions">
-          <button type="submit" className="btn btn-primary">
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={checkingEmail || (formData.email && emailAvailable === false)}
+          >
             {editingPatient ? `💾 ${t('patients.editPatient')}` : `➕ ${t('patients.createPatient')}`}
           </button>
           {editingPatient && (

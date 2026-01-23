@@ -10,6 +10,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useTranslation } from 'react-i18next';
 import userService from '../services/userService';
+import useEmailCheck from '../hooks/useEmailCheck';
 
 // Password strength validation
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
@@ -70,6 +71,15 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
   });
 
   const password = watch('password');
+  const email = watch('email');
+
+  // Email availability check with debouncing
+  const { checking: checkingEmail, available: emailAvailable, error: emailCheckError } = useEmailCheck(
+    email,
+    'user',
+    isEditMode ? user?.id : null,
+    500
+  );
 
   useEffect(() => {
     if (show) {
@@ -215,10 +225,32 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
                 <Form.Control
                   type="email"
                   {...register('email')}
-                  isInvalid={!!errors.email}
+                  isInvalid={!!errors.email || (email && emailAvailable === false)}
+                  isValid={email && emailAvailable === true && !errors.email}
                   placeholder="user@example.com"
                 />
-                <Form.Control.Feedback type="invalid">{errors.email?.message}</Form.Control.Feedback>
+                {errors.email && (
+                  <Form.Control.Feedback type="invalid">{errors.email.message}</Form.Control.Feedback>
+                )}
+                {!errors.email && checkingEmail && email && (
+                  <Form.Text className="text-muted">
+                    <Spinner animation="border" size="sm" className="me-1" />
+                    {t('users.checkingEmail', 'Checking email availability...')}
+                  </Form.Text>
+                )}
+                {!errors.email && emailAvailable === false && email && (
+                  <Form.Control.Feedback type="invalid" style={{ display: 'block' }}>
+                    {t('users.emailTaken', 'This email is already used by another user')}
+                  </Form.Control.Feedback>
+                )}
+                {!errors.email && emailAvailable === true && email && (
+                  <Form.Control.Feedback type="valid" style={{ display: 'block' }}>
+                    {t('users.emailAvailable', 'Email is available')}
+                  </Form.Control.Feedback>
+                )}
+                {emailCheckError && (
+                  <Form.Text className="text-danger">{emailCheckError}</Form.Text>
+                )}
               </Form.Group>
             </Col>
 
@@ -409,7 +441,11 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
           <Button variant="secondary" onClick={onHide} disabled={loading}>
             {t('common.cancel')}
           </Button>
-          <Button variant="primary" type="submit" disabled={loading}>
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={loading || checkingEmail || (email && emailAvailable === false)}
+          >
             {loading ? <Spinner animation="border" size="sm" /> : (isCreateMode ? t('users.createUser') : t('users.editUser'))}
           </Button>
         </Modal.Footer>
