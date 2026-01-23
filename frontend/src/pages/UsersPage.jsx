@@ -112,14 +112,25 @@ const UsersPage = () => {
       return;
     }
 
-    if (!window.confirm(t('users.confirmDeactivate'))) return;
+    // Find the user to check if they're active
+    const targetUser = users.find(u => u.id === userId);
+
+    if (targetUser?.is_active) {
+      alert(t('users.mustDeactivateBeforeDelete', 'You must deactivate this user before deleting. Please deactivate the user first, then you can delete them.'));
+      return;
+    }
+
+    if (!window.confirm(t('users.confirmDelete', 'Are you sure you want to PERMANENTLY delete this user? This action cannot be undone!'))) {
+      return;
+    }
 
     try {
       await userService.deleteUser(userId);
       fetchUsers();
     } catch (err) {
       console.error('Error deleting user:', err);
-      alert(err.response?.data?.error || t('users.failedToDelete'));
+      const errorMessage = err.response?.data?.error || t('users.failedToDelete');
+      alert(errorMessage);
     }
   };
 
@@ -329,10 +340,14 @@ const UsersPage = () => {
                             <Dropdown.Divider />
                             <Dropdown.Item
                               onClick={() => handleDelete(usr.id)}
-                              disabled={usr.id === user.id}
+                              disabled={usr.id === user.id || usr.is_active}
                               className="text-danger"
                             >
-                              🗑️ {t('users.delete')}
+                              {usr.is_active ? (
+                                <>🔒 {t('users.delete')} ({t('users.deactivateFirst')})</>
+                              ) : (
+                                <>🗑️ {t('users.delete')}</>
+                              )}
                             </Dropdown.Item>
                           </Dropdown.Menu>
                         </Dropdown>
@@ -403,10 +418,16 @@ const UsersPage = () => {
                                 variant="outline-danger"
                                 size="sm"
                                 onClick={() => handleDelete(usr.id)}
-                                disabled={usr.id === user.id}
-                                title={usr.id === user.id ? t('users.cannotDeleteOwnAccount') : ''}
+                                disabled={usr.id === user.id || usr.is_active}
+                                title={
+                                  usr.id === user.id
+                                    ? t('users.cannotDeleteOwnAccount')
+                                    : usr.is_active
+                                    ? t('users.mustDeactivateBeforeDelete')
+                                    : t('users.deleteUser')
+                                }
                               >
-                                {t('users.delete')}
+                                {usr.is_active ? `🔒 ${t('users.delete')}` : t('users.delete')}
                               </Button>
                             </div>
                           </td>

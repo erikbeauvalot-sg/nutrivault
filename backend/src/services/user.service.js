@@ -414,9 +414,16 @@ async function deleteUser(user, userId, requestMetadata = {}) {
       throw error;
     }
 
-    // Soft delete - set is_active to false
-    targetUser.is_active = false;
-    await targetUser.save();
+    // User must be deactivated before deletion
+    if (targetUser.is_active) {
+      const error = new Error('User must be deactivated before deletion. Please deactivate the user first.');
+      error.statusCode = 400;
+      error.code = 'USER_MUST_BE_DEACTIVATED';
+      throw error;
+    }
+
+    // Hard delete - actually remove from database
+    await targetUser.destroy();
 
     // Audit log
     await auditService.log({
@@ -425,10 +432,15 @@ async function deleteUser(user, userId, requestMetadata = {}) {
       action: 'DELETE',
       resource_type: 'users',
       resource_id: userId,
-      details: { target_username: targetUser.username },
+      details: {
+        target_username: targetUser.username,
+        target_email: targetUser.email
+      },
       ip_address: requestMetadata.ip,
       user_agent: requestMetadata.userAgent
     });
+
+    return { message: 'User permanently deleted successfully' };
   } catch (error) {
     console.error('Error in deleteUser:', error.message);
     throw error;
