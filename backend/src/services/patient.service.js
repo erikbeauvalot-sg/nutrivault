@@ -347,6 +347,31 @@ async function createPatient(patientData, user, requestMetadata = {}) {
 
     return patient;
   } catch (error) {
+    // Handle unique constraint violations
+    if (error.name === 'SequelizeUniqueConstraintError' || error.message?.includes('UNIQUE constraint failed')) {
+      if (error.message?.includes('email') || error.fields?.email) {
+        const duplicateError = new Error('Email already exists for another patient');
+        duplicateError.statusCode = 409;
+        duplicateError.code = 'EMAIL_ALREADY_EXISTS_PATIENT';
+
+        // Audit log failure
+        await auditService.log({
+          user_id: user.id,
+          username: user.username,
+          action: 'CREATE',
+          resource_type: 'patients',
+          status_code: 409,
+          error_message: duplicateError.message,
+          ip_address: requestMetadata.ip,
+          user_agent: requestMetadata.userAgent,
+          request_method: requestMetadata.method,
+          request_path: requestMetadata.path
+        });
+
+        throw duplicateError;
+      }
+    }
+
     // Audit log failure
     await auditService.log({
       user_id: user.id,
@@ -461,6 +486,32 @@ async function updatePatient(patientId, updateData, user, requestMetadata = {}) 
 
     return patient;
   } catch (error) {
+    // Handle unique constraint violations
+    if (error.name === 'SequelizeUniqueConstraintError' || error.message?.includes('UNIQUE constraint failed')) {
+      if (error.message?.includes('email') || error.fields?.email) {
+        const duplicateError = new Error('Email already exists for another patient');
+        duplicateError.statusCode = 409;
+        duplicateError.code = 'EMAIL_ALREADY_EXISTS_PATIENT';
+
+        // Audit log failure
+        await auditService.log({
+          user_id: user.id,
+          username: user.username,
+          action: 'UPDATE',
+          resource_type: 'patients',
+          resource_id: patientId,
+          status_code: 409,
+          error_message: duplicateError.message,
+          ip_address: requestMetadata.ip,
+          user_agent: requestMetadata.userAgent,
+          request_method: requestMetadata.method,
+          request_path: requestMetadata.path
+        });
+
+        throw duplicateError;
+      }
+    }
+
     // Audit log failure
     await auditService.log({
       user_id: user.id,

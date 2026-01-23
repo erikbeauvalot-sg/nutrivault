@@ -201,8 +201,9 @@ async function createUser(user, userData, requestMetadata = {}) {
       where: { email: userData.email }
     });
     if (existingEmail) {
-      const error = new Error('Email already exists');
-      error.statusCode = 400;
+      const error = new Error('Email already exists for another user');
+      error.statusCode = 409;
+      error.code = 'EMAIL_ALREADY_EXISTS_USER';
       throw error;
     }
 
@@ -312,8 +313,9 @@ async function updateUser(user, userId, updateData, requestMetadata = {}) {
         where: { email: updateData.email, id: { [Op.ne]: userId } }
       });
       if (existingEmail) {
-        const error = new Error('Email already exists');
-        error.statusCode = 400;
+        const error = new Error('Email already exists for another user');
+        error.statusCode = 409;
+        error.code = 'EMAIL_ALREADY_EXISTS_USER';
         throw error;
       }
     }
