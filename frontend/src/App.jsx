@@ -33,6 +33,7 @@ const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
 const DocumentUploadPage = lazy(() => import('./pages/DocumentUploadPage'));
 const CustomFieldsPage = lazy(() => import('./pages/CustomFieldsPage'));
+const RolesManagementPage = lazy(() => import('./pages/RolesManagementPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -239,6 +240,15 @@ function App() {
         element={
           <ProtectedRoute>
             <CustomFieldsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/roles"
+        element={
+          <ProtectedRoute>
+            <RolesManagementPage />
           </ProtectedRoute>
         }
       />
