@@ -3,7 +3,7 @@
  * Modal form for editing existing patients with custom fields organized by categories
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Modal, Button, Form, Row, Col, Alert, Tab, Tabs, Spinner } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import userService from '../services/userService';
@@ -11,6 +11,7 @@ import PatientTagsManager from './PatientTagsManager';
 import * as patientTagService from '../services/patientTagService';
 import customFieldService from '../services/customFieldService';
 import CustomFieldInput from './CustomFieldInput';
+import api from '../services/api';
 
 const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
   const { t } = useTranslation();
@@ -18,6 +19,14 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
   const [error, setError] = useState(null);
   const [dietitians, setDietitians] = useState([]);
   const [patientTags, setPatientTags] = useState([]);
+
+  // Email validation state
+  const [emailValidation, setEmailValidation] = useState({
+    status: 'idle', // 'idle' | 'checking' | 'available' | 'taken'
+    message: ''
+  });
+  const [originalEmail, setOriginalEmail] = useState('');
+  const emailCheckTimeout = useRef(null);
 
   // Custom fields state
   const [customFieldCategories, setCustomFieldCategories] = useState([]);
@@ -47,6 +56,15 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
       loadPatientData();
     }
   }, [patient, show]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (emailCheckTimeout.current) {
+        clearTimeout(emailCheckTimeout.current);
+      }
+    };
+  }, []);
 
   const fetchDietitians = async () => {
     try {
@@ -97,15 +115,60 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
     }
   };
 
+  // Check email availability with debounce (500ms)
+  const checkEmailAvailability = useCallback(async (email, original) => {
+    if (!email || !email.trim()) {
+      setEmailValidation({ status: 'idle', message: '' });
+      return;
+    }
+
+    // If email hasn't changed from original, don't validate
+    if (email.trim().toLowerCase() === original.trim().toLowerCase()) {
+      setEmailValidation({ status: 'idle', message: '' });
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailValidation({ status: 'idle', message: '' });
+      return;
+    }
+
+    setEmailValidation({ status: 'checking', message: 'Vérification...' });
+
+    try {
+      const response = await api.get(`/api/patients/check-email/${encodeURIComponent(email.trim().toLowerCase())}`);
+      const isAvailable = response.data?.available;
+
+      if (isAvailable) {
+        setEmailValidation({
+          status: 'available',
+          message: '✓ Email disponible'
+        });
+      } else {
+        setEmailValidation({
+          status: 'taken',
+          message: '✗ Cet email est déjà utilisé par un autre patient'
+        });
+      }
+    } catch (err) {
+      console.error('Error checking email:', err);
+      setEmailValidation({ status: 'idle', message: '' });
+    }
+  }, []);
+
   const loadPatientData = async () => {
     try {
       const tags = await fetchPatientTags(patient.id);
 
       // Set basic patient info
+      const patientEmail = patient.email || '';
+      setOriginalEmail(patientEmail);
       setFormData({
         first_name: patient.first_name || '',
         last_name: patient.last_name || '',
-        email: patient.email || '',
+        email: patientEmail,
         phone: patient.phone || '',
         assigned_dietitian_id: patient.assigned_dietitian_id || '',
         tags: tags
@@ -134,6 +197,24 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
       [name]: value
     }));
     setError(null);
+
+    // Debounced email validation
+    if (name === 'email') {
+      // Clear previous timeout
+      if (emailCheckTimeout.current) {
+        clearTimeout(emailCheckTimeout.current);
+      }
+
+      // Reset validation status while typing
+      setEmailValidation({ status: 'idle', message: '' });
+
+      // Set new timeout (500ms debounce)
+      if (value && value.trim()) {
+        emailCheckTimeout.current = setTimeout(() => {
+          checkEmailAvailability(value, originalEmail);
+        }, 500);
+      }
+    }
   };
 
   const handleTagsChange = (newTags) => {
@@ -165,6 +246,18 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
     if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       setError('Format email invalide');
       return false;
+    }
+    // Check if email is taken (only if it was changed from original)
+    if (formData.email && formData.email.trim().toLowerCase() !== originalEmail.trim().toLowerCase()) {
+      if (emailValidation.status === 'taken') {
+        setError('Cet email est déjà utilisé par un autre patient');
+        return false;
+      }
+      // Wait for email validation to complete
+      if (emailValidation.status === 'checking') {
+        setError('Vérification de l\'email en cours...');
+        return false;
+      }
     }
     return true;
   };
@@ -247,6 +340,8 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
     setFieldValues({});
     setFieldErrors({});
     setError(null);
+    setEmailValidation({ status: 'idle', message: '' });
+    setOriginalEmail('');
     onHide();
   };
 
@@ -304,7 +399,25 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
                         name="email"
                         value={formData.email}
                         onChange={handleInputChange}
+                        isValid={emailValidation.status === 'available'}
+                        isInvalid={emailValidation.status === 'taken'}
                       />
+                      {emailValidation.status === 'checking' && (
+                        <Form.Text className="text-muted">
+                          <Spinner animation="border" size="sm" className="me-1" />
+                          {emailValidation.message}
+                        </Form.Text>
+                      )}
+                      {emailValidation.status === 'available' && (
+                        <Form.Control.Feedback type="valid">
+                          {emailValidation.message}
+                        </Form.Control.Feedback>
+                      )}
+                      {emailValidation.status === 'taken' && (
+                        <Form.Control.Feedback type="invalid">
+                          {emailValidation.message}
+                        </Form.Control.Feedback>
+                      )}
                     </Form.Group>
                   </Col>
                   <Col md={6}>
