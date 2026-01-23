@@ -98,27 +98,32 @@ async function getPatients(user, filters = {}, requestMetadata = {}) {
       const values = await PatientCustomFieldValue.findAll({
         where: {
           patient_id: patientIds,
-          definition_id: fieldIds
-        },
-        attributes: ['patient_id', 'definition_id', 'value']
+          field_definition_id: fieldIds
+        }
       });
 
-      // Build a map for quick lookup: patientId -> { defId -> value }
+      // Build a map for quick lookup: patientId -> { defId -> valueObject }
       const valueMap = {};
       values.forEach(v => {
         if (!valueMap[v.patient_id]) valueMap[v.patient_id] = {};
-        valueMap[v.patient_id][v.definition_id] = v.value;
+        valueMap[v.patient_id][v.field_definition_id] = v;
       });
 
       // Attach custom fields to each patient
       rows.forEach(patient => {
-        patient.dataValues.custom_fields = listFields.map(field => ({
-          definition_id: field.id,
-          field_name: field.field_name,
-          field_label: field.field_label,
-          field_type: field.field_type,
-          value: valueMap[patient.id]?.[field.id] || null
-        }));
+        patient.dataValues.custom_fields = listFields.map(field => {
+          const valueObj = valueMap[patient.id]?.[field.id];
+          // Use the model's getValue method to get the correct value based on field type
+          const value = valueObj ? valueObj.getValue(field.field_type) : null;
+
+          return {
+            definition_id: field.id,
+            field_name: field.field_name,
+            field_label: field.field_label,
+            field_type: field.field_type,
+            value: value
+          };
+        });
       });
     }
 
