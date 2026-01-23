@@ -212,6 +212,12 @@ function PatientList({
                 <th onClick={() => handleSort('phone')} style={{ cursor: 'pointer' }}>
                   {t('patients.phone', 'Phone')} {getSortIcon('phone')}
                 </th>
+                {/* Dynamic custom field columns */}
+                {displayPatients.length > 0 && displayPatients[0].custom_fields?.map(field => (
+                  <th key={field.definition_id}>
+                    {field.field_label}
+                  </th>
+                ))}
                 <th onClick={() => handleSort('is_active')} style={{ cursor: 'pointer' }}>
                   {t('patients.status', 'Status')} {getSortIcon('is_active')}
                 </th>
@@ -221,7 +227,7 @@ function PatientList({
             <tbody>
               {displayPatients.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-4">
+                  <td colSpan={5 + (patients.length > 0 && patients[0].custom_fields?.length || 0)} className="text-center py-4">
                     <div className="text-muted">
                       {displayPatients.length === 0 && patients.length > 0 ? (
                         <div>
@@ -259,6 +265,12 @@ function PatientList({
                     </td>
                     <td>{patient.email || '-'}</td>
                     <td>{patient.phone || '-'}</td>
+                    {/* Dynamic custom field columns */}
+                    {patient.custom_fields?.map(field => (
+                      <td key={field.definition_id}>
+                        {field.value || '-'}
+                      </td>
+                    ))}
                     <td>
                       <Badge bg={patient.is_active ? 'success' : 'secondary'}>
                         {patient.is_active ? t('common.active') : t('common.inactive')}
