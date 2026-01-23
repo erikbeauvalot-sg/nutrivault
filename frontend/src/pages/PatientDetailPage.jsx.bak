@@ -3,17 +3,17 @@
  * Detailed patient view with tabbed interface
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Tab, Tabs, Button, Badge, Alert, Spinner, Dropdown, Modal, Form, InputGroup } from 'react-bootstrap';
+import { Container, Row, Col, Card, Tab, Tabs, Button, Badge, Alert, Spinner, Dropdown, Modal } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import DocumentListComponent from '../components/DocumentListComponent';
 import MeasurementCharts from '../components/MeasurementCharts';
 import InvoiceList from '../components/InvoiceList';
+import PatientCustomFieldsTabs from '../components/PatientCustomFieldsTabs';
 import CustomFieldInput from '../components/CustomFieldInput';
-import CustomFieldDisplay from '../components/CustomFieldDisplay';
 import customFieldService from '../services/customFieldService';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import { getBMICategory, calculateBMI } from '../utils/bmiUtils';
@@ -53,7 +53,6 @@ const PatientDetailPage = () => {
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [savingFields, setSavingFields] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (id) {
@@ -175,65 +174,6 @@ const PatientDetailPage = () => {
 
   const handleEditPatient = () => {
     navigate(`/patients/${id}/edit`);
-  };
-
-  // Search across custom fields
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return { hasResults: false, matchingFields: [], matchingCategory: null };
-    }
-
-    const query = searchQuery.toLowerCase();
-    const matchingFields = [];
-    let matchingCategory = null;
-
-    customFieldCategories.forEach(category => {
-      category.fields.forEach(field => {
-        const fieldLabel = field.field_label?.toLowerCase() || '';
-        const fieldValue = fieldValues[field.definition_id]?.toString()?.toLowerCase() || '';
-        const categoryName = category.name?.toLowerCase() || '';
-
-        if (fieldLabel.includes(query) || fieldValue.includes(query) || categoryName.includes(query)) {
-          matchingFields.push({
-            ...field,
-            categoryId: category.id,
-            categoryName: category.name
-          });
-          if (!matchingCategory) {
-            matchingCategory = category.id;
-          }
-        }
-      });
-    });
-
-    return {
-      hasResults: matchingFields.length > 0,
-      matchingFields,
-      matchingCategory
-    };
-  }, [searchQuery, customFieldCategories, fieldValues]);
-
-  // Auto-switch to tab with search results
-  useEffect(() => {
-    if (searchResults.hasResults && searchResults.matchingCategory) {
-      setActiveTab(`category-${searchResults.matchingCategory}`);
-    }
-  }, [searchResults]);
-
-  // Highlight matching text
-  const highlightText = (text, query) => {
-    if (!text || !query.trim()) return text;
-
-    const parts = text.toString().split(new RegExp(`(${query})`, 'gi'));
-    return parts.map((part, index) =>
-      part.toLowerCase() === query.toLowerCase() ? (
-        <mark key={index} style={{ backgroundColor: '#fff3cd', padding: '0 2px', fontWeight: 'bold' }}>
-          {part}
-        </mark>
-      ) : (
-        part
-      )
-    );
   };
 
   const handleExportData = async (format) => {
@@ -479,202 +419,418 @@ const PatientDetailPage = () => {
         {/* Patient Details Tabs */}
         <Card>
           <Card.Body>
-            {/* Search Bar for Custom Fields */}
-            <Row className="mb-3">
-              <Col md={6}>
-                <InputGroup>
-                  <InputGroup.Text>🔍</InputGroup.Text>
-                  <Form.Control
-                    type="text"
-                    placeholder="Search in custom fields..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  {searchQuery && (
-                    <Button
-                      variant="outline-secondary"
-                      onClick={() => setSearchQuery('')}
-                      title="Clear search"
-                    >
-                      ✕
-                    </Button>
-                  )}
-                </InputGroup>
-                {searchQuery && (
-                  <Form.Text className="text-muted">
-                    {searchResults.hasResults ? (
-                      <>
-                        {searchResults.matchingFields.length} field{searchResults.matchingFields.length !== 1 ? 's' : ''} found
-                        {searchResults.matchingCategory && ' - switched to matching tab'}
-                      </>
-                    ) : (
-                      'No fields found matching your search'
-                    )}
-                  </Form.Text>
-                )}
-              </Col>
-            </Row>
-
             <Tabs activeKey={activeTab} onSelect={setActiveTab} className="mb-3">
-              {/* Basic Info Tab */}
-              <Tab eventKey="basic-info" title="📋 Basic Information">
-                {/* Essential Patient Info */}
-                <Card className="mb-3">
-                  <Card.Header className="bg-primary text-white">
-                    <h6 className="mb-0">Patient Basic Information</h6>
-                  </Card.Header>
-                  <Card.Body>
-                    <Row>
-                      <Col md={6}>
+              {/* Complete Profile Tab */}
+              <Tab eventKey="complete" title="📋 Complete Profile">
+                <Row className="patient-info-cards">
+                  {/* Personal Information */}
+                  <Col md={6}>
+                    <Card className="mb-3">
+                      <Card.Header className="bg-primary text-white">
+                        <h6 className="mb-0">{t('patients.personalInfoHeading')}</h6>
+                      </Card.Header>
+                      <Card.Body>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>First Name:</strong></Col>
-                          <Col sm={7}>{patient.first_name}</Col>
+                          <Col sm={5}><strong>{t('patients.fullNameLabel')}</strong></Col>
+                          <Col sm={7}>{patient.first_name} {patient.last_name}</Col>
                         </Row>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Last Name:</strong></Col>
-                          <Col sm={7}>{patient.last_name}</Col>
-                        </Row>
-                      </Col>
-                      <Col md={6}>
-                        <Row className="mb-2">
-                          <Col sm={5}><strong>Email:</strong></Col>
+                          <Col sm={5}><strong>{t('patients.emailLabel')}</strong></Col>
                           <Col sm={7}>{patient.email || '-'}</Col>
                         </Row>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Phone:</strong></Col>
+                          <Col sm={5}><strong>{t('patients.phoneLabel')}</strong></Col>
                           <Col sm={7}>{patient.phone || '-'}</Col>
                         </Row>
-                      </Col>
-                    </Row>
-                    <hr />
-                    <Row>
-                      <Col>
-                        <strong>Status:</strong>{' '}
-                        <Badge bg={patient.is_active ? 'success' : 'secondary'}>
-                          {patient.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </Col>
-                      {patient.assigned_dietitian && (
-                        <Col>
-                          <strong>Assigned Dietitian:</strong> {patient.assigned_dietitian.first_name} {patient.assigned_dietitian.last_name}
-                        </Col>
-                      )}
-                    </Row>
-                  </Card.Body>
-                </Card>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>{t('patients.dateOfBirthLabel', 'Date of Birth:')}</strong></Col>
+                          <Col sm={7}>{formatDate(patient.date_of_birth)}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>{t('patients.ageLabel', 'Age:')}</strong></Col>
+                          <Col sm={7}>
+                            {patient.date_of_birth
+                              ? Math.floor((new Date() - new Date(patient.date_of_birth)) / (365.25 * 24 * 60 * 60 * 1000))
+                              : '-'
+                            } years
+                          </Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>{t('patients.genderLabel', 'Gender:')}</strong></Col>
+                          <Col sm={7}>{patient.gender || '-'}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>{t('patients.statusLabel', 'Status:')}</strong></Col>
+                          <Col sm={7}>
+                            <Badge bg={patient.is_active ? 'success' : 'secondary'}>
+                              {patient.is_active ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
+                            </Badge>
+                          </Col>
+                        </Row>
+                      </Card.Body>
+                    </Card>
 
-                {/* Custom Fields marked as "show_in_basic_info", grouped by category */}
-                {customFieldCategories
-                  .filter(category => category.fields.some(field => field.show_in_basic_info))
-                  .map((category) => {
-                    const basicInfoFields = category.fields.filter(field => field.show_in_basic_info);
-                    if (basicInfoFields.length === 0) return null;
+                    {/* Contact & Address */}
+                    <Card className="mb-3">
+                      <Card.Header className="bg-info text-white">
+                        <h6 className="mb-0">📍 {t('patients.addressContact', 'Address & Contact')}</h6>
+                      </Card.Header>
+                      <Card.Body>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>{t('patients.addressLabel', 'Address:')}</strong></Col>
+                          <Col sm={7}>{patient.address || '-'}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>{t('patients.cityLabel', 'City:')}</strong></Col>
+                          <Col sm={7}>{patient.city || '-'}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>{t('patients.stateLabel', 'State:')}</strong></Col>
+                          <Col sm={7}>{patient.state || '-'}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>{t('patients.zipCode', 'ZIP Code:')}</strong></Col>
+                          <Col sm={7}>{patient.zip_code || '-'}</Col>
+                        </Row>
+                        <hr />
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>{t('patients.emergencyContactName', 'Emergency Contact:')}</strong></Col>
+                          <Col sm={7}>{patient.emergency_contact_name || '-'}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>{t('patients.emergencyContactPhone', 'Emergency Phone:')}</strong></Col>
+                          <Col sm={7}>{patient.emergency_contact_phone || '-'}</Col>
+                        </Row>
+                      </Card.Body>
+                    </Card>
+                  </Col>
 
-                    return (
-                      <Card key={category.id} className="mb-3">
-                        <Card.Header
-                          style={{
-                            backgroundColor: category.color || '#3498db',
-                            color: '#fff',
-                            borderLeft: `4px solid ${category.color || '#3498db'}`
-                          }}
-                        >
-                          <h6 className="mb-0">
-                            <span
-                              style={{
-                                display: 'inline-block',
-                                width: '10px',
-                                height: '10px',
-                                backgroundColor: '#fff',
-                                borderRadius: '50%',
-                                marginRight: '8px',
-                                opacity: 0.8
-                              }}
-                            />
-                            {category.name}
-                          </h6>
+                  {/* Medical & Dietary */}
+                  <Col md={6}>
+                    <Card className="mb-3">
+                      <Card.Header className="bg-danger text-white">
+                        <h6 className="mb-0">🏥 {t('patients.medicalInfo')}</h6>
+                      </Card.Header>
+                      <Card.Body>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>{t('patients.allergies', 'Allergies:')}</strong></Col>
+                          <Col sm={7}>
+                            {patient.allergies ? (
+                              <div style={{ whiteSpace: 'pre-wrap' }}>{patient.allergies}</div>
+                            ) : '-'}
+                          </Col>
+                        </Row>
+                        <hr />
+                        <Row className="mb-2">
+                          <Col><strong>{t('patients.medicalNotes', 'Medical Notes:')}</strong></Col>
+                        </Row>
+                        <Row>
+                          <Col>
+                            {patient.medical_notes ? (
+                              <div style={{ whiteSpace: 'pre-wrap', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
+                                {patient.medical_notes}
+                              </div>
+                            ) : (
+                              <div className="text-muted fst-italic">{t('patients.noMedicalNotesRecorded', 'No medical notes recorded')}</div>
+                            )}
+                          </Col>
+                        </Row>
+                      </Card.Body>
+                    </Card>
+
+                    <Card className="mb-3">
+                      <Card.Header className="bg-success text-white">
+                        <h6 className="mb-0">🥗 {t('patients.dietaryInfo')}</h6>
+                      </Card.Header>
+                      <Card.Body>
+                        <Row className="mb-2">
+                          <Col><strong>{t('patients.dietaryPreferences', 'Dietary Preferences:')}</strong></Col>
+                        </Row>
+                        <Row className="mb-3">
+                          <Col>
+                            {patient.dietary_preferences ? (
+                              <div style={{ whiteSpace: 'pre-wrap', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
+                                {patient.dietary_preferences}
+                              </div>
+                            ) : (
+                              <div className="text-muted fst-italic">{t('patients.noDietaryPreferencesRecorded', 'No dietary preferences recorded')}</div>
+                            )}
+                          </Col>
+                        </Row>
+                      </Card.Body>
+                    </Card>
+
+                    <Card className="mb-3">
+                      <Card.Header className="bg-warning">
+                        <h6 className="mb-0">👨‍⚕️ Care Team</h6>
+                      </Card.Header>
+                      <Card.Body>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>{t('patients.assignedDietitian', 'Assigned Dietitian:')}</strong></Col>
+                          <Col sm={7}>
+                            {patient.assigned_dietitian
+                              ? `${patient.assigned_dietitian.first_name} ${patient.assigned_dietitian.last_name}`
+                              : 'Not assigned'
+                            }
+                          </Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>{t('patients.createdLabel', 'Created:')}</strong></Col>
+                          <Col sm={7}>{formatDateTime(patient.created_at)}</Col>
+                        </Row>
+                        <Row className="mb-2">
+                          <Col sm={5}><strong>{t('patients.lastUpdated', 'Last Updated:')}</strong></Col>
+                          <Col sm={7}>{formatDateTime(patient.updated_at)}</Col>
+                        </Row>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                </Row>
+              </Tab>
+
+              {/* Personal Information Tab */}
+              <Tab eventKey="info" title={t('patients.personalInformationTab', 'Personal Information')}>
+                <Row>
+                  <Col md={6}>
+                    <Card className="mb-3">
+                      <Card.Header>
+                        <h5 className="mb-0">{t('patients.basicInformation', 'Basic Information')}</h5>
+                      </Card.Header>
+                      <Card.Body>
+                        <Row>
+                          <Col sm={4}><strong>{t('patients.nameLabel', 'Name:')}</strong></Col>
+                          <Col sm={8}>{patient.first_name} {patient.last_name}</Col>
+                        </Row>
+                        <Row className="mt-2">
+                          <Col sm={4}><strong>{t('patients.emailLabel', 'Email:')}</strong></Col>
+                          <Col sm={8}>{patient.email || '-'}</Col>
+                        </Row>
+                        <Row className="mt-2">
+                          <Col sm={4}><strong>{t('patients.phoneLabel', 'Phone:')}</strong></Col>
+                          <Col sm={8}>{patient.phone || '-'}</Col>
+                        </Row>
+                        <Row className="mt-2">
+                          <Col sm={4}><strong>{t('patients.dateOfBirthLabel', 'Date of Birth:')}</strong></Col>
+                          <Col sm={8}>{formatDate(patient.date_of_birth)}</Col>
+                        </Row>
+                        <Row className="mt-2">
+                          <Col sm={4}><strong>{t('patients.genderLabel', 'Gender:')}</strong></Col>
+                          <Col sm={8}>{patient.gender || '-'}</Col>
+                        </Row>
+                        <Row className="mt-2">
+                          <Col sm={4}><strong>{t('patients.bloodType', 'Blood Type:')}</strong></Col>
+                          <Col sm={8}>{patient.blood_type || '-'}</Col>
+                        </Row>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                  <Col md={6}>
+                    <Card className="mb-3">
+                      <Card.Header>
+                        <h5 className="mb-0">{t('patients.addressContact', 'Address & Contact')}</h5>
+                      </Card.Header>
+                      <Card.Body>
+                        <Row>
+                          <Col sm={4}><strong>{t('patients.addressLabel', 'Address:')}</strong></Col>
+                          <Col sm={8}>{patient.address || '-'}</Col>
+                        </Row>
+                        <Row className="mt-2">
+                          <Col sm={4}><strong>{t('patients.cityLabel', 'City:')}</strong></Col>
+                          <Col sm={8}>{patient.city || '-'}</Col>
+                        </Row>
+                        <Row className="mt-2">
+                          <Col sm={4}><strong>{t('patients.stateLabel', 'State:')}</strong></Col>
+                          <Col sm={8}>{patient.state || '-'}</Col>
+                        </Row>
+                        <Row className="mt-2">
+                          <Col sm={4}><strong>{t('patients.zipCode', 'ZIP Code:')}</strong></Col>
+                          <Col sm={8}>{patient.zip_code || '-'}</Col>
+                        </Row>
+                        <Row className="mt-2">
+                          <Col sm={4}><strong>{t('patients.emergencyContactName', 'Emergency Contact:')}</strong></Col>
+                          <Col sm={8}>
+                            {patient.emergency_contact_name || '-'}
+                            {patient.emergency_contact_phone && (
+                              <div className="small text-muted">{patient.emergency_contact_phone}</div>
+                            )}
+                          </Col>
+                        </Row>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                </Row>
+              </Tab>
+
+              {/* Medical Information Tab */}
+              {canViewMedicalData && (
+                <Tab eventKey="medical" title={t('patients.medicalInformationTab')}>
+                  <Row>
+                    <Col md={6}>
+                      <Card className="mb-3">
+                        <Card.Header>
+                          <h5 className="mb-0">{t('patients.medicalDetails', 'Medical Details')}</h5>
                         </Card.Header>
                         <Card.Body>
                           <Row>
-                            {basicInfoFields.map((field) => (
-                              <Col md={6} key={field.definition_id}>
-                                <CustomFieldDisplay
-                                  fieldDefinition={field}
-                                  value={fieldValues[field.definition_id]}
-                                  searchQuery={searchQuery}
-                                  highlightText={highlightText}
-                                />
-                              </Col>
-                            ))}
+                            <Col sm={5}><strong>{t('patients.medicalRecordNumber', 'Medical Record #:')}</strong></Col>
+                            <Col sm={7}>{patient.medical_record_number || '-'}</Col>
+                          </Row>
+                          <Row className="mt-2">
+                            <Col sm={5}><strong>{t('patients.bmi', 'BMI:')}</strong></Col>
+                            <Col sm={7}>
+                              {patient.weight_kg && patient.height_cm ? (
+                                <>
+                                  <div className="mb-1">
+                                    <strong style={{ fontSize: '1.1rem' }}>
+                                      {calculateBMI(patient.weight_kg, patient.height_cm)}
+                                    </strong>
+                                  </div>
+                                  {(() => {
+                                    const bmi = calculateBMI(patient.weight_kg, patient.height_cm);
+                                    const category = getBMICategory(bmi, t);
+                                    return (
+                                      <Badge
+                                        bg={category.variant}
+                                        style={category.customBg ? { backgroundColor: category.customBg } : {}}
+                                      >
+                                        {category.category}
+                                      </Badge>
+                                    );
+                                  })()}
+                                </>
+                              ) : (
+                                <span className="text-muted">
+                                  {t('bmi.notAvailable', 'Poids et taille requis')}
+                                </span>
+                              )}
+                            </Col>
+                          </Row>
+                          <Row className="mt-2">
+                            <Col sm={5}><strong>{t('patients.heightCm', 'Height:')}</strong></Col>
+                            <Col sm={7}>{patient.height_cm ? `${patient.height_cm} cm` : '-'}</Col>
+                          </Row>
+                          <Row className="mt-2">
+                            <Col sm={5}><strong>{t('patients.weightKg', 'Weight:')}</strong></Col>
+                            <Col sm={7}>{patient.weight_kg ? `${patient.weight_kg} kg` : '-'}</Col>
+                          </Row>
+                          <Row className="mt-2">
+                            <Col sm={5}><strong>{t('patients.insuranceProvider', 'Insurance:')}</strong></Col>
+                            <Col sm={7}>
+                              {patient.insurance_provider || '-'}
+                              {patient.insurance_policy_number && (
+                                <div className="small text-muted">Policy: {patient.insurance_policy_number}</div>
+                              )}
+                            </Col>
+                          </Row>
+                          <Row className="mt-2">
+                            <Col sm={5}><strong>{t('patients.primaryCarePhysician', 'Primary Care Physician:')}</strong></Col>
+                            <Col sm={7}>{patient.primary_care_physician || '-'}</Col>
                           </Row>
                         </Card.Body>
                       </Card>
-                    );
-                  })}
-              </Tab>
-
-              {/* Dynamic Custom Field Category Tabs */}
-              {customFieldCategories.map((category) => (
-                <Tab
-                  key={category.id}
-                  eventKey={`category-${category.id}`}
-                  title={
-                    <span>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          width: '12px',
-                          height: '12px',
-                          backgroundColor: category.color || '#3498db',
-                          borderRadius: '50%',
-                          marginRight: '8px',
-                          verticalAlign: 'middle',
-                          border: '2px solid rgba(255,255,255,0.5)'
-                        }}
-                      />
-                      {category.name}
-                    </span>
-                  }
-                >
-                  <div
-                    className="mb-3"
-                    style={{
-                      borderLeft: `4px solid ${category.color || '#3498db'}`,
-                      paddingLeft: '15px'
-                    }}
-                  >
-                    {category.description && (
-                      <Alert
-                        variant="info"
-                        style={{
-                          borderLeft: `4px solid ${category.color || '#3498db'}`,
-                          backgroundColor: `${category.color || '#3498db'}10`
-                        }}
-                      >
-                        {category.description}
-                      </Alert>
-                    )}
-                    {category.fields.length === 0 ? (
-                      <Alert variant="warning">
-                        Aucun champ défini pour cette catégorie
-                      </Alert>
-                    ) : (
-                      <Row>
-                        {category.fields.map(field => (
-                          <Col key={field.definition_id} md={6}>
-                            <CustomFieldDisplay
-                              fieldDefinition={field}
-                              value={fieldValues[field.definition_id]}
-                              searchQuery={searchQuery}
-                              highlightText={highlightText}
-                            />
-                          </Col>
-                        ))}
-                      </Row>
-                    )}
-                  </div>
+                    </Col>
+                    <Col md={6}>
+                      <Card className="mb-3">
+                        <Card.Header>
+                          <h5 className="mb-0">{t('patients.medicalHistory', 'Medical History')}</h5>
+                        </Card.Header>
+                        <Card.Body>
+                          <Row>
+                            <Col sm={4}><strong>{t('patients.allergies', 'Allergies:')}</strong></Col>
+                            <Col sm={8}>
+                              {patient.allergies ? (
+                                <div style={{ whiteSpace: 'pre-wrap' }}>{patient.allergies}</div>
+                              ) : '-'}
+                            </Col>
+                          </Row>
+                          <Row className="mt-3">
+                            <Col sm={4}><strong>{t('patients.currentMedications', 'Current Medications:')}</strong></Col>
+                            <Col sm={8}>
+                              {patient.current_medications ? (
+                                <div style={{ whiteSpace: 'pre-wrap' }}>{patient.current_medications}</div>
+                              ) : '-'}
+                            </Col>
+                          </Row>
+                          <Row className="mt-3">
+                            <Col sm={4}><strong>{t('patients.medicalConditions')}:</strong></Col>
+                            <Col sm={8}>
+                              {patient.medical_conditions ? (
+                                <div style={{ whiteSpace: 'pre-wrap' }}>{patient.medical_conditions}</div>
+                              ) : '-'}
+                            </Col>
+                          </Row>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                  </Row>
                 </Tab>
-              ))}
+              )}
+
+              {/* Dietary Information Tab */}
+              {canViewMedicalData && (
+                <Tab eventKey="dietary" title={t('patients.dietaryInformationTab')}>
+                  <Row>
+                    <Col md={6}>
+                      <Card className="mb-3">
+                        <Card.Header>
+                          <h5 className="mb-0">{t('patients.dietaryPreferences')}</h5>
+                        </Card.Header>
+                        <Card.Body>
+                          <Row>
+                            <Col sm={5}><strong>{t('patients.dietaryRestrictions')}:</strong></Col>
+                            <Col sm={7}>
+                              {patient.dietary_restrictions ? (
+                                <div style={{ whiteSpace: 'pre-wrap' }}>{patient.dietary_restrictions}</div>
+                              ) : '-'}
+                            </Col>
+                          </Row>
+                          <Row className="mt-3">
+                            <Col sm={5}><strong>{t('patients.foodPreferences')}:</strong></Col>
+                            <Col sm={7}>
+                              {patient.food_preferences ? (
+                                <div style={{ whiteSpace: 'pre-wrap' }}>{patient.food_preferences}</div>
+                              ) : '-'}
+                            </Col>
+                          </Row>
+                          <Row className="mt-3">
+                            <Col sm={5}><strong>{t('patients.nutritionalGoals')}:</strong></Col>
+                            <Col sm={7}>
+                              {patient.nutritional_goals ? (
+                                <div style={{ whiteSpace: 'pre-wrap' }}>{patient.nutritional_goals}</div>
+                              ) : '-'}
+                            </Col>
+                          </Row>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                    <Col md={6}>
+                      <Card className="mb-3">
+                        <Card.Header>
+                          <h5 className="mb-0">{t('patients.lifestyle')}</h5>
+                        </Card.Header>
+                        <Card.Body>
+                          <Row>
+                            <Col sm={5}><strong>{t('patients.exerciseHabits')}:</strong></Col>
+                            <Col sm={7}>
+                              {patient.exercise_habits ? (
+                                <div style={{ whiteSpace: 'pre-wrap' }}>{patient.exercise_habits}</div>
+                              ) : '-'}
+                            </Col>
+                          </Row>
+                          <Row className="mt-3">
+                            <Col sm={5}><strong>{t('patients.smokingStatus')}:</strong></Col>
+                            <Col sm={7}>{patient.smoking_status || '-'}</Col>
+                          </Row>
+                          <Row className="mt-3">
+                            <Col sm={5}><strong>{t('patients.alcoholConsumption')}:</strong></Col>
+                            <Col sm={7}>{patient.alcohol_consumption || '-'}</Col>
+                          </Row>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                  </Row>
+                </Tab>
+              )}
 
               {/* Visits Tab */}
               <Tab eventKey="visits" title={`${t('patients.visitsTab', 'Visits')} (${visits.length})`}>

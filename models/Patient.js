@@ -1,3 +1,9 @@
+/**
+ * Patient Model - Simplified Version
+ * Contains only essential patient information
+ * All other data is managed via custom fields
+ */
+
 module.exports = (sequelize, DataTypes) => {
   const Patient = sequelize.define('Patient', {
     id: {
@@ -8,11 +14,17 @@ module.exports = (sequelize, DataTypes) => {
     },
     first_name: {
       type: DataTypes.STRING(100),
-      allowNull: false
+      allowNull: false,
+      validate: {
+        notEmpty: true
+      }
     },
     last_name: {
       type: DataTypes.STRING(100),
-      allowNull: false
+      allowNull: false,
+      validate: {
+        notEmpty: true
+      }
     },
     email: {
       type: DataTypes.STRING(255),
@@ -26,117 +38,13 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(20),
       allowNull: true
     },
-    date_of_birth: {
-      type: DataTypes.DATEONLY,
-      allowNull: true
-    },
-    gender: {
-      type: DataTypes.STRING(20),
-      allowNull: true
-    },
-    address: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    city: {
-      type: DataTypes.STRING(100),
-      allowNull: true
-    },
-    state: {
-      type: DataTypes.STRING(50),
-      allowNull: true
-    },
-    zip_code: {
-      type: DataTypes.STRING(20),
-      allowNull: true
-    },
-    emergency_contact_name: {
-      type: DataTypes.STRING(200),
-      allowNull: true
-    },
-    emergency_contact_phone: {
-      type: DataTypes.STRING(20),
-      allowNull: true
-    },
-    medical_notes: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    medical_conditions: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    allergies: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    dietary_preferences: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    dietary_restrictions: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    blood_type: {
-      type: DataTypes.STRING(10),
-      allowNull: true
-    },
-    current_medications: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    medical_record_number: {
-      type: DataTypes.STRING(100),
-      allowNull: true
-    },
-    insurance_provider: {
-      type: DataTypes.STRING(200),
-      allowNull: true
-    },
-    insurance_policy_number: {
-      type: DataTypes.STRING(100),
-      allowNull: true
-    },
-    primary_care_physician: {
-      type: DataTypes.STRING(200),
-      allowNull: true
-    },
-    height_cm: {
-      type: DataTypes.DECIMAL(5, 2),
-      allowNull: true
-    },
-    weight_kg: {
-      type: DataTypes.DECIMAL(5, 2),
-      allowNull: true
-    },
-    food_preferences: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    nutritional_goals: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    exercise_habits: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    smoking_status: {
-      type: DataTypes.STRING(50),
-      allowNull: true
-    },
-    alcohol_consumption: {
-      type: DataTypes.STRING(50),
-      allowNull: true
-    },
-    notes: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
     assigned_dietitian_id: {
       type: DataTypes.UUID,
-      allowNull: true
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id'
+      }
     },
     is_active: {
       type: DataTypes.BOOLEAN,
@@ -149,7 +57,13 @@ module.exports = (sequelize, DataTypes) => {
     underscored: true,
     indexes: [
       {
-        fields: ['email']
+        fields: ['email'],
+        unique: true,
+        where: {
+          email: {
+            [sequelize.Sequelize.Op.ne]: null
+          }
+        }
       },
       {
         fields: ['assigned_dietitian_id']
@@ -159,6 +73,38 @@ module.exports = (sequelize, DataTypes) => {
       }
     ]
   });
+
+  Patient.associate = function(models) {
+    // Patient is assigned to a dietitian (User)
+    Patient.belongsTo(models.User, {
+      foreignKey: 'assigned_dietitian_id',
+      as: 'assigned_dietitian'
+    });
+
+    // Patient has many visits
+    Patient.hasMany(models.Visit, {
+      foreignKey: 'patient_id',
+      as: 'visits'
+    });
+
+    // Patient has many billing records
+    Patient.hasMany(models.Billing, {
+      foreignKey: 'patient_id',
+      as: 'billing_records'
+    });
+
+    // Patient has many tags
+    Patient.hasMany(models.PatientTag, {
+      foreignKey: 'patient_id',
+      as: 'tags'
+    });
+
+    // Patient has many custom field values
+    Patient.hasMany(models.PatientCustomFieldValue, {
+      foreignKey: 'patient_id',
+      as: 'custom_field_values'
+    });
+  };
 
   return Patient;
 };

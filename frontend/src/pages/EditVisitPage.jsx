@@ -10,6 +10,8 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import visitService from '../services/visitService';
+import visitCustomFieldService from '../services/visitCustomFieldService';
+import CustomFieldInput from '../components/CustomFieldInput';
 
 const EditVisitPage = () => {
   const { t } = useTranslation();
@@ -49,9 +51,13 @@ const EditVisitPage = () => {
   });
 
   const [editingMeasurement, setEditingMeasurement] = useState(null);
+  const [customFieldCategories, setCustomFieldCategories] = useState([]);
+  const [fieldValues, setFieldValues] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     fetchVisitData();
+    fetchCustomFields();
   }, [id]);
 
   const fetchVisitData = async () => {
@@ -102,6 +108,38 @@ const EditVisitPage = () => {
   const handleMeasurementChange = (e) => {
     const { name, value } = e.target;
     setMeasurementData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const fetchCustomFields = async () => {
+    try {
+      const data = await visitCustomFieldService.getVisitCustomFields(id);
+      setCustomFieldCategories(data || []);
+
+      // Build initial values map
+      const values = {};
+      data.forEach(category => {
+        category.fields.forEach(field => {
+          values[field.definition_id] = field.value;
+        });
+      });
+      setFieldValues(values);
+    } catch (err) {
+      console.error('Error fetching visit custom fields:', err);
+      // Don't set error for custom fields failure
+    }
+  };
+
+  const handleCustomFieldChange = (definitionId, value) => {
+    setFieldValues(prev => ({
+      ...prev,
+      [definitionId]: value
+    }));
+    // Clear any error for this field
+    setFieldErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[definitionId];
+      return newErrors;
+    });
   };
 
   const handleBack = () => {
@@ -202,6 +240,29 @@ const EditVisitPage = () => {
         }
       } else {
         console.log('⏭️ No measurement data to save, skipping');
+      }
+
+      // Step 3: Save custom fields
+      const customFieldsToSave = [];
+      customFieldCategories.forEach(category => {
+        category.fields.forEach(field => {
+          if (fieldValues[field.definition_id] !== undefined && fieldValues[field.definition_id] !== null && fieldValues[field.definition_id] !== '') {
+            customFieldsToSave.push({
+              definition_id: field.definition_id,
+              value: fieldValues[field.definition_id]
+            });
+          }
+        });
+      });
+
+      if (customFieldsToSave.length > 0) {
+        try {
+          await visitCustomFieldService.updateVisitCustomFields(id, customFieldsToSave);
+          console.log('✅ Custom fields saved successfully');
+        } catch (customFieldError) {
+          console.error('❌ Error saving custom fields:', customFieldError);
+          // Don't throw error, just log it
+        }
       }
 
       navigate('/visits');
@@ -832,6 +893,69 @@ const EditVisitPage = () => {
                     </Col>
                   </Row>
                 </Tab>
+
+                {/* Custom Fields Tabs - Only visible if there are categories for visits */}
+                {customFieldCategories.length > 0 && customFieldCategories.map((category) => (
+                  <Tab
+                    key={category.id}
+                    eventKey={`category-${category.id}`}
+                    title={
+                      <span>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            width: '12px',
+                            height: '12px',
+                            backgroundColor: category.color || '#3498db',
+                            borderRadius: '50%',
+                            marginRight: '8px',
+                            verticalAlign: 'middle',
+                            border: '2px solid rgba(255,255,255,0.5)'
+                          }}
+                        />
+                        {category.name}
+                      </span>
+                    }
+                  >
+                    <div
+                      className="mb-3"
+                      style={{
+                        borderLeft: `4px solid ${category.color || '#3498db'}`,
+                        paddingLeft: '15px'
+                      }}
+                    >
+                      {category.description && (
+                        <Alert
+                          variant="info"
+                          style={{
+                            borderLeft: `4px solid ${category.color || '#3498db'}`,
+                            backgroundColor: `${category.color || '#3498db'}10`
+                          }}
+                        >
+                          {category.description}
+                        </Alert>
+                      )}
+                      {category.fields.length === 0 ? (
+                        <Alert variant="warning">
+                          No fields defined for this category
+                        </Alert>
+                      ) : (
+                        <Row>
+                          {category.fields.map(field => (
+                            <Col key={field.definition_id} md={6}>
+                              <CustomFieldInput
+                                fieldDefinition={field}
+                                value={fieldValues[field.definition_id]}
+                                onChange={(value) => handleCustomFieldChange(field.definition_id, value)}
+                                error={fieldErrors[field.definition_id]}
+                              />
+                            </Col>
+                          ))}
+                        </Row>
+                      )}
+                    </div>
+                  </Tab>
+                ))}
               </Tabs>
 
               {/* Action Buttons */}

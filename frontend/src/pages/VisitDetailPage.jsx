@@ -11,6 +11,8 @@ import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import visitService from '../services/visitService';
+import visitCustomFieldService from '../services/visitCustomFieldService';
+import CustomFieldDisplay from '../components/CustomFieldDisplay';
 
 const VisitDetailPage = () => {
   const { t, i18n } = useTranslation();
@@ -25,10 +27,13 @@ const VisitDetailPage = () => {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [finishingVisit, setFinishingVisit] = useState(false);
   const [finishSuccess, setFinishSuccess] = useState(null);
+  const [customFieldCategories, setCustomFieldCategories] = useState([]);
+  const [fieldValues, setFieldValues] = useState({});
 
   useEffect(() => {
     if (id) {
       fetchVisitDetails();
+      fetchCustomFields();
     }
   }, [id]);
 
@@ -44,6 +49,25 @@ const VisitDetailPage = () => {
       console.error('Error fetching visit details:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCustomFields = async () => {
+    try {
+      const data = await visitCustomFieldService.getVisitCustomFields(id);
+      setCustomFieldCategories(data || []);
+
+      // Build initial values map
+      const values = {};
+      data.forEach(category => {
+        category.fields.forEach(field => {
+          values[field.definition_id] = field.value;
+        });
+      });
+      setFieldValues(values);
+    } catch (err) {
+      console.error('Error fetching visit custom fields:', err);
+      // Don't set error for custom fields failure
     }
   };
 
@@ -445,6 +469,67 @@ const VisitDetailPage = () => {
                   </Col>
                 </Row>
               </Tab>
+
+              {/* Custom Fields Tabs - Only visible if there are categories for visits */}
+              {customFieldCategories.length > 0 && customFieldCategories.map((category) => (
+                <Tab
+                  key={category.id}
+                  eventKey={`category-${category.id}`}
+                  title={
+                    <span>
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          width: '12px',
+                          height: '12px',
+                          backgroundColor: category.color || '#3498db',
+                          borderRadius: '50%',
+                          marginRight: '8px',
+                          verticalAlign: 'middle',
+                          border: '2px solid rgba(255,255,255,0.5)'
+                        }}
+                      />
+                      {category.name}
+                    </span>
+                  }
+                >
+                  <div
+                    className="mb-3"
+                    style={{
+                      borderLeft: `4px solid ${category.color || '#3498db'}`,
+                      paddingLeft: '15px'
+                    }}
+                  >
+                    {category.description && (
+                      <Alert
+                        variant="info"
+                        style={{
+                          borderLeft: `4px solid ${category.color || '#3498db'}`,
+                          backgroundColor: `${category.color || '#3498db'}10`
+                        }}
+                      >
+                        {category.description}
+                      </Alert>
+                    )}
+                    {category.fields.length === 0 ? (
+                      <Alert variant="warning">
+                        No fields defined for this category
+                      </Alert>
+                    ) : (
+                      <Row>
+                        {category.fields.map(field => (
+                          <Col key={field.definition_id} md={6}>
+                            <CustomFieldDisplay
+                              fieldDefinition={field}
+                              value={fieldValues[field.definition_id]}
+                            />
+                          </Col>
+                        ))}
+                      </Row>
+                    )}
+                  </div>
+                </Tab>
+              ))}
 
               {/* Administrative Tab */}
               <Tab eventKey="admin" title={`⚙️ ${t('visits.administrativeTab')}`}>

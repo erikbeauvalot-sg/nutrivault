@@ -33,6 +33,7 @@ const InvoiceDetailPage = lazy(() => import('./pages/InvoiceDetailPage'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
 const DocumentUploadPage = lazy(() => import('./pages/DocumentUploadPage'));
+const CustomFieldsPage = lazy(() => import('./pages/CustomFieldsPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -239,6 +240,15 @@ function App() {
         element={
           <ProtectedRoute>
             <DocumentUploadPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/custom-fields"
+        element={
+          <ProtectedRoute>
+            <CustomFieldsPage />
           </ProtectedRoute>
         }
       />

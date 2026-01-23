@@ -1,0 +1,418 @@
+/**
+ * Visit Custom Field Service
+ *
+ * Business logic for managing visit custom field values.
+ * Handles CRUD operations with RBAC and audit logging.
+ * Follows visit access control: ADMIN sees all, DIETITIAN sees visits for assigned patients only.
+ */
+
+const db = require('../../../models');
+const VisitCustomFieldValue = db.VisitCustomFieldValue;
+const CustomFieldDefinition = db.CustomFieldDefinition;
+const CustomFieldCategory = db.CustomFieldCategory;
+const Visit = db.Visit;
+const Patient = db.Patient;
+const auditService = require('./audit.service');
+const { Op } = db.Sequelize;
+
+/**
+ * Check if user has access to visit
+ *
+ * @param {Object} user - Authenticated user object
+ * @param {string} visitId - Visit UUID
+ * @returns {Promise<boolean>} True if user has access
+ */
+async function checkVisitAccess(user, visitId) {
+  if (user.role.name === 'ADMIN') {
+    return true;
+  }
+
+  if (user.role.name === 'DIETITIAN') {
+    const visit = await Visit.findByPk(visitId, {
+      include: [{
+        model: Patient,
+        as: 'patient'
+      }]
+    });
+
+    if (!visit) {
+      return false;
+    }
+
+    // Dietitian can access if they're assigned to the patient OR if they're the visit dietitian
+    return visit.patient && (
+      visit.patient.assigned_dietitian_id === user.id ||
+      visit.dietitian_id === user.id
+    );
+  }
+
+  return false;
+}
+
+/**
+ * Get all custom field values for a visit
+ *
+ * @param {Object} user - Authenticated user object
+ * @param {string} visitId - Visit UUID
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Array>} Custom field values grouped by category
+ */
+async function getVisitCustomFields(user, visitId, requestMetadata = {}) {
+  try {
+    // Check visit access
+    const hasAccess = await checkVisitAccess(user, visitId);
+    if (!hasAccess) {
+      throw new Error('Access denied to this visit');
+    }
+
+    // Get all active categories and definitions where entity_types includes 'visit'
+    const categories = await CustomFieldCategory.findAll({
+      where: {
+        is_active: true
+      },
+      order: [['display_order', 'ASC']],
+      include: [
+        {
+          model: CustomFieldDefinition,
+          as: 'field_definitions',
+          where: { is_active: true },
+          required: false,
+          order: [['display_order', 'ASC']]
+        }
+      ]
+    });
+
+    // Filter categories to only those that apply to visits
+    const visitCategories = categories.filter(category => {
+      const entityTypes = category.entity_types || ['patient'];
+      return entityTypes.includes('visit');
+    });
+
+    // Get visit's custom field values
+    const visitValues = await VisitCustomFieldValue.findAll({
+      where: { visit_id: visitId },
+      include: [
+        {
+          model: CustomFieldDefinition,
+          as: 'field_definition',
+          where: { is_active: true },
+          required: true
+        }
+      ]
+    });
+
+    // Map values to definitions
+    const valuesMap = {};
+    visitValues.forEach(value => {
+      valuesMap[value.field_definition_id] = value;
+    });
+
+    // Build response with categories, definitions, and values
+    const result = visitCategories.map(category => ({
+      id: category.id,
+      name: category.name,
+      description: category.description,
+      display_order: category.display_order,
+      color: category.color || '#3498db',
+      fields: (category.field_definitions || []).map(definition => {
+        const value = valuesMap[definition.id];
+
+        // Parse JSON fields
+        let validationRules = null;
+        let selectOptions = null;
+
+        try {
+          validationRules = definition.validation_rules ? JSON.parse(definition.validation_rules) : null;
+        } catch (e) {
+          validationRules = definition.validation_rules;
+        }
+
+        try {
+          selectOptions = definition.select_options ? JSON.parse(definition.select_options) : null;
+        } catch (e) {
+          selectOptions = definition.select_options;
+        }
+
+        return {
+          definition_id: definition.id,
+          field_name: definition.field_name,
+          field_label: definition.field_label,
+          field_type: definition.field_type,
+          is_required: definition.is_required,
+          validation_rules: validationRules,
+          select_options: selectOptions,
+          help_text: definition.help_text,
+          display_order: definition.display_order,
+          show_in_basic_info: definition.show_in_basic_info || false,
+          value: value ? value.getValue(definition.field_type) : null,
+          value_id: value ? value.id : null,
+          updated_at: value ? value.updated_at : null
+        };
+      })
+    }));
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'READ',
+      resource_type: 'visit_custom_fields',
+      resource_id: visitId,
+      ...requestMetadata
+    });
+
+    return result;
+  } catch (error) {
+    console.error('Error in getVisitCustomFields:', error);
+    throw error;
+  }
+}
+
+/**
+ * Set a custom field value for a visit
+ *
+ * @param {Object} user - Authenticated user object
+ * @param {string} visitId - Visit UUID
+ * @param {string} definitionId - Field definition UUID
+ * @param {any} value - Field value
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated/created field value
+ */
+async function setVisitCustomField(user, visitId, definitionId, value, requestMetadata = {}) {
+  try {
+    // Check visit access
+    const hasAccess = await checkVisitAccess(user, visitId);
+    if (!hasAccess) {
+      throw new Error('Access denied to this visit');
+    }
+
+    // Get field definition
+    const definition = await CustomFieldDefinition.findByPk(definitionId);
+    if (!definition || !definition.is_active) {
+      throw new Error('Field definition not found or inactive');
+    }
+
+    // Validate value
+    const validation = definition.validateValue(value);
+    if (!validation.isValid) {
+      throw new Error(validation.error);
+    }
+
+    // Find or create visit custom field value
+    let fieldValue = await VisitCustomFieldValue.findOne({
+      where: {
+        visit_id: visitId,
+        field_definition_id: definitionId
+      }
+    });
+
+    const isNew = !fieldValue;
+    const beforeData = fieldValue ? fieldValue.toJSON() : null;
+
+    if (isNew) {
+      fieldValue = await VisitCustomFieldValue.create({
+        visit_id: visitId,
+        field_definition_id: definitionId,
+        updated_by: user.id
+      });
+    }
+
+    // Set the value based on field type
+    fieldValue.setValue(value, definition.field_type);
+    fieldValue.updated_by = user.id;
+    await fieldValue.save();
+
+    // Get visit info for audit log
+    const visit = await Visit.findByPk(visitId, {
+      include: [{ model: Patient, as: 'patient' }]
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: isNew ? 'CREATE' : 'UPDATE',
+      resource_type: 'visit_custom_field_value',
+      resource_id: fieldValue.id,
+      changes: {
+        before: beforeData,
+        after: fieldValue.toJSON()
+      },
+      details: visit ? `Visit for patient: ${visit.patient?.first_name} ${visit.patient?.last_name}, Field: ${definition.field_label}` : undefined,
+      ...requestMetadata
+    });
+
+    return fieldValue;
+  } catch (error) {
+    console.error('Error in setVisitCustomField:', error);
+    throw error;
+  }
+}
+
+/**
+ * Bulk update custom field values for a visit
+ *
+ * @param {Object} user - Authenticated user object
+ * @param {string} visitId - Visit UUID
+ * @param {Array} fields - Array of {definition_id, value} objects
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Result
+ */
+async function bulkUpdateVisitFields(user, visitId, fields, requestMetadata = {}) {
+  try {
+    // Check visit access
+    const hasAccess = await checkVisitAccess(user, visitId);
+    if (!hasAccess) {
+      throw new Error('Access denied to this visit');
+    }
+
+    const transaction = await db.sequelize.transaction();
+
+    try {
+      const results = [];
+
+      for (const field of fields) {
+        // Get field definition
+        const definition = await CustomFieldDefinition.findByPk(field.definition_id, { transaction });
+        if (!definition || !definition.is_active) {
+          throw new Error(`Field definition ${field.definition_id} not found or inactive`);
+        }
+
+        // Validate value
+        const validation = definition.validateValue(field.value);
+        if (!validation.isValid) {
+          throw new Error(`${definition.field_label}: ${validation.error}`);
+        }
+
+        // Find or create visit custom field value
+        let fieldValue = await VisitCustomFieldValue.findOne({
+          where: {
+            visit_id: visitId,
+            field_definition_id: field.definition_id
+          },
+          transaction
+        });
+
+        const isNew = !fieldValue;
+
+        if (isNew) {
+          fieldValue = await VisitCustomFieldValue.create({
+            visit_id: visitId,
+            field_definition_id: field.definition_id,
+            updated_by: user.id
+          }, { transaction });
+        }
+
+        // Set the value based on field type
+        fieldValue.setValue(field.value, definition.field_type);
+        fieldValue.updated_by = user.id;
+        await fieldValue.save({ transaction });
+
+        results.push({
+          definition_id: field.definition_id,
+          value_id: fieldValue.id,
+          status: isNew ? 'created' : 'updated'
+        });
+      }
+
+      await transaction.commit();
+
+      // Get visit info for audit log
+      const visit = await Visit.findByPk(visitId, {
+        include: [{ model: Patient, as: 'patient' }]
+      });
+
+      // Audit log
+      await auditService.log({
+        user_id: user.id,
+        username: user.username,
+        action: 'UPDATE',
+        resource_type: 'visit_custom_fields',
+        resource_id: visitId,
+        changes: { after: { fields: results } },
+        details: visit ? `Visit for patient: ${visit.patient?.first_name} ${visit.patient?.last_name}, Updated ${results.length} fields` : undefined,
+        ...requestMetadata
+      });
+
+      return {
+        message: `Successfully updated ${results.length} custom fields`,
+        results
+      };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error in bulkUpdateVisitFields:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a custom field value for a visit
+ *
+ * @param {Object} user - Authenticated user object
+ * @param {string} visitId - Visit UUID
+ * @param {string} fieldValueId - Field value UUID
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Result
+ */
+async function deleteVisitCustomField(user, visitId, fieldValueId, requestMetadata = {}) {
+  try {
+    // Check visit access
+    const hasAccess = await checkVisitAccess(user, visitId);
+    if (!hasAccess) {
+      throw new Error('Access denied to this visit');
+    }
+
+    const fieldValue = await VisitCustomFieldValue.findOne({
+      where: {
+        id: fieldValueId,
+        visit_id: visitId
+      },
+      include: [
+        {
+          model: CustomFieldDefinition,
+          as: 'field_definition'
+        }
+      ]
+    });
+
+    if (!fieldValue) {
+      throw new Error('Custom field value not found');
+    }
+
+    const beforeData = fieldValue.toJSON();
+
+    await fieldValue.destroy();
+
+    // Get visit info for audit log
+    const visit = await Visit.findByPk(visitId, {
+      include: [{ model: Patient, as: 'patient' }]
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'DELETE',
+      resource_type: 'visit_custom_field_value',
+      resource_id: fieldValueId,
+      changes: { before: beforeData },
+      details: visit ? `Visit for patient: ${visit.patient?.first_name} ${visit.patient?.last_name}` : undefined,
+      ...requestMetadata
+    });
+
+    return { message: 'Custom field value deleted successfully' };
+  } catch (error) {
+    console.error('Error in deleteVisitCustomField:', error);
+    throw error;
+  }
+}
+
+module.exports = {
+  getVisitCustomFields,
+  setVisitCustomField,
+  bulkUpdateVisitFields,
+  deleteVisitCustomField
+};

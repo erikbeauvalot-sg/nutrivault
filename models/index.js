@@ -28,6 +28,10 @@ db.DocumentShare = require('./DocumentShare')(sequelize, DataTypes);
 db.AuditLog = require('./AuditLog')(sequelize, DataTypes);
 db.RefreshToken = require('./RefreshToken')(sequelize, DataTypes);
 db.ApiKey = require('./ApiKey')(sequelize, DataTypes);
+db.CustomFieldCategory = require('./CustomFieldCategory')(sequelize, DataTypes);
+db.CustomFieldDefinition = require('./CustomFieldDefinition')(sequelize, DataTypes);
+db.PatientCustomFieldValue = require('./PatientCustomFieldValue')(sequelize, DataTypes);
+db.VisitCustomFieldValue = require('./VisitCustomFieldValue')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -237,5 +241,95 @@ db.User.hasMany(db.ApiKey, {
 
 // Note: AuditLog does not have FK constraints to preserve audit integrity
 // Documents use polymorphic associations (resource_type + resource_id)
+
+// CustomFieldCategory - CustomFieldDefinition relationship
+db.CustomFieldCategory.hasMany(db.CustomFieldDefinition, {
+  foreignKey: 'category_id',
+  as: 'field_definitions'
+});
+db.CustomFieldDefinition.belongsTo(db.CustomFieldCategory, {
+  foreignKey: 'category_id',
+  as: 'category'
+});
+
+// CustomFieldCategory - User (created_by) relationship
+db.CustomFieldCategory.belongsTo(db.User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+db.User.hasMany(db.CustomFieldCategory, {
+  foreignKey: 'created_by',
+  as: 'created_field_categories'
+});
+
+// CustomFieldDefinition - User (created_by) relationship
+db.CustomFieldDefinition.belongsTo(db.User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+db.User.hasMany(db.CustomFieldDefinition, {
+  foreignKey: 'created_by',
+  as: 'created_field_definitions'
+});
+
+// CustomFieldDefinition - PatientCustomFieldValue relationship
+db.CustomFieldDefinition.hasMany(db.PatientCustomFieldValue, {
+  foreignKey: 'field_definition_id',
+  as: 'patient_values'
+});
+db.PatientCustomFieldValue.belongsTo(db.CustomFieldDefinition, {
+  foreignKey: 'field_definition_id',
+  as: 'field_definition'
+});
+
+// Patient - PatientCustomFieldValue relationship
+db.Patient.hasMany(db.PatientCustomFieldValue, {
+  foreignKey: 'patient_id',
+  as: 'custom_field_values'
+});
+db.PatientCustomFieldValue.belongsTo(db.Patient, {
+  foreignKey: 'patient_id',
+  as: 'patient'
+});
+
+// PatientCustomFieldValue - User (updated_by) relationship
+db.PatientCustomFieldValue.belongsTo(db.User, {
+  foreignKey: 'updated_by',
+  as: 'updater'
+});
+db.User.hasMany(db.PatientCustomFieldValue, {
+  foreignKey: 'updated_by',
+  as: 'updated_custom_field_values'
+});
+
+// CustomFieldDefinition - VisitCustomFieldValue relationship
+db.CustomFieldDefinition.hasMany(db.VisitCustomFieldValue, {
+  foreignKey: 'field_definition_id',
+  as: 'visit_values'
+});
+db.VisitCustomFieldValue.belongsTo(db.CustomFieldDefinition, {
+  foreignKey: 'field_definition_id',
+  as: 'field_definition'
+});
+
+// Visit - VisitCustomFieldValue relationship
+db.Visit.hasMany(db.VisitCustomFieldValue, {
+  foreignKey: 'visit_id',
+  as: 'custom_field_values'
+});
+db.VisitCustomFieldValue.belongsTo(db.Visit, {
+  foreignKey: 'visit_id',
+  as: 'visit'
+});
+
+// VisitCustomFieldValue - User (updated_by) relationship
+db.VisitCustomFieldValue.belongsTo(db.User, {
+  foreignKey: 'updated_by',
+  as: 'updater'
+});
+db.User.hasMany(db.VisitCustomFieldValue, {
+  foreignKey: 'updated_by',
+  as: 'updated_visit_custom_field_values'
+});
 
 module.exports = db;

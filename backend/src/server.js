@@ -82,6 +82,10 @@ app.use('/api/alerts', alertsRoutes);
 const gdprRoutes = require('./routes/gdpr');
 app.use('/api/gdpr', gdprRoutes);
 
+// Custom Fields routes (protected - RBAC enforced in routes file)
+const customFieldsRoutes = require('./routes/customFields');
+app.use('/api/custom-fields', customFieldsRoutes);
+
 // Basic error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);

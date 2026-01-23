@@ -6,11 +6,13 @@
 import { Nav } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../contexts/AuthContext';
 import './Sidebar.css';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   const menuItems = [
     { path: '/dashboard', icon: '📊', label: t('navigation.dashboard') },
@@ -21,6 +23,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { path: '/documents', icon: '📄', label: t('documents.title'), disabled: false },
     { path: '/reports', icon: '📈', label: t('navigation.reports') },
     { path: '/users', icon: '👤', label: t('navigation.users') },
+    ...(user?.role === 'ADMIN' ? [{ path: '/settings/custom-fields', icon: '🔧', label: t('navigation.customFields') }] : []),
   ];
 
   const handleNavClick = () => {
