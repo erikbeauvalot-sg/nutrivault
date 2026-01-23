@@ -19,14 +19,25 @@ const CustomFieldsPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Restore filter state from localStorage
+  const getStoredFilters = () => {
+    try {
+      const stored = localStorage.getItem('customFieldsPage_filters');
+      return stored ? JSON.parse(stored) : { searchQuery: '', selectedCategories: [] };
+    } catch (err) {
+      console.error('Error reading filters from localStorage:', err);
+      return { searchQuery: '', selectedCategories: [] };
+    }
+  };
+
   // State
   const [categories, setCategories] = useState([]);
   const [definitions, setDefinitions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('categories');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [searchQuery, setSearchQuery] = useState(() => getStoredFilters().searchQuery);
+  const [selectedCategories, setSelectedCategories] = useState(() => getStoredFilters().selectedCategories);
 
   // Modal state
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -46,6 +57,19 @@ const CustomFieldsPage = () => {
       fetchData();
     }
   }, [user]);
+
+  // Persist filter state to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      const filters = {
+        searchQuery,
+        selectedCategories
+      };
+      localStorage.setItem('customFieldsPage_filters', JSON.stringify(filters));
+    } catch (err) {
+      console.error('Error saving filters to localStorage:', err);
+    }
+  }, [searchQuery, selectedCategories]);
 
   const fetchData = async () => {
     try {
@@ -140,6 +164,11 @@ const CustomFieldsPage = () => {
   };
 
   const handleDeselectAllCategories = () => {
+    setSelectedCategories([]);
+  };
+
+  const handleClearAllFilters = () => {
+    setSearchQuery('');
     setSelectedCategories([]);
   };
 
@@ -401,13 +430,20 @@ const CustomFieldsPage = () => {
                   </Row>
                 )}
 
-                {/* Results Counter */}
+                {/* Results Counter and Clear All */}
                 {(searchQuery || selectedCategories.length > 0) && (
                   <Row className="mb-2">
-                    <Col>
+                    <Col className="d-flex justify-content-between align-items-center">
                       <Form.Text className="text-muted">
                         Showing {filteredDefinitions.length} of {definitions.length} field{filteredDefinitions.length !== 1 ? 's' : ''}
                       </Form.Text>
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        onClick={handleClearAllFilters}
+                      >
+                        🔄 Clear All Filters
+                      </Button>
                     </Col>
                   </Row>
                 )}
