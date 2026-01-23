@@ -206,6 +206,26 @@ exports.getDietitians = async (req, res, next) => {
 };
 
 /**
+ * GET /api/users/check-email/:email - Check if email is available
+ */
+exports.checkEmailAvailability = async (req, res, next) => {
+  try {
+    const { email } = req.params;
+    const { excludeId } = req.query; // For updates, exclude current user
+
+    const isAvailable = await userService.checkEmailAvailability(email, excludeId);
+
+    res.json({
+      success: true,
+      available: isAvailable,
+      email: email.toLowerCase().trim()
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * GET /api/users/roles - Get all available roles
  */
 exports.getRoles = async (req, res, next) => {

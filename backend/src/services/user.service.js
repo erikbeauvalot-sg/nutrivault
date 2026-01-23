@@ -201,8 +201,9 @@ async function createUser(user, userData, requestMetadata = {}) {
       where: { email: userData.email }
     });
     if (existingEmail) {
-      const error = new Error('Email already exists');
-      error.statusCode = 400;
+      const error = new Error('Email already exists for another user');
+      error.statusCode = 409;
+      error.code = 'EMAIL_ALREADY_EXISTS_USER';
       throw error;
     }
 
@@ -312,8 +313,9 @@ async function updateUser(user, userId, updateData, requestMetadata = {}) {
         where: { email: updateData.email, id: { [Op.ne]: userId } }
       });
       if (existingEmail) {
-        const error = new Error('Email already exists');
-        error.statusCode = 400;
+        const error = new Error('Email already exists for another user');
+        error.statusCode = 409;
+        error.code = 'EMAIL_ALREADY_EXISTS_USER';
         throw error;
       }
     }
@@ -412,9 +414,16 @@ async function deleteUser(user, userId, requestMetadata = {}) {
       throw error;
     }
 
-    // Soft delete - set is_active to false
-    targetUser.is_active = false;
-    await targetUser.save();
+    // User must be deactivated before deletion
+    if (targetUser.is_active) {
+      const error = new Error('User must be deactivated before deletion. Please deactivate the user first.');
+      error.statusCode = 400;
+      error.code = 'USER_MUST_BE_DEACTIVATED';
+      throw error;
+    }
+
+    // Hard delete - actually remove from database
+    await targetUser.destroy();
 
     // Audit log
     await auditService.log({
@@ -423,10 +432,15 @@ async function deleteUser(user, userId, requestMetadata = {}) {
       action: 'DELETE',
       resource_type: 'users',
       resource_id: userId,
-      details: { target_username: targetUser.username },
+      details: {
+        target_username: targetUser.username,
+        target_email: targetUser.email
+      },
       ip_address: requestMetadata.ip,
       user_agent: requestMetadata.userAgent
     });
+
+    return { message: 'User permanently deleted successfully' };
   } catch (error) {
     console.error('Error in deleteUser:', error.message);
     throw error;
@@ -660,6 +674,42 @@ async function getRoles() {
   }
 }
 
+/**
+ * Check if email is available for use
+ *
+ * @param {string} email - Email to check
+ * @param {string} excludeId - User ID to exclude from check (for updates)
+ * @returns {Promise<boolean>} True if email is available, false if taken
+ */
+async function checkEmailAvailability(email, excludeId = null) {
+  try {
+    if (!email) {
+      return false; // Empty email not allowed for users
+    }
+
+    // Normalize email
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const whereClause = {
+      email: normalizedEmail
+    };
+
+    // Exclude current user when updating
+    if (excludeId) {
+      whereClause.id = { [Op.ne]: excludeId };
+    }
+
+    const existingUser = await User.findOne({
+      where: whereClause
+    });
+
+    return !existingUser; // Available if no existing user found
+  } catch (error) {
+    console.error('Error checking email availability:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getUsers,
   getUserById,
@@ -669,5 +719,6 @@ module.exports = {
   changePassword,
   toggleUserStatus,
   getDietitians,
-  getRoles
+  getRoles,
+  checkEmailAvailability
 };

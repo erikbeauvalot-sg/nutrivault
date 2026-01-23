@@ -14,7 +14,7 @@ import visitCustomFieldService from '../services/visitCustomFieldService';
 import CustomFieldInput from '../components/CustomFieldInput';
 
 const EditVisitPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -56,9 +56,11 @@ const EditVisitPage = () => {
   const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
-    fetchVisitData();
-    fetchCustomFields();
-  }, [id]);
+    if (i18n.resolvedLanguage) {
+      fetchVisitData();
+      fetchCustomFields();
+    }
+  }, [id, i18n.resolvedLanguage]);
 
   const fetchVisitData = async () => {
     try {
@@ -112,7 +114,11 @@ const EditVisitPage = () => {
 
   const fetchCustomFields = async () => {
     try {
-      const data = await visitCustomFieldService.getVisitCustomFields(id);
+      let language = i18n.resolvedLanguage || i18n.language;
+      if (!language) {
+        language = localStorage.getItem('i18nextLng') || 'fr';
+      }
+      const data = await visitCustomFieldService.getVisitCustomFields(id, language);
       setCustomFieldCategories(data || []);
 
       // Build initial values map

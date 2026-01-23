@@ -5,12 +5,13 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Modal, Button, Form, Alert, Spinner, Card, Badge, Row, Col } from 'react-bootstrap';
+import { Modal, Button, Form, Alert, Spinner, Card, Badge, Row, Col, Tabs, Tab } from 'react-bootstrap';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useTranslation } from 'react-i18next';
 import customFieldService from '../services/customFieldService';
+import TranslationEditor from './TranslationEditor';
 
 const FIELD_TYPES = [
   { value: 'text', label: 'Text', icon: '📝' },
@@ -55,6 +56,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
   const [selectedFieldType, setSelectedFieldType] = useState('text');
   const [selectOptions, setSelectOptions] = useState([]);
   const [validationRules, setValidationRules] = useState({});
+  const [activeTab, setActiveTab] = useState('general');
 
   const isEditing = !!definition;
 
@@ -131,10 +133,18 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
 
       // Build the payload
       const payload = {
-        ...data,
-        validation_rules: Object.keys(validationRules).length > 0 ? JSON.stringify(validationRules) : null,
-        select_options: selectedFieldType === 'select' ? selectOptions : null
+        ...data
       };
+
+      // Add validation_rules only if not empty
+      if (Object.keys(validationRules).length > 0) {
+        payload.validation_rules = JSON.stringify(validationRules);
+      }
+
+      // Add select_options only for select type
+      if (selectedFieldType === 'select') {
+        payload.select_options = selectOptions;
+      }
 
       // Validate select options
       if (selectedFieldType === 'select' && (!selectOptions || selectOptions.length === 0)) {
@@ -213,6 +223,14 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
               Field definition {isEditing ? 'updated' : 'created'} successfully!
             </Alert>
           )}
+
+          <Tabs
+            activeKey={activeTab}
+            onSelect={(k) => setActiveTab(k)}
+            className="mb-3"
+          >
+            <Tab eventKey="general" title="📝 General">
+              <div className="pt-2">
 
           <Row>
             <Col md={6}>
@@ -462,6 +480,32 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
               </Form.Group>
             </Col>
           </Row>
+              </div>
+            </Tab>
+
+            <Tab
+              eventKey="translations"
+              title="🌍 Translations"
+              disabled={!isEditing}
+            >
+              <div className="pt-2">
+                {isEditing ? (
+                  <TranslationEditor
+                    entityType="field_definition"
+                    entityId={definition.id}
+                    originalValues={{
+                      field_label: definition.field_label,
+                      help_text: definition.help_text
+                    }}
+                  />
+                ) : (
+                  <Alert variant="info">
+                    ℹ️ Save the field definition first to add translations.
+                  </Alert>
+                )}
+              </div>
+            </Tab>
+          </Tabs>
         </Modal.Body>
 
         <Modal.Footer>

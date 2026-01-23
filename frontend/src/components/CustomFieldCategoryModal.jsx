@@ -4,13 +4,14 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Modal, Button, Form, Alert, Spinner, Row, Col, Badge } from 'react-bootstrap';
+import { Modal, Button, Form, Alert, Spinner, Row, Col, Badge, Tabs, Tab } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { HexColorPicker } from 'react-colorful';
 import { useTranslation } from 'react-i18next';
 import customFieldService from '../services/customFieldService';
+import TranslationEditor from './TranslationEditor';
 
 // Validation schema
 const categorySchema = (t) => yup.object().shape({
@@ -38,6 +39,7 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
   const [success, setSuccess] = useState(false);
   const [color, setColor] = useState('#3498db');
   const [entityTypes, setEntityTypes] = useState(['patient']);
+  const [activeTab, setActiveTab] = useState('general');
 
   const isEditing = !!category;
 
@@ -185,6 +187,14 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
             </Alert>
           )}
 
+          <Tabs
+            activeKey={activeTab}
+            onSelect={(k) => setActiveTab(k)}
+            className="mb-3"
+          >
+            <Tab eventKey="general" title="📝 General">
+              <div className="pt-2">
+
           <Form.Group className="mb-3">
             <Form.Label>Name *</Form.Label>
             <Form.Control
@@ -322,6 +332,32 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
               Inactive categories are hidden from users
             </Form.Text>
           </Form.Group>
+              </div>
+            </Tab>
+
+            <Tab
+              eventKey="translations"
+              title="🌍 Translations"
+              disabled={!isEditing}
+            >
+              <div className="pt-2">
+                {isEditing ? (
+                  <TranslationEditor
+                    entityType="category"
+                    entityId={category.id}
+                    originalValues={{
+                      name: category.name,
+                      description: category.description
+                    }}
+                  />
+                ) : (
+                  <Alert variant="info">
+                    ℹ️ Save the category first to add translations.
+                  </Alert>
+                )}
+              </div>
+            </Tab>
+          </Tabs>
         </Modal.Body>
 
         <Modal.Footer>

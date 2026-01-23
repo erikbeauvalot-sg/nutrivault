@@ -347,6 +347,31 @@ async function createPatient(patientData, user, requestMetadata = {}) {
 
     return patient;
   } catch (error) {
+    // Handle unique constraint violations
+    if (error.name === 'SequelizeUniqueConstraintError' || error.message?.includes('UNIQUE constraint failed')) {
+      if (error.message?.includes('email') || error.fields?.email) {
+        const duplicateError = new Error('Email already exists for another patient');
+        duplicateError.statusCode = 409;
+        duplicateError.code = 'EMAIL_ALREADY_EXISTS_PATIENT';
+
+        // Audit log failure
+        await auditService.log({
+          user_id: user.id,
+          username: user.username,
+          action: 'CREATE',
+          resource_type: 'patients',
+          status_code: 409,
+          error_message: duplicateError.message,
+          ip_address: requestMetadata.ip,
+          user_agent: requestMetadata.userAgent,
+          request_method: requestMetadata.method,
+          request_path: requestMetadata.path
+        });
+
+        throw duplicateError;
+      }
+    }
+
     // Audit log failure
     await auditService.log({
       user_id: user.id,
@@ -461,6 +486,32 @@ async function updatePatient(patientId, updateData, user, requestMetadata = {}) 
 
     return patient;
   } catch (error) {
+    // Handle unique constraint violations
+    if (error.name === 'SequelizeUniqueConstraintError' || error.message?.includes('UNIQUE constraint failed')) {
+      if (error.message?.includes('email') || error.fields?.email) {
+        const duplicateError = new Error('Email already exists for another patient');
+        duplicateError.statusCode = 409;
+        duplicateError.code = 'EMAIL_ALREADY_EXISTS_PATIENT';
+
+        // Audit log failure
+        await auditService.log({
+          user_id: user.id,
+          username: user.username,
+          action: 'UPDATE',
+          resource_type: 'patients',
+          resource_id: patientId,
+          status_code: 409,
+          error_message: duplicateError.message,
+          ip_address: requestMetadata.ip,
+          user_agent: requestMetadata.userAgent,
+          request_method: requestMetadata.method,
+          request_path: requestMetadata.path
+        });
+
+        throw duplicateError;
+      }
+    }
+
     // Audit log failure
     await auditService.log({
       user_id: user.id,
@@ -559,11 +610,49 @@ async function deletePatient(patientId, user, requestMetadata = {}) {
   }
 }
 
+/**
+ * Check if email is available for use
+ *
+ * @param {string} email - Email to check
+ * @param {string} excludeId - Patient ID to exclude from check (for updates)
+ * @returns {Promise<boolean>} True if email is available, false if taken
+ */
+async function checkEmailAvailability(email, excludeId = null) {
+  try {
+    if (!email) {
+      return true; // Empty email is allowed
+    }
+
+    // Normalize email
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const whereClause = {
+      email: normalizedEmail,
+      is_active: true
+    };
+
+    // Exclude current patient when updating
+    if (excludeId) {
+      whereClause.id = { [Op.ne]: excludeId };
+    }
+
+    const existingPatient = await Patient.findOne({
+      where: whereClause
+    });
+
+    return !existingPatient; // Available if no existing patient found
+  } catch (error) {
+    console.error('Error checking email availability:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getPatients,
   getPatientById,
   getPatientDetails,
   createPatient,
   updatePatient,
-  deletePatient
+  deletePatient,
+  checkEmailAvailability
 };

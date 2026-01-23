@@ -1022,18 +1022,42 @@ cat .env.production
 
 ### Erreur de migration de base de données
 
+#### Erreur "no such column" (ex: show_in_basic_info)
+
+Si vous voyez une erreur comme `SQLITE_ERROR: no such column: CustomFieldDefinition.show_in_basic_info`:
+
+**Cause :** Les migrations backend n'ont pas été exécutées. Le script `docker-entrypoint.sh` consolide maintenant automatiquement les migrations des deux répertoires (`/migrations/` et `/backend/migrations/`).
+
+**Solution :**
+
 ```bash
-# Accéder au conteneur
+# Option 1: Redémarrer le conteneur (recommandé)
+# Les migrations s'exécutent automatiquement au démarrage
+docker-compose restart backend
+
+# Option 2: Exécuter manuellement
 docker exec -it nutrivault-backend sh
 
 # Vérifier l'état des migrations
 npx sequelize-cli db:migrate:status
 
-# Forcer une migration
+# Exécuter les migrations en attente
 npm run db:migrate
 
 # Sortir
 exit
+```
+
+**Vérification :**
+
+```bash
+# Les logs doivent montrer :
+docker-compose logs backend | grep -i "migration"
+
+# Résultat attendu :
+# 📦 Consolidating migrations...
+# 🔄 Running database migrations...
+# ✅ Migrations completed successfully
 ```
 
 ### Problème de connexion API

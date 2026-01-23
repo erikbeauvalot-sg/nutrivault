@@ -43,6 +43,7 @@ COPY backend/seed.js ./seed.js
 # Copy models, migrations and config from project root
 COPY models/ ./models/
 COPY migrations/ ./migrations/
+COPY backend/migrations/ ./backend-migrations/
 COPY config/ ./config/
 
 # Create symbolic link for models at root level (for ../../models require in server.js)

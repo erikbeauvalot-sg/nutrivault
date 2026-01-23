@@ -60,9 +60,15 @@ const PatientDetailPage = () => {
       fetchPatientDetails();
       fetchPatientDocuments();
       fetchPatientInvoices();
-      fetchCustomFields();
     }
   }, [id]);
+
+  // Separate effect for custom fields that depends on language
+  useEffect(() => {
+    if (id) {
+      fetchCustomFields();
+    }
+  }, [id, i18n.resolvedLanguage, i18n.language]);
 
   const fetchPatientDetails = async () => {
     try {
@@ -107,7 +113,11 @@ const PatientDetailPage = () => {
 
   const fetchCustomFields = async () => {
     try {
-      const data = await customFieldService.getPatientCustomFields(id);
+      let language = i18n.resolvedLanguage || i18n.language;
+      if (!language) {
+        language = localStorage.getItem('i18nextLng') || 'fr';
+      }
+      const data = await customFieldService.getPatientCustomFields(id, language);
       setCustomFieldCategories(data || []);
 
       // Build initial values map

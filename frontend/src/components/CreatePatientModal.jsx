@@ -3,13 +3,14 @@
  * Multi-step modal form for creating new patients with custom fields
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Modal, Button, Form, Row, Col, ProgressBar, Alert, Spinner } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import userService from '../services/userService';
 import PatientTagsManager from './PatientTagsManager';
 import customFieldService from '../services/customFieldService';
 import CustomFieldInput from './CustomFieldInput';
+import api from '../services/api';
 
 const CreatePatientModal = ({ show, onHide, onSubmit }) => {
   const { t } = useTranslation();
@@ -17,6 +18,13 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dietitians, setDietitians] = useState([]);
+
+  // Email validation state
+  const [emailValidation, setEmailValidation] = useState({
+    status: 'idle', // 'idle' | 'checking' | 'available' | 'taken'
+    message: ''
+  });
+  const emailCheckTimeout = useRef(null);
 
   // Custom fields state
   const [customFieldCategories, setCustomFieldCategories] = useState([]);
@@ -43,6 +51,15 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
       fetchCustomFields();
     }
   }, [show]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (emailCheckTimeout.current) {
+        clearTimeout(emailCheckTimeout.current);
+      }
+    };
+  }, []);
 
   const fetchDietitians = async () => {
     try {
@@ -79,6 +96,43 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
     }
   };
 
+  // Check email availability with debounce (500ms)
+  const checkEmailAvailability = useCallback(async (email) => {
+    if (!email || !email.trim()) {
+      setEmailValidation({ status: 'idle', message: '' });
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailValidation({ status: 'idle', message: '' });
+      return;
+    }
+
+    setEmailValidation({ status: 'checking', message: 'Vérification...' });
+
+    try {
+      const response = await api.get(`/api/patients/check-email/${encodeURIComponent(email.trim().toLowerCase())}`);
+      const isAvailable = response.data?.available;
+
+      if (isAvailable) {
+        setEmailValidation({
+          status: 'available',
+          message: '✓ Email disponible'
+        });
+      } else {
+        setEmailValidation({
+          status: 'taken',
+          message: '✗ Cet email est déjà utilisé par un autre patient'
+        });
+      }
+    } catch (err) {
+      console.error('Error checking email:', err);
+      setEmailValidation({ status: 'idle', message: '' });
+    }
+  }, []);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -86,6 +140,24 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
       [name]: value
     }));
     setError(null);
+
+    // Debounced email validation
+    if (name === 'email') {
+      // Clear previous timeout
+      if (emailCheckTimeout.current) {
+        clearTimeout(emailCheckTimeout.current);
+      }
+
+      // Reset validation status while typing
+      setEmailValidation({ status: 'idle', message: '' });
+
+      // Set new timeout (500ms debounce)
+      if (value && value.trim()) {
+        emailCheckTimeout.current = setTimeout(() => {
+          checkEmailAvailability(value);
+        }, 500);
+      }
+    }
   };
 
   const handleTagsChange = (newTags) => {
@@ -118,6 +190,16 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
       }
       if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
         setError('Format email invalide');
+        return false;
+      }
+      // Check if email is taken
+      if (formData.email && emailValidation.status === 'taken') {
+        setError('Cet email est déjà utilisé par un autre patient');
+        return false;
+      }
+      // Wait for email validation to complete
+      if (formData.email && emailValidation.status === 'checking') {
+        setError('Vérification de l\'email en cours...');
         return false;
       }
     } else if (step > 1 && step <= customFieldCategories.length + 1) {
@@ -273,7 +355,25 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
+                  isValid={emailValidation.status === 'available'}
+                  isInvalid={emailValidation.status === 'taken'}
                 />
+                {emailValidation.status === 'checking' && (
+                  <Form.Text className="text-muted">
+                    <Spinner animation="border" size="sm" className="me-1" />
+                    {emailValidation.message}
+                  </Form.Text>
+                )}
+                {emailValidation.status === 'available' && (
+                  <Form.Control.Feedback type="valid">
+                    {emailValidation.message}
+                  </Form.Control.Feedback>
+                )}
+                {emailValidation.status === 'taken' && (
+                  <Form.Control.Feedback type="invalid">
+                    {emailValidation.message}
+                  </Form.Control.Feedback>
+                )}
               </Form.Group>
             </Col>
             <Col md={6}>

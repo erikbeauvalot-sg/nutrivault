@@ -32,6 +32,7 @@ db.CustomFieldCategory = require('./CustomFieldCategory')(sequelize, DataTypes);
 db.CustomFieldDefinition = require('./CustomFieldDefinition')(sequelize, DataTypes);
 db.PatientCustomFieldValue = require('./PatientCustomFieldValue')(sequelize, DataTypes);
 db.VisitCustomFieldValue = require('./VisitCustomFieldValue')(sequelize, DataTypes);
+db.CustomFieldTranslation = require('./CustomFieldTranslation')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship

@@ -17,6 +17,14 @@ module.exports = (sequelize, DataTypes) => {
       unique: true,
       validate: {
         isEmail: true
+      },
+      set(value) {
+        // Normalize email: trim and lowercase
+        if (value) {
+          this.setDataValue('email', value.trim().toLowerCase());
+        } else {
+          this.setDataValue('email', value);
+        }
       }
     },
     password_hash: {

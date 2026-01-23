@@ -13,6 +13,7 @@ const CustomFieldCategory = db.CustomFieldCategory;
 const Visit = db.Visit;
 const Patient = db.Patient;
 const auditService = require('./audit.service');
+const translationService = require('./customFieldTranslation.service');
 const { Op } = db.Sequelize;
 
 /**
@@ -57,7 +58,7 @@ async function checkVisitAccess(user, visitId) {
  * @param {Object} requestMetadata - Request metadata for audit logging
  * @returns {Promise<Array>} Custom field values grouped by category
  */
-async function getVisitCustomFields(user, visitId, requestMetadata = {}) {
+async function getVisitCustomFields(user, visitId, language = 'fr', requestMetadata = {}) {
   try {
     // Check visit access
     const hasAccess = await checkVisitAccess(user, visitId);
@@ -108,47 +109,72 @@ async function getVisitCustomFields(user, visitId, requestMetadata = {}) {
     });
 
     // Build response with categories, definitions, and values
-    const result = visitCategories.map(category => ({
-      id: category.id,
-      name: category.name,
-      description: category.description,
-      display_order: category.display_order,
-      color: category.color || '#3498db',
-      fields: (category.field_definitions || []).map(definition => {
+    const result = await Promise.all(visitCategories.map(async (category) => {
+      // Apply translations to category if language is not French
+      let translatedCategory = category.toJSON ? category.toJSON() : category;
+      if (language && language !== 'fr') {
+        translatedCategory = await translationService.applyTranslations(
+          category,
+          'category',
+          language
+        );
+      }
+
+      // Process field definitions
+      const fields = await Promise.all((category.field_definitions || []).map(async (definition) => {
         const value = valuesMap[definition.id];
+
+        // Apply translations to definition if language is not French
+        let translatedDefinition = definition.toJSON ? definition.toJSON() : definition;
+        if (language && language !== 'fr') {
+          translatedDefinition = await translationService.applyTranslations(
+            definition,
+            'field_definition',
+            language
+          );
+        }
 
         // Parse JSON fields
         let validationRules = null;
         let selectOptions = null;
 
         try {
-          validationRules = definition.validation_rules ? JSON.parse(definition.validation_rules) : null;
+          validationRules = translatedDefinition.validation_rules ? JSON.parse(translatedDefinition.validation_rules) : null;
         } catch (e) {
-          validationRules = definition.validation_rules;
+          validationRules = translatedDefinition.validation_rules;
         }
 
         try {
-          selectOptions = definition.select_options ? JSON.parse(definition.select_options) : null;
+          selectOptions = translatedDefinition.select_options ? JSON.parse(translatedDefinition.select_options) : null;
         } catch (e) {
-          selectOptions = definition.select_options;
+          selectOptions = translatedDefinition.select_options;
         }
 
         return {
-          definition_id: definition.id,
-          field_name: definition.field_name,
-          field_label: definition.field_label,
-          field_type: definition.field_type,
-          is_required: definition.is_required,
+          definition_id: translatedDefinition.id,
+          field_name: translatedDefinition.field_name,
+          field_label: translatedDefinition.field_label,
+          field_type: translatedDefinition.field_type,
+          is_required: translatedDefinition.is_required,
           validation_rules: validationRules,
           select_options: selectOptions,
-          help_text: definition.help_text,
-          display_order: definition.display_order,
-          show_in_basic_info: definition.show_in_basic_info || false,
-          value: value ? value.getValue(definition.field_type) : null,
+          help_text: translatedDefinition.help_text,
+          display_order: translatedDefinition.display_order,
+          show_in_basic_info: translatedDefinition.show_in_basic_info || false,
+          value: value ? value.getValue(translatedDefinition.field_type) : null,
           value_id: value ? value.id : null,
           updated_at: value ? value.updated_at : null
         };
-      })
+      }));
+
+      return {
+        id: translatedCategory.id,
+        name: translatedCategory.name,
+        description: translatedCategory.description,
+        display_order: translatedCategory.display_order,
+        color: translatedCategory.color || '#3498db',
+        fields
+      };
     }));
 
     // Audit log

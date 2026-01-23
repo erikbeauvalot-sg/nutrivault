@@ -6,10 +6,12 @@
 import { useState, useEffect } from 'react';
 import { Tabs, Tab, Spinner, Alert, Button, Row, Col, Form } from 'react-bootstrap';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import customFieldService from '../services/customFieldService';
 import CustomFieldInput from './CustomFieldInput';
 
 const PatientCustomFieldsTabs = ({ patientId, editable = false, onUpdate = null }) => {
+  const { i18n, ready } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [customFields, setCustomFields] = useState([]);
@@ -19,15 +21,21 @@ const PatientCustomFieldsTabs = ({ patientId, editable = false, onUpdate = null 
   const [activeKey, setActiveKey] = useState(null);
 
   useEffect(() => {
-    if (patientId) {
+    if (patientId && ready) {
       fetchCustomFields();
     }
-  }, [patientId]);
+  }, [patientId, ready, i18n.resolvedLanguage]);
 
   const fetchCustomFields = async () => {
     try {
       setLoading(true);
-      const data = await customFieldService.getPatientCustomFields(patientId);
+      // Get language from multiple sources with fallback
+      let language = i18n.resolvedLanguage || i18n.language;
+      if (!language) {
+        language = localStorage.getItem('i18nextLng') || 'fr';
+      }
+
+      const data = await customFieldService.getPatientCustomFields(patientId, language);
 
       setCustomFields(data || []);
 

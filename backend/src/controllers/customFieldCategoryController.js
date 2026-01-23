@@ -14,7 +14,8 @@ const getAllCategories = async (req, res) => {
   try {
     const user = req.user;
     const filters = {
-      is_active: req.query.is_active
+      is_active: req.query.is_active,
+      language: req.query.language || user.language_preference || 'fr'
     };
 
     const requestMetadata = {
@@ -47,6 +48,7 @@ const getCategoryById = async (req, res) => {
   try {
     const { id } = req.params;
     const user = req.user;
+    const language = req.query.language || user.language_preference || 'fr';
 
     const requestMetadata = {
       ip_address: req.ip,
@@ -55,7 +57,7 @@ const getCategoryById = async (req, res) => {
       request_path: req.originalUrl
     };
 
-    const category = await customFieldCategoryService.getCategoryById(user, id, requestMetadata);
+    const category = await customFieldCategoryService.getCategoryById(user, id, language, requestMetadata);
 
     res.json({
       success: true,

@@ -156,10 +156,23 @@ router.get(
 );
 
 /**
- * Patient Tags Routes
+ * Patient-specific Routes
  * NOTE: These specific routes MUST come before the /:id parameterized routes
- * to prevent Express from matching "tags" as a patient ID
+ * to prevent Express from matching paths like "tags", "check-email" as patient IDs
  */
+
+/**
+ * GET /api/patients/check-email/:email - Check if email is available
+ * Requires: patients.read permission
+ */
+router.get(
+  '/check-email/:email',
+  authenticate,
+  requirePermission('patients.read'),
+  param('email').isEmail().withMessage('Invalid email format'),
+  validate,
+  patientController.checkEmailAvailability
+);
 
 /**
  * GET /api/patients/tags - Get all available tags

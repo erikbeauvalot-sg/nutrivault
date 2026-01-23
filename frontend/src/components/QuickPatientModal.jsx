@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { Modal, Button, Form, Alert, Spinner } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import * as patientService from '../services/patientService';
+import useEmailCheck from '../hooks/useEmailCheck';
 
 const QuickPatientModal = ({ show, onHide, onSuccess }) => {
   const { t } = useTranslation();
@@ -19,6 +20,14 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Email availability check with debouncing
+  const { checking: checkingEmail, available: emailAvailable, error: emailCheckError } = useEmailCheck(
+    formData.email,
+    'patient',
+    null,
+    500
+  );
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -178,7 +187,30 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
               onChange={handleChange}
               placeholder={t('patients.emailPlaceholder', 'patient@example.com')}
               disabled={loading}
+              isInvalid={formData.email && emailAvailable === false}
+              isValid={formData.email && emailAvailable === true}
             />
+            {checkingEmail && formData.email && (
+              <Form.Text className="text-muted">
+                <Spinner animation="border" size="sm" className="me-1" />
+                {t('patients.checkingEmail', 'Checking email availability...')}
+              </Form.Text>
+            )}
+            {emailAvailable === false && formData.email && (
+              <Form.Control.Feedback type="invalid" style={{ display: 'block' }}>
+                {t('patients.emailTaken', 'This email is already used by another patient')}
+              </Form.Control.Feedback>
+            )}
+            {emailAvailable === true && formData.email && (
+              <Form.Control.Feedback type="valid" style={{ display: 'block' }}>
+                {t('patients.emailAvailable', 'Email is available')}
+              </Form.Control.Feedback>
+            )}
+            {emailCheckError && (
+              <Form.Text className="text-danger">
+                {emailCheckError}
+              </Form.Text>
+            )}
           </Form.Group>
 
           <Form.Group className="mb-3">
@@ -205,7 +237,11 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
           <Button variant="secondary" onClick={handleClose} disabled={loading}>
             {t('common.cancel', 'Cancel')}
           </Button>
-          <Button variant="primary" type="submit" disabled={loading}>
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={loading || checkingEmail || (formData.email && emailAvailable === false)}
+          >
             {loading ? (
               <>
                 <Spinner animation="border" size="sm" className="me-2" />
