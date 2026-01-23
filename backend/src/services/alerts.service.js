@@ -91,7 +91,7 @@ async function getAlerts(user, requestMetadata = {}) {
     });
 
     // Get active custom field definitions for visits
-    const visitCustomFields = await CustomFieldDefinition.findAll({
+    const allCustomFields = await CustomFieldDefinition.findAll({
       where: {
         is_active: true
       },
@@ -99,12 +99,21 @@ async function getAlerts(user, requestMetadata = {}) {
         model: db.CustomFieldCategory,
         as: 'category',
         where: {
-          entity_type: 'visit',
           is_active: true
         },
         required: true
       }],
       attributes: ['id']
+    });
+
+    // Filter for visit fields - check if 'visit' is in entity_types array
+    const visitCustomFields = allCustomFields.filter(field => {
+      const entityTypes = field.category.entity_types;
+      // entity_types is a JSON field that could be an array or a string
+      if (Array.isArray(entityTypes)) {
+        return entityTypes.includes('visit');
+      }
+      return false;
     });
 
     const visitFieldIds = visitCustomFields.map(f => f.id);
@@ -118,13 +127,16 @@ async function getAlerts(user, requestMetadata = {}) {
       const values = await VisitCustomFieldValue.findAll({
         where: {
           visit_id: visit.id,
-          definition_id: visitFieldIds
+          field_definition_id: visitFieldIds
         }
       });
 
-      // Filter out empty values
+      // Filter out empty values - check all value columns
       const nonEmptyValues = values.filter(v =>
-        v.value !== null && v.value !== undefined && v.value !== ''
+        v.value_text !== null && v.value_text !== undefined && v.value_text !== '' ||
+        v.value_number !== null && v.value_number !== undefined ||
+        v.value_boolean !== null && v.value_boolean !== undefined ||
+        v.value_json !== null && v.value_json !== undefined
       );
 
       // If no custom fields have values, add to alerts
