@@ -11,6 +11,8 @@ const db = require('../../../models');
 const Billing = db.Billing;
 const Patient = db.Patient;
 const Visit = db.Visit;
+const VisitCustomFieldValue = db.VisitCustomFieldValue;
+const CustomFieldDefinition = db.CustomFieldDefinition;
 const { Op } = db.Sequelize;
 
 /**
@@ -69,21 +71,11 @@ async function getAlerts(user, requestMetadata = {}) {
       };
     });
 
-    // 2. Get completed visits without clinical notes
-    const visitsWithoutNotes = await Visit.findAll({
+    // 2. Get completed visits without custom field values
+    // First, get all completed visits
+    const completedVisits = await Visit.findAll({
       where: {
-        status: 'COMPLETED',
-        [Op.or]: [
-          { notes: { [Op.is]: null } },
-          { notes: { [Op.eq]: '' } },
-          {
-            [Op.and]: [
-              { chief_complaint: { [Op.is]: null } },
-              { assessment: { [Op.is]: null } },
-              { recommendations: { [Op.is]: null } }
-            ]
-          }
-        ]
+        status: 'COMPLETED'
       },
       include: [
         {
@@ -95,18 +87,68 @@ async function getAlerts(user, requestMetadata = {}) {
         }
       ],
       order: [['visit_date', 'DESC']],
-      limit: 50
+      limit: 100 // Check more to find those without custom fields
     });
 
-    alerts.visits_without_notes = visitsWithoutNotes.map(visit => ({
-      type: 'VISIT_WITHOUT_NOTES',
+    // Get active custom field definitions for visits
+    const visitCustomFields = await CustomFieldDefinition.findAll({
+      where: {
+        is_active: true
+      },
+      include: [{
+        model: db.CustomFieldCategory,
+        as: 'category',
+        where: {
+          entity_type: 'visit',
+          is_active: true
+        },
+        required: true
+      }],
+      attributes: ['id']
+    });
+
+    const visitFieldIds = visitCustomFields.map(f => f.id);
+
+    // Check each visit for missing custom fields
+    const visitsWithoutFields = [];
+    for (const visit of completedVisits) {
+      if (visitFieldIds.length === 0) continue; // Skip if no visit custom fields defined
+
+      // Get custom field values for this visit
+      const values = await VisitCustomFieldValue.findAll({
+        where: {
+          visit_id: visit.id,
+          definition_id: visitFieldIds
+        }
+      });
+
+      // Filter out empty values
+      const nonEmptyValues = values.filter(v =>
+        v.value !== null && v.value !== undefined && v.value !== ''
+      );
+
+      // If no custom fields have values, add to alerts
+      if (nonEmptyValues.length === 0) {
+        visitsWithoutFields.push({
+          visit,
+          missingFieldsCount: visitFieldIds.length
+        });
+      }
+
+      // Limit results
+      if (visitsWithoutFields.length >= 50) break;
+    }
+
+    alerts.visits_without_notes = visitsWithoutFields.map(({ visit, missingFieldsCount }) => ({
+      type: 'VISIT_WITHOUT_CUSTOM_FIELDS',
       severity: 'warning',
       visit_id: visit.id,
       patient_id: visit.patient_id,
       patient_name: `${visit.patient.first_name} ${visit.patient.last_name}`,
       visit_date: visit.visit_date,
       visit_type: visit.visit_type,
-      message: `Visit on ${new Date(visit.visit_date).toLocaleDateString()} has no clinical notes`,
+      missing_fields_count: missingFieldsCount,
+      message: `Visit on ${new Date(visit.visit_date).toLocaleDateString()} has no custom field data (${missingFieldsCount} fields empty)`,
       action: 'edit_visit'
     }));
 

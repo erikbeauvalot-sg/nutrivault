@@ -189,7 +189,7 @@ const AlertsWidget = () => {
           </div>
         )}
 
-        {/* Visits Without Notes Section */}
+        {/* Visits Without Custom Fields Section */}
         {alerts.visits_without_notes.length > 0 && (
           <div className="border-bottom">
             <div
@@ -198,7 +198,7 @@ const AlertsWidget = () => {
               onClick={() => toggleSection('visits_without_notes')}
             >
               <div>
-                <strong>📝 {t('alerts.visitsWithoutNotes', 'Visits Without Notes')}</strong>
+                <strong>📋 {t('alerts.visitsWithoutCustomFields', 'Visits Without Custom Field Data')}</strong>
                 <Badge bg="warning" text="dark" className="ms-2">{alerts.visits_without_notes.length}</Badge>
               </div>
               <span>{expandedSections.visits_without_notes ? '▼' : '▶'}</span>
@@ -213,6 +213,9 @@ const AlertsWidget = () => {
                           <span>{getSeverityIcon(alert.severity)}</span>
                           <strong>{alert.patient_name}</strong>
                           {alert.visit_type && <Badge bg="secondary">{alert.visit_type}</Badge>}
+                          {alert.missing_fields_count && (
+                            <Badge bg="danger">{alert.missing_fields_count} fields empty</Badge>
+                          )}
                         </div>
                         <div className="text-muted small">{alert.message}</div>
                       </div>
@@ -221,7 +224,7 @@ const AlertsWidget = () => {
                         size="sm"
                         onClick={() => handleAlertAction(alert)}
                       >
-                        {t('alerts.addNotes', 'Add Notes')}
+                        {t('alerts.addCustomFields', 'Add Data')}
                       </Button>
                     </ListGroup.Item>
                   ))}
