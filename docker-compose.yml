@@ -31,9 +31,6 @@ services:
       - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-NutriVault}
       # Database initialization flags
       - SEED_DB=${SEED_DB:-false}
-      - CREATE_ADMIN=${CREATE_ADMIN:-false}
-      - ADMIN_USERNAME=${ADMIN_USERNAME}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     volumes:
       # Persistent data volume for SQLite database
       - nutrivault-data:/app/data

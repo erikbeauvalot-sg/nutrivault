@@ -22,9 +22,59 @@ docker-compose --env-file .env.production up -d --build
 # 5. Vérifier
 docker-compose ps
 curl http://localhost/health
+
+# 6. Créer l'utilisateur admin (IMPORTANT!)
+# Voir la section "Création de l'utilisateur admin" ci-dessous
 ```
 
 Accédez à l'application sur **http://localhost**
+
+### 👤 Création de l'utilisateur admin
+
+**IMPORTANT :** L'utilisateur admin n'est pas créé automatiquement. Deux options :
+
+**Option 1 : Script helper (recommandé)**
+
+```bash
+# Avec mot de passe personnalisé
+docker exec nutrivault-backend node /app/scripts/create-admin.js "VotreMotDePasseSecurise123!"
+
+# Avec mot de passe par défaut (à changer après connexion)
+docker exec nutrivault-backend node /app/scripts/create-admin.js
+```
+
+**Option 2 : Script complet**
+
+```bash
+docker exec nutrivault-backend sh -c "cat > /tmp/create-admin.js << 'EOF'
+const bcrypt = require('bcryptjs');
+const db = require('/models');
+(async () => {
+  try {
+    const existingAdmin = await db.User.findOne({ where: { username: 'admin' } });
+    if (existingAdmin) { console.log('⚠️  Admin exists'); process.exit(0); }
+    let adminRole = await db.Role.findOne({ where: { name: 'ADMIN' } });
+    if (!adminRole) adminRole = await db.Role.create({ name: 'ADMIN' });
+    const hashedPassword = await bcrypt.hash('VOTRE_MOT_DE_PASSE_ICI', 10);
+    await db.User.create({
+      username: 'admin',
+      email: 'admin@example.com',
+      password_hash: hashedPassword,
+      role_id: adminRole.id,
+      first_name: 'Admin',
+      last_name: 'User',
+      is_active: true
+    });
+    console.log('✅ Admin created!');
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+  }
+})();
+EOF
+node /tmp/create-admin.js && rm /tmp/create-admin.js"
+```
+
+⚠️ **Remplacez `VOTRE_MOT_DE_PASSE_ICI` par un mot de passe fort !**
 
 ## 📁 Structure des fichiers Docker
 

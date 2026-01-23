@@ -145,6 +145,61 @@ curl http://localhost/health
 docker-compose ps
 ```
 
+### 7. Créer l'utilisateur administrateur
+
+**IMPORTANT :** Créez maintenant l'utilisateur admin. Deux options disponibles :
+
+**Option A : Script helper (recommandé)**
+
+```bash
+# Avec mot de passe personnalisé
+docker exec nutrivault-backend node /app/scripts/create-admin.js "VotreMotDePasseSecurise123!"
+
+# Avec mot de passe par défaut (à changer après connexion)
+docker exec nutrivault-backend node /app/scripts/create-admin.js
+```
+
+**Option B : Script inline complet**
+
+```bash
+# Créer l'utilisateur admin
+docker exec nutrivault-backend sh -c "cat > /app/create-admin.js << 'EOFADMIN'
+const bcrypt = require('bcryptjs');
+const db = require('/models');
+(async () => {
+  try {
+    const existingAdmin = await db.User.findOne({ where: { username: 'admin' } });
+    if (existingAdmin) {
+      console.log('⚠️  Admin already exists');
+      process.exit(0);
+    }
+    let adminRole = await db.Role.findOne({ where: { name: 'ADMIN' } });
+    if (!adminRole) adminRole = await db.Role.create({ name: 'ADMIN', description: 'Administrator' });
+    const hashedPassword = await bcrypt.hash('CHANGEZ_CE_MOT_DE_PASSE', 10);
+    await db.User.create({
+      username: 'admin',
+      email: 'admin@votredomaine.com',
+      password_hash: hashedPassword,
+      role_id: adminRole.id,
+      first_name: 'Admin',
+      last_name: 'User',
+      is_active: true
+    });
+    console.log('✅ Admin created! Username: admin');
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+    process.exit(1);
+  }
+})();
+EOFADMIN
+node /app/create-admin.js && rm /app/create-admin.js"
+```
+
+**⚠️ AVANT D'EXÉCUTER :**
+- Remplacez `CHANGEZ_CE_MOT_DE_PASSE` par votre mot de passe fort
+- Utilisez au moins 12 caractères avec majuscules, minuscules, chiffres et symboles
+
 L'application est maintenant accessible sur `http://localhost` (ou votre domaine).
 
 ## 📖 Déploiement pas à pas
@@ -342,13 +397,109 @@ curl http://localhost/health
 curl http://votre-serveur.com/health
 ```
 
-#### 4.2 Test de connexion
+#### 4.2 Créer l'utilisateur administrateur
+
+**IMPORTANT :** Le premier démarrage ne crée pas automatiquement l'utilisateur admin. Vous devez le créer manuellement.
+
+**Méthode 1 : Script helper (recommandé)**
+
+```bash
+# Avec votre propre mot de passe sécurisé
+docker exec nutrivault-backend node /app/scripts/create-admin.js "MonMotDePasseSecurise2024!"
+
+# Ou avec mot de passe par défaut (à changer immédiatement)
+docker exec nutrivault-backend node /app/scripts/create-admin.js
+```
+
+**Méthode 2 : Script complet inline**
+
+```bash
+# Créer le script de création d'admin dans le conteneur
+docker exec nutrivault-backend sh -c "cat > /app/create-admin.js << 'EOF'
+const bcrypt = require('bcryptjs');
+const db = require('/models');
+
+(async () => {
+  try {
+    console.log('🔍 Checking for existing admin user...');
+
+    // Vérifier si l'admin existe déjà
+    const existingAdmin = await db.User.findOne({ where: { username: 'admin' } });
+    if (existingAdmin) {
+      console.log('⚠️  Admin user already exists!');
+      console.log('Username:', existingAdmin.username);
+      console.log('Email:', existingAdmin.email);
+      process.exit(0);
+    }
+
+    console.log('🔍 Looking for ADMIN role...');
+    // Trouver ou créer le rôle ADMIN
+    let adminRole = await db.Role.findOne({ where: { name: 'ADMIN' } });
+    if (!adminRole) {
+      console.log('📝 Creating ADMIN role...');
+      adminRole = await db.Role.create({ name: 'ADMIN', description: 'Administrator' });
+    }
+    console.log('✅ ADMIN role found/created with ID:', adminRole.id);
+
+    console.log('🔐 Hashing password...');
+    const hashedPassword = await bcrypt.hash('VotreMotDePasseSecurise123!', 10);
+
+    console.log('👤 Creating admin user...');
+    const admin = await db.User.create({
+      username: 'admin',
+      email: 'admin@votredomaine.com',
+      password_hash: hashedPassword,
+      role_id: adminRole.id,
+      first_name: 'Admin',
+      last_name: 'User',
+      is_active: true
+    });
+
+    console.log('✅ Admin user created successfully!');
+    console.log('   Username:', admin.username);
+    console.log('   Email:', admin.email);
+    console.log('');
+    console.log('🔐 Login credentials:');
+    console.log('   Username: admin');
+    console.log('   Password: VotreMotDePasseSecurise123!');
+
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Error creating admin:', error.message);
+    console.error(error);
+    process.exit(1);
+  }
+})();
+EOF
+"
+
+# Exécuter le script pour créer l'admin
+docker exec nutrivault-backend node /app/create-admin.js
+```
+
+**Résultat attendu :**
+```
+✅ Admin user created successfully!
+   Username: admin
+   Email: admin@votredomaine.com
+
+🔐 Login credentials:
+   Username: admin
+   Password: VotreMotDePasseSecurise123!
+```
+
+**⚠️ IMPORTANT :**
+- Modifiez le mot de passe dans le script avant de l'exécuter !
+- Changez `'VotreMotDePasseSecurise123!'` par un mot de passe fort
+- Utilisez un mot de passe d'au moins 12 caractères avec majuscules, minuscules, chiffres et symboles
+
+#### 4.3 Test de connexion
 
 ```bash
 # Se connecter avec le compte admin créé
 # URL : http://votre-serveur.com
 # Username : admin
-# Password : (celui défini dans ADMIN_PASSWORD)
+# Password : (celui défini dans le script ci-dessus)
 ```
 
 ### Étape 5 : Configuration HTTPS (Recommandé)
