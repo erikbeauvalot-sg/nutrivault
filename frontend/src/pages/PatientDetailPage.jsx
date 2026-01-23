@@ -3,9 +3,9 @@
  * Detailed patient view with tabbed interface
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Tab, Tabs, Button, Badge, Alert, Spinner, Dropdown, Modal, Form } from 'react-bootstrap';
+import { Container, Row, Col, Card, Tab, Tabs, Button, Badge, Alert, Spinner, Dropdown, Modal, Form, InputGroup } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
@@ -53,6 +53,7 @@ const PatientDetailPage = () => {
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [savingFields, setSavingFields] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (id) {
@@ -174,6 +175,65 @@ const PatientDetailPage = () => {
 
   const handleEditPatient = () => {
     navigate(`/patients/${id}/edit`);
+  };
+
+  // Search across custom fields
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return { hasResults: false, matchingFields: [], matchingCategory: null };
+    }
+
+    const query = searchQuery.toLowerCase();
+    const matchingFields = [];
+    let matchingCategory = null;
+
+    customFieldCategories.forEach(category => {
+      category.fields.forEach(field => {
+        const fieldLabel = field.field_label?.toLowerCase() || '';
+        const fieldValue = fieldValues[field.definition_id]?.toString()?.toLowerCase() || '';
+        const categoryName = category.name?.toLowerCase() || '';
+
+        if (fieldLabel.includes(query) || fieldValue.includes(query) || categoryName.includes(query)) {
+          matchingFields.push({
+            ...field,
+            categoryId: category.id,
+            categoryName: category.name
+          });
+          if (!matchingCategory) {
+            matchingCategory = category.id;
+          }
+        }
+      });
+    });
+
+    return {
+      hasResults: matchingFields.length > 0,
+      matchingFields,
+      matchingCategory
+    };
+  }, [searchQuery, customFieldCategories, fieldValues]);
+
+  // Auto-switch to tab with search results
+  useEffect(() => {
+    if (searchResults.hasResults && searchResults.matchingCategory) {
+      setActiveTab(`category-${searchResults.matchingCategory}`);
+    }
+  }, [searchResults]);
+
+  // Highlight matching text
+  const highlightText = (text, query) => {
+    if (!text || !query.trim()) return text;
+
+    const parts = text.toString().split(new RegExp(`(${query})`, 'gi'));
+    return parts.map((part, index) =>
+      part.toLowerCase() === query.toLowerCase() ? (
+        <mark key={index} style={{ backgroundColor: '#fff3cd', padding: '0 2px', fontWeight: 'bold' }}>
+          {part}
+        </mark>
+      ) : (
+        part
+      )
+    );
   };
 
   const handleExportData = async (format) => {
@@ -419,6 +479,42 @@ const PatientDetailPage = () => {
         {/* Patient Details Tabs */}
         <Card>
           <Card.Body>
+            {/* Search Bar for Custom Fields */}
+            <Row className="mb-3">
+              <Col md={6}>
+                <InputGroup>
+                  <InputGroup.Text>🔍</InputGroup.Text>
+                  <Form.Control
+                    type="text"
+                    placeholder="Search in custom fields..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  {searchQuery && (
+                    <Button
+                      variant="outline-secondary"
+                      onClick={() => setSearchQuery('')}
+                      title="Clear search"
+                    >
+                      ✕
+                    </Button>
+                  )}
+                </InputGroup>
+                {searchQuery && (
+                  <Form.Text className="text-muted">
+                    {searchResults.hasResults ? (
+                      <>
+                        {searchResults.matchingFields.length} field{searchResults.matchingFields.length !== 1 ? 's' : ''} found
+                        {searchResults.matchingCategory && ' - switched to matching tab'}
+                      </>
+                    ) : (
+                      'No fields found matching your search'
+                    )}
+                  </Form.Text>
+                )}
+              </Col>
+            </Row>
+
             <Tabs activeKey={activeTab} onSelect={setActiveTab} className="mb-3">
               {/* Basic Info Tab */}
               <Tab eventKey="basic-info" title="📋 Basic Information">
@@ -505,6 +601,8 @@ const PatientDetailPage = () => {
                                 <CustomFieldDisplay
                                   fieldDefinition={field}
                                   value={fieldValues[field.definition_id]}
+                                  searchQuery={searchQuery}
+                                  highlightText={highlightText}
                                 />
                               </Col>
                             ))}
@@ -567,6 +665,8 @@ const PatientDetailPage = () => {
                             <CustomFieldDisplay
                               fieldDefinition={field}
                               value={fieldValues[field.definition_id]}
+                              searchQuery={searchQuery}
+                              highlightText={highlightText}
                             />
                           </Col>
                         ))}

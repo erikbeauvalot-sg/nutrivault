@@ -298,9 +298,10 @@ const CustomFieldsPage = () => {
                 </Button>
               </Card.Header>
               <Card.Body>
-                {/* Search Bar */}
+                {/* Search Bar and Category Filter */}
                 <Row className="mb-3">
                   <Col md={6}>
+                    <Form.Label>Search</Form.Label>
                     <InputGroup>
                       <InputGroup.Text>🔍</InputGroup.Text>
                       <Form.Control
@@ -319,13 +320,97 @@ const CustomFieldsPage = () => {
                         </Button>
                       )}
                     </InputGroup>
-                    {searchQuery && (
-                      <Form.Text className="text-muted">
-                        {filteredDefinitions.length} field{filteredDefinitions.length !== 1 ? 's' : ''} found
-                      </Form.Text>
-                    )}
+                  </Col>
+                  <Col md={6}>
+                    <Form.Label>Filter by Category</Form.Label>
+                    <div className="d-flex gap-2">
+                      <Form.Select
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            handleToggleCategory(e.target.value);
+                            e.target.value = ''; // Reset select
+                          }
+                        }}
+                      >
+                        <option value="">Select category to add...</option>
+                        {categories
+                          .filter(cat => !selectedCategories.includes(cat.id))
+                          .map(cat => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                      </Form.Select>
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={handleSelectAllCategories}
+                        disabled={selectedCategories.length === categories.length}
+                        title="Select all categories"
+                      >
+                        All
+                      </Button>
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        onClick={handleDeselectAllCategories}
+                        disabled={selectedCategories.length === 0}
+                        title="Deselect all categories"
+                      >
+                        None
+                      </Button>
+                    </div>
                   </Col>
                 </Row>
+
+                {/* Selected Categories Badges */}
+                {selectedCategories.length > 0 && (
+                  <Row className="mb-3">
+                    <Col>
+                      <div className="d-flex flex-wrap gap-2 align-items-center">
+                        <small className="text-muted">Filtering by:</small>
+                        {selectedCategories.map(catId => {
+                          const category = categories.find(c => c.id === catId);
+                          return category ? (
+                            <Badge
+                              key={catId}
+                              bg="primary"
+                              style={{
+                                cursor: 'pointer',
+                                padding: '6px 10px',
+                                fontSize: '0.85rem'
+                              }}
+                              onClick={() => handleToggleCategory(catId)}
+                            >
+                              <span style={{
+                                display: 'inline-block',
+                                width: '8px',
+                                height: '8px',
+                                backgroundColor: category.color || '#3498db',
+                                borderRadius: '50%',
+                                marginRight: '6px',
+                                border: '1px solid rgba(255,255,255,0.5)'
+                              }} />
+                              {category.name} ✕
+                            </Badge>
+                          ) : null;
+                        })}
+                      </div>
+                    </Col>
+                  </Row>
+                )}
+
+                {/* Results Counter */}
+                {(searchQuery || selectedCategories.length > 0) && (
+                  <Row className="mb-2">
+                    <Col>
+                      <Form.Text className="text-muted">
+                        Showing {filteredDefinitions.length} of {definitions.length} field{filteredDefinitions.length !== 1 ? 's' : ''}
+                      </Form.Text>
+                    </Col>
+                  </Row>
+                )}
 
                 {definitions.length === 0 ? (
                   <Alert variant="info">

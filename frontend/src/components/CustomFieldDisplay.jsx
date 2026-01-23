@@ -7,13 +7,30 @@
 import { Badge } from 'react-bootstrap';
 import PropTypes from 'prop-types';
 
-const CustomFieldDisplay = ({ fieldDefinition, value }) => {
+const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highlightText = null }) => {
   const {
     field_label,
     field_type,
     select_options,
     validation_rules
   } = fieldDefinition;
+
+  // Default highlightText function if not provided
+  const defaultHighlightText = (text, query) => {
+    if (!text || !query.trim()) return text;
+    const parts = text.toString().split(new RegExp(`(${query})`, 'gi'));
+    return parts.map((part, index) =>
+      part.toLowerCase() === query.toLowerCase() ? (
+        <mark key={index} style={{ backgroundColor: '#fff3cd', padding: '0 2px', fontWeight: 'bold' }}>
+          {part}
+        </mark>
+      ) : (
+        part
+      )
+    );
+  };
+
+  const highlight = highlightText || defaultHighlightText;
 
   const formatValue = () => {
     // Handle empty values
@@ -55,19 +72,21 @@ const CustomFieldDisplay = ({ fieldDefinition, value }) => {
       case 'textarea':
         return (
           <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {value}
+            {searchQuery ? highlight(value, searchQuery) : value}
           </div>
         );
 
       case 'text':
       default:
-        return <span>{value}</span>;
+        return <span>{searchQuery ? highlight(value, searchQuery) : value}</span>;
     }
   };
 
   return (
     <div className="mb-3">
-      <div className="text-muted small mb-1">{field_label}</div>
+      <div className="text-muted small mb-1">
+        {searchQuery ? highlight(field_label, searchQuery) : field_label}
+      </div>
       <div>{formatValue()}</div>
     </div>
   );
@@ -80,7 +99,9 @@ CustomFieldDisplay.propTypes = {
     validation_rules: PropTypes.object,
     select_options: PropTypes.arrayOf(PropTypes.string)
   }).isRequired,
-  value: PropTypes.any
+  value: PropTypes.any,
+  searchQuery: PropTypes.string,
+  highlightText: PropTypes.func
 };
 
 export default CustomFieldDisplay;
