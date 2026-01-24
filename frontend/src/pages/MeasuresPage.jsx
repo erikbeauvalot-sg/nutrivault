@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import MeasureDefinitionModal from '../components/MeasureDefinitionModal';
+import MeasureTranslationModal from '../components/MeasureTranslationModal';
 import * as measureService from '../services/measureService';
 
 const MeasuresPage = () => {
@@ -39,6 +40,8 @@ const MeasuresPage = () => {
   // Modal state
   const [showMeasureModal, setShowMeasureModal] = useState(false);
   const [selectedMeasure, setSelectedMeasure] = useState(null);
+  const [showTranslationModal, setShowTranslationModal] = useState(false);
+  const [translationMeasure, setTranslationMeasure] = useState(null);
 
   // Define available categories
   const categories = [
@@ -111,6 +114,11 @@ const MeasuresPage = () => {
       console.error('Error deleting measure:', err);
       alert(err.response?.data?.error || 'Failed to delete measure definition');
     }
+  };
+
+  const handleTranslateMeasure = (measure) => {
+    setTranslationMeasure(measure);
+    setShowTranslationModal(true);
   };
 
   // Get category icon
@@ -424,6 +432,15 @@ const MeasuresPage = () => {
                           Edit
                         </Button>
                         <Button
+                          variant="outline-secondary"
+                          size="sm"
+                          className="me-2"
+                          onClick={() => handleTranslateMeasure(measure)}
+                          title="Manage translations"
+                        >
+                          🌐 Translations
+                        </Button>
+                        <Button
                           variant="outline-danger"
                           size="sm"
                           onClick={() => handleDeleteMeasure(measure.id)}
@@ -451,6 +468,19 @@ const MeasuresPage = () => {
             fetchMeasures();
             setShowMeasureModal(false);
             setSelectedMeasure(null);
+          }}
+        />
+
+        {/* Measure Translation Modal */}
+        <MeasureTranslationModal
+          show={showTranslationModal}
+          onHide={() => {
+            setShowTranslationModal(false);
+            setTranslationMeasure(null);
+          }}
+          measure={translationMeasure}
+          onSuccess={() => {
+            fetchMeasures();
           }}
         />
       </Container>

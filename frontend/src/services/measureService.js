@@ -301,3 +301,75 @@ export const recalculateMeasureAcrossAll = async (measureDefinitionId) => {
   const response = await api.post(`/api/measures/${measureDefinitionId}/recalculate-all`);
   return response.data.data || response.data;
 };
+
+// ===========================================
+// Translation API Calls (Sprint 4: US-5.4.2)
+// ===========================================
+
+/**
+ * Get all translations for a measure (all languages)
+ * @param {string} measureId - Measure definition UUID
+ * @returns {Promise<object>} { en: {...}, fr: {...}, ... }
+ */
+export const getAllMeasureTranslations = async (measureId) => {
+  const response = await api.get(`/api/measures/${measureId}/translations`);
+  return response.data.data || response.data;
+};
+
+/**
+ * Get translations for a measure in a specific language
+ * @param {string} measureId - Measure definition UUID
+ * @param {string} languageCode - Language code (e.g., 'fr', 'en')
+ * @returns {Promise<object>} { display_name: '...', description: '...', unit: '...' }
+ */
+export const getMeasureTranslations = async (measureId, languageCode) => {
+  const response = await api.get(`/api/measures/${measureId}/translations/${languageCode}`);
+  return response.data.data || response.data;
+};
+
+/**
+ * Set translations for a measure (bulk)
+ * @param {string} measureId - Measure definition UUID
+ * @param {string} languageCode - Language code
+ * @param {object} translations - { display_name: '...', description: '...', unit: '...' }
+ * @returns {Promise<object>} Updated translations
+ */
+export const setMeasureTranslations = async (measureId, languageCode, translations) => {
+  const response = await api.post(`/api/measures/${measureId}/translations/${languageCode}`, translations);
+  return response.data.data || response.data;
+};
+
+/**
+ * Set a single translation field
+ * @param {string} measureId - Measure definition UUID
+ * @param {string} languageCode - Language code
+ * @param {string} fieldName - Field name (display_name, description, unit)
+ * @param {string} value - Translated value
+ * @returns {Promise<object>} Updated translation
+ */
+export const setMeasureTranslation = async (measureId, languageCode, fieldName, value) => {
+  const response = await api.put(`/api/measures/${measureId}/translations/${languageCode}/${fieldName}`, { value });
+  return response.data.data || response.data;
+};
+
+/**
+ * Delete a translation
+ * @param {string} translationId - Translation UUID
+ * @returns {Promise<void>}
+ */
+export const deleteMeasureTranslation = async (translationId) => {
+  const response = await api.delete(`/api/measures/translations/${translationId}`);
+  return response.data;
+};
+
+/**
+ * Get measure with translations applied
+ * @param {string} measureId - Measure definition UUID
+ * @param {string} languageCode - Language code
+ * @param {string} fallbackLanguage - Fallback language (default: 'en')
+ * @returns {Promise<object>} Measure with translated fields
+ */
+export const getMeasureWithTranslations = async (measureId, languageCode, fallbackLanguage = 'en') => {
+  const response = await api.get(`/api/measures/${measureId}/translated/${languageCode}?fallback=${fallbackLanguage}`);
+  return response.data.data || response.data;
+};
