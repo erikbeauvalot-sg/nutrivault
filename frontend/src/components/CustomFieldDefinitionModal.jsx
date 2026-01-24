@@ -19,7 +19,8 @@ const FIELD_TYPES = [
   { value: 'number', label: 'Number', icon: '🔢' },
   { value: 'date', label: 'Date', icon: '📅' },
   { value: 'select', label: 'Dropdown', icon: '📋' },
-  { value: 'boolean', label: 'Yes/No', icon: '☑️' }
+  { value: 'boolean', label: 'Yes/No', icon: '☑️' },
+  { value: 'calculated', label: 'Calculated', icon: '🧮' }
 ];
 
 // Validation schema
@@ -37,7 +38,7 @@ const definitionSchema = (t) => yup.object().shape({
     .max(200, t('forms.maxLength', { count: 200 })),
   field_type: yup.string()
     .required(t('forms.required'))
-    .oneOf(['text', 'number', 'date', 'select', 'boolean', 'textarea']),
+    .oneOf(['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated']),
   help_text: yup.string()
     .max(500, t('forms.maxLength', { count: 500 }))
     .nullable(),
@@ -57,6 +58,10 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
   const [selectOptions, setSelectOptions] = useState([]);
   const [validationRules, setValidationRules] = useState({});
   const [activeTab, setActiveTab] = useState('general');
+  const [formula, setFormula] = useState('');
+  const [decimalPlaces, setDecimalPlaces] = useState(2);
+  const [formulaError, setFormulaError] = useState(null);
+  const [dependencies, setDependencies] = useState([]);
 
   const isEditing = !!definition;
 
@@ -109,6 +114,9 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       setSelectedFieldType(definition.field_type || 'text');
       setSelectOptions(definition.select_options || []);
       setValidationRules(definition.validation_rules || {});
+      setFormula(definition.formula || '');
+      setDecimalPlaces(definition.decimal_places !== undefined ? definition.decimal_places : 2);
+      setDependencies(definition.dependencies || []);
     } else {
       reset({
         category_id: categories && categories.length > 0 ? categories[0].id : '',
@@ -125,6 +133,10 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       setSelectedFieldType('text');
       setSelectOptions([]);
       setValidationRules({});
+      setFormula('');
+      setDecimalPlaces(2);
+      setDependencies([]);
+      setFormulaError(null);
     }
   }, [definition, categories, reset]);
 
@@ -149,9 +161,22 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
         payload.select_options = selectOptions;
       }
 
+      // Add formula and decimal_places for calculated type
+      if (selectedFieldType === 'calculated') {
+        payload.formula = formula;
+        payload.decimal_places = decimalPlaces;
+      }
+
       // Validate select options
       if (selectedFieldType === 'select' && (!selectOptions || selectOptions.length === 0)) {
         setError('Please add at least one option for dropdown fields');
+        setLoading(false);
+        return;
+      }
+
+      // Validate formula for calculated fields
+      if (selectedFieldType === 'calculated' && (!formula || formula.trim() === '')) {
+        setError('Please enter a formula for calculated fields');
         setLoading(false);
         return;
       }
@@ -166,6 +191,10 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       reset();
       setSelectOptions([]);
       setValidationRules({});
+      setFormula('');
+      setDecimalPlaces(2);
+      setDependencies([]);
+      setFormulaError(null);
 
       setTimeout(() => {
         onSuccess();
@@ -185,6 +214,10 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
     setSuccess(false);
     setSelectOptions([]);
     setValidationRules({});
+    setFormula('');
+    setDecimalPlaces(2);
+    setDependencies([]);
+    setFormulaError(null);
     onHide();
   };
 
@@ -390,6 +423,84 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
                     <Form.Text className="text-danger d-block">
                       At least one option is required
                     </Form.Text>
+                  )}
+                </div>
+              )}
+
+              {selectedFieldType === 'calculated' && (
+                <div>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Formula * <Badge bg="info">Calculated</Badge></Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={4}
+                      placeholder="Enter formula, e.g., {weight} / ({height} * {height})"
+                      value={formula}
+                      onChange={(e) => {
+                        setFormula(e.target.value);
+                        setFormulaError(null);
+                      }}
+                      isInvalid={!!formulaError}
+                      style={{ fontFamily: 'monospace', fontSize: '14px' }}
+                    />
+                    {formulaError && (
+                      <Form.Control.Feedback type="invalid" style={{ display: 'block' }}>
+                        {formulaError}
+                      </Form.Control.Feedback>
+                    )}
+                    <Form.Text className="text-muted d-block mt-2">
+                      <strong>Syntax:</strong> Use {'{field_name}'} for variables<br/>
+                      <strong>Operators:</strong> + - * / ^ (power)<br/>
+                      <strong>Functions:</strong> sqrt(), abs(), round(), floor(), ceil(), min(), max()<br/>
+                      <strong>Example:</strong> {'{weight}'} / ({'{height}'} * {'{height}'})
+                    </Form.Text>
+                  </Form.Group>
+
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Decimal Places</Form.Label>
+                        <Form.Select
+                          value={decimalPlaces}
+                          onChange={(e) => setDecimalPlaces(parseInt(e.target.value))}
+                        >
+                          <option value="0">0 (Integer)</option>
+                          <option value="1">1</option>
+                          <option value="2">2 (Default)</option>
+                          <option value="3">3</option>
+                          <option value="4">4</option>
+                        </Form.Select>
+                        <Form.Text className="text-muted">
+                          Number of decimal places to display
+                        </Form.Text>
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      {dependencies.length > 0 && (
+                        <div>
+                          <Form.Label>Dependencies</Form.Label>
+                          <div className="mb-2">
+                            {dependencies.map((dep, index) => (
+                              <Badge key={index} bg="secondary" className="me-2 mb-2" style={{ fontSize: '13px' }}>
+                                {dep}
+                              </Badge>
+                            ))}
+                          </div>
+                          <Form.Text className="text-muted">
+                            Fields this calculated field depends on
+                          </Form.Text>
+                        </div>
+                      )}
+                    </Col>
+                  </Row>
+
+                  {formula && (
+                    <Alert variant="info" className="mt-2">
+                      <small>
+                        <strong>ℹ️ Note:</strong> Calculated fields are automatically computed and read-only.
+                        Values update when dependency fields change.
+                      </small>
+                    </Alert>
                   )}
                 </div>
               )}
