@@ -26,9 +26,6 @@ async function logMeasure(patientId, data, user, requestMetadata = {}) {
     if (!data.measure_definition_id) {
       throw new Error('measure_definition_id is required');
     }
-    if (data.value === undefined || data.value === null) {
-      throw new Error('value is required');
-    }
 
     // Verify patient exists
     const patient = await Patient.findByPk(patientId);
@@ -46,8 +43,36 @@ async function logMeasure(patientId, data, user, requestMetadata = {}) {
       throw new Error('Cannot log values for inactive measure');
     }
 
+    // Extract value from appropriate field (support both formats)
+    let value;
+    if (data.value !== undefined && data.value !== null) {
+      // Generic value field (backwards compatible)
+      value = data.value;
+    } else {
+      // Polymorphic value fields (preferred)
+      switch (measureDef.measure_type) {
+        case 'numeric':
+        case 'calculated':
+          value = data.numeric_value;
+          break;
+        case 'text':
+          value = data.text_value;
+          break;
+        case 'boolean':
+          value = data.boolean_value;
+          break;
+        default:
+          throw new Error('Unsupported measure type');
+      }
+    }
+
+    // Validate value is present
+    if (value === undefined || value === null) {
+      throw new Error('value is required');
+    }
+
     // Validate value
-    const validation = measureDef.validateValue(data.value);
+    const validation = measureDef.validateValue(value);
     if (!validation.valid) {
       throw new Error(validation.error);
     }
@@ -63,7 +88,7 @@ async function logMeasure(patientId, data, user, requestMetadata = {}) {
     });
 
     // Set value based on type
-    measure.setValue(measureDef.measure_type, data.value);
+    measure.setValue(measureDef.measure_type, value);
 
     // Save
     await measure.save();

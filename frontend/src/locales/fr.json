@@ -35,6 +35,8 @@
     "password": "Mot de Passe",    
     "pending": "En attente",
     "overdue": "En retard",
+    "startDate": "Date de début",
+    "endDate": "Date de fin",
     "refresh": "Actualiser",
     "comingSoon": "Bientôt disponible"
   },
@@ -718,6 +720,11 @@
     "loading": "Chargement...",
     "mustDeactivateBeforeDelete": "Vous devez d'abord désactiver cet utilisateur avant de le supprimer",
     "deleteUser": "Supprimer l'utilisateur",
+    "password": "Mot de passe",
+    "viewUser": "Voir l'utilisateur",
+    "userDetails": "Détails de l'utilisateur",
+    "viewEditPersonalInfo": "Voir/Modifier les informations personnelles",
+    "viewEdit": "Voir/Modifier",
     "notesLabel": "Notes :"
   },
   "forms": {
@@ -1102,6 +1109,16 @@
     "measureUpdated": "Définition de mesure mise à jour avec succès",
     "measureDeleted": "Définition de mesure supprimée avec succès",
     "measureLogged": "Mesure enregistrée avec succès",
+    "healthMeasures": "Mesures de Santé",
+    "measuresForVisit": "Mesures pour cette visite",
+    "noMeasuresForVisit": "Aucune mesure enregistrée pour cette visite",
+    "clickLogMeasureToStart": "Cliquez sur « Enregistrer une mesure » pour ajouter des mesures de santé pour cette visite.",
+    "editMeasure": "Modifier la Mesure",
+    "updateMeasure": "Mettre à Jour la Mesure",
+    "updateSuccess": "Mesure mise à jour avec succès !",
+    "recordedAt": "Enregistrée Le",
+    "notesPlaceholder": "Ajouter des notes sur cette mesure...",
+    "recordedBy": "Enregistrée Par",
     "categories": {
       "vitals": "Signes Vitaux",
       "labResults": "Résultats de Laboratoire",

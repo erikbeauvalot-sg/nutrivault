@@ -15,6 +15,7 @@ import {
 } from '../services/measureService';
 import { formatDateTime } from '../utils/dateUtils';
 import { getCategoryBadgeVariant, getCategoryDisplayName } from '../utils/measureUtils';
+import LogMeasureModal from './LogMeasureModal';
 
 const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
   const { t, i18n } = useTranslation();
@@ -34,7 +35,8 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
-  // Modal state (for future implementation of LogMeasureModal)
+  // Modal state
+  const [showLogModal, setShowLogModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingMeasure, setEditingMeasure] = useState(null);
 
@@ -154,6 +156,13 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
       {/* Filter Controls */}
       <Card className="mb-3">
         <Card.Body>
+          {/* Add Measure Button */}
+          <div className="d-flex justify-content-end mb-3">
+            <Button variant="primary" onClick={() => setShowLogModal(true)}>
+              + {t('measures.logMeasure', 'Log Measure')}
+            </Button>
+          </div>
+
           <Row className="g-3">
             <Col md={4}>
               <Form.Group>
@@ -345,7 +354,18 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
         </Card.Body>
       </Card>
 
-      {/* TODO: Add LogMeasureModal for editing measures */}
+      {/* Log New Measure Modal */}
+      <LogMeasureModal
+        show={showLogModal}
+        onHide={() => setShowLogModal(false)}
+        patientId={patientId}
+        onSuccess={() => {
+          fetchMeasures();
+          setShowLogModal(false);
+        }}
+      />
+
+      {/* TODO: Add edit functionality to LogMeasureModal */}
       {/* {showEditModal && (
         <LogMeasureModal
           show={showEditModal}

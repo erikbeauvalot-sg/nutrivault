@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Container, Row, Col, Card, Tab, Tabs, Button, Badge, Alert, Spinner, Modal } from 'react-bootstrap';
+import { Container, Row, Col, Card, Tab, Tabs, Button, Badge, Alert, Spinner, Modal, Table } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
@@ -13,6 +13,8 @@ import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import visitService from '../services/visitService';
 import visitCustomFieldService from '../services/visitCustomFieldService';
 import CustomFieldDisplay from '../components/CustomFieldDisplay';
+import LogMeasureModal from '../components/LogMeasureModal';
+import { getMeasuresByVisit, formatMeasureValue } from '../services/measureService';
 
 const VisitDetailPage = () => {
   const { t, i18n } = useTranslation();
@@ -30,10 +32,16 @@ const VisitDetailPage = () => {
   const [customFieldCategories, setCustomFieldCategories] = useState([]);
   const [fieldValues, setFieldValues] = useState({});
 
+  // Measures state
+  const [measures, setMeasures] = useState([]);
+  const [loadingMeasures, setLoadingMeasures] = useState(false);
+  const [showLogMeasureModal, setShowLogMeasureModal] = useState(false);
+
   useEffect(() => {
     if (id && i18n.resolvedLanguage) {
       fetchVisitDetails();
       fetchCustomFields();
+      fetchVisitMeasures();
     }
   }, [id, i18n.resolvedLanguage]);
 
@@ -72,6 +80,19 @@ const VisitDetailPage = () => {
     } catch (err) {
       console.error('Error fetching visit custom fields:', err);
       // Don't set error for custom fields failure
+    }
+  };
+
+  const fetchVisitMeasures = async () => {
+    try {
+      setLoadingMeasures(true);
+      const data = await getMeasuresByVisit(id);
+      setMeasures(data || []);
+    } catch (err) {
+      console.error('Error fetching visit measures:', err);
+      // Don't set error for measures failure
+    } finally {
+      setLoadingMeasures(false);
     }
   };
 
@@ -474,6 +495,76 @@ const VisitDetailPage = () => {
                 </Row>
               </Tab>
 
+              {/* Health Measures Tab - New Measures System */}
+              <Tab eventKey="health-measures" title={`📊 ${t('measures.healthMeasures', 'Health Measures')} (${measures.length})`}>
+                <Row className="mb-3">
+                  <Col>
+                    <div className="d-flex justify-content-between align-items-center">
+                      <h5>{t('measures.measuresForVisit', 'Measures for this visit')}</h5>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setShowLogMeasureModal(true)}
+                      >
+                        + {t('measures.logMeasure', 'Log Measure')}
+                      </Button>
+                    </div>
+                  </Col>
+                </Row>
+
+                {loadingMeasures ? (
+                  <div className="text-center py-4">
+                    <Spinner animation="border" size="sm" />
+                    <p className="mt-2 text-muted">{t('common.loading')}</p>
+                  </div>
+                ) : measures.length === 0 ? (
+                  <Alert variant="info">
+                    <strong>{t('measures.noMeasuresForVisit', 'No measures logged for this visit yet')}</strong>
+                    <p className="mb-0 mt-2">
+                      {t('measures.clickLogMeasureToStart', 'Click "Log Measure" to add health measurements for this visit.')}
+                    </p>
+                  </Alert>
+                ) : (
+                  <Table striped bordered hover responsive>
+                    <thead className="table-dark">
+                      <tr>
+                        <th>{t('measures.measure', 'Measure')}</th>
+                        <th>{t('measures.value', 'Value')}</th>
+                        <th>{t('measures.recordedAt', 'Recorded At')}</th>
+                        <th>{t('measures.recordedBy', 'Recorded By')}</th>
+                        <th>{t('measures.notes', 'Notes')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {measures.map(measure => (
+                        <tr key={measure.id}>
+                          <td>
+                            <strong>{measure.measureDefinition?.display_name || '-'}</strong>
+                            {measure.measureDefinition?.category && (
+                              <div className="mt-1">
+                                <Badge bg="light" text="dark" style={{ fontSize: '0.75rem' }}>
+                                  {measure.measureDefinition.category}
+                                </Badge>
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            <strong>
+                              {formatMeasureValue(measure, measure.measureDefinition)}
+                            </strong>
+                          </td>
+                          <td>{formatDateTime(measure.measured_at)}</td>
+                          <td>{measure.recorder?.username || '-'}</td>
+                          <td style={{ maxWidth: '200px', whiteSpace: 'pre-wrap' }}>
+                            {measure.notes || '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                )}
+              </Tab>
+
               {/* Custom Fields Tabs - Only visible if there are categories for visits */}
               {customFieldCategories.length > 0 && customFieldCategories.map((category) => (
                 <Tab
@@ -634,6 +725,20 @@ const VisitDetailPage = () => {
             </Button>
           </Modal.Footer>
         </Modal>
+
+        {/* Log Measure Modal */}
+        {visit?.patient && (
+          <LogMeasureModal
+            show={showLogMeasureModal}
+            onHide={() => setShowLogMeasureModal(false)}
+            patientId={visit.patient.id}
+            visitId={id}
+            onSuccess={() => {
+              fetchVisitMeasures();
+              setShowLogMeasureModal(false);
+            }}
+          />
+        )}
       </Container>
     </Layout>
   );

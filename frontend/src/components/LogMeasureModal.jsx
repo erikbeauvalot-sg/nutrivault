@@ -7,9 +7,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Modal, Button, Form, Alert, Spinner, Badge } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { getMeasureDefinitions, logPatientMeasure } from '../services/measureService';
+import { getMeasureDefinitions, logPatientMeasure, updatePatientMeasure, getMeasureValue } from '../services/measureService';
 
-const LogMeasureModal = ({ show, onHide, patientId, visitId, onSuccess }) => {
+const LogMeasureModal = ({ show, onHide, patientId, visitId, measure, onSuccess }) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [loadingDefinitions, setLoadingDefinitions] = useState(false);
@@ -38,13 +38,41 @@ const LogMeasureModal = ({ show, onHide, patientId, visitId, onSuccess }) => {
     }
   }, [t]);
 
-  // Load measure definitions on mount
+  // Determine if we're in edit mode
+  const isEditMode = Boolean(measure);
+
+  // Load measure definitions on mount and populate form if editing
   useEffect(() => {
     if (show) {
       loadDefinitions();
-      setDefaultMeasuredAt();
+
+      if (isEditMode && measure) {
+        // Edit mode: populate form with existing measure data
+        const measureDef = measure.measureDefinition || measure.MeasureDefinition;
+        const value = getMeasureValue(measure, measureDef?.measure_type);
+
+        // Format measured_at to datetime-local format
+        const measuredAt = new Date(measure.measured_at);
+        const year = measuredAt.getFullYear();
+        const month = String(measuredAt.getMonth() + 1).padStart(2, '0');
+        const day = String(measuredAt.getDate()).padStart(2, '0');
+        const hours = String(measuredAt.getHours()).padStart(2, '0');
+        const minutes = String(measuredAt.getMinutes()).padStart(2, '0');
+        const formattedMeasuredAt = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+        setFormData({
+          measure_definition_id: measure.measure_definition_id,
+          value: value !== null && value !== undefined ? value : '',
+          measured_at: formattedMeasuredAt,
+          notes: measure.notes || ''
+        });
+        setSelectedDefinition(measureDef);
+      } else {
+        // Create mode: set default timestamp
+        setDefaultMeasuredAt();
+      }
     }
-  }, [show, loadDefinitions]);
+  }, [show, loadDefinitions, isEditMode, measure]);
 
   const setDefaultMeasuredAt = () => {
     // Set default measured_at to current date/time in datetime-local format (YYYY-MM-DDTHH:mm)
@@ -173,7 +201,13 @@ const LogMeasureModal = ({ show, onHide, patientId, visitId, onSuccess }) => {
           throw new Error('Unsupported measure type');
       }
 
-      await logPatientMeasure(patientId, payload);
+      if (isEditMode) {
+        // Update existing measure
+        await updatePatientMeasure(measure.id, payload);
+      } else {
+        // Create new measure
+        await logPatientMeasure(patientId, payload);
+      }
 
       setSuccess(true);
 
@@ -303,7 +337,11 @@ const LogMeasureModal = ({ show, onHide, patientId, visitId, onSuccess }) => {
     <Modal show={show} onHide={handleClose} centered>
       <Modal.Header closeButton>
         <Modal.Title>
-          📊 {t('measures.logMeasure', 'Log Measure')}
+          {isEditMode ? (
+            <>✏️ {t('measures.editMeasure', 'Edit Measure')}</>
+          ) : (
+            <>📊 {t('measures.logMeasure', 'Log Measure')}</>
+          )}
         </Modal.Title>
       </Modal.Header>
 
@@ -317,7 +355,9 @@ const LogMeasureModal = ({ show, onHide, patientId, visitId, onSuccess }) => {
 
           {success && (
             <Alert variant="success">
-              {t('measures.logSuccess', 'Measure logged successfully!')}
+              {isEditMode
+                ? t('measures.updateSuccess', 'Measure updated successfully!')
+                : t('measures.logSuccess', 'Measure logged successfully!')}
             </Alert>
           )}
 
@@ -416,6 +456,8 @@ const LogMeasureModal = ({ show, onHide, patientId, visitId, onSuccess }) => {
                 <Spinner animation="border" size="sm" className="me-2" />
                 {t('common.saving', 'Saving...')}
               </>
+            ) : isEditMode ? (
+              t('measures.updateMeasure', 'Update Measure')
             ) : (
               t('measures.logMeasure', 'Log Measure')
             )}

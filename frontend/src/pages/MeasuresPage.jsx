@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
+import MeasureDefinitionModal from '../components/MeasureDefinitionModal';
 import * as measureService from '../services/measureService';
 
 const MeasuresPage = () => {
@@ -429,13 +430,20 @@ const MeasuresPage = () => {
           </Card.Body>
         </Card>
 
-        {/* TODO: Add MeasureDefinitionModal component when created */}
-        {/* <MeasureDefinitionModal
+        {/* Measure Definition Modal */}
+        <MeasureDefinitionModal
           show={showMeasureModal}
-          onHide={() => setShowMeasureModal(false)}
+          onHide={() => {
+            setShowMeasureModal(false);
+            setSelectedMeasure(null);
+          }}
           measure={selectedMeasure}
-          onSuccess={fetchMeasures}
-        /> */}
+          onSuccess={() => {
+            fetchMeasures();
+            setShowMeasureModal(false);
+            setSelectedMeasure(null);
+          }}
+        />
       </Container>
     </Layout>
   );
