@@ -46,6 +46,8 @@
     "users": "Utilisateurs",
     "customFields": "Champs Personnalisés",
     "measures": "Mesures",
+    "passwords": "Gérer les Mots de Passe",
+    "settings": "Paramètres",
     "roles": "Gérer les Rôles",
     "logout": "Déconnexion",
     "profile": "Profil",
@@ -906,6 +908,8 @@
     "addNotes": "Ajouter notes",
     "scheduleVisit": "Planifier",
     "more": "de plus",
+    "visitsWithoutCustomFields": "Visites sans champs personnalisés requis",
+    "addCustomFields": "Ajouter des champs",
     "refresh": "Actualiser"
   },
   "reports": {
