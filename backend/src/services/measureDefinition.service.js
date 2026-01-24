@@ -132,11 +132,17 @@ async function createDefinition(data, user, requestMetadata = {}) {
 
       // Validate dependencies exist
       for (const depName of data.dependencies) {
+        // Extract base measure name from time-series variables
+        // e.g., "current:weight" -> "weight", "weight" -> "weight"
+        const baseMeasureName = depName.includes(':')
+          ? depName.split(':')[1]
+          : depName;
+
         const dep = await MeasureDefinition.findOne({
-          where: { name: depName, deleted_at: null }
+          where: { name: baseMeasureName, deleted_at: null }
         });
         if (!dep) {
-          throw new Error(`Dependency not found: ${depName}`);
+          throw new Error(`Dependency not found: ${baseMeasureName} (from ${depName})`);
         }
       }
 
@@ -261,11 +267,17 @@ async function updateDefinition(id, data, user, requestMetadata = {}) {
 
         // Validate dependencies exist
         for (const depName of data.dependencies) {
+          // Extract base measure name from time-series variables
+          // e.g., "current:weight" -> "weight", "weight" -> "weight"
+          const baseMeasureName = depName.includes(':')
+            ? depName.split(':')[1]
+            : depName;
+
           const dep = await MeasureDefinition.findOne({
-            where: { name: depName, deleted_at: null }
+            where: { name: baseMeasureName, deleted_at: null }
           });
           if (!dep) {
-            throw new Error(`Dependency not found: ${depName}`);
+            throw new Error(`Dependency not found: ${baseMeasureName} (from ${depName})`);
           }
         }
 
