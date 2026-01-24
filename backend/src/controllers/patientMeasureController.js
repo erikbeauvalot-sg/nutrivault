@@ -7,6 +7,7 @@
 
 const patientMeasureService = require('../services/patientMeasure.service');
 const trendAnalysisService = require('../services/trendAnalysis.service');
+const measureEvaluation = require('../services/measureEvaluation.service');
 const db = require('../../../models');
 const { Op } = require('sequelize');
 const PatientMeasure = db.PatientMeasure;
@@ -562,6 +563,135 @@ async function getTrend(req, res) {
   }
 }
 
+/**
+ * POST /api/patient-measures/:patientId/recalculate
+ * Recalculate all calculated measures for a patient
+ */
+async function recalculatePatientMeasures(req, res) {
+  try {
+    const { patientId } = req.params;
+
+    // Verify patient exists
+    const patient = await Patient.findByPk(patientId);
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        error: 'Patient not found'
+      });
+    }
+
+    // Get all calculated measures
+    const calculatedMeasures = await measureEvaluation.getCalculatedMeasures();
+    if (calculatedMeasures.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No calculated measures found',
+        data: { count: 0, calculated: [] }
+      });
+    }
+
+    // Get all unique timestamps where patient has dependency values
+    const allMeasures = await PatientMeasure.findAll({
+      where: { patient_id: patientId, deleted_at: null },
+      attributes: ['measured_at'],
+      group: ['measured_at'],
+      order: [['measured_at', 'ASC']],
+      raw: true
+    });
+
+    let totalCalculated = [];
+
+    // Recalculate for each timestamp
+    for (const record of allMeasures) {
+      const measuredAt = new Date(record.measured_at);
+
+      for (const measureDef of calculatedMeasures) {
+        try {
+          const value = await measureEvaluation.evaluateCalculatedMeasure(
+            measureDef,
+            patientId,
+            measuredAt,
+            req.user
+          );
+
+          if (value !== null) {
+            // Check if already exists
+            const existing = await PatientMeasure.findOne({
+              where: {
+                patient_id: patientId,
+                measure_definition_id: measureDef.id,
+                measured_at: measuredAt,
+                deleted_at: null
+              }
+            });
+
+            if (existing) {
+              existing.numeric_value = value;
+              await existing.save();
+            } else {
+              await PatientMeasure.create({
+                patient_id: patientId,
+                measure_definition_id: measureDef.id,
+                measured_at: measuredAt,
+                numeric_value: value,
+                recorded_by: req.user.id
+              });
+            }
+
+            totalCalculated.push({
+              measure_name: measureDef.name,
+              value,
+              measured_at: measuredAt
+            });
+          }
+        } catch (error) {
+          console.error(`Error calculating ${measureDef.name}:`, error);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Recalculated ${totalCalculated.length} measure values`,
+      data: {
+        count: totalCalculated.length,
+        calculated: totalCalculated
+      }
+    });
+  } catch (error) {
+    console.error('Error in recalculatePatientMeasures:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to recalculate measures'
+    });
+  }
+}
+
+/**
+ * POST /api/measures/:id/recalculate-all
+ * Recalculate all historical values for a measure across all patients
+ */
+async function recalculateMeasureAcrossAllPatients(req, res) {
+  try {
+    const { id } = req.params;
+
+    const result = await measureEvaluation.recalculateAllValuesForMeasure(id, req.user);
+
+    res.json({
+      success: true,
+      message: `Bulk recalculation complete`,
+      data: result
+    });
+  } catch (error) {
+    console.error('Error in recalculateMeasureAcrossAllPatients:', error);
+    const statusCode = error.message.includes('not found') ? 404 : 500;
+    res.status(statusCode).json({
+      success: false,
+      error: error.message || 'Failed to recalculate measure'
+    });
+  }
+}
+
 module.exports = {
   logMeasure,
   getMeasures,
@@ -571,5 +701,7 @@ module.exports = {
   getMeasuresByVisit,
   getAllPatientMeasures,
   getTrend,
-  compareMeasures
+  compareMeasures,
+  recalculatePatientMeasures,
+  recalculateMeasureAcrossAllPatients
 };

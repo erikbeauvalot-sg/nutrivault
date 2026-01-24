@@ -204,11 +204,154 @@ function getAllTemplates() {
   return getTemplates();
 }
 
+/**
+ * Get formula templates specifically for calculated measures
+ * These templates use measure names (not custom field names)
+ * @returns {Array} Array of measure template objects
+ */
+function getMeasureTemplates() {
+  return [
+    {
+      id: 'bmi',
+      name: 'Body Mass Index (BMI)',
+      description: 'BMI = weight (kg) / height (m)²',
+      formula: '{weight} / ({height} * {height})',
+      dependencies: ['weight', 'height'],
+      unit: 'kg/m²',
+      category: 'anthropometric',
+      decimalPlaces: 2,
+      helpText: 'Requires weight and height measures. Standard formula for Body Mass Index.'
+    },
+    {
+      id: 'weight_change',
+      name: 'Weight Change',
+      description: 'Current weight - Previous weight',
+      formula: '{current:weight} - {previous:weight}',
+      dependencies: ['weight'],
+      unit: 'kg',
+      category: 'trends',
+      decimalPlaces: 1,
+      helpText: 'Time-series calculation showing weight change from previous measurement.'
+    },
+    {
+      id: 'weight_delta_percent',
+      name: 'Weight Change Percentage',
+      description: '((Current - Previous) / Previous) × 100',
+      formula: '(({current:weight} - {previous:weight}) / {previous:weight}) * 100',
+      dependencies: ['weight'],
+      unit: '%',
+      category: 'trends',
+      decimalPlaces: 1,
+      helpText: 'Percentage change in weight from previous measurement.'
+    },
+    {
+      id: 'weight_trend',
+      name: 'Weight Trend (30-day avg)',
+      description: 'Current weight - 30-day average',
+      formula: '{current:weight} - {avg30:weight}',
+      dependencies: ['weight'],
+      unit: 'kg',
+      category: 'trends',
+      decimalPlaces: 1,
+      helpText: 'Difference between current weight and 30-day rolling average.'
+    },
+    {
+      id: 'bsa_mosteller',
+      name: 'Body Surface Area (Mosteller)',
+      description: 'BSA = √((height × weight) / 3600)',
+      formula: 'sqrt(({height} * {weight}) / 3600)',
+      dependencies: ['height', 'weight'],
+      unit: 'm²',
+      category: 'anthropometric',
+      decimalPlaces: 2,
+      helpText: 'Mosteller formula for Body Surface Area. Height in cm, weight in kg.'
+    },
+    {
+      id: 'bsa_dubois',
+      name: 'Body Surface Area (DuBois)',
+      description: 'BSA = 0.007184 × height^0.725 × weight^0.425',
+      formula: '0.007184 * ({height} ^ 0.725) * ({weight} ^ 0.425)',
+      dependencies: ['height', 'weight'],
+      unit: 'm²',
+      category: 'anthropometric',
+      decimalPlaces: 2,
+      helpText: 'DuBois formula for Body Surface Area. Height in cm, weight in kg.'
+    },
+    {
+      id: 'map',
+      name: 'Mean Arterial Pressure',
+      description: 'MAP = DBP + (SBP - DBP) / 3',
+      formula: '{diastolic_bp} + ({systolic_bp} - {diastolic_bp}) / 3',
+      dependencies: ['systolic_bp', 'diastolic_bp'],
+      unit: 'mmHg',
+      category: 'vitals',
+      decimalPlaces: 0,
+      helpText: 'Average arterial pressure during a single cardiac cycle.'
+    },
+    {
+      id: 'pulse_pressure',
+      name: 'Pulse Pressure',
+      description: 'PP = SBP - DBP',
+      formula: '{systolic_bp} - {diastolic_bp}',
+      dependencies: ['systolic_bp', 'diastolic_bp'],
+      unit: 'mmHg',
+      category: 'vitals',
+      decimalPlaces: 0,
+      helpText: 'Difference between systolic and diastolic blood pressure.'
+    },
+    {
+      id: 'waist_height_ratio',
+      name: 'Waist-to-Height Ratio',
+      description: 'WHtR = Waist / Height',
+      formula: '{waist} / {height}',
+      dependencies: ['waist', 'height'],
+      unit: 'ratio',
+      category: 'anthropometric',
+      decimalPlaces: 2,
+      helpText: 'Waist-to-height ratio. Should be <0.5 for healthy individuals.'
+    },
+    {
+      id: 'bmi_category_score',
+      name: 'BMI Category Score',
+      description: 'Numeric score based on BMI category',
+      formula: 'round({bmi} / 5) * 5',
+      dependencies: ['bmi'],
+      unit: 'score',
+      category: 'derived',
+      decimalPlaces: 0,
+      helpText: 'Rounded BMI score in 5-point increments for categorization.'
+    },
+    {
+      id: 'heart_rate_reserve',
+      name: 'Heart Rate Reserve',
+      description: 'HRR = Max HR - Resting HR',
+      formula: '{max_heart_rate} - {resting_heart_rate}',
+      dependencies: ['max_heart_rate', 'resting_heart_rate'],
+      unit: 'bpm',
+      category: 'vitals',
+      decimalPlaces: 0,
+      helpText: 'Difference between maximum and resting heart rate.'
+    },
+    {
+      id: 'target_heart_rate_zone',
+      name: 'Target Heart Rate (60-70%)',
+      description: 'THR = ((MaxHR - RestingHR) × 0.65) + RestingHR',
+      formula: '(({max_heart_rate} - {resting_heart_rate}) * 0.65) + {resting_heart_rate}',
+      dependencies: ['max_heart_rate', 'resting_heart_rate'],
+      unit: 'bpm',
+      category: 'vitals',
+      decimalPlaces: 0,
+      helpText: 'Target heart rate for moderate intensity exercise (mid-range 60-70%).'
+    }
+  ];
+}
+
 module.exports = {
   getTemplates,
   getAllTemplates,
   getTemplateById,
   getTemplatesByCategory,
   getCategories,
-  applyTemplate
+  applyTemplate,
+  getMeasureTemplates
 };

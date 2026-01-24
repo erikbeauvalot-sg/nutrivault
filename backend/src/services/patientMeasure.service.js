@@ -11,6 +11,7 @@ const MeasureDefinition = db.MeasureDefinition;
 const Patient = db.Patient;
 const User = db.User;
 const auditService = require('./audit.service');
+const measureEvaluation = require('./measureEvaluation.service');
 const { Op } = require('sequelize');
 
 /**
@@ -93,6 +94,21 @@ async function logMeasure(patientId, data, user, requestMetadata = {}) {
 
     // Save
     await measure.save();
+
+    // Trigger recalculation of dependent measures
+    if (measureDef.measure_type !== 'calculated') {
+      try {
+        await measureEvaluation.recalculateDependentMeasures(
+          patientId,
+          measureDef.name,
+          measure.measured_at,
+          user
+        );
+      } catch (error) {
+        console.error('Error recalculating dependent measures:', error);
+        // Don't fail the whole operation if recalculation fails
+      }
+    }
 
     // Audit log
     await auditService.log({
@@ -386,6 +402,21 @@ async function updateMeasure(id, data, user, requestMetadata = {}) {
     }
 
     await measure.save();
+
+    // Trigger recalculation of dependent measures if value or timestamp changed
+    if (measureDef.measure_type !== 'calculated' && (newValue !== undefined || data.measured_at)) {
+      try {
+        await measureEvaluation.recalculateDependentMeasures(
+          measure.patient_id,
+          measureDef.name,
+          measure.measured_at,
+          user
+        );
+      } catch (error) {
+        console.error('Error recalculating dependent measures:', error);
+        // Don't fail the whole operation if recalculation fails
+      }
+    }
 
     // Audit log
     await auditService.log({

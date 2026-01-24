@@ -149,4 +149,30 @@ router.get(
   patientMeasureController.getAllPatientMeasures
 );
 
+/**
+ * POST /api/patient-measures/:patientId/recalculate
+ * Recalculate all calculated measures for a patient
+ * Permission: measures:update
+ * Sprint 4: US-5.4.2 - Calculated Measures
+ */
+router.post(
+  '/patient-measures/:patientId/recalculate',
+  authenticate,
+  requirePermission('measures.update'),
+  patientMeasureController.recalculatePatientMeasures
+);
+
+/**
+ * POST /api/measures/:id/recalculate-all
+ * Bulk recalculate all historical values for a measure across all patients
+ * Permission: measures:update
+ * Sprint 4: US-5.4.2 - Calculated Measures
+ */
+router.post(
+  '/measures/:id/recalculate-all',
+  authenticate,
+  requirePermission('measures.update'),
+  patientMeasureController.recalculateMeasureAcrossAllPatients
+);
+
 module.exports = router;

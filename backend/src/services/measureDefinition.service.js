@@ -8,6 +8,8 @@
 const db = require('../../../models');
 const MeasureDefinition = db.MeasureDefinition;
 const auditService = require('./audit.service');
+const formulaEngine = require('./formulaEngine.service');
+const measureEvaluation = require('./measureEvaluation.service');
 const { Op } = require('sequelize');
 
 /**
@@ -113,6 +115,55 @@ async function createDefinition(data, user, requestMetadata = {}) {
       throw new Error(`Measure with name '${data.name}' already exists`);
     }
 
+    // Validate calculated measure formula
+    if (data.measure_type === 'calculated') {
+      if (!data.formula) {
+        throw new Error('Formula is required for calculated measures');
+      }
+
+      // Validate formula syntax
+      const validation = formulaEngine.validateFormula(data.formula);
+      if (!validation.valid) {
+        throw new Error(`Invalid formula: ${validation.error}`);
+      }
+
+      // Extract dependencies
+      data.dependencies = formulaEngine.extractDependencies(data.formula);
+
+      // Validate dependencies exist
+      for (const depName of data.dependencies) {
+        const dep = await MeasureDefinition.findOne({
+          where: { name: depName, deleted_at: null }
+        });
+        if (!dep) {
+          throw new Error(`Dependency not found: ${depName}`);
+        }
+      }
+
+      // Check for circular dependencies
+      const allMeasures = await MeasureDefinition.findAll({
+        where: { measure_type: 'calculated', deleted_at: null }
+      });
+      const measureMap = {};
+      allMeasures.forEach(m => {
+        measureMap[m.name] = { dependencies: m.getDependencies() };
+      });
+      measureMap[data.name] = { dependencies: data.dependencies };
+
+      const circular = formulaEngine.detectCircularDependencies(
+        data.name,
+        data.dependencies,
+        measureMap
+      );
+
+      if (circular.hasCircular) {
+        throw new Error(`Circular dependency detected: ${circular.cycle.join(' → ')}`);
+      }
+
+      // Set timestamp
+      data.last_formula_change = new Date();
+    }
+
     // Create measure definition
     const measure = await MeasureDefinition.create({
       name: data.name,
@@ -126,7 +177,10 @@ async function createDefinition(data, user, requestMetadata = {}) {
       decimal_places: data.decimal_places !== undefined ? data.decimal_places : 2,
       is_active: data.is_active !== undefined ? data.is_active : true,
       display_order: data.display_order !== undefined ? data.display_order : 0,
-      is_system: false // User-created measures are never system measures
+      is_system: false, // User-created measures are never system measures
+      formula: data.formula || null,
+      dependencies: data.dependencies || [],
+      last_formula_change: data.last_formula_change || null
     });
 
     // Audit log
@@ -189,11 +243,66 @@ async function updateDefinition(id, data, user, requestMetadata = {}) {
       }
     }
 
+    // Validate calculated measure formula if being updated
+    if (data.measure_type === 'calculated' || measure.measure_type === 'calculated') {
+      if (data.formula !== undefined) {
+        if (!data.formula) {
+          throw new Error('Formula is required for calculated measures');
+        }
+
+        // Validate formula syntax
+        const validation = formulaEngine.validateFormula(data.formula);
+        if (!validation.valid) {
+          throw new Error(`Invalid formula: ${validation.error}`);
+        }
+
+        // Extract dependencies
+        data.dependencies = formulaEngine.extractDependencies(data.formula);
+
+        // Validate dependencies exist
+        for (const depName of data.dependencies) {
+          const dep = await MeasureDefinition.findOne({
+            where: { name: depName, deleted_at: null }
+          });
+          if (!dep) {
+            throw new Error(`Dependency not found: ${depName}`);
+          }
+        }
+
+        // Check for circular dependencies
+        const allMeasures = await MeasureDefinition.findAll({
+          where: {
+            measure_type: 'calculated',
+            deleted_at: null,
+            id: { [Op.ne]: id } // Exclude current measure
+          }
+        });
+        const measureMap = {};
+        allMeasures.forEach(m => {
+          measureMap[m.name] = { dependencies: m.getDependencies() };
+        });
+        measureMap[measure.name] = { dependencies: data.dependencies };
+
+        const circular = formulaEngine.detectCircularDependencies(
+          measure.name,
+          data.dependencies,
+          measureMap
+        );
+
+        if (circular.hasCircular) {
+          throw new Error(`Circular dependency detected: ${circular.cycle.join(' → ')}`);
+        }
+
+        data.last_formula_change = new Date();
+      }
+    }
+
     // Update measure
     const updateFields = {};
     const allowedUpdateFields = [
       'name', 'display_name', 'description', 'category', 'measure_type',
-      'unit', 'min_value', 'max_value', 'decimal_places', 'is_active', 'display_order'
+      'unit', 'min_value', 'max_value', 'decimal_places', 'is_active', 'display_order',
+      'formula', 'dependencies', 'last_formula_change'
     ];
 
     allowedUpdateFields.forEach(field => {
@@ -202,7 +311,26 @@ async function updateDefinition(id, data, user, requestMetadata = {}) {
       }
     });
 
+    // Track if formula changed for recalculation
+    const formulaChanged = data.formula !== undefined && data.formula !== measure.formula;
+
     await measure.update(updateFields);
+
+    // Trigger bulk recalculation if formula changed
+    if (formulaChanged && measure.measure_type === 'calculated') {
+      try {
+        console.log(`Formula changed for ${measure.name}, triggering bulk recalculation...`);
+        // Run in background - don't wait for it
+        measureEvaluation.recalculateAllValuesForMeasure(id, user)
+          .catch(err => console.error('Error in background recalculation:', err));
+      } catch (error) {
+        console.error('Error triggering recalculation:', error);
+        // Don't fail the update if recalculation fails
+      }
+    }
+
+    // Clear cache since measure definitions changed
+    measureEvaluation.clearCache();
 
     // Audit log
     await auditService.log({

@@ -156,10 +156,32 @@ async function applyTemplate(req, res) {
   }
 }
 
+/**
+ * Get measure formula templates
+ * @route GET /api/formulas/templates/measures
+ */
+async function getMeasureTemplates(req, res) {
+  try {
+    const templates = templatesService.getMeasureTemplates();
+
+    res.json({
+      success: true,
+      data: templates
+    });
+  } catch (error) {
+    console.error('Error in getMeasureTemplates:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get measure templates'
+    });
+  }
+}
+
 module.exports = {
   validateFormula,
   previewFormula,
   getOperators,
   getTemplates,
+  getMeasureTemplates,
   applyTemplate
 };

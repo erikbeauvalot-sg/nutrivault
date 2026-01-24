@@ -96,6 +96,19 @@ router.get(
 );
 
 /**
+ * @route   GET /api/formulas/templates/measures
+ * @desc    Get formula templates for calculated measures
+ * @access  Admin only
+ * Sprint 4: US-5.4.2 - Calculated Measures
+ */
+router.get(
+  '/templates/measures',
+  authenticate,
+  requireRole('ADMIN'),
+  formulaController.getMeasureTemplates
+);
+
+/**
  * @route   POST /api/formulas/templates/apply
  * @desc    Apply a template with field mapping
  * @access  Admin only
