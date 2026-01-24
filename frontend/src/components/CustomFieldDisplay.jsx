@@ -39,6 +39,16 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
     }
 
     switch (field_type) {
+      case 'calculated':
+        // Display calculated fields with special formatting
+        const decimalPlaces = fieldDefinition.decimal_places || 2;
+        const formattedValue = typeof value === 'number' ? value.toFixed(decimalPlaces) : value;
+        return (
+          <span style={{ fontWeight: '500' }}>
+            🧮 {formattedValue}
+          </span>
+        );
+
       case 'boolean':
         return value === true || value === 'true' ?
           <Badge bg="success">Oui</Badge> :
@@ -95,9 +105,10 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
 CustomFieldDisplay.propTypes = {
   fieldDefinition: PropTypes.shape({
     field_label: PropTypes.string.isRequired,
-    field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean']).isRequired,
+    field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean', 'calculated']).isRequired,
     validation_rules: PropTypes.object,
-    select_options: PropTypes.arrayOf(PropTypes.string)
+    select_options: PropTypes.arrayOf(PropTypes.string),
+    decimal_places: PropTypes.number
   }).isRequired,
   value: PropTypes.any,
   searchQuery: PropTypes.string,
