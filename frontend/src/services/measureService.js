@@ -142,6 +142,28 @@ export const getMeasureHistory = async (patientId, measureDefId, dateRange = {})
 };
 
 /**
+ * Get trend analysis for a specific measure
+ * Sprint 4: US-5.4.1 - Trend Visualization with Charts
+ * @param {string} patientId - Patient UUID
+ * @param {string} measureDefId - Measure definition UUID
+ * @param {object} options - { start_date, end_date, includeMA, includeTrendLine }
+ * @returns {Promise<object>} Trend analysis data with statistics, moving averages, and trend line
+ */
+export const getMeasureTrend = async (patientId, measureDefId, options = {}) => {
+  const params = new URLSearchParams();
+  if (options.start_date) params.append('start_date', options.start_date);
+  if (options.end_date) params.append('end_date', options.end_date);
+  if (options.includeMA !== undefined) params.append('includeMA', options.includeMA);
+  if (options.includeTrendLine !== undefined) params.append('includeTrendLine', options.includeTrendLine);
+
+  const queryString = params.toString();
+  const response = await api.get(
+    `/api/patients/${patientId}/measures/${measureDefId}/trend${queryString ? '?' + queryString : ''}`
+  );
+  return response.data.data || response.data;
+};
+
+/**
  * Update a patient measure
  * @param {string} measureId - Patient measure UUID
  * @param {object} measureData - Updated measure data

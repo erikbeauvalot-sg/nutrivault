@@ -158,11 +158,18 @@ async function getMeasures(patientId, filters = {}, user, requestMetadata = {}) 
 
     const measures = await PatientMeasure.findAll({
       where,
-      include: [{
-        model: MeasureDefinition,
-        as: 'measureDefinition',
-        required: true
-      }],
+      include: [
+        {
+          model: MeasureDefinition,
+          as: 'measureDefinition',
+          required: true
+        },
+        {
+          model: User,
+          as: 'recorder',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        }
+      ],
       order: [['measured_at', 'DESC']],
       limit: filters.limit || 100
     });
@@ -170,26 +177,51 @@ async function getMeasures(patientId, filters = {}, user, requestMetadata = {}) 
     // Format results
     const results = measures.map(measure => {
       const measureDef = measure.measureDefinition || measure.MeasureDefinition;
+      const recorder = measure.recorder;
       return {
         id: measure.id,
         patient_id: measure.patient_id,
         measure_definition_id: measure.measure_definition_id,
         visit_id: measure.visit_id,
         measured_at: measure.measured_at,
+        numeric_value: measure.numeric_value,
+        text_value: measure.text_value,
+        boolean_value: measure.boolean_value,
         value: measure.getValue(measureDef.measure_type),
         formatted_value: measure.formatValue(measureDef),
         notes: measure.notes,
         recorded_by: measure.recorded_by,
         created_at: measure.created_at,
         updated_at: measure.updated_at,
-        measure_definition: {
+        deleted_at: measure.deleted_at,
+        MeasureDefinition: {
           id: measureDef.id,
           name: measureDef.name,
           display_name: measureDef.display_name,
           category: measureDef.category,
           measure_type: measureDef.measure_type,
           unit: measureDef.unit
-        }
+        },
+        RecordedBy: recorder ? {
+          id: recorder.id,
+          username: recorder.username,
+          first_name: recorder.first_name,
+          last_name: recorder.last_name
+        } : null,
+        measureDefinition: {
+          id: measureDef.id,
+          name: measureDef.name,
+          display_name: measureDef.display_name,
+          category: measureDef.category,
+          measure_type: measureDef.measure_type,
+          unit: measureDef.unit
+        },
+        recorder: recorder ? {
+          id: recorder.id,
+          username: recorder.username,
+          first_name: recorder.first_name,
+          last_name: recorder.last_name
+        } : null
       };
     });
 
@@ -322,12 +354,24 @@ async function updateMeasure(id, data, user, requestMetadata = {}) {
     const measureDef = measure.measureDefinition || measure.MeasureDefinition;
 
     // Validate new value if provided
+    // Support both 'value' field and type-specific fields (numeric_value, text_value, boolean_value)
+    let newValue;
     if (data.value !== undefined) {
-      const validation = measureDef.validateValue(data.value);
+      newValue = data.value;
+    } else if (data.numeric_value !== undefined) {
+      newValue = data.numeric_value;
+    } else if (data.text_value !== undefined) {
+      newValue = data.text_value;
+    } else if (data.boolean_value !== undefined) {
+      newValue = data.boolean_value;
+    }
+
+    if (newValue !== undefined) {
+      const validation = measureDef.validateValue(newValue);
       if (!validation.valid) {
         throw new Error(validation.error);
       }
-      measure.setValue(measureDef.measure_type, data.value);
+      measure.setValue(measureDef.measure_type, newValue);
     }
 
     // Update other fields

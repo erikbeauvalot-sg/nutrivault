@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Card, Table, Alert, Spinner, Badge, Button } from 'react-bootstrap';
+import { Container, Card, Table, Alert, Spinner, Badge, Button, Form } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import Layout from '../components/layout/Layout';
 import api from '../services/api';
@@ -21,6 +21,7 @@ const MeasureDetailPage = () => {
   const [error, setError] = useState(null);
   const [measureDefinition, setMeasureDefinition] = useState(null);
   const [measures, setMeasures] = useState([]);
+  const [displayLimit, setDisplayLimit] = useState(20);
 
   useEffect(() => {
     fetchData();
@@ -157,7 +158,23 @@ const MeasureDetailPage = () => {
         <Card>
           <Card.Header className="bg-dark text-white d-flex justify-content-between align-items-center">
             <h5 className="mb-0">💾 Raw Database Dump</h5>
-            <Badge bg="light" text="dark">{measures.length} records</Badge>
+            <div className="d-flex align-items-center gap-3">
+              <Form.Group className="mb-0 d-flex align-items-center gap-2">
+                <Form.Label className="mb-0 text-white">Show:</Form.Label>
+                <Form.Select
+                  size="sm"
+                  value={displayLimit}
+                  onChange={(e) => setDisplayLimit(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
+                  style={{ width: 'auto' }}
+                >
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                  <option value="all">All</option>
+                </Form.Select>
+              </Form.Group>
+              <Badge bg="light" text="dark">{measures.length} total records</Badge>
+            </div>
           </Card.Header>
           <Card.Body className="p-0">
             {measures.length === 0 ? (
@@ -187,7 +204,7 @@ const MeasureDetailPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {measures.map(measure => (
+                    {(displayLimit === 'all' ? measures : measures.slice(0, displayLimit)).map(measure => (
                       <tr key={measure.id}>
                         <td><code style={{ fontSize: '0.8rem' }}>{measure.id}</code></td>
                         <td><code style={{ fontSize: '0.8rem' }}>{measure.patient_id}</code></td>

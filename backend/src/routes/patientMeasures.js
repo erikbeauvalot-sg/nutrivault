@@ -59,6 +59,44 @@ router.get(
 );
 
 /**
+ * GET /api/patients/:patientId/measures/:measureDefId/trend
+ * Get trend analysis for a specific measure
+ * Permission: measures:read
+ * Sprint 4: US-5.4.1 - Trend Visualization with Charts
+ *
+ * Query params:
+ * - start_date: Start of date range (ISO format, default: 365 days ago)
+ * - end_date: End of date range (ISO format, default: today)
+ * - includeMA: Include moving averages (default: true)
+ * - includeTrendLine: Include trend line (default: true)
+ */
+router.get(
+  '/patients/:patientId/measures/:measureDefId/trend',
+  authenticate,
+  requirePermission('measures.read'),
+  patientMeasureController.getTrend
+);
+
+/**
+ * POST /api/patients/:patientId/measures/compare
+ * Compare multiple measures for a patient
+ * Permission: measures:read
+ * Sprint 4: US-5.4.1 - Trend Visualization with Charts (Phase 2)
+ *
+ * Body:
+ * - measureDefinitionIds: Array of measure definition UUIDs (2-5 measures)
+ * - start_date: Start of date range (ISO format, optional)
+ * - end_date: End of date range (ISO format, optional)
+ * - normalize: Boolean, normalize to 0-100 scale (default: false)
+ */
+router.post(
+  '/patients/:patientId/measures/compare',
+  authenticate,
+  requirePermission('measures.read'),
+  patientMeasureController.compareMeasures
+);
+
+/**
  * PUT /api/patient-measures/:id
  * Update a measure
  * Permission: measures:update

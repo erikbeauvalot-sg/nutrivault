@@ -102,6 +102,10 @@ app.use('/api/measures', measureRoutes);
 const patientMeasureRoutes = require('./routes/patientMeasures');
 app.use('/api', patientMeasureRoutes);
 
+// Annotation routes (protected - RBAC enforced in routes file)
+const annotationRoutes = require('./routes/annotations');
+app.use('/api', annotationRoutes);
+
 // Basic error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);

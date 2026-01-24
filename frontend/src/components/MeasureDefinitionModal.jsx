@@ -200,7 +200,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg">
+    <Modal show={show} onHide={handleClose} size="lg" centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
           {isEditing ? 'Edit Measure Definition' : 'Create Measure Definition'}
@@ -208,7 +208,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
       </Modal.Header>
 
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <Modal.Body style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+        <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
           {error && (
             <Alert variant="danger" dismissible onClose={() => setError(null)}>
               {error}

@@ -365,8 +365,8 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
         }}
       />
 
-      {/* TODO: Add edit functionality to LogMeasureModal */}
-      {/* {showEditModal && (
+      {/* Edit Measure Modal */}
+      {showEditModal && (
         <LogMeasureModal
           show={showEditModal}
           onHide={() => {
@@ -381,7 +381,7 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
             setEditingMeasure(null);
           }}
         />
-      )} */}
+      )}
     </div>
   );
 };

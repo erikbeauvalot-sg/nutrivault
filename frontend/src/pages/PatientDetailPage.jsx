@@ -14,6 +14,8 @@ import MeasurementCharts from '../components/MeasurementCharts';
 import InvoiceList from '../components/InvoiceList';
 import CustomFieldInput from '../components/CustomFieldInput';
 import CustomFieldDisplay from '../components/CustomFieldDisplay';
+import MeasureHistory from '../components/MeasureHistory';
+import MeasureComparison from '../components/MeasureComparison';
 import customFieldService from '../services/customFieldService';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import { getBMICategory, calculateBMI } from '../utils/bmiUtils';
@@ -54,12 +56,16 @@ const PatientDetailPage = () => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [savingFields, setSavingFields] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [patientMeasures, setPatientMeasures] = useState([]);
+  const [measuresLoading, setMeasuresLoading] = useState(false);
+  const [measuresDisplayLimit, setMeasuresDisplayLimit] = useState(20);
 
   useEffect(() => {
     if (id) {
       fetchPatientDetails();
       fetchPatientDocuments();
       fetchPatientInvoices();
+      fetchPatientMeasures();
     }
   }, [id]);
 
@@ -108,6 +114,20 @@ const PatientDetailPage = () => {
       // Don't set error for invoices failure
     } finally {
       setInvoicesLoading(false);
+    }
+  };
+
+  const fetchPatientMeasures = async () => {
+    try {
+      setMeasuresLoading(true);
+      const response = await api.get(`/api/patients/${id}/measures`);
+      const measuresData = response.data?.data || response.data || [];
+      setPatientMeasures(Array.isArray(measuresData) ? measuresData : []);
+    } catch (err) {
+      console.error('Error fetching patient measures:', err);
+      // Don't set error for measures failure
+    } finally {
+      setMeasuresLoading(false);
     }
   };
 
@@ -826,124 +846,118 @@ const PatientDetailPage = () => {
                 </Card>
               </Tab>
 
-              {/* Measurements Tab */}
-              <Tab eventKey="measurements" title={`📊 ${t('patients.measurementsTab')}`}>
-                <Card>
-                  <Card.Header>
-                    <h5 className="mb-0">{t('patients.measurementTrends')}</h5>
-                    <p className="text-muted mb-0 small">
-                      {t('patients.measurementTrendsDescription')}
-                    </p>
-                  </Card.Header>
-                  <Card.Body>
-                    <MeasurementCharts visits={visits} />
-                  </Card.Body>
-                </Card>
-              </Tab>
-
               {/* Raw Measurements Tab (Development Only) */}
               {import.meta.env.DEV && (
                 <Tab eventKey="raw-measurements" title={`🔧 Raw Data`}>
                   <Card>
-                    <Card.Header className="bg-dark text-white">
-                      <h5 className="mb-0">{t('patients.rawMeasurementData', 'Raw Measurement Data (Development Only)')}</h5>
-                      <p className="text-muted mb-0 small">
-                        All measurements from completed visits
-                      </p>
+                    <Card.Header className="bg-dark text-white d-flex justify-content-between align-items-center">
+                      <h5 className="mb-0">💾 Raw Database Dump</h5>
+                      <div className="d-flex align-items-center gap-3">
+                        <Form.Group className="mb-0 d-flex align-items-center gap-2">
+                          <Form.Label className="mb-0 text-white">Show:</Form.Label>
+                          <Form.Select
+                            size="sm"
+                            value={measuresDisplayLimit}
+                            onChange={(e) => setMeasuresDisplayLimit(e.target.value === 'all' ? 'all' : parseInt(e.target.value))}
+                            style={{ width: 'auto' }}
+                          >
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="all">All</option>
+                          </Form.Select>
+                        </Form.Group>
+                        <Badge bg="light" text="dark">{patientMeasures.length} total records</Badge>
+                      </div>
                     </Card.Header>
-                    <Card.Body>
-                      {(() => {
-                        // Filter completed visits and extract measurements
-                        const completedVisits = visits.filter(v => v.status === 'COMPLETED');
-                        const allMeasurements = [];
+                    <Card.Body className="p-0">
+                      {measuresLoading ? (
+                        <div className="text-center py-5">
+                          <Spinner animation="border" variant="primary" />
+                          <div className="mt-2">Loading measures...</div>
+                        </div>
+                      ) : patientMeasures.length === 0 ? (
+                        <div className="text-center py-5 text-muted">
+                          <h4>No data found</h4>
+                          <p>No measures have been recorded for this patient yet.</p>
+                        </div>
+                      ) : (
+                        <div className="table-responsive">
+                          <table className="table table-striped table-bordered table-hover table-sm mb-0">
+                            <thead className="table-secondary">
+                              <tr>
+                                <th>ID</th>
+                                <th>Measure ID</th>
+                                <th>Measure Name</th>
+                                <th>Value</th>
+                                <th>Numeric Value</th>
+                                <th>Text Value</th>
+                                <th>Boolean Value</th>
+                                <th>Measured At</th>
+                                <th>Visit ID</th>
+                                <th>Recorded By</th>
+                                <th>Notes</th>
+                                <th>Created At</th>
+                                <th>Updated At</th>
+                                <th>Deleted At</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(measuresDisplayLimit === 'all' ? patientMeasures : patientMeasures.slice(0, measuresDisplayLimit)).map((measure) => {
+                                const getMeasureValue = (m) => {
+                                  if (m.numeric_value !== null && m.numeric_value !== undefined) {
+                                    return m.numeric_value;
+                                  }
+                                  if (m.text_value !== null && m.text_value !== undefined) {
+                                    return m.text_value;
+                                  }
+                                  if (m.boolean_value !== null && m.boolean_value !== undefined) {
+                                    return m.boolean_value ? 'Yes' : 'No';
+                                  }
+                                  return '—';
+                                };
 
-                        completedVisits.forEach(visit => {
-                          if (visit.measurements && Array.isArray(visit.measurements)) {
-                            visit.measurements.forEach(measurement => {
-                              allMeasurements.push({
-                                ...measurement,
-                                visit_date: visit.visit_date,
-                                visit_type: visit.visit_type,
-                                visit_id: visit.id
-                              });
-                            });
-                          }
-                        });
-
-                        if (allMeasurements.length === 0) {
-                          return (
-                            <Alert variant="info">
-                              No measurements found in completed visits.
-                            </Alert>
-                          );
-                        }
-
-                        return (
-                          <div className="table-responsive">
-                            <table className="table table-sm table-bordered">
-                              <thead className="table-dark">
-                                <tr>
-                                  <th>Visit Date</th>
-                                  <th>Visit Type</th>
-                                  <th>Weight (kg)</th>
-                                  <th>Height (cm)</th>
-                                  <th>BMI</th>
-                                  <th>BP Systolic</th>
-                                  <th>BP Diastolic</th>
-                                  <th>Heart Rate</th>
-                                  <th>Waist (cm)</th>
-                                  <th>Hip (cm)</th>
-                                  <th>Body Fat %</th>
-                                  <th>Muscle Mass (kg)</th>
-                                  <th>Notes</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {allMeasurements.map((m, idx) => {
-                                  const bmiCategory = m.bmi ? getBMICategory(m.bmi, t) : null;
-                                  return (
-                                  <tr key={idx}>
-                                    <td>{formatDateTime(m.visit_date)}</td>
-                                    <td>{m.visit_type || 'General'}</td>
-                                    <td>{m.weight_kg || '-'}</td>
-                                    <td>{m.height_cm || '-'}</td>
+                                return (
+                                  <tr key={measure.id}>
+                                    <td><code style={{ fontSize: '0.8rem' }}>{measure.id}</code></td>
+                                    <td><code style={{ fontSize: '0.8rem' }}>{measure.measure_definition_id}</code></td>
                                     <td>
-                                      {m.bmi ? (
-                                        <div>
-                                          <strong>{m.bmi.toFixed(1)}</strong>
-                                          {bmiCategory && (
-                                            <div>
-                                              <Badge
-                                                bg={bmiCategory.variant}
-                                                className="mt-1"
-                                                style={bmiCategory.customBg ? { backgroundColor: bmiCategory.customBg } : {}}
-                                              >
-                                                {bmiCategory.category}
-                                              </Badge>
-                                            </div>
-                                          )}
-                                        </div>
-                                      ) : '-'}
+                                      {measure.MeasureDefinition ? (
+                                        <a href={`/settings/measures/${measure.measure_definition_id}/view`}>
+                                          {measure.MeasureDefinition.display_name || measure.MeasureDefinition.internal_name}
+                                        </a>
+                                      ) : (
+                                        '—'
+                                      )}
                                     </td>
-                                    <td>{m.blood_pressure_systolic || '-'}</td>
-                                    <td>{m.blood_pressure_diastolic || '-'}</td>
-                                    <td>{m.heart_rate_bpm || '-'}</td>
-                                    <td>{m.waist_circumference_cm || '-'}</td>
-                                    <td>{m.hip_circumference_cm || '-'}</td>
-                                    <td>{m.body_fat_percentage || '-'}</td>
-                                    <td>{m.muscle_mass_kg || '-'}</td>
-                                    <td>{m.notes || '-'}</td>
+                                    <td><strong>{getMeasureValue(measure)}</strong></td>
+                                    <td>{measure.numeric_value !== null ? measure.numeric_value : '—'}</td>
+                                    <td>{measure.text_value || '—'}</td>
+                                    <td>{measure.boolean_value !== null ? (measure.boolean_value ? '✅' : '❌') : '—'}</td>
+                                    <td>{formatDateTime(measure.measured_at)}</td>
+                                    <td>
+                                      {measure.visit_id ? (
+                                        <a href={`/visits/${measure.visit_id}`}>
+                                          <code style={{ fontSize: '0.8rem' }}>{measure.visit_id}</code>
+                                        </a>
+                                      ) : (
+                                        '—'
+                                      )}
+                                    </td>
+                                    <td>{measure.RecordedBy?.username || '—'}</td>
+                                    <td style={{ maxWidth: '200px', fontSize: '0.85rem' }}>
+                                      {measure.notes || '—'}
+                                    </td>
+                                    <td>{formatDateTime(measure.created_at)}</td>
+                                    <td>{formatDateTime(measure.updated_at)}</td>
+                                    <td>{measure.deleted_at ? formatDateTime(measure.deleted_at) : '—'}</td>
                                   </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                            <div className="mt-3">
-                              <strong>Total Measurements:</strong> {allMeasurements.length} records from {completedVisits.length} completed visits
-                            </div>
-                          </div>
-                        );
-                      })()}
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </Card.Body>
                   </Card>
                 </Tab>
@@ -1061,6 +1075,36 @@ const PatientDetailPage = () => {
                     canDelete={canEditPatient}
                   />
                 )}
+              </Tab>
+
+              {/* Measures Tab */}
+              <Tab eventKey="measures" title="📊 Measures">
+                <Card>
+                  <Card.Header>
+                    <h5 className="mb-0">{t('patients.measuresTab', 'Patient Measures')}</h5>
+                    <p className="text-muted mb-0 small">
+                      {t('patients.measuresDescription', 'View and track patient health measures over time')}
+                    </p>
+                  </Card.Header>
+                  <Card.Body>
+                    <MeasureHistory patientId={id} />
+                  </Card.Body>
+                </Card>
+              </Tab>
+
+              {/* Compare Measures Tab */}
+              <Tab eventKey="compare-measures" title="📈 Compare Measures">
+                <Card>
+                  <Card.Header>
+                    <h5 className="mb-0">{t('patients.compareMeasuresTab', 'Compare Multiple Measures')}</h5>
+                    <p className="text-muted mb-0 small">
+                      {t('patients.compareMeasuresDescription', 'Compare and analyze multiple health measures simultaneously')}
+                    </p>
+                  </Card.Header>
+                  <Card.Body>
+                    <MeasureComparison patientId={id} />
+                  </Card.Body>
+                </Card>
               </Tab>
             </Tabs>
           </Card.Body>

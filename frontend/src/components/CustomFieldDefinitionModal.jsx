@@ -272,7 +272,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="xl">
+    <Modal show={show} onHide={handleClose} size="xl" centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
           {isEditing ? '✏️ Edit Field Definition' : '➕ Create Field Definition'}

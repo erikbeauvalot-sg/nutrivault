@@ -334,7 +334,7 @@ const LogMeasureModal = ({ show, onHide, patientId, visitId, measure, onSuccess 
   };
 
   return (
-    <Modal show={show} onHide={handleClose} centered>
+    <Modal show={show} onHide={handleClose} centered scrollable size="lg">
       <Modal.Header closeButton>
         <Modal.Title>
           {isEditMode ? (
@@ -346,7 +346,7 @@ const LogMeasureModal = ({ show, onHide, patientId, visitId, measure, onSuccess 
       </Modal.Header>
 
       <Form onSubmit={handleSubmit}>
-        <Modal.Body>
+        <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
           {error && (
             <Alert variant="danger" dismissible onClose={() => setError(null)}>
               {error}
