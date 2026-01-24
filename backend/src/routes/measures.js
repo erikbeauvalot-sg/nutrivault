@@ -8,8 +8,10 @@
 const express = require('express');
 const router = express.Router();
 const measureDefinitionController = require('../controllers/measureDefinitionController');
+const measureTranslationController = require('../controllers/measureTranslationController');
 const authenticate = require('../middleware/authenticate');
 const { requirePermission } = require('../middleware/rbac');
+const { param, body } = require('express-validator');
 
 /**
  * GET /api/measures/categories
@@ -98,6 +100,99 @@ router.delete(
   authenticate,
   requirePermission('measures.delete'),
   measureDefinitionController.deleteDefinition
+);
+
+// ===========================================
+// Translation Routes
+// Sprint 4: US-5.4.2 - Translation Support
+// ===========================================
+
+/**
+ * GET /api/measures/:measureId/translations
+ * Get all translations for a measure definition (all languages)
+ * Permission: measures:read
+ */
+router.get(
+  '/:measureId/translations',
+  authenticate,
+  requirePermission('measures.read'),
+  param('measureId').isUUID().withMessage('Invalid measure ID'),
+  measureTranslationController.getAllTranslations
+);
+
+/**
+ * GET /api/measures/:measureId/translations/:languageCode
+ * Get translations for a measure in a specific language
+ * Permission: measures:read
+ */
+router.get(
+  '/:measureId/translations/:languageCode',
+  authenticate,
+  requirePermission('measures.read'),
+  param('measureId').isUUID().withMessage('Invalid measure ID'),
+  param('languageCode').matches(/^[a-z]{2}(-[A-Z]{2})?$/).withMessage('Invalid language code'),
+  measureTranslationController.getTranslations
+);
+
+/**
+ * POST /api/measures/:measureId/translations/:languageCode
+ * Set translations for a measure in a specific language (bulk)
+ * Permission: measures:update
+ * Body: { display_name: "...", description: "...", unit: "..." }
+ */
+router.post(
+  '/:measureId/translations/:languageCode',
+  authenticate,
+  requirePermission('measures.update'),
+  param('measureId').isUUID().withMessage('Invalid measure ID'),
+  param('languageCode').matches(/^[a-z]{2}(-[A-Z]{2})?$/).withMessage('Invalid language code'),
+  body().isObject().withMessage('Request body must be an object'),
+  measureTranslationController.setTranslations
+);
+
+/**
+ * PUT /api/measures/:measureId/translations/:languageCode/:fieldName
+ * Set a single translation field
+ * Permission: measures:update
+ * Body: { value: "..." }
+ */
+router.put(
+  '/:measureId/translations/:languageCode/:fieldName',
+  authenticate,
+  requirePermission('measures.update'),
+  param('measureId').isUUID().withMessage('Invalid measure ID'),
+  param('languageCode').matches(/^[a-z]{2}(-[A-Z]{2})?$/).withMessage('Invalid language code'),
+  param('fieldName').isIn(['display_name', 'description', 'unit']).withMessage('Invalid field name'),
+  body('value').isString().withMessage('Value must be a string'),
+  measureTranslationController.setTranslation
+);
+
+/**
+ * DELETE /api/measures/translations/:translationId
+ * Delete a translation
+ * Permission: measures:update
+ */
+router.delete(
+  '/translations/:translationId',
+  authenticate,
+  requirePermission('measures.update'),
+  param('translationId').isUUID().withMessage('Invalid translation ID'),
+  measureTranslationController.deleteTranslation
+);
+
+/**
+ * GET /api/measures/:measureId/translated/:languageCode
+ * Get measure definition with translations applied
+ * Permission: measures:read
+ * Query params: ?fallback=en (default language for missing translations)
+ */
+router.get(
+  '/:measureId/translated/:languageCode',
+  authenticate,
+  requirePermission('measures.read'),
+  param('measureId').isUUID().withMessage('Invalid measure ID'),
+  param('languageCode').matches(/^[a-z]{2}(-[A-Z]{2})?$/).withMessage('Invalid language code'),
+  measureTranslationController.getMeasureWithTranslations
 );
 
 module.exports = router;
