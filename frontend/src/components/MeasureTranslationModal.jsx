@@ -14,11 +14,7 @@ import * as measureService from '../services/measureService';
 
 const SUPPORTED_LANGUAGES = [
   { code: 'en', name: 'English', flag: '🇬🇧' },
-  { code: 'fr', name: 'Français', flag: '🇫🇷' },
-  { code: 'es', name: 'Español', flag: '🇪🇸' },
-  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
-  { code: 'it', name: 'Italiano', flag: '🇮🇹' },
-  { code: 'pt', name: 'Português', flag: '🇵🇹' }
+  { code: 'fr', name: 'Français', flag: '🇫🇷' }
 ];
 
 function MeasureTranslationModal({ show, onHide, measure, onSuccess }) {
@@ -29,7 +25,7 @@ function MeasureTranslationModal({ show, onHide, measure, onSuccess }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  const [activeTab, setActiveTab] = useState('fr');
+  const [activeTab, setActiveTab] = useState('en');
 
   // Load translations when modal opens
   useEffect(() => {
