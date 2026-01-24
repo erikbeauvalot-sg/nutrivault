@@ -34,6 +34,7 @@ db.PatientCustomFieldValue = require('./PatientCustomFieldValue')(sequelize, Dat
 db.VisitCustomFieldValue = require('./VisitCustomFieldValue')(sequelize, DataTypes);
 db.CustomFieldTranslation = require('./CustomFieldTranslation')(sequelize, DataTypes);
 db.MeasureDefinition = require('./MeasureDefinition')(sequelize, DataTypes);
+db.MeasureTranslation = require('./MeasureTranslation')(sequelize, DataTypes);
 db.PatientMeasure = require('./PatientMeasure')(sequelize, DataTypes);
 
 // Define associations
@@ -373,6 +374,21 @@ db.PatientMeasure.belongsTo(db.User, {
 db.User.hasMany(db.PatientMeasure, {
   foreignKey: 'recorded_by',
   as: 'recorded_measures'
+});
+
+// MeasureTranslation - MeasureDefinition relationship (polymorphic)
+db.MeasureTranslation.belongsTo(db.MeasureDefinition, {
+  foreignKey: 'entity_id',
+  constraints: false,
+  as: 'measureDefinition'
+});
+db.MeasureDefinition.hasMany(db.MeasureTranslation, {
+  foreignKey: 'entity_id',
+  constraints: false,
+  scope: {
+    entity_type: 'measure_definition'
+  },
+  as: 'translations'
 });
 
 module.exports = db;
