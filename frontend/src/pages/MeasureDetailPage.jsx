@@ -32,7 +32,7 @@ const MeasureDetailPage = () => {
       setError(null);
 
       // Fetch measure definition
-      const defResponse = await api.get(`/api/measures/definitions/${id}`);
+      const defResponse = await api.get(`/api/measures/${id}`);
       setMeasureDefinition(defResponse.data.data || defResponse.data);
 
       // Fetch all measures for this definition (no filters)
