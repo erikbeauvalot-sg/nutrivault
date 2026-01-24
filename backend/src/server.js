@@ -90,6 +90,10 @@ app.use('/api/custom-fields', customFieldsRoutes);
 const roleRoutes = require('./routes/roles');
 app.use('/api/roles', roleRoutes);
 
+// Formula routes (protected - RBAC enforced in routes file)
+const formulaRoutes = require('./routes/formulas');
+app.use('/api/formulas', formulaRoutes);
+
 // Basic error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);
