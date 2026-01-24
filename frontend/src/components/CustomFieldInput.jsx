@@ -272,7 +272,7 @@ CustomFieldInput.propTypes = {
     definition_id: PropTypes.string.isRequired,
     field_name: PropTypes.string.isRequired,
     field_label: PropTypes.string.isRequired,
-    field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean']).isRequired,
+    field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean', 'calculated']).isRequired,
     is_required: PropTypes.bool,
     validation_rules: PropTypes.object,
     select_options: PropTypes.arrayOf(PropTypes.string),

@@ -1117,8 +1117,13 @@
     "updateMeasure": "Mettre à Jour la Mesure",
     "updateSuccess": "Mesure mise à jour avec succès !",
     "recordedAt": "Enregistrée Le",
+    "selectMeasureFirst": "Veuillez d'abord sélectionner une mesure",
+    "EnterValue": "Saisir la valeur",
+    "valuePlaceholder": "Saisir la valeur de la mesure",
+    "measuredAtPlaceholder": "Sélectionner la date et l'heure de la mesure",
     "notesPlaceholder": "Ajouter des notes sur cette mesure...",
     "recordedBy": "Enregistrée Par",
+    "enterValue": "Saisir la valeur",
     "categories": {
       "vitals": "Signes Vitaux",
       "labResults": "Résultats de Laboratoire",

@@ -13,6 +13,7 @@
     "active": "Active",
     "actions": "Actions",
     "inactive": "Inactive",
+    "password":"Password",
     "all": "All",
     "yes": "Yes",
     "no": "No",
@@ -706,6 +707,15 @@
     "waistLabel": "Waist:",
     "bodyFatLabel": "Body Fat:",
     "muscleLabel": "Muscle:",
+    "loading":"Loading alerts...",
+    "deleteUser": "Delete User",
+    "mustDeactivateBeforeDelete": "Users must be deactivated before deletion",
+    "viewEditMeasurements": "View/Edit Measurements",
+    "viewEdit": "View/Edit",
+    "checkingEmail": "Checking email availability...",
+    "emailAvailable": "Email is available",
+    "emailNotAvailable": "Email is already in use",
+    "createUserSuccess": "User created successfully",
     "notesLabel": "Notes:"
   },
   "forms": {

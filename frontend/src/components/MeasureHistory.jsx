@@ -76,13 +76,16 @@ const MeasureHistory = ({ patientId }) => {
 
     try {
       setLoading(true);
-      const history = await getMeasureHistory(patientId, selectedMeasureId, dateRange);
+      const response = await getMeasureHistory(patientId, selectedMeasureId, dateRange);
+
+      // Ensure history is an array (handle both response formats)
+      const history = Array.isArray(response) ? response : (response?.data || []);
 
       // Transform data for Recharts
       const chartData = (history || []).map(measure => ({
-        date: new Date(measure.measured_at).getTime(),
-        dateLabel: formatDateTime(measure.measured_at),
-        value: parseFloat(measure.numeric_value),
+        date: new Date(measure.measured_at || measure.date).getTime(),
+        dateLabel: formatDateTime(measure.measured_at || measure.date),
+        value: parseFloat(measure.numeric_value || measure.value),
         notes: measure.notes
       }));
 
