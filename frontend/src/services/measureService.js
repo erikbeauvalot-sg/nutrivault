@@ -247,3 +247,57 @@ export const getMeasureValue = (measure, measureType) => {
       return null;
   }
 };
+
+// ===========================================
+// Formula API Calls (Sprint 4: US-5.4.2)
+// ===========================================
+
+/**
+ * Validate formula syntax
+ * @param {string} formula - Formula string to validate
+ * @returns {Promise<object>} { valid: boolean, error: string|null, dependencies: string[] }
+ */
+export const validateFormula = async (formula) => {
+  const response = await api.post('/api/formulas/validate', { formula });
+  return response.data.data || response.data;
+};
+
+/**
+ * Preview formula with sample values
+ * @param {string} formula - Formula string
+ * @param {object} values - Sample values map
+ * @returns {Promise<object>} { success: boolean, result: number|null, error: string|null }
+ */
+export const previewFormula = async (formula, values) => {
+  const response = await api.post('/api/formulas/preview', { formula, values });
+  return response.data.data || response.data;
+};
+
+/**
+ * Get formula templates for measures
+ * @returns {Promise<Array>} Array of measure template objects
+ */
+export const getMeasureTemplates = async () => {
+  const response = await api.get('/api/formulas/templates/measures');
+  return response.data.data || response.data;
+};
+
+/**
+ * Recalculate all calculated measures for a patient
+ * @param {string} patientId - Patient UUID
+ * @returns {Promise<object>} { count: number, calculated: Array }
+ */
+export const recalculatePatientMeasures = async (patientId) => {
+  const response = await api.post(`/api/patient-measures/${patientId}/recalculate`);
+  return response.data.data || response.data;
+};
+
+/**
+ * Bulk recalculate measure across all patients
+ * @param {string} measureDefinitionId - Measure definition UUID
+ * @returns {Promise<object>} { patientsAffected: number, valuesCalculated: number }
+ */
+export const recalculateMeasureAcrossAll = async (measureDefinitionId) => {
+  const response = await api.post(`/api/measures/${measureDefinitionId}/recalculate-all`);
+  return response.data.data || response.data;
+};

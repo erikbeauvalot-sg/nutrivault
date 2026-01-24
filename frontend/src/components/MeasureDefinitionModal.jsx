@@ -5,11 +5,14 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Modal, Button, Form, Alert, Spinner, Card, Row, Col } from 'react-bootstrap';
+import { Modal, Button, Form, Alert, Spinner, Card, Row, Col, Badge } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { createMeasureDefinition, updateMeasureDefinition } from '../services/measureService';
+import FormulaValidator from './FormulaValidator';
+import FormulaPreviewModal from './FormulaPreviewModal';
+import FormulaTemplatesModal from './FormulaTemplatesModal';
 
 const MEASURE_TYPES = [
   { value: 'numeric', label: 'Numeric' },
@@ -68,7 +71,13 @@ const measureSchema = yup.object().shape({
     .integer('Decimal places must be an integer')
     .min(0, 'Decimal places must be between 0 and 4')
     .max(4, 'Decimal places must be between 0 and 4')
-    .nullable()
+    .nullable(),
+  formula: yup.string()
+    .when('measure_type', {
+      is: 'calculated',
+      then: (schema) => schema.required('Formula is required for calculated measures'),
+      otherwise: (schema) => schema.nullable()
+    })
 });
 
 const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
@@ -76,6 +85,9 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [selectedMeasureType, setSelectedMeasureType] = useState('numeric');
+  const [showPreview, setShowPreview] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [dependencies, setDependencies] = useState([]);
 
   const isEditing = !!definition;
 
@@ -84,7 +96,8 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
     handleSubmit,
     formState: { errors },
     reset,
-    watch
+    watch,
+    setValue
   } = useForm({
     resolver: yupResolver(measureSchema),
     defaultValues: {
@@ -97,11 +110,13 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
       min_value: null,
       max_value: null,
       decimal_places: 2,
-      is_active: true
+      is_active: true,
+      formula: ''
     }
   });
 
   const watchMeasureType = watch('measure_type');
+  const watchFormula = watch('formula');
 
   // Update selected measure type when form changes
   useEffect(() => {
@@ -109,6 +124,23 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
       setSelectedMeasureType(watchMeasureType);
     }
   }, [watchMeasureType]);
+
+  // Extract dependencies when formula changes
+  useEffect(() => {
+    if (watchFormula && selectedMeasureType === 'calculated') {
+      const regex = /\{([a-zA-Z_][a-zA-Z0-9_:]*)\}/g;
+      const matches = [];
+      let match;
+      while ((match = regex.exec(watchFormula)) !== null) {
+        if (!matches.includes(match[1])) {
+          matches.push(match[1]);
+        }
+      }
+      setDependencies(matches);
+    } else {
+      setDependencies([]);
+    }
+  }, [watchFormula, selectedMeasureType]);
 
   // Reset form when definition changes or modal opens
   useEffect(() => {
@@ -123,7 +155,8 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
         min_value: definition.min_value ?? null,
         max_value: definition.max_value ?? null,
         decimal_places: definition.decimal_places ?? 2,
-        is_active: definition.is_active !== undefined ? definition.is_active : true
+        is_active: definition.is_active !== undefined ? definition.is_active : true,
+        formula: definition.formula || ''
       });
       setSelectedMeasureType(definition.measure_type || 'numeric');
     } else {
@@ -137,7 +170,8 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
         min_value: null,
         max_value: null,
         decimal_places: 2,
-        is_active: true
+        is_active: true,
+        formula: ''
       });
       setSelectedMeasureType('numeric');
     }
@@ -171,6 +205,11 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
         payload.max_value = data.max_value !== null && data.max_value !== '' ? parseFloat(data.max_value) : null;
       }
 
+      // Add formula for calculated type
+      if (data.measure_type === 'calculated') {
+        payload.formula = data.formula || null;
+      }
+
       if (isEditing) {
         await updateMeasureDefinition(definition.id, payload);
       } else {
@@ -199,7 +238,18 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
     onHide();
   };
 
+  const handleApplyTemplate = (template) => {
+    if (template) {
+      setValue('formula', template.formula);
+      if (template.unit) setValue('unit', template.unit);
+      if (template.display_name && !watch('display_name')) {
+        setValue('display_name', template.name);
+      }
+    }
+  };
+
   return (
+    <>
     <Modal show={show} onHide={handleClose} size="lg" centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
@@ -381,12 +431,67 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
           )}
 
           {selectedMeasureType === 'calculated' && (
-            <Alert variant="info">
-              <small>
-                <strong>Note:</strong> Calculated measures will use formulas defined separately.
-                The formula configuration is managed through the formula engine.
-              </small>
-            </Alert>
+            <Card className="mb-3">
+              <Card.Header>
+                <div className="d-flex justify-content-between align-items-center">
+                  <span>Formula Configuration</span>
+                  <Button
+                    size="sm"
+                    variant="outline-primary"
+                    onClick={() => setShowTemplates(true)}
+                  >
+                    📋 Templates
+                  </Button>
+                </div>
+              </Card.Header>
+              <Card.Body>
+                <Form.Group className="mb-3">
+                  <Form.Label>Formula *</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    {...register('formula')}
+                    isInvalid={!!errors.formula}
+                    placeholder="{weight} / ({height} * {height})"
+                    className="font-monospace"
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    {errors.formula?.message}
+                  </Form.Control.Feedback>
+                  <Form.Text className="text-muted">
+                    Use {'{measure_name}'} to reference measures.
+                    Time-series: {'{current:name}'}, {'{previous:name}'}, {'{delta:name}'}, {'{avg30:name}'}
+                    <br />
+                    Operators: +, -, *, /, ^. Functions: sqrt, abs, min, max, round
+                  </Form.Text>
+                </Form.Group>
+
+                {/* Real-time validation */}
+                {watchFormula && <FormulaValidator formula={watchFormula} />}
+
+                {/* Dependencies display */}
+                {dependencies.length > 0 && (
+                  <Alert variant="info" className="mt-2 small mb-0">
+                    <strong>Dependencies:</strong>{' '}
+                    {dependencies.map(dep => (
+                      <Badge key={dep} bg="secondary" className="me-1">{dep}</Badge>
+                    ))}
+                  </Alert>
+                )}
+
+                {/* Preview button */}
+                {dependencies.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="link"
+                    className="mt-2 p-0"
+                    onClick={() => setShowPreview(true)}
+                  >
+                    🔍 Preview Calculation
+                  </Button>
+                )}
+              </Card.Body>
+            </Card>
           )}
 
           {selectedMeasureType === 'text' && (
@@ -431,6 +536,22 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
         </Modal.Footer>
       </Form>
     </Modal>
+
+    {/* Formula Preview Modal */}
+    <FormulaPreviewModal
+      show={showPreview}
+      onHide={() => setShowPreview(false)}
+      formula={watchFormula}
+      dependencies={dependencies}
+    />
+
+    {/* Formula Templates Modal */}
+    <FormulaTemplatesModal
+      show={showTemplates}
+      onHide={() => setShowTemplates(false)}
+      onApply={handleApplyTemplate}
+    />
+    </>
   );
 };
 

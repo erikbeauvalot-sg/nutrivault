@@ -117,6 +117,12 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
   };
 
   const handleEdit = (measure) => {
+    // Prevent editing calculated measures
+    if (measure.measureDefinition?.measure_type === 'calculated') {
+      alert(t('measures.cannotEditCalculated', 'Calculated measures cannot be edited. Update the source measures instead.'));
+      return;
+    }
+
     setEditingMeasure(measure);
     setShowEditModal(true);
     // TODO: Open LogMeasureModal in edit mode when it's created
@@ -260,9 +266,20 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
                         </div>
                       </td>
                       <td>
-                        <strong>
-                          {formatMeasureValue(measure, measure.measureDefinition)}
-                        </strong>
+                        <div className="d-flex align-items-center gap-2">
+                          <strong>
+                            {formatMeasureValue(measure, measure.measureDefinition)}
+                          </strong>
+                          {measure.measureDefinition?.measure_type === 'calculated' && (
+                            <Badge
+                              bg="info"
+                              className="small"
+                              title={t('measures.autoCalculated', 'Auto-calculated value')}
+                            >
+                              🧮 {t('measures.calculated', 'Calculated')}
+                            </Badge>
+                          )}
+                        </div>
                       </td>
                       <td>
                         {measure.visit_id ? (
@@ -276,14 +293,16 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
                       <td>{measure.recorder?.username || '-'}</td>
                       <td>
                         <div className="d-flex gap-1">
-                          <Button
-                            variant="outline-primary"
-                            size="sm"
-                            onClick={() => handleEdit(measure)}
-                            title={t('common.edit', 'Edit')}
-                          >
-                            ✏️
-                          </Button>
+                          {measure.measureDefinition?.measure_type !== 'calculated' && (
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              onClick={() => handleEdit(measure)}
+                              title={t('common.edit', 'Edit')}
+                            >
+                              ✏️
+                            </Button>
+                          )}
                           <Button
                             variant="outline-danger"
                             size="sm"
