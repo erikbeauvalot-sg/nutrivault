@@ -1,0 +1,227 @@
+/**
+ * Measure Service
+ * API calls for measure definitions and patient measure values
+ * Sprint 3: US-5.3.1 - Define Custom Measures
+ */
+
+import api from './api';
+
+// ===========================================
+// Measure Definition API Calls
+// ===========================================
+
+/**
+ * Get all measure definitions
+ * @param {object} filters - Filter parameters (category, is_active, measure_type)
+ * @returns {Promise<Array>} Array of measure definitions
+ */
+export const getMeasureDefinitions = async (filters = {}) => {
+  const params = new URLSearchParams();
+  Object.keys(filters).forEach(key => {
+    if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
+      params.append(key, filters[key]);
+    }
+  });
+
+  const queryString = params.toString();
+  const response = await api.get(`/api/measures${queryString ? '?' + queryString : ''}`);
+  return response.data.data || response.data;
+};
+
+/**
+ * Get measure definition by ID
+ * @param {string} id - Measure definition UUID
+ * @returns {Promise<object>} Measure definition object
+ */
+export const getMeasureDefinitionById = async (id) => {
+  const response = await api.get(`/api/measures/${id}`);
+  return response.data.data || response.data;
+};
+
+/**
+ * Create a new measure definition
+ * @param {object} measureData - Measure definition information
+ * @returns {Promise<object>} Created measure definition
+ */
+export const createMeasureDefinition = async (measureData) => {
+  const response = await api.post('/api/measures', measureData);
+  return response.data;
+};
+
+/**
+ * Update existing measure definition
+ * @param {string} id - Measure definition UUID
+ * @param {object} measureData - Updated measure information
+ * @returns {Promise<object>} Updated measure definition
+ */
+export const updateMeasureDefinition = async (id, measureData) => {
+  const response = await api.put(`/api/measures/${id}`, measureData);
+  return response.data;
+};
+
+/**
+ * Delete measure definition (soft delete)
+ * @param {string} id - Measure definition UUID
+ * @returns {Promise<void>}
+ */
+export const deleteMeasureDefinition = async (id) => {
+  const response = await api.delete(`/api/measures/${id}`);
+  return response.data;
+};
+
+/**
+ * Get measure definitions by category
+ * @param {string} category - Category name (vitals, lab_results, etc.)
+ * @returns {Promise<Array>} Array of measure definitions
+ */
+export const getMeasuresByCategory = async (category) => {
+  const response = await api.get(`/api/measures/category/${category}`);
+  return response.data.data || response.data;
+};
+
+/**
+ * Get all categories with counts
+ * @returns {Promise<Array>} Array of categories with measure counts
+ */
+export const getMeasureCategories = async () => {
+  const response = await api.get('/api/measures/categories');
+  return response.data.data || response.data;
+};
+
+// ===========================================
+// Patient Measure API Calls
+// ===========================================
+
+/**
+ * Log a new measure value for a patient
+ * @param {string} patientId - Patient UUID
+ * @param {object} measureData - Measure data (measure_definition_id, value, measured_at, etc.)
+ * @returns {Promise<object>} Created measure
+ */
+export const logPatientMeasure = async (patientId, measureData) => {
+  const response = await api.post(`/api/patients/${patientId}/measures`, measureData);
+  return response.data;
+};
+
+/**
+ * Get all measures for a patient
+ * @param {string} patientId - Patient UUID
+ * @param {object} filters - Filter parameters (measure_definition_id, visit_id, start_date, end_date, limit)
+ * @returns {Promise<Array>} Array of patient measures
+ */
+export const getPatientMeasures = async (patientId, filters = {}) => {
+  const params = new URLSearchParams();
+  Object.keys(filters).forEach(key => {
+    if (filters[key] !== undefined && filters[key] !== null && filters[key] !== '') {
+      params.append(key, filters[key]);
+    }
+  });
+
+  const queryString = params.toString();
+  const response = await api.get(`/api/patients/${patientId}/measures${queryString ? '?' + queryString : ''}`);
+  return response.data.data || response.data;
+};
+
+/**
+ * Get measure history for a specific measure type
+ * @param {string} patientId - Patient UUID
+ * @param {string} measureDefId - Measure definition UUID
+ * @param {object} dateRange - { start_date, end_date } (ISO format)
+ * @returns {Promise<Array>} Array of measures ordered by date
+ */
+export const getMeasureHistory = async (patientId, measureDefId, dateRange = {}) => {
+  const params = new URLSearchParams();
+  if (dateRange.start_date) params.append('start_date', dateRange.start_date);
+  if (dateRange.end_date) params.append('end_date', dateRange.end_date);
+
+  const queryString = params.toString();
+  const response = await api.get(
+    `/api/patients/${patientId}/measures/${measureDefId}/history${queryString ? '?' + queryString : ''}`
+  );
+  return response.data.data || response.data;
+};
+
+/**
+ * Update a patient measure
+ * @param {string} measureId - Patient measure UUID
+ * @param {object} measureData - Updated measure data
+ * @returns {Promise<object>} Updated measure
+ */
+export const updatePatientMeasure = async (measureId, measureData) => {
+  const response = await api.put(`/api/patient-measures/${measureId}`, measureData);
+  return response.data;
+};
+
+/**
+ * Delete a patient measure (soft delete)
+ * @param {string} measureId - Patient measure UUID
+ * @returns {Promise<void>}
+ */
+export const deletePatientMeasure = async (measureId) => {
+  const response = await api.delete(`/api/patient-measures/${measureId}`);
+  return response.data;
+};
+
+/**
+ * Get measures by visit
+ * @param {string} visitId - Visit UUID
+ * @returns {Promise<Array>} Array of measures for the visit
+ */
+export const getMeasuresByVisit = async (visitId) => {
+  const response = await api.get(`/api/visits/${visitId}/measures`);
+  return response.data.data || response.data;
+};
+
+/**
+ * Format measure value for display
+ * @param {object} measure - Measure object with value
+ * @param {object} definition - Measure definition with unit and decimal_places
+ * @returns {string} Formatted value
+ */
+export const formatMeasureValue = (measure, definition) => {
+  if (!measure || !definition) return '-';
+
+  let value;
+  switch (definition.measure_type) {
+    case 'numeric':
+    case 'calculated':
+      value = measure.numeric_value;
+      if (value === null || value === undefined) return '-';
+      const decimalPlaces = definition.decimal_places || 2;
+      const formattedNumber = parseFloat(value).toFixed(decimalPlaces);
+      return definition.unit ? `${formattedNumber} ${definition.unit}` : formattedNumber;
+
+    case 'text':
+      value = measure.text_value;
+      return value || '-';
+
+    case 'boolean':
+      value = measure.boolean_value;
+      return value ? 'Yes' : 'No';
+
+    default:
+      return '-';
+  }
+};
+
+/**
+ * Get the appropriate value field based on measure type
+ * @param {object} measure - Measure object
+ * @param {string} measureType - Type (numeric, text, boolean, calculated)
+ * @returns {*} The value
+ */
+export const getMeasureValue = (measure, measureType) => {
+  if (!measure) return null;
+
+  switch (measureType) {
+    case 'numeric':
+    case 'calculated':
+      return measure.numeric_value;
+    case 'text':
+      return measure.text_value;
+    case 'boolean':
+      return measure.boolean_value;
+    default:
+      return null;
+  }
+};

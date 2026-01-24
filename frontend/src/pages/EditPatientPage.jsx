@@ -12,6 +12,8 @@ import Layout from '../components/layout/Layout';
 import userService from '../services/userService';
 import customFieldService from '../services/customFieldService';
 import CustomFieldInput from '../components/CustomFieldInput';
+import PatientMeasuresTable from '../components/PatientMeasuresTable';
+import MeasureHistory from '../components/MeasureHistory';
 import api from '../services/api';
 
 const EditPatientPage = () => {
@@ -628,6 +630,19 @@ const EditPatientPage = () => {
                     </Tab>
                   ))
                 )}
+
+                {/* Measures Tab */}
+                <Tab eventKey="measures" title="📏 Measures">
+                  <h5 className="mb-3">Patient Measures</h5>
+
+                  {/* Measures History Chart */}
+                  <div className="mb-4">
+                    <MeasureHistory patientId={id} />
+                  </div>
+
+                  {/* Measures Table */}
+                  <PatientMeasuresTable patientId={id} />
+                </Tab>
               </Tabs>
 
               {/* Action Buttons */}

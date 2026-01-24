@@ -25,6 +25,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { path: '/users', icon: '👤', label: t('navigation.users') },
     ...(user?.role === 'ADMIN' ? [
       { path: '/settings/custom-fields', icon: '🔧', label: t('navigation.customFields') },
+      { path: '/settings/measures', icon: '📏', label: t('navigation.measures') },
       { path: '/settings/roles', icon: '🔐', label: t('navigation.roles', 'Manage Roles') }
     ] : []),
   ];
