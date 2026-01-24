@@ -488,9 +488,9 @@ const EditPatientPage = () => {
                   {/* Custom Fields marked as "show_in_basic_info", grouped by category */}
                   <Row>
                     {customFieldCategories
-                      .filter(category => category.fields.some(field => field.show_in_basic_info))
+                      .filter(category => category.fields.some(field => field.show_in_basic_info && !field.is_calculated))
                       .map((category) => {
-                        const basicInfoFields = category.fields.filter(field => field.show_in_basic_info);
+                        const basicInfoFields = category.fields.filter(field => field.show_in_basic_info && !field.is_calculated);
                         if (basicInfoFields.length === 0) return null;
 
                         return (
@@ -598,13 +598,13 @@ const EditPatientPage = () => {
                           </Alert>
                         )}
 
-                        {category.fields.length === 0 ? (
+                        {category.fields.filter(f => !f.is_calculated).length === 0 ? (
                           <Alert variant="warning">
                             Aucun champ défini pour cette catégorie
                           </Alert>
                         ) : (
                           <Row>
-                            {category.fields.map((field) => (
+                            {category.fields.filter(f => !f.is_calculated).map((field) => (
                               <Col md={6} key={field.definition_id}>
                                 <Form.Group className="mb-3">
                                   <CustomFieldInput

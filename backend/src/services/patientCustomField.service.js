@@ -124,9 +124,17 @@ async function getPatientCustomFields(user, patientId, language = 'fr', requestM
         // Check if this field already has a value
         const fieldValueRecord = valuesMap[calcField.id];
         const currentValue = fieldValueRecord ? fieldValueRecord.getValue(calcField.field_type) : null;
-        const needsCalculation = currentValue === null || currentValue === undefined;
+
+        // Check if formula uses volatile functions like today() that change over time
+        const usesVolatileFunctions = calcField.formula && /today\(\)/.test(calcField.formula);
+
+        // Always recalculate if: no value OR uses volatile functions (like today())
+        const needsCalculation = currentValue === null || currentValue === undefined || usesVolatileFunctions;
 
         if (needsCalculation) {
+          if (usesVolatileFunctions && currentValue !== null) {
+            console.log(`[AUTO-CALC-INIT] Field ${calcField.field_name} uses volatile function (today()), recalculating...`);
+          }
           console.log(`[AUTO-CALC-INIT] Field ${calcField.field_name} has no value (current: ${currentValue}), checking dependencies...`);
 
           // Check if all dependencies have values
@@ -136,10 +144,13 @@ async function getPatientCustomFields(user, patientId, language = 'fr', requestM
             return depValue !== null && depValue !== undefined;
           });
 
-          if (hasAllDeps && deps.length > 0) {
-            console.log(`[AUTO-CALC-INIT] All dependencies present for ${calcField.field_name}, calculating...`);
+          // Calculate if all deps are present OR if there are no dependencies (like today())
+          if (hasAllDeps || deps.length === 0) {
+            console.log(`[AUTO-CALC-INIT] ${deps.length === 0 ? 'No dependencies (zero-arg function)' : 'All dependencies present'} for ${calcField.field_name}, calculating...`);
             console.log(`[AUTO-CALC-INIT] Formula: ${calcField.formula}`);
-            console.log(`[AUTO-CALC-INIT] Dependencies:`, deps.map(d => `${d}=${valueMapByName[d]}`));
+            if (deps.length > 0) {
+              console.log(`[AUTO-CALC-INIT] Dependencies:`, deps.map(d => `${d}=${valueMapByName[d]}`));
+            }
 
             try {
               // Evaluate formula
@@ -292,19 +303,102 @@ async function getPatientCustomFields(user, patientId, language = 'fr', requestM
  * @param {Object} user - User making the change
  * @returns {Promise<Array>} Array of updated field values
  */
+// Cache for calculated field definitions (cleared when definitions are updated)
+let calculatedFieldsCache = null;
+let cacheTimestamp = null;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Get all calculated fields with caching
+ */
+async function getCachedCalculatedFields() {
+  const now = Date.now();
+
+  // Return cached data if valid
+  if (calculatedFieldsCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_TTL) {
+    return calculatedFieldsCache;
+  }
+
+  // Fetch fresh data
+  const fields = await CustomFieldDefinition.findAll({
+    where: {
+      is_calculated: true,
+      is_active: true
+    }
+  });
+
+  calculatedFieldsCache = fields;
+  cacheTimestamp = now;
+
+  return fields;
+}
+
+/**
+ * Clear calculated fields cache (call when definitions are updated)
+ */
+function clearCalculatedFieldsCache() {
+  calculatedFieldsCache = null;
+  cacheTimestamp = null;
+}
+
+/**
+ * Topological sort for dependency resolution
+ * Ensures calculated fields are processed in correct order
+ */
+function topologicalSort(fields, allFieldsMap) {
+  const sorted = [];
+  const visited = new Set();
+  const temp = new Set();
+
+  function visit(field) {
+    if (temp.has(field.field_name)) {
+      // Circular dependency - skip this field
+      console.warn(`[TOPO-SORT] Circular dependency detected for ${field.field_name}`);
+      return;
+    }
+
+    if (visited.has(field.field_name)) {
+      return;
+    }
+
+    temp.add(field.field_name);
+
+    // Visit dependencies first (that are also calculated fields)
+    const deps = field.dependencies || [];
+    for (const depName of deps) {
+      const depField = allFieldsMap[depName];
+      if (depField && depField.is_calculated) {
+        visit(depField);
+      }
+    }
+
+    temp.delete(field.field_name);
+    visited.add(field.field_name);
+    sorted.push(field);
+  }
+
+  for (const field of fields) {
+    if (!visited.has(field.field_name)) {
+      visit(field);
+    }
+  }
+
+  return sorted;
+}
+
 async function recalculateDependentFields(patientId, changedFieldName, user) {
+  const startTime = Date.now();
+
   try {
     console.log(`[RECALC] Looking for calculated fields that depend on: ${changedFieldName}`);
 
-    // Find all calculated fields that depend on the changed field
-    const calculatedFields = await CustomFieldDefinition.findAll({
-      where: {
-        is_calculated: true,
-        is_active: true,
-        dependencies: {
-          [Op.like]: `%"${changedFieldName}"%`
-        }
-      }
+    // Get all calculated fields (with caching)
+    const allCalculatedFields = await getCachedCalculatedFields();
+
+    // Filter to only those that directly depend on the changed field
+    let calculatedFields = allCalculatedFields.filter(field => {
+      const deps = field.dependencies || [];
+      return deps.includes(changedFieldName);
     });
 
     console.log(`[RECALC] Found ${calculatedFields.length} calculated fields that depend on ${changedFieldName}`);
@@ -313,7 +407,22 @@ async function recalculateDependentFields(patientId, changedFieldName, user) {
       return [];
     }
 
-    // Get all patient field values to use for calculations
+    // Build a map of all calculated fields for topological sorting
+    const allFieldsMap = {};
+    allCalculatedFields.forEach(f => {
+      allFieldsMap[f.field_name] = f;
+    });
+
+    // Topologically sort fields to handle cascading dependencies
+    // This ensures that if field A depends on field B, and both changed,
+    // we calculate B before A
+    calculatedFields = topologicalSort(calculatedFields, allFieldsMap);
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[RECALC] Processing order:`, calculatedFields.map(f => f.field_name));
+    }
+
+    // Get all patient field values in one query
     const allValues = await PatientCustomFieldValue.findAll({
       where: { patient_id: patientId },
       include: [{
@@ -325,15 +434,18 @@ async function recalculateDependentFields(patientId, changedFieldName, user) {
 
     // Build value map by field name
     const valueMap = {};
+    const valueRecordsById = {};
     allValues.forEach(v => {
       if (v.field_definition) {
         valueMap[v.field_definition.field_name] = v.getValue(v.field_definition.field_type);
+        valueRecordsById[v.field_definition_id] = v;
       }
     });
 
     const updatedFields = [];
+    const auditLogs = [];
 
-    // Recalculate each dependent field
+    // Recalculate each dependent field in topological order
     for (const calcField of calculatedFields) {
       try {
         // Check if all dependencies have values
@@ -341,30 +453,23 @@ async function recalculateDependentFields(patientId, changedFieldName, user) {
         const hasAllDeps = deps.every(dep => valueMap[dep] !== null && valueMap[dep] !== undefined);
 
         if (!hasAllDeps) {
+          if (process.env.NODE_ENV !== 'production') {
+            const missing = deps.filter(dep => valueMap[dep] === null || valueMap[dep] === undefined);
+            console.log(`[RECALC] Skipping ${calcField.field_name}, missing dependencies: ${missing.join(', ')}`);
+          }
           continue;
         }
 
         // Evaluate formula
-        console.log(`[RECALC] Evaluating formula for ${calcField.field_name}: ${calcField.formula}`);
-        console.log(`[RECALC] Value map:`, valueMap);
-
         const result = formulaEngine.evaluateFormula(
           calcField.formula,
           valueMap,
           calcField.decimal_places || 2
         );
 
-        console.log(`[RECALC] Formula result:`, result);
-
         if (result.success) {
           // Find or create the calculated field value
-          let fieldValue = await PatientCustomFieldValue.findOne({
-            where: {
-              patient_id: patientId,
-              field_definition_id: calcField.id
-            }
-          });
-
+          let fieldValue = valueRecordsById[calcField.id];
           const isNew = !fieldValue;
 
           if (isNew) {
@@ -373,6 +478,7 @@ async function recalculateDependentFields(patientId, changedFieldName, user) {
               field_definition_id: calcField.id,
               updated_by: user.id
             });
+            valueRecordsById[calcField.id] = fieldValue;
           }
 
           // Set the calculated value
@@ -389,8 +495,8 @@ async function recalculateDependentFields(patientId, changedFieldName, user) {
           // Update value map for cascading calculations
           valueMap[calcField.field_name] = result.result;
 
-          // Audit log
-          await auditService.log({
+          // Queue audit log (batch insert later if needed)
+          auditLogs.push({
             user_id: user.id,
             username: user.username,
             action: isNew ? 'AUTO_CREATE' : 'AUTO_UPDATE',
@@ -398,15 +504,26 @@ async function recalculateDependentFields(patientId, changedFieldName, user) {
             resource_id: fieldValue.id,
             details: `Auto-calculated field ${calcField.field_label} due to change in ${changedFieldName}`
           });
+        } else {
+          console.error(`[RECALC] Formula evaluation failed for ${calcField.field_name}:`, result.error);
         }
       } catch (error) {
-        console.error(`Error recalculating field ${calcField.field_name}:`, error);
+        console.error(`[RECALC] Error calculating ${calcField.field_name}:`, error.message);
       }
     }
 
+    // Batch insert audit logs
+    for (const log of auditLogs) {
+      await auditService.log(log);
+    }
+
+    const duration = Date.now() - startTime;
+    console.log(`[RECALC] Completed in ${duration}ms. Updated ${updatedFields.length} fields.`);
+
     return updatedFields;
   } catch (error) {
-    console.error('Error in recalculateDependentFields:', error);
+    const duration = Date.now() - startTime;
+    console.error(`[RECALC] Error after ${duration}ms:`, error);
     return [];
   }
 }
@@ -423,6 +540,8 @@ async function recalculateDependentFields(patientId, changedFieldName, user) {
  */
 async function setPatientCustomField(user, patientId, definitionId, value, requestMetadata = {}) {
   try {
+    console.log(`[SET-FIELD] Called with definitionId: ${definitionId}, value: ${value}`);
+
     // Check patient access
     const hasAccess = await checkPatientAccess(user, patientId);
     if (!hasAccess) {
@@ -434,6 +553,8 @@ async function setPatientCustomField(user, patientId, definitionId, value, reque
     if (!definition || !definition.is_active) {
       throw new Error('Field definition not found or inactive');
     }
+
+    console.log(`[SET-FIELD] Field name: ${definition.field_name}, is_calculated: ${definition.is_calculated}`);
 
     // Validate value
     const validation = definition.validateValue(value);
@@ -580,6 +701,32 @@ async function bulkUpdatePatientFields(user, patientId, fields, requestMetadata 
         ...requestMetadata
       });
 
+      // Auto-recalculate dependent calculated fields
+      // Get all field definitions that were updated
+      const updatedDefinitionIds = fields.map(f => f.definition_id);
+      const updatedDefinitions = await CustomFieldDefinition.findAll({
+        where: {
+          id: updatedDefinitionIds,
+          is_calculated: false // Only trigger recalc for non-calculated fields
+        }
+      });
+
+      console.log(`[BULK-UPDATE] ${updatedDefinitions.length} non-calculated fields updated, checking for dependent calculated fields...`);
+
+      // Track all updated calculated fields to avoid duplicates
+      const allUpdatedCalcFields = new Set();
+
+      // For each updated non-calculated field, recalculate dependent fields
+      for (const definition of updatedDefinitions) {
+        console.log(`[BULK-UPDATE] Checking dependents of: ${definition.field_name}`);
+        const updated = await recalculateDependentFields(patientId, definition.field_name, user);
+        updated.forEach(f => allUpdatedCalcFields.add(f.field_name));
+      }
+
+      if (allUpdatedCalcFields.size > 0) {
+        console.log(`[BULK-UPDATE] Auto-recalculated ${allUpdatedCalcFields.size} calculated fields:`, Array.from(allUpdatedCalcFields));
+      }
+
       return {
         message: `Successfully updated ${results.length} custom fields`,
         results
@@ -654,9 +801,111 @@ async function deletePatientCustomField(user, patientId, fieldValueId, requestMe
   }
 }
 
+/**
+ * Recalculate all values for a specific calculated field across all patients
+ * Used when an admin changes the formula
+ *
+ * @param {string} fieldDefinitionId - Field definition UUID
+ * @param {Object} user - User making the change
+ * @returns {Promise<Object>} Result summary
+ */
+async function recalculateAllValuesForField(fieldDefinitionId, user) {
+  try {
+    console.log(`[RECALC-ALL] Recalculating all values for field: ${fieldDefinitionId}`);
+
+    // Get the field definition
+    const fieldDefinition = await CustomFieldDefinition.findByPk(fieldDefinitionId);
+    if (!fieldDefinition || !fieldDefinition.is_calculated) {
+      throw new Error('Field not found or is not a calculated field');
+    }
+
+    console.log(`[RECALC-ALL] Field: ${fieldDefinition.field_name}, Formula: ${fieldDefinition.formula}`);
+
+    // Get all patients that have values for this field
+    const existingValues = await PatientCustomFieldValue.findAll({
+      where: {
+        field_definition_id: fieldDefinitionId
+      },
+      include: [{
+        model: CustomFieldDefinition,
+        as: 'field_definition'
+      }]
+    });
+
+    console.log(`[RECALC-ALL] Found ${existingValues.length} existing values to recalculate`);
+
+    // Get all unique patient IDs
+    const patientIds = [...new Set(existingValues.map(v => v.patient_id))];
+
+    let recalculatedCount = 0;
+    let errorCount = 0;
+
+    // Recalculate for each patient
+    for (const patientId of patientIds) {
+      try {
+        // Get all field values for this patient
+        const allValues = await PatientCustomFieldValue.findAll({
+          where: { patient_id: patientId },
+          include: [{
+            model: CustomFieldDefinition,
+            as: 'field_definition',
+            attributes: ['field_name', 'field_type']
+          }]
+        });
+
+        // Build value map by field name
+        const valueMap = {};
+        allValues.forEach(v => {
+          if (v.field_definition) {
+            valueMap[v.field_definition.field_name] = v.getValue(v.field_definition.field_type);
+          }
+        });
+
+        // Evaluate formula
+        const result = formulaEngine.evaluateFormula(
+          fieldDefinition.formula,
+          valueMap,
+          fieldDefinition.decimal_places || 2
+        );
+
+        if (result.success) {
+          // Update the value
+          const valueRecord = existingValues.find(v => v.patient_id === patientId);
+          if (valueRecord) {
+            valueRecord.setValue(result.result, 'number');
+            valueRecord.updated_by = user.id;
+            await valueRecord.save();
+            recalculatedCount++;
+          }
+        } else {
+          console.log(`[RECALC-ALL] Skipping patient ${patientId}: ${result.error}`);
+          errorCount++;
+        }
+      } catch (error) {
+        console.error(`[RECALC-ALL] Error recalculating for patient ${patientId}:`, error.message);
+        errorCount++;
+      }
+    }
+
+    console.log(`[RECALC-ALL] Completed: ${recalculatedCount} updated, ${errorCount} errors`);
+
+    return {
+      success: true,
+      recalculated: recalculatedCount,
+      errors: errorCount,
+      total: existingValues.length
+    };
+  } catch (error) {
+    console.error('Error in recalculateAllValuesForField:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getPatientCustomFields,
   setPatientCustomField,
   bulkUpdatePatientFields,
-  deletePatientCustomField
+  deletePatientCustomField,
+  recalculateAllValuesForField,
+  clearCalculatedFieldsCache
 };

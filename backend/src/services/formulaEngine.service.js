@@ -285,7 +285,8 @@ function evaluatePostfix(postfix, values) {
       }
 
       // Use the argument count tracked during parsing
-      const argCount = token.argCount || 1;
+      // Note: argCount can be 0 for functions like today(), so we can't use || 1
+      const argCount = token.argCount !== undefined ? token.argCount : 1;
       if (stack.length < argCount) {
         throw new Error(`Insufficient arguments for function: ${token.name}`);
       }

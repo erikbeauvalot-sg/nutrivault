@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import customFieldService from '../services/customFieldService';
 import formulaService from '../services/formulaService';
 import TranslationEditor from './TranslationEditor';
+import DependencyTree from './DependencyTree';
 
 const FIELD_TYPES = [
   { value: 'text', label: 'Text', icon: '📝' },
@@ -582,6 +583,15 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
                       )}
                     </Col>
                   </Row>
+
+                  {/* Dependency Tree Visualization */}
+                  {formula && (
+                    <DependencyTree
+                      formula={formula}
+                      currentFieldName={definition?.field_name || null}
+                      dependencies={dependencies}
+                    />
+                  )}
 
                   {formula && (
                     <Alert variant="info" className="mt-2">

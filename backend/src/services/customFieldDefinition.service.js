@@ -12,6 +12,7 @@ const PatientCustomFieldValue = db.PatientCustomFieldValue;
 const auditService = require('./audit.service');
 const translationService = require('./customFieldTranslation.service');
 const formulaEngine = require('./formulaEngine.service');
+const patientCustomFieldService = require('./patientCustomField.service');
 const { Op } = db.Sequelize;
 
 /**
@@ -304,6 +305,11 @@ async function createDefinition(user, definitionData, requestMetadata = {}) {
       ...requestMetadata
     });
 
+    // Clear calculated fields cache
+    if (isCalculated) {
+      patientCustomFieldService.clearCalculatedFieldsCache();
+    }
+
     // Parse JSON fields before returning
     return parseDefinitionJSON(definition);
   } catch (error) {
@@ -414,6 +420,21 @@ async function updateDefinition(user, definitionId, updateData, requestMetadata 
 
     await definition.save();
 
+    // If formula changed for a calculated field, recalculate all existing values
+    const formulaChanged = definition.is_calculated &&
+                          beforeData.formula !== definition.formula;
+
+    if (formulaChanged) {
+      console.log(`[UPDATE-DEF] Formula changed for ${definition.field_name}, triggering recalculation...`);
+      try {
+        const recalcResult = await patientCustomFieldService.recalculateAllValuesForField(definitionId, user);
+        console.log(`[UPDATE-DEF] Recalculation completed:`, recalcResult);
+      } catch (recalcError) {
+        console.error(`[UPDATE-DEF] Error recalculating values:`, recalcError.message);
+        // Don't fail the update if recalculation fails
+      }
+    }
+
     // Audit log
     await auditService.log({
       user_id: user.id,
@@ -424,6 +445,11 @@ async function updateDefinition(user, definitionId, updateData, requestMetadata 
       changes: { before: beforeData, after: definition.toJSON() },
       ...requestMetadata
     });
+
+    // Clear calculated fields cache when any calculated field is updated
+    if (definition.is_calculated || beforeData.is_calculated) {
+      patientCustomFieldService.clearCalculatedFieldsCache();
+    }
 
     // Parse JSON fields before returning
     return parseDefinitionJSON(definition);
@@ -465,6 +491,11 @@ async function deleteDefinition(user, definitionId, requestMetadata = {}) {
       changes: { before: beforeData },
       ...requestMetadata
     });
+
+    // Clear calculated fields cache if this was a calculated field
+    if (beforeData.is_calculated) {
+      patientCustomFieldService.clearCalculatedFieldsCache();
+    }
 
     return { message: 'Field definition deleted successfully' };
   } catch (error) {
