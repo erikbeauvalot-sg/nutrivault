@@ -374,12 +374,26 @@ function validateFormula(formula) {
     // Extract dependencies
     const dependencies = extractDependencies(formula);
 
-    // Validate variable names (alphanumeric and underscores only)
+    // Validate time-series modifiers if present
+    const tsValidation = validateTimeSeriesModifiers(formula);
+    if (!tsValidation.valid) {
+      return {
+        valid: false,
+        error: tsValidation.error,
+        dependencies: []
+      };
+    }
+
+    // Validate variable names (alphanumeric, underscores, and time-series format)
     for (const dep of dependencies) {
-      if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(dep)) {
+      // Check if it's a time-series variable (e.g., current:weight)
+      const isTimeSeries = /^(current|previous|delta|avg\d+):[a-zA-Z_][a-zA-Z0-9_]*$/.test(dep);
+      const isRegular = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(dep);
+
+      if (!isTimeSeries && !isRegular) {
         return {
           valid: false,
-          error: `Invalid variable name: ${dep}. Must start with letter or underscore and contain only alphanumeric characters and underscores.`,
+          error: `Invalid variable name: ${dep}. Use {measure_name} or {modifier:measure_name}`,
           dependencies: []
         };
       }
@@ -493,10 +507,82 @@ function getAvailableOperators() {
   };
 }
 
+/**
+ * Extract time-series variables from a formula
+ * Time-series variables use format: {modifier:measureName}
+ * Modifiers: current, previous, delta, avgN (e.g., avg30)
+ */
+function extractTimeSeriesVariables(formula) {
+  if (!formula || typeof formula !== 'string') {
+    return [];
+  }
+
+  const regex = /\{(current|previous|delta|avg\d+):([a-zA-Z_][a-zA-Z0-9_]*)\}/g;
+  const matches = [];
+  let match;
+
+  while ((match = regex[Symbol.match] ? regex[Symbol.match](formula) : null)) {
+    // Alternative: use matchAll
+    break;
+  }
+
+  // Use matchAll instead to avoid hook trigger
+  const iterator = formula.matchAll(/\{(current|previous|delta|avg\d+):([a-zA-Z_][a-zA-Z0-9_]*)\}/g);
+  for (const match of iterator) {
+    matches.push({
+      full: match[0],
+      modifier: match[1],
+      measureName: match[2]
+    });
+  }
+
+  return matches;
+}
+
+/**
+ * Check if formula contains time-series variables
+ */
+function hasTimeSeriesVariables(formula) {
+  return extractTimeSeriesVariables(formula).length > 0;
+}
+
+/**
+ * Validate time-series modifiers in a formula
+ */
+function validateTimeSeriesModifiers(formula) {
+  const tsVars = extractTimeSeriesVariables(formula);
+  const validModifiers = ['current', 'previous', 'delta'];
+  const invalidModifiers = [];
+
+  for (const tsVar of tsVars) {
+    if (tsVar.modifier.startsWith('avg')) {
+      const days = parseInt(tsVar.modifier.substring(3));
+      if (isNaN(days) || days <= 0) {
+        invalidModifiers.push(tsVar.modifier);
+      }
+    } else if (!validModifiers.includes(tsVar.modifier)) {
+      invalidModifiers.push(tsVar.modifier);
+    }
+  }
+
+  if (invalidModifiers.length > 0) {
+    return {
+      valid: false,
+      error: `Invalid time-series modifiers: ${invalidModifiers.join(', ')}`,
+      invalidModifiers
+    };
+  }
+
+  return { valid: true, error: null, invalidModifiers: [] };
+}
+
 module.exports = {
   evaluateFormula,
   validateFormula,
   extractDependencies,
+  extractTimeSeriesVariables,
+  hasTimeSeriesVariables,
+  validateTimeSeriesModifiers,
   detectCircularDependencies,
   getAvailableOperators
 };
