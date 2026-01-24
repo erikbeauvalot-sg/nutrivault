@@ -271,7 +271,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg">
+    <Modal show={show} onHide={handleClose} size="xl">
       <Modal.Header closeButton>
         <Modal.Title>
           {isEditing ? '✏️ Edit Field Definition' : '➕ Create Field Definition'}
@@ -279,7 +279,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       </Modal.Header>
 
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <Modal.Body>
+        <Modal.Body style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
           {error && (
             <Alert variant="danger" dismissible onClose={() => setError(null)}>
               {error}

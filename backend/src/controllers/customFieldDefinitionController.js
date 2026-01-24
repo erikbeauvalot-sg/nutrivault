@@ -274,7 +274,7 @@ const validateCreateDefinition = [
     .withMessage('Field label must be between 1 and 200 characters')
     .trim(),
   body('field_type')
-    .isIn(['text', 'number', 'date', 'select', 'boolean', 'textarea'])
+    .isIn(['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated'])
     .withMessage('Invalid field type'),
   body('is_required')
     .optional()
@@ -332,7 +332,7 @@ const validateUpdateDefinition = [
     .trim(),
   body('field_type')
     .optional()
-    .isIn(['text', 'number', 'date', 'select', 'boolean', 'textarea'])
+    .isIn(['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated'])
     .withMessage('Invalid field type'),
   body('is_required')
     .optional()
