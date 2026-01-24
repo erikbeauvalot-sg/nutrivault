@@ -33,6 +33,8 @@ db.CustomFieldDefinition = require('./CustomFieldDefinition')(sequelize, DataTyp
 db.PatientCustomFieldValue = require('./PatientCustomFieldValue')(sequelize, DataTypes);
 db.VisitCustomFieldValue = require('./VisitCustomFieldValue')(sequelize, DataTypes);
 db.CustomFieldTranslation = require('./CustomFieldTranslation')(sequelize, DataTypes);
+db.MeasureDefinition = require('./MeasureDefinition')(sequelize, DataTypes);
+db.PatientMeasure = require('./PatientMeasure')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -331,6 +333,46 @@ db.VisitCustomFieldValue.belongsTo(db.User, {
 db.User.hasMany(db.VisitCustomFieldValue, {
   foreignKey: 'updated_by',
   as: 'updated_visit_custom_field_values'
+});
+
+// MeasureDefinition - PatientMeasure relationship
+db.MeasureDefinition.hasMany(db.PatientMeasure, {
+  foreignKey: 'measure_definition_id',
+  as: 'measures'
+});
+db.PatientMeasure.belongsTo(db.MeasureDefinition, {
+  foreignKey: 'measure_definition_id',
+  as: 'measureDefinition'
+});
+
+// PatientMeasure - Patient relationship
+db.PatientMeasure.belongsTo(db.Patient, {
+  foreignKey: 'patient_id',
+  as: 'patient'
+});
+db.Patient.hasMany(db.PatientMeasure, {
+  foreignKey: 'patient_id',
+  as: 'measures'
+});
+
+// PatientMeasure - Visit relationship (optional)
+db.PatientMeasure.belongsTo(db.Visit, {
+  foreignKey: 'visit_id',
+  as: 'visit'
+});
+db.Visit.hasMany(db.PatientMeasure, {
+  foreignKey: 'visit_id',
+  as: 'measures'
+});
+
+// PatientMeasure - User (recorded_by) relationship
+db.PatientMeasure.belongsTo(db.User, {
+  foreignKey: 'recorded_by',
+  as: 'recorder'
+});
+db.User.hasMany(db.PatientMeasure, {
+  foreignKey: 'recorded_by',
+  as: 'recorded_measures'
 });
 
 module.exports = db;

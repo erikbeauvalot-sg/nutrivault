@@ -94,6 +94,14 @@ app.use('/api/roles', roleRoutes);
 const formulaRoutes = require('./routes/formulas');
 app.use('/api/formulas', formulaRoutes);
 
+// Measure Definition routes (protected - RBAC enforced in routes file)
+const measureRoutes = require('./routes/measures');
+app.use('/api/measures', measureRoutes);
+
+// Patient Measures routes (protected - RBAC enforced in routes file)
+const patientMeasureRoutes = require('./routes/patientMeasures');
+app.use('/api', patientMeasureRoutes);
+
 // Basic error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);
