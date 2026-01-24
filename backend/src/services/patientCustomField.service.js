@@ -13,6 +13,7 @@ const CustomFieldCategory = db.CustomFieldCategory;
 const Patient = db.Patient;
 const auditService = require('./audit.service');
 const translationService = require('./customFieldTranslation.service');
+const formulaEngine = require('./formulaEngine.service');
 const { Op } = db.Sequelize;
 
 /**
@@ -180,6 +181,123 @@ async function getPatientCustomFields(user, patientId, language = 'fr', requestM
 }
 
 /**
+ * Recalculate dependent calculated fields
+ * @param {string} patientId - Patient UUID
+ * @param {string} changedFieldName - Name of field that was changed
+ * @param {Object} user - User making the change
+ * @returns {Promise<Array>} Array of updated field values
+ */
+async function recalculateDependentFields(patientId, changedFieldName, user) {
+  try {
+    // Find all calculated fields that depend on the changed field
+    const calculatedFields = await CustomFieldDefinition.findAll({
+      where: {
+        is_calculated: true,
+        is_active: true,
+        dependencies: {
+          [Op.like]: `%"${changedFieldName}"%`
+        }
+      }
+    });
+
+    if (calculatedFields.length === 0) {
+      return [];
+    }
+
+    // Get all patient field values to use for calculations
+    const allValues = await PatientCustomFieldValue.findAll({
+      where: { patient_id: patientId },
+      include: [{
+        model: CustomFieldDefinition,
+        as: 'field_definition',
+        attributes: ['field_name', 'field_type']
+      }]
+    });
+
+    // Build value map by field name
+    const valueMap = {};
+    allValues.forEach(v => {
+      if (v.field_definition) {
+        valueMap[v.field_definition.field_name] = v.getValue(v.field_definition.field_type);
+      }
+    });
+
+    const updatedFields = [];
+
+    // Recalculate each dependent field
+    for (const calcField of calculatedFields) {
+      try {
+        // Check if all dependencies have values
+        const deps = calcField.dependencies || [];
+        const hasAllDeps = deps.every(dep => valueMap[dep] !== null && valueMap[dep] !== undefined);
+
+        if (!hasAllDeps) {
+          continue;
+        }
+
+        // Evaluate formula
+        const result = formulaEngine.evaluateFormula(
+          calcField.formula,
+          valueMap,
+          calcField.decimal_places || 2
+        );
+
+        if (result.success) {
+          // Find or create the calculated field value
+          let fieldValue = await PatientCustomFieldValue.findOne({
+            where: {
+              patient_id: patientId,
+              field_definition_id: calcField.id
+            }
+          });
+
+          const isNew = !fieldValue;
+
+          if (isNew) {
+            fieldValue = await PatientCustomFieldValue.create({
+              patient_id: patientId,
+              field_definition_id: calcField.id,
+              updated_by: user.id
+            });
+          }
+
+          // Set the calculated value
+          fieldValue.setValue(result.result, 'number');
+          fieldValue.updated_by = user.id;
+          await fieldValue.save();
+
+          updatedFields.push({
+            field_name: calcField.field_name,
+            field_label: calcField.field_label,
+            value: result.result
+          });
+
+          // Update value map for cascading calculations
+          valueMap[calcField.field_name] = result.result;
+
+          // Audit log
+          await auditService.log({
+            user_id: user.id,
+            username: user.username,
+            action: isNew ? 'AUTO_CREATE' : 'AUTO_UPDATE',
+            resource_type: 'patient_custom_field_value',
+            resource_id: fieldValue.id,
+            details: `Auto-calculated field ${calcField.field_label} due to change in ${changedFieldName}`
+          });
+        }
+      } catch (error) {
+        console.error(`Error recalculating field ${calcField.field_name}:`, error);
+      }
+    }
+
+    return updatedFields;
+  } catch (error) {
+    console.error('Error in recalculateDependentFields:', error);
+    return [];
+  }
+}
+
+/**
  * Set a custom field value for a patient
  *
  * @param {Object} user - Authenticated user object
@@ -250,6 +368,11 @@ async function setPatientCustomField(user, patientId, definitionId, value, reque
       details: patient ? `Patient: ${patient.first_name} ${patient.last_name}, Field: ${definition.field_label}` : undefined,
       ...requestMetadata
     });
+
+    // Auto-recalculate dependent calculated fields (only if this is not a calculated field)
+    if (!definition.is_calculated) {
+      await recalculateDependentFields(patientId, definition.field_name, user);
+    }
 
     return fieldValue;
   } catch (error) {
