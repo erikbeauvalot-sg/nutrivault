@@ -10,7 +10,7 @@ import PropTypes from 'prop-types';
 import { Card, Form, Row, Col, Alert, Spinner, Badge, Button, Dropdown } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { getMeasureDefinitions, getMeasureTrend } from '../services/measureService';
+import { getMeasureDefinitions, getMeasureTrend, getAllMeasureTranslations } from '../services/measureService';
 import {
   formatTrendIndicator,
   formatStatisticsSummary,
@@ -23,14 +23,16 @@ import {
   generatePDFReport,
   formatChartDataForExport
 } from '../utils/chartExportUtils';
+import { fetchMeasureTranslations, applyMeasureTranslations } from '../utils/measureTranslations';
 import AnnotationModal from './AnnotationModal';
 import api from '../services/api';
 
 const MeasureHistory = ({ patientId }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   // State
   const [measureDefinitions, setMeasureDefinitions] = useState([]);
+  const [measureTranslations, setMeasureTranslations] = useState({});
   const [selectedMeasureId, setSelectedMeasureId] = useState('');
   const [selectedDefinition, setSelectedDefinition] = useState(null);
   const [trendData, setTrendData] = useState(null);
@@ -77,6 +79,26 @@ const MeasureHistory = ({ patientId }) => {
     }
   }, [selectedMeasureId, dateRange]);
 
+  // Re-apply translations when language changes
+  useEffect(() => {
+    if (Object.keys(measureTranslations).length > 0 && measureDefinitions.length > 0) {
+      const currentLanguage = i18n.resolvedLanguage || i18n.language || 'en';
+      const translatedDefinitions = measureDefinitions.map(def =>
+        applyMeasureTranslations(def, measureTranslations[def.id]?.[currentLanguage] || {})
+      );
+      setMeasureDefinitions(translatedDefinitions);
+
+      // Update selected definition if it exists
+      if (selectedDefinition) {
+        const updatedSelected = applyMeasureTranslations(
+          selectedDefinition,
+          measureTranslations[selectedDefinition.id]?.[currentLanguage] || {}
+        );
+        setSelectedDefinition(updatedSelected);
+      }
+    }
+  }, [i18n.resolvedLanguage, i18n.language]);
+
   const loadMeasureDefinitions = async () => {
     try {
       setLoading(true);
@@ -84,12 +106,25 @@ const MeasureHistory = ({ patientId }) => {
         is_active: true,
         measure_type: 'numeric' // Only numeric measures can be graphed
       });
-      setMeasureDefinitions(definitions || []);
 
-      // Auto-select first measure if available
+      // Fetch translations for all measure definitions
       if (definitions && definitions.length > 0) {
-        setSelectedMeasureId(definitions[0].id);
-        setSelectedDefinition(definitions[0]);
+        const measureIds = definitions.map(d => d.id);
+        const translations = await fetchMeasureTranslations(measureIds, getAllMeasureTranslations);
+        setMeasureTranslations(translations);
+
+        // Apply translations based on current language
+        const currentLanguage = i18n.resolvedLanguage || i18n.language || 'en';
+        const translatedDefinitions = definitions.map(def =>
+          applyMeasureTranslations(def, translations[def.id]?.[currentLanguage] || {})
+        );
+        setMeasureDefinitions(translatedDefinitions);
+
+        // Auto-select first measure if available
+        setSelectedMeasureId(translatedDefinitions[0].id);
+        setSelectedDefinition(translatedDefinitions[0]);
+      } else {
+        setMeasureDefinitions(definitions || []);
       }
 
       setError(null);

@@ -10,11 +10,12 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
+import { applyTranslationsToMeasures, fetchMeasureTranslations } from '../utils/measureTranslations';
 import visitService from '../services/visitService';
 import visitCustomFieldService from '../services/visitCustomFieldService';
 import CustomFieldDisplay from '../components/CustomFieldDisplay';
 import LogMeasureModal from '../components/LogMeasureModal';
-import { getMeasuresByVisit, formatMeasureValue } from '../services/measureService';
+import { getMeasuresByVisit, formatMeasureValue, getAllMeasureTranslations } from '../services/measureService';
 
 const VisitDetailPage = () => {
   const { t, i18n } = useTranslation();
@@ -34,6 +35,7 @@ const VisitDetailPage = () => {
 
   // Measures state
   const [measures, setMeasures] = useState([]);
+  const [measureTranslations, setMeasureTranslations] = useState({});
   const [loadingMeasures, setLoadingMeasures] = useState(false);
   const [showLogMeasureModal, setShowLogMeasureModal] = useState(false);
 
@@ -44,6 +46,19 @@ const VisitDetailPage = () => {
       fetchVisitMeasures();
     }
   }, [id, i18n.resolvedLanguage]);
+
+  // Re-apply measure translations when language changes (without refetching)
+  useEffect(() => {
+    if (measures.length > 0 && Object.keys(measureTranslations).length > 0) {
+      const currentLanguage = i18n.resolvedLanguage || i18n.language || 'en';
+      const translatedMeasures = applyTranslationsToMeasures(
+        measures,
+        measureTranslations,
+        currentLanguage
+      );
+      setMeasures(translatedMeasures);
+    }
+  }, [i18n.language]);
 
   const fetchVisitDetails = async () => {
     try {
@@ -87,7 +102,34 @@ const VisitDetailPage = () => {
     try {
       setLoadingMeasures(true);
       const data = await getMeasuresByVisit(id);
-      setMeasures(data || []);
+      const measuresArray = data || [];
+
+      // Get unique measure definition IDs
+      const measureDefIds = [...new Set(
+        measuresArray
+          .filter(m => m.measure_definition_id)
+          .map(m => m.measure_definition_id)
+      )];
+
+      // Fetch translations for all measure definitions
+      if (measureDefIds.length > 0) {
+        const translations = await fetchMeasureTranslations(
+          measureDefIds,
+          getAllMeasureTranslations
+        );
+        setMeasureTranslations(translations);
+
+        // Apply translations based on current language
+        const currentLanguage = i18n.resolvedLanguage || i18n.language || 'en';
+        const translatedMeasures = applyTranslationsToMeasures(
+          measuresArray,
+          translations,
+          currentLanguage
+        );
+        setMeasures(translatedMeasures);
+      } else {
+        setMeasures(measuresArray);
+      }
     } catch (err) {
       console.error('Error fetching visit measures:', err);
       // Don't set error for measures failure

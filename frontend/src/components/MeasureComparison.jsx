@@ -18,14 +18,16 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { getMeasureDefinitions } from '../services/measureService';
+import { getMeasureDefinitions, getAllMeasureTranslations } from '../services/measureService';
+import { fetchMeasureTranslations, applyMeasureTranslations } from '../utils/measureTranslations';
 import api from '../services/api';
 
 const MeasureComparison = ({ patientId }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   // State
   const [measureDefinitions, setMeasureDefinitions] = useState([]);
+  const [measureTranslations, setMeasureTranslations] = useState({});
   const [selectedMeasures, setSelectedMeasures] = useState([]);
   const [comparisonData, setComparisonData] = useState(null);
   const [dateRange, setDateRange] = useState({
@@ -55,13 +57,39 @@ const MeasureComparison = ({ patientId }) => {
     }
   }, [selectedMeasures, dateRange]);
 
+  // Re-apply translations when language changes
+  useEffect(() => {
+    if (Object.keys(measureTranslations).length > 0 && measureDefinitions.length > 0) {
+      const currentLanguage = i18n.resolvedLanguage || i18n.language || 'en';
+      const translatedDefinitions = measureDefinitions.map(def =>
+        applyMeasureTranslations(def, measureTranslations[def.id]?.[currentLanguage] || {})
+      );
+      setMeasureDefinitions(translatedDefinitions);
+    }
+  }, [i18n.resolvedLanguage, i18n.language]);
+
   const loadMeasureDefinitions = async () => {
     try {
       const definitions = await getMeasureDefinitions({
         is_active: true,
         measure_type: 'numeric'
       });
-      setMeasureDefinitions(definitions || []);
+
+      // Fetch translations for all measure definitions
+      if (definitions && definitions.length > 0) {
+        const measureIds = definitions.map(d => d.id);
+        const translations = await fetchMeasureTranslations(measureIds, getAllMeasureTranslations);
+        setMeasureTranslations(translations);
+
+        // Apply translations based on current language
+        const currentLanguage = i18n.resolvedLanguage || i18n.language || 'en';
+        const translatedDefinitions = definitions.map(def =>
+          applyMeasureTranslations(def, translations[def.id]?.[currentLanguage] || {})
+        );
+        setMeasureDefinitions(translatedDefinitions);
+      } else {
+        setMeasureDefinitions(definitions || []);
+      }
     } catch (err) {
       console.error('Error loading measure definitions:', err);
       setError(t('measures.errorLoadingDefinitions'));
