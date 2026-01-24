@@ -125,12 +125,12 @@ const DocumentUploadModal = ({
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg">
+    <Modal show={show} onHide={handleClose} size="xl">
       <Modal.Header closeButton>
         <Modal.Title>{t('documents.uploadDocuments', 'Upload Documents')}</Modal.Title>
       </Modal.Header>
 
-      <Modal.Body>
+      <Modal.Body style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
         {error && (
           <Alert variant="danger" dismissible onClose={() => setError(null)}>
             {error}

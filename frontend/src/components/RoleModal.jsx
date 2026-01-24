@@ -130,7 +130,7 @@ const RoleModal = ({ show, onHide, mode, role, onSave }) => {
     <Modal
       show={show}
       onHide={onHide}
-      size="lg"
+      size="xl"
       backdrop="static"
       keyboard={false}
     >
@@ -141,7 +141,7 @@ const RoleModal = ({ show, onHide, mode, role, onSave }) => {
       </Modal.Header>
 
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <Modal.Body>
+        <Modal.Body style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
           {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
 
           <Tabs

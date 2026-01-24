@@ -164,7 +164,7 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
   };
 
   return (
-    <Modal show={show} onHide={handleClose}>
+    <Modal show={show} onHide={handleClose} size="xl">
       <Modal.Header closeButton>
         <Modal.Title>
           {isEditing ? '✏️ Edit Category' : '➕ Create Category'}
@@ -172,7 +172,7 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
       </Modal.Header>
 
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <Modal.Body>
+        <Modal.Body style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
           {/* Hidden input for color */}
           <input type="hidden" {...register('color')} />
 

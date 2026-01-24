@@ -173,7 +173,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg">
+    <Modal show={show} onHide={onHide} size="xl">
       <Modal.Header closeButton>
         <Modal.Title>
           {isCreateMode ? `👤 ${t('users.createUser')}` : `👤 ${t('users.editUser')}`}
@@ -181,7 +181,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
       </Modal.Header>
 
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <Modal.Body>
+        <Modal.Body style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
           {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
 
           <h5 className="mb-3">{t('users.accountInfo')}</h5>

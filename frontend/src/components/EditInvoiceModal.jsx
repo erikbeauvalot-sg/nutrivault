@@ -154,13 +154,13 @@ const EditInvoiceModal = ({ show, onHide, onSubmit, invoice }) => {
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg">
+    <Modal show={show} onHide={handleClose} size="xl">
       <Modal.Header closeButton>
         <Modal.Title>{t('billing.editInvoice', 'Edit Invoice')}</Modal.Title>
       </Modal.Header>
 
       <Form onSubmit={handleSubmit}>
-        <Modal.Body>
+        <Modal.Body style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
           {error && (
             <Alert variant="danger" className="mb-3">
               {error}

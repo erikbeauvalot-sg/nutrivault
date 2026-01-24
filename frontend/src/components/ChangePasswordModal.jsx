@@ -122,13 +122,13 @@ const ChangePasswordModal = ({ show, onHide, userId, username, isAdmin, onSucces
   };
 
   return (
-    <Modal show={show} onHide={handleClose}>
+    <Modal show={show} onHide={handleClose} size="lg">
       <Modal.Header closeButton>
         <Modal.Title>🔑 Change Password</Modal.Title>
       </Modal.Header>
 
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <Modal.Body>
+        <Modal.Body style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
           {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
           {success && <Alert variant="success">Password changed successfully!</Alert>}
 

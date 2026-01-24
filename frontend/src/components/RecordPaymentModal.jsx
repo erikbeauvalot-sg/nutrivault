@@ -94,13 +94,13 @@ const RecordPaymentModal = ({ show, onHide, onSubmit, invoice }) => {
   };
 
   return (
-    <Modal show={show} onHide={handleClose}>
+    <Modal show={show} onHide={handleClose} size="lg">
       <Modal.Header closeButton>
         <Modal.Title>{t('billing.recordPayment', 'Record Payment')}</Modal.Title>
       </Modal.Header>
 
       <Form onSubmit={handleSubmit}>
-        <Modal.Body>
+        <Modal.Body style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
           {invoice && (
             <Alert variant="info">
               <strong>{t('billing.invoice', 'Invoice')}:</strong> {invoice.invoice_number}

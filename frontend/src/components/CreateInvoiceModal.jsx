@@ -161,13 +161,13 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg">
+    <Modal show={show} onHide={handleClose} size="xl">
       <Modal.Header closeButton>
         <Modal.Title>{t('billing.createInvoice', 'Create Invoice')}</Modal.Title>
       </Modal.Header>
 
       <Form onSubmit={handleSubmit}>
-        <Modal.Body>
+        <Modal.Body style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
           {error && (
             <Alert variant="danger" dismissible onClose={() => setError(null)}>
               {error}
