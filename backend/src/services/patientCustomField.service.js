@@ -94,6 +94,111 @@ async function getPatientCustomFields(user, patientId, language = 'fr', requestM
       valuesMap[value.field_definition_id] = value;
     });
 
+    // Auto-calculate missing calculated field values
+    // This handles the case where a calculated field is created after its dependencies already have values
+    console.log('[AUTO-CALC-INIT] Checking for calculated fields with missing values...');
+
+    // Get all calculated field definitions
+    const allCalculatedFields = [];
+    patientCategories.forEach(category => {
+      category.field_definitions?.forEach(def => {
+        if (def.is_calculated && def.is_active) {
+          allCalculatedFields.push(def);
+        }
+      });
+    });
+
+    console.log(`[AUTO-CALC-INIT] Found ${allCalculatedFields.length} calculated fields`);
+
+    if (allCalculatedFields.length > 0) {
+      // Build value map by field name for formula evaluation
+      const valueMapByName = {};
+      patientValues.forEach(v => {
+        if (v.field_definition) {
+          valueMapByName[v.field_definition.field_name] = v.getValue(v.field_definition.field_type);
+        }
+      });
+
+      // Process each calculated field
+      for (const calcField of allCalculatedFields) {
+        // Check if this field already has a value
+        const fieldValueRecord = valuesMap[calcField.id];
+        const currentValue = fieldValueRecord ? fieldValueRecord.getValue(calcField.field_type) : null;
+        const needsCalculation = currentValue === null || currentValue === undefined;
+
+        if (needsCalculation) {
+          console.log(`[AUTO-CALC-INIT] Field ${calcField.field_name} has no value (current: ${currentValue}), checking dependencies...`);
+
+          // Check if all dependencies have values
+          const deps = calcField.dependencies || [];
+          const hasAllDeps = deps.every(dep => {
+            const depValue = valueMapByName[dep];
+            return depValue !== null && depValue !== undefined;
+          });
+
+          if (hasAllDeps && deps.length > 0) {
+            console.log(`[AUTO-CALC-INIT] All dependencies present for ${calcField.field_name}, calculating...`);
+            console.log(`[AUTO-CALC-INIT] Formula: ${calcField.formula}`);
+            console.log(`[AUTO-CALC-INIT] Dependencies:`, deps.map(d => `${d}=${valueMapByName[d]}`));
+
+            try {
+              // Evaluate formula
+              const result = formulaEngine.evaluateFormula(
+                calcField.formula,
+                valueMapByName,
+                calcField.decimal_places || 2
+              );
+
+              console.log(`[AUTO-CALC-INIT] Formula result:`, result);
+
+              if (result.success) {
+                // Find or create the calculated field value record
+                let fieldValue = fieldValueRecord;
+                const isNew = !fieldValue;
+
+                if (isNew) {
+                  fieldValue = await PatientCustomFieldValue.create({
+                    patient_id: patientId,
+                    field_definition_id: calcField.id,
+                    updated_by: user.id
+                  });
+                }
+
+                // Set the calculated value
+                fieldValue.setValue(result.result, 'number');
+                fieldValue.updated_by = user.id;
+                await fieldValue.save();
+
+                // Add to values map so it appears in the response
+                valuesMap[calcField.id] = fieldValue;
+                valueMapByName[calcField.field_name] = result.result;
+
+                console.log(`[AUTO-CALC-INIT] Successfully calculated and saved ${calcField.field_name} = ${result.result}`);
+
+                // Audit log
+                await auditService.log({
+                  user_id: user.id,
+                  username: user.username,
+                  action: isNew ? 'AUTO_CREATE' : 'AUTO_UPDATE',
+                  resource_type: 'patient_custom_field_value',
+                  resource_id: fieldValue.id,
+                  details: `Auto-calculated field ${calcField.field_label} on page load`
+                });
+              } else {
+                console.log(`[AUTO-CALC-INIT] Formula evaluation failed: ${result.error}`);
+              }
+            } catch (error) {
+              console.error(`[AUTO-CALC-INIT] Error calculating field ${calcField.field_name}:`, error);
+            }
+          } else {
+            console.log(`[AUTO-CALC-INIT] Missing dependencies for ${calcField.field_name}. Has: ${deps.filter(d => valueMapByName[d] !== null && valueMapByName[d] !== undefined).join(', ')}. Missing: ${deps.filter(d => valueMapByName[d] === null || valueMapByName[d] === undefined).join(', ')}`);
+          }
+        } else {
+          console.log(`[AUTO-CALC-INIT] Field ${calcField.field_name} already has value: ${currentValue}`);
+        }
+      }
+    }
+
     // Build response with categories, definitions, and values
     const result = await Promise.all(patientCategories.map(async (category) => {
       // Apply translations to category if language is not French
@@ -189,6 +294,8 @@ async function getPatientCustomFields(user, patientId, language = 'fr', requestM
  */
 async function recalculateDependentFields(patientId, changedFieldName, user) {
   try {
+    console.log(`[RECALC] Looking for calculated fields that depend on: ${changedFieldName}`);
+
     // Find all calculated fields that depend on the changed field
     const calculatedFields = await CustomFieldDefinition.findAll({
       where: {
@@ -199,6 +306,8 @@ async function recalculateDependentFields(patientId, changedFieldName, user) {
         }
       }
     });
+
+    console.log(`[RECALC] Found ${calculatedFields.length} calculated fields that depend on ${changedFieldName}`);
 
     if (calculatedFields.length === 0) {
       return [];
@@ -236,11 +345,16 @@ async function recalculateDependentFields(patientId, changedFieldName, user) {
         }
 
         // Evaluate formula
+        console.log(`[RECALC] Evaluating formula for ${calcField.field_name}: ${calcField.formula}`);
+        console.log(`[RECALC] Value map:`, valueMap);
+
         const result = formulaEngine.evaluateFormula(
           calcField.formula,
           valueMap,
           calcField.decimal_places || 2
         );
+
+        console.log(`[RECALC] Formula result:`, result);
 
         if (result.success) {
           // Find or create the calculated field value
@@ -371,7 +485,9 @@ async function setPatientCustomField(user, patientId, definitionId, value, reque
 
     // Auto-recalculate dependent calculated fields (only if this is not a calculated field)
     if (!definition.is_calculated) {
-      await recalculateDependentFields(patientId, definition.field_name, user);
+      console.log(`[AUTO-CALC] Triggering recalculation for field: ${definition.field_name}`);
+      const updated = await recalculateDependentFields(patientId, definition.field_name, user);
+      console.log(`[AUTO-CALC] Updated ${updated.length} calculated fields:`, updated.map(f => f.field_name));
     }
 
     return fieldValue;

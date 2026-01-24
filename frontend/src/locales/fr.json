@@ -266,6 +266,7 @@
     "contactRequired": "Au moins un moyen de contact est requis (email ou téléphone)",
     "quickCreateSuccess": "Le patient sera créé instantanément. Vous pourrez compléter les détails supplémentaires depuis sa page de profil.",
     "createQuick": "Créer Patient Flash",
+    "notes": "Notes",
     "createError": "Échec de la création du patient"
   },
   "agenda": {
@@ -299,6 +300,7 @@
     "visitTime": "Heure de visite",
     "status": "Statut",
     "notes": "Notes",
+    "date": "Date",
     "dietitian": "Diététicien",
     "patient": "Patient",
     "scheduled": "Programmée",

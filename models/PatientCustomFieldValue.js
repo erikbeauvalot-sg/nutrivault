@@ -67,6 +67,7 @@ module.exports = (sequelize, DataTypes) => {
         return this.value_text;
 
       case 'number':
+      case 'calculated':
         return this.value_number !== null ? parseFloat(this.value_number) : null;
 
       case 'boolean':
@@ -107,6 +108,7 @@ module.exports = (sequelize, DataTypes) => {
         break;
 
       case 'number':
+      case 'calculated':
         this.value_number = value !== null && value !== undefined ? parseFloat(value) : null;
         break;
 
