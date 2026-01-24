@@ -83,6 +83,49 @@ module.exports = (sequelize, DataTypes) => {
       },
       comment: 'Maximum valid value (for numeric types)'
     },
+    normal_range_min: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      validate: {
+        isDecimal: true
+      },
+      comment: 'Minimum value for normal/healthy range'
+    },
+    normal_range_max: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      validate: {
+        isDecimal: true,
+        isGreaterThanNormalMin(value) {
+          if (this.normal_range_min !== null && value !== null && parseFloat(value) <= parseFloat(this.normal_range_min)) {
+            throw new Error('normal_range_max must be greater than normal_range_min');
+          }
+        }
+      },
+      comment: 'Maximum value for normal/healthy range'
+    },
+    alert_threshold_min: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      validate: {
+        isDecimal: true
+      },
+      comment: 'Minimum threshold for critical alerts (more extreme than normal_range_min)'
+    },
+    alert_threshold_max: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      validate: {
+        isDecimal: true
+      },
+      comment: 'Maximum threshold for critical alerts (more extreme than normal_range_max)'
+    },
+    enable_alerts: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: 'Whether to automatically generate alerts for out-of-range values'
+    },
     decimal_places: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -261,6 +304,58 @@ module.exports = (sequelize, DataTypes) => {
     }
 
     return { valid: true, error: null, missing: [] };
+  };
+
+  /**
+   * Validate range configuration
+   * @returns {Object} { valid: boolean, errors: string[] }
+   */
+  MeasureDefinition.prototype.validateRanges = function() {
+    const errors = [];
+
+    // Only validate for numeric measures
+    if (this.measure_type !== 'numeric') {
+      return { valid: true, errors: [] };
+    }
+
+    // Normal range validation
+    if (this.normal_range_min !== null && this.normal_range_max !== null) {
+      if (parseFloat(this.normal_range_min) >= parseFloat(this.normal_range_max)) {
+        errors.push('normal_range_min must be less than normal_range_max');
+      }
+
+      // Normal range must be within validation range
+      if (this.min_value !== null && parseFloat(this.normal_range_min) < parseFloat(this.min_value)) {
+        errors.push('normal_range_min must be >= min_value');
+      }
+      if (this.max_value !== null && parseFloat(this.normal_range_max) > parseFloat(this.max_value)) {
+        errors.push('normal_range_max must be <= max_value');
+      }
+    }
+
+    // Alert threshold validation
+    if (this.alert_threshold_min !== null) {
+      if (this.min_value !== null && parseFloat(this.alert_threshold_min) < parseFloat(this.min_value)) {
+        errors.push('alert_threshold_min must be >= min_value');
+      }
+      if (this.normal_range_min !== null && parseFloat(this.alert_threshold_min) > parseFloat(this.normal_range_min)) {
+        errors.push('alert_threshold_min should be <= normal_range_min (more extreme)');
+      }
+    }
+
+    if (this.alert_threshold_max !== null) {
+      if (this.max_value !== null && parseFloat(this.alert_threshold_max) > parseFloat(this.max_value)) {
+        errors.push('alert_threshold_max must be <= max_value');
+      }
+      if (this.normal_range_max !== null && parseFloat(this.alert_threshold_max) < parseFloat(this.normal_range_max)) {
+        errors.push('alert_threshold_max should be >= normal_range_max (more extreme)');
+      }
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors
+    };
   };
 
   return MeasureDefinition;

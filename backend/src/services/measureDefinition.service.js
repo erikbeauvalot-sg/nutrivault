@@ -7,6 +7,7 @@
 
 const db = require('../../../models');
 const MeasureDefinition = db.MeasureDefinition;
+const MeasureTranslation = db.MeasureTranslation;
 const auditService = require('./audit.service');
 const formulaEngine = require('./formulaEngine.service');
 const measureEvaluation = require('./measureEvaluation.service');
@@ -36,6 +37,11 @@ async function getAllDefinitions(user, filters = {}, requestMetadata = {}) {
 
     const measures = await MeasureDefinition.findAll({
       where,
+      include: [{
+        model: MeasureTranslation,
+        as: 'translations',
+        required: false
+      }],
       order: [
         ['display_order', 'ASC'],
         ['display_name', 'ASC']
@@ -181,6 +187,11 @@ async function createDefinition(data, user, requestMetadata = {}) {
       min_value: data.min_value !== undefined ? data.min_value : null,
       max_value: data.max_value !== undefined ? data.max_value : null,
       decimal_places: data.decimal_places !== undefined ? data.decimal_places : 2,
+      normal_range_min: data.normal_range_min !== undefined ? data.normal_range_min : null,
+      normal_range_max: data.normal_range_max !== undefined ? data.normal_range_max : null,
+      alert_threshold_min: data.alert_threshold_min !== undefined ? data.alert_threshold_min : null,
+      alert_threshold_max: data.alert_threshold_max !== undefined ? data.alert_threshold_max : null,
+      enable_alerts: data.enable_alerts !== undefined ? data.enable_alerts : false,
       is_active: data.is_active !== undefined ? data.is_active : true,
       display_order: data.display_order !== undefined ? data.display_order : 0,
       is_system: false, // User-created measures are never system measures
@@ -226,7 +237,14 @@ async function updateDefinition(id, data, user, requestMetadata = {}) {
     // Check if trying to modify system measure critical fields
     if (measure.is_system) {
       // Allow only certain fields to be updated for system measures
-      const allowedFields = ['display_name', 'description', 'is_active', 'display_order'];
+      // Range fields (both validation and alert ranges) can be configured even for system measures
+      const allowedFields = [
+        'display_name', 'description', 'is_active', 'display_order',
+        'min_value', 'max_value',
+        'normal_range_min', 'normal_range_max',
+        'alert_threshold_min', 'alert_threshold_max',
+        'enable_alerts'
+      ];
       const attemptedFields = Object.keys(data);
       const disallowedFields = attemptedFields.filter(f => !allowedFields.includes(f));
 
@@ -314,6 +332,8 @@ async function updateDefinition(id, data, user, requestMetadata = {}) {
     const allowedUpdateFields = [
       'name', 'display_name', 'description', 'category', 'measure_type',
       'unit', 'min_value', 'max_value', 'decimal_places', 'is_active', 'display_order',
+      'normal_range_min', 'normal_range_max',
+      'alert_threshold_min', 'alert_threshold_max', 'enable_alerts',
       'formula', 'dependencies', 'last_formula_change'
     ];
 

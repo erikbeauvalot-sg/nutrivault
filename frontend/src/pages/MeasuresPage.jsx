@@ -13,6 +13,7 @@ import Layout from '../components/layout/Layout';
 import MeasureDefinitionModal from '../components/MeasureDefinitionModal';
 import MeasureTranslationModal from '../components/MeasureTranslationModal';
 import * as measureService from '../services/measureService';
+import i18n from '../i18n';
 
 const MeasuresPage = () => {
   const { t } = useTranslation();
@@ -105,14 +106,14 @@ const MeasuresPage = () => {
   };
 
   const handleDeleteMeasure = async (measureId) => {
-    if (!window.confirm('Are you sure you want to delete this measure definition?')) return;
+    if (!window.confirm(t('measures.confirmDelete'))) return;
 
     try {
       await measureService.deleteMeasureDefinition(measureId);
       fetchMeasures();
     } catch (err) {
       console.error('Error deleting measure:', err);
-      alert(err.response?.data?.error || 'Failed to delete measure definition');
+      alert(err.response?.data?.error || t('measures.deleteError'));
     }
   };
 
@@ -131,6 +132,28 @@ const MeasuresPage = () => {
   const getCategoryName = (category) => {
     const categoryObj = categories.find(c => c.id === category);
     return categoryObj ? categoryObj.name : category;
+  };
+
+  // Get translated display name for a measure
+  const getTranslatedDisplayName = (measure) => {
+    if (!measure) return '';
+
+    // Get current language from i18n
+    const currentLang = i18n.language || 'en';
+
+    // Check if translations exist
+    if (measure.translations && measure.translations.length > 0) {
+      // Find translation for current language
+      const translation = measure.translations.find(
+        tr => tr.language_code === currentLang && tr.field_name === 'display_name'
+      );
+      if (translation && translation.translated_value) {
+        return translation.translated_value;
+      }
+    }
+
+    // Fallback to default display_name
+    return measure.display_name;
   };
 
   // Get measure type badge variant
@@ -176,9 +199,13 @@ const MeasuresPage = () => {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(measure => {
+        // Check if search matches translated display name
+        const translatedName = getTranslatedDisplayName(measure)?.toLowerCase();
+
         return (
           measure.name?.toLowerCase().includes(query) ||
           measure.display_name?.toLowerCase().includes(query) ||
+          translatedName?.includes(query) ||
           measure.description?.toLowerCase().includes(query) ||
           measure.category?.toLowerCase().includes(query) ||
           measure.unit?.toLowerCase().includes(query)
@@ -217,7 +244,7 @@ const MeasuresPage = () => {
       <Layout>
         <Container className="mt-4 text-center">
           <Spinner animation="border" />
-          <p>Loading measures...</p>
+          <p>{t('measures.loading')}</p>
         </Container>
       </Layout>
     );
@@ -228,8 +255,8 @@ const MeasuresPage = () => {
       <Container className="mt-4">
         <Row className="mb-4">
           <Col>
-            <h1>📊 Measure Definitions</h1>
-            <p className="text-muted">Manage health measure definitions for patient tracking</p>
+            <h1>📊 {t('measures.title')}</h1>
+            <p className="text-muted">{t('measures.subtitle')}</p>
           </Col>
         </Row>
 
@@ -241,21 +268,21 @@ const MeasuresPage = () => {
 
         <Card>
           <Card.Header className="d-flex justify-content-between align-items-center">
-            <h5 className="mb-0">Measure Definitions ({measures.length})</h5>
+            <h5 className="mb-0">{t('measures.cardTitle', { count: measures.length })}</h5>
             <Button variant="primary" size="sm" onClick={handleCreateMeasure}>
-              ➕ New Measure
+              ➕ {t('measures.newMeasure')}
             </Button>
           </Card.Header>
           <Card.Body>
             {/* Search Bar and Category Filter */}
             <Row className="mb-3">
               <Col md={6}>
-                <Form.Label>Search</Form.Label>
+                <Form.Label>{t('measures.search')}</Form.Label>
                 <InputGroup>
                   <InputGroup.Text>🔍</InputGroup.Text>
                   <Form.Control
                     type="text"
-                    placeholder="Search by name, display name, category, unit..."
+                    placeholder={t('measures.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -263,7 +290,7 @@ const MeasuresPage = () => {
                     <Button
                       variant="outline-secondary"
                       onClick={() => setSearchQuery('')}
-                      title="Clear search"
+                      title={t('measures.clearSearch')}
                     >
                       ✕
                     </Button>
@@ -271,7 +298,7 @@ const MeasuresPage = () => {
                 </InputGroup>
               </Col>
               <Col md={6}>
-                <Form.Label>Filter by Category</Form.Label>
+                <Form.Label>{t('measures.filterByCategory')}</Form.Label>
                 <div className="d-flex gap-2">
                   <Form.Select
                     value=""
@@ -282,7 +309,7 @@ const MeasuresPage = () => {
                       }
                     }}
                   >
-                    <option value="">Select category to add...</option>
+                    <option value="">{t('measures.selectCategory')}</option>
                     {categories
                       .filter(cat => !selectedCategories.includes(cat.id))
                       .map(cat => (
@@ -296,18 +323,18 @@ const MeasuresPage = () => {
                     size="sm"
                     onClick={handleSelectAllCategories}
                     disabled={selectedCategories.length === categories.length}
-                    title="Select all categories"
+                    title={t('measures.selectAll')}
                   >
-                    All
+                    {t('measures.all')}
                   </Button>
                   <Button
                     variant="outline-secondary"
                     size="sm"
                     onClick={handleDeselectAllCategories}
                     disabled={selectedCategories.length === 0}
-                    title="Deselect all categories"
+                    title={t('measures.deselectAll')}
                   >
-                    None
+                    {t('measures.none')}
                   </Button>
                 </div>
               </Col>
@@ -318,7 +345,7 @@ const MeasuresPage = () => {
               <Row className="mb-3">
                 <Col>
                   <div className="d-flex flex-wrap gap-2 align-items-center">
-                    <small className="text-muted">Filtering by:</small>
+                    <small className="text-muted">{t('measures.filteringBy')}</small>
                     {selectedCategories.map(catId => {
                       const category = categories.find(c => c.id === catId);
                       return category ? (
@@ -346,14 +373,17 @@ const MeasuresPage = () => {
               <Row className="mb-2">
                 <Col className="d-flex justify-content-between align-items-center">
                   <Form.Text className="text-muted">
-                    Showing {filteredMeasures.length} of {measures.length} measure{filteredMeasures.length !== 1 ? 's' : ''}
+                    {t('measures.showingResults', {
+                      filtered: filteredMeasures.length,
+                      total: measures.length
+                    })}
                   </Form.Text>
                   <Button
                     variant="outline-secondary"
                     size="sm"
                     onClick={handleClearAllFilters}
                   >
-                    🔄 Clear All Filters
+                    🔄 {t('measures.clearAllFilters')}
                   </Button>
                 </Col>
               </Row>
@@ -361,23 +391,23 @@ const MeasuresPage = () => {
 
             {measures.length === 0 ? (
               <Alert variant="info">
-                No measures defined yet. Create one to get started!
+                {t('measures.noMeasures')}
               </Alert>
             ) : filteredMeasures.length === 0 ? (
               <Alert variant="warning">
-                No measures found matching your filters. Try adjusting your search or category filters.
+                {t('measures.noResults')}
               </Alert>
             ) : (
               <Table striped bordered hover responsive>
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Display Name</th>
-                    <th>Category</th>
-                    <th>Type</th>
-                    <th>Unit</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>{t('measures.table.name')}</th>
+                    <th>{t('measures.table.displayName')}</th>
+                    <th>{t('measures.table.category')}</th>
+                    <th>{t('measures.table.type')}</th>
+                    <th>{t('measures.table.unit')}</th>
+                    <th>{t('measures.table.status')}</th>
+                    <th>{t('measures.table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -387,7 +417,7 @@ const MeasuresPage = () => {
                         <code>{highlightText(measure.name, searchQuery)}</code>
                       </td>
                       <td>
-                        <strong>{highlightText(measure.display_name, searchQuery)}</strong>
+                        <strong>{highlightText(getTranslatedDisplayName(measure), searchQuery)}</strong>
                       </td>
                       <td>
                         <Badge bg="light" text="dark">
@@ -408,9 +438,9 @@ const MeasuresPage = () => {
                       </td>
                       <td>
                         {measure.is_active ? (
-                          <Badge bg="success">Active</Badge>
+                          <Badge bg="success">{t('measures.status.active')}</Badge>
                         ) : (
-                          <Badge bg="secondary">Inactive</Badge>
+                          <Badge bg="secondary">{t('measures.status.inactive')}</Badge>
                         )}
                       </td>
                       <td>
@@ -419,9 +449,9 @@ const MeasuresPage = () => {
                           size="sm"
                           className="me-2"
                           onClick={() => navigate(`/settings/measures/${measure.id}/view`)}
-                          title="View raw data (dev only)"
+                          title={t('measures.actions.viewTooltip')}
                         >
-                          🔍 View
+                          🔍 {t('measures.actions.view')}
                         </Button>
                         <Button
                           variant="outline-primary"
@@ -429,23 +459,23 @@ const MeasuresPage = () => {
                           className="me-2"
                           onClick={() => handleEditMeasure(measure)}
                         >
-                          Edit
+                          {t('measures.actions.edit')}
                         </Button>
                         <Button
                           variant="outline-secondary"
                           size="sm"
                           className="me-2"
                           onClick={() => handleTranslateMeasure(measure)}
-                          title="Manage translations"
+                          title={t('measures.actions.translationsTooltip')}
                         >
-                          🌐 Translations
+                          🌐 {t('measures.actions.translations')}
                         </Button>
                         <Button
                           variant="outline-danger"
                           size="sm"
                           onClick={() => handleDeleteMeasure(measure.id)}
                         >
-                          Delete
+                          {t('measures.actions.delete')}
                         </Button>
                       </td>
                     </tr>

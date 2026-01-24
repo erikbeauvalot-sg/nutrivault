@@ -9,7 +9,7 @@ import { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { Card, Form, Row, Col, Alert, Spinner, Badge, Button, Dropdown } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceArea } from 'recharts';
 import { getMeasureDefinitions, getMeasureTrend, getAllMeasureTranslations } from '../services/measureService';
 import {
   formatTrendIndicator,
@@ -322,6 +322,114 @@ const MeasureHistory = ({ patientId }) => {
     return null;
   };
 
+  // Get reference areas for normal ranges and alert thresholds
+  const getReferenceAreas = () => {
+    if (!selectedDefinition) return null;
+
+    const areas = [];
+    const def = selectedDefinition;
+
+    // Determine Y-axis domain for proper zone rendering
+    const minValue = def.min_value ? parseFloat(def.min_value) : (chartData.length > 0 ? Math.min(...chartData.map(d => d.value)) * 0.9 : 0);
+    const maxValue = def.max_value ? parseFloat(def.max_value) : (chartData.length > 0 ? Math.max(...chartData.map(d => d.value)) * 1.1 : 100);
+
+    // Critical low zone (red)
+    if (def.alert_threshold_min) {
+      areas.push(
+        <ReferenceArea
+          key="critical-low"
+          y1={minValue}
+          y2={parseFloat(def.alert_threshold_min)}
+          fill="#dc3545"
+          fillOpacity={0.1}
+          ifOverflow="extendDomain"
+        />
+      );
+    }
+
+    // Warning low zone (yellow)
+    if (def.normal_range_min && def.alert_threshold_min) {
+      areas.push(
+        <ReferenceArea
+          key="warning-low"
+          y1={parseFloat(def.alert_threshold_min)}
+          y2={parseFloat(def.normal_range_min)}
+          fill="#ffc107"
+          fillOpacity={0.15}
+          ifOverflow="extendDomain"
+        />
+      );
+    } else if (def.normal_range_min && !def.alert_threshold_min) {
+      // If no critical threshold, warning zone starts from min
+      areas.push(
+        <ReferenceArea
+          key="warning-low"
+          y1={minValue}
+          y2={parseFloat(def.normal_range_min)}
+          fill="#ffc107"
+          fillOpacity={0.15}
+          ifOverflow="extendDomain"
+        />
+      );
+    }
+
+    // Normal zone (green)
+    if (def.normal_range_min && def.normal_range_max) {
+      areas.push(
+        <ReferenceArea
+          key="normal"
+          y1={parseFloat(def.normal_range_min)}
+          y2={parseFloat(def.normal_range_max)}
+          fill="#28a745"
+          fillOpacity={0.1}
+          ifOverflow="extendDomain"
+        />
+      );
+    }
+
+    // Warning high zone (yellow)
+    if (def.normal_range_max && def.alert_threshold_max) {
+      areas.push(
+        <ReferenceArea
+          key="warning-high"
+          y1={parseFloat(def.normal_range_max)}
+          y2={parseFloat(def.alert_threshold_max)}
+          fill="#ffc107"
+          fillOpacity={0.15}
+          ifOverflow="extendDomain"
+        />
+      );
+    } else if (def.normal_range_max && !def.alert_threshold_max) {
+      // If no critical threshold, warning zone extends to max
+      areas.push(
+        <ReferenceArea
+          key="warning-high"
+          y1={parseFloat(def.normal_range_max)}
+          y2={maxValue}
+          fill="#ffc107"
+          fillOpacity={0.15}
+          ifOverflow="extendDomain"
+        />
+      );
+    }
+
+    // Critical high zone (red)
+    if (def.alert_threshold_max) {
+      areas.push(
+        <ReferenceArea
+          key="critical-high"
+          y1={parseFloat(def.alert_threshold_max)}
+          y2={maxValue}
+          fill="#dc3545"
+          fillOpacity={0.1}
+          ifOverflow="extendDomain"
+        />
+      );
+    }
+
+    return areas;
+  };
+
   // Get trend indicator
   const trendIndicator = trendData?.trend ? formatTrendIndicator(trendData.trend) : null;
 
@@ -531,6 +639,7 @@ const MeasureHistory = ({ patientId }) => {
             <ResponsiveContainer width="100%" height={450}>
             {chartType === 'area' ? (
               <AreaChart data={chartData}>
+                {getReferenceAreas()}
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="date"
@@ -605,6 +714,7 @@ const MeasureHistory = ({ patientId }) => {
               </AreaChart>
             ) : (
               <LineChart data={chartData}>
+                {getReferenceAreas()}
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="date"
@@ -718,6 +828,34 @@ const MeasureHistory = ({ patientId }) => {
               </LineChart>
             )}
           </ResponsiveContainer>
+
+          {/* Range Zone Legend */}
+          {selectedDefinition?.normal_range_min && selectedDefinition?.normal_range_max && (
+            <div className="mt-3 d-flex justify-content-center gap-4" style={{ fontSize: '0.85em' }}>
+              {selectedDefinition.alert_threshold_min && (
+                <div className="d-flex align-items-center gap-1">
+                  <div style={{ width: '20px', height: '12px', backgroundColor: '#dc3545', opacity: 0.3 }}></div>
+                  <span>Critical Low</span>
+                </div>
+              )}
+              <div className="d-flex align-items-center gap-1">
+                <div style={{ width: '20px', height: '12px', backgroundColor: '#ffc107', opacity: 0.4 }}></div>
+                <span>Warning</span>
+              </div>
+              <div className="d-flex align-items-center gap-1">
+                <div style={{ width: '20px', height: '12px', backgroundColor: '#28a745', opacity: 0.3 }}></div>
+                <span>
+                  Normal ({parseFloat(selectedDefinition.normal_range_min).toFixed(1)} - {parseFloat(selectedDefinition.normal_range_max).toFixed(1)} {selectedDefinition.unit})
+                </span>
+              </div>
+              {selectedDefinition.alert_threshold_max && (
+                <div className="d-flex align-items-center gap-1">
+                  <div style={{ width: '20px', height: '12px', backgroundColor: '#dc3545', opacity: 0.3 }}></div>
+                  <span>Critical High</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Annotation List */}
           {annotations.length > 0 && (

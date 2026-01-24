@@ -72,6 +72,26 @@ const measureSchema = yup.object().shape({
     .min(0, 'Decimal places must be between 0 and 4')
     .max(4, 'Decimal places must be between 0 and 4')
     .nullable(),
+  normal_range_min: yup.number()
+    .typeError('Normal range minimum must be a number')
+    .nullable(),
+  normal_range_max: yup.number()
+    .typeError('Normal range maximum must be a number')
+    .nullable()
+    .test('is-greater-than-min', 'Normal range maximum must be greater than minimum', function(value) {
+      const { normal_range_min } = this.parent;
+      if (value === null || value === undefined || normal_range_min === null || normal_range_min === undefined) {
+        return true;
+      }
+      return value > normal_range_min;
+    }),
+  alert_threshold_min: yup.number()
+    .typeError('Alert threshold minimum must be a number')
+    .nullable(),
+  alert_threshold_max: yup.number()
+    .typeError('Alert threshold maximum must be a number')
+    .nullable(),
+  enable_alerts: yup.boolean(),
   formula: yup.string()
     .when('measure_type', {
       is: 'calculated',
@@ -110,6 +130,11 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
       min_value: null,
       max_value: null,
       decimal_places: 2,
+      normal_range_min: null,
+      normal_range_max: null,
+      alert_threshold_min: null,
+      alert_threshold_max: null,
+      enable_alerts: false,
       is_active: true,
       formula: ''
     }
@@ -156,6 +181,11 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
           min_value: definition.min_value ?? null,
           max_value: definition.max_value ?? null,
           decimal_places: definition.decimal_places ?? 2,
+          normal_range_min: definition.normal_range_min ?? null,
+          normal_range_max: definition.normal_range_max ?? null,
+          alert_threshold_min: definition.alert_threshold_min ?? null,
+          alert_threshold_max: definition.alert_threshold_max ?? null,
+          enable_alerts: definition.enable_alerts ?? false,
           is_active: definition.is_active !== undefined ? definition.is_active : true,
           formula: definition.formula || ''
         });
@@ -171,6 +201,11 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
           min_value: null,
           max_value: null,
           decimal_places: 2,
+          normal_range_min: null,
+          normal_range_max: null,
+          alert_threshold_min: null,
+          alert_threshold_max: null,
+          enable_alerts: false,
           is_active: true,
           formula: ''
         });
@@ -185,31 +220,61 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
       setError(null);
       setSuccess(false);
 
+      // Check if this is a system measure being edited
+      const isSystemMeasure = isEditing && definition?.is_system;
+
       // Build the payload
-      const payload = {
-        name: data.name,
-        display_name: data.display_name,
-        description: data.description || null,
-        category: data.category,
-        measure_type: data.measure_type,
-        is_active: data.is_active
-      };
+      const payload = {};
 
-      // Add unit for numeric/calculated types
-      if (data.measure_type === 'numeric' || data.measure_type === 'calculated') {
-        payload.unit = data.unit || null;
-        payload.decimal_places = data.decimal_places !== null ? parseInt(data.decimal_places) : 2;
-      }
+      // For system measures, only include allowed fields
+      if (isSystemMeasure) {
+        // System measures can only update these fields
+        payload.display_name = data.display_name;
+        payload.description = data.description || null;
+        payload.is_active = data.is_active;
 
-      // Add min/max values for numeric type
-      if (data.measure_type === 'numeric') {
-        payload.min_value = data.min_value !== null && data.min_value !== '' ? parseFloat(data.min_value) : null;
-        payload.max_value = data.max_value !== null && data.max_value !== '' ? parseFloat(data.max_value) : null;
-      }
+        // Range fields (both validation and alert ranges) are allowed for system measures
+        if (data.measure_type === 'numeric') {
+          payload.min_value = data.min_value !== null && data.min_value !== '' ? parseFloat(data.min_value) : null;
+          payload.max_value = data.max_value !== null && data.max_value !== '' ? parseFloat(data.max_value) : null;
+          payload.normal_range_min = data.normal_range_min !== null && data.normal_range_min !== '' ? parseFloat(data.normal_range_min) : null;
+          payload.normal_range_max = data.normal_range_max !== null && data.normal_range_max !== '' ? parseFloat(data.normal_range_max) : null;
+          payload.alert_threshold_min = data.alert_threshold_min !== null && data.alert_threshold_min !== '' ? parseFloat(data.alert_threshold_min) : null;
+          payload.alert_threshold_max = data.alert_threshold_max !== null && data.alert_threshold_max !== '' ? parseFloat(data.alert_threshold_max) : null;
+          payload.enable_alerts = data.enable_alerts ?? false;
+        }
+      } else {
+        // For non-system measures or new measures, include all fields
+        payload.name = data.name;
+        payload.display_name = data.display_name;
+        payload.description = data.description || null;
+        payload.category = data.category;
+        payload.measure_type = data.measure_type;
+        payload.is_active = data.is_active;
 
-      // Add formula for calculated type
-      if (data.measure_type === 'calculated') {
-        payload.formula = data.formula || null;
+        // Add unit for numeric/calculated types
+        if (data.measure_type === 'numeric' || data.measure_type === 'calculated') {
+          payload.unit = data.unit || null;
+          payload.decimal_places = data.decimal_places !== null ? parseInt(data.decimal_places) : 2;
+        }
+
+        // Add min/max values for numeric type
+        if (data.measure_type === 'numeric') {
+          payload.min_value = data.min_value !== null && data.min_value !== '' ? parseFloat(data.min_value) : null;
+          payload.max_value = data.max_value !== null && data.max_value !== '' ? parseFloat(data.max_value) : null;
+
+          // Add range fields for alerts
+          payload.normal_range_min = data.normal_range_min !== null && data.normal_range_min !== '' ? parseFloat(data.normal_range_min) : null;
+          payload.normal_range_max = data.normal_range_max !== null && data.normal_range_max !== '' ? parseFloat(data.normal_range_max) : null;
+          payload.alert_threshold_min = data.alert_threshold_min !== null && data.alert_threshold_min !== '' ? parseFloat(data.alert_threshold_min) : null;
+          payload.alert_threshold_max = data.alert_threshold_max !== null && data.alert_threshold_max !== '' ? parseFloat(data.alert_threshold_max) : null;
+          payload.enable_alerts = data.enable_alerts ?? false;
+        }
+
+        // Add formula for calculated type
+        if (data.measure_type === 'calculated') {
+          payload.formula = data.formula || null;
+        }
       }
 
       if (isEditing) {
@@ -272,6 +337,12 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
             </Alert>
           )}
 
+          {isEditing && definition?.is_system && (
+            <Alert variant="info">
+              <strong>System Measure:</strong> This is a system-defined measure. Only display name, description, active status, validation ranges (min/max), and alert ranges can be modified.
+            </Alert>
+          )}
+
           <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
@@ -279,6 +350,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                 <Form.Select
                   {...register('category')}
                   isInvalid={!!errors.category}
+                  disabled={isEditing && definition?.is_system}
                 >
                   {CATEGORIES.map(cat => (
                     <option key={cat.value} value={cat.value}>{cat.label}</option>
@@ -296,6 +368,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                 <Form.Select
                   {...register('measure_type')}
                   isInvalid={!!errors.measure_type}
+                  disabled={isEditing && definition?.is_system}
                 >
                   {MEASURE_TYPES.map(type => (
                     <option key={type.value} value={type.value}>
@@ -318,6 +391,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
               isInvalid={!!errors.name}
               placeholder="e.g., blood_pressure_systolic"
               autoFocus
+              disabled={isEditing && definition?.is_system}
             />
             <Form.Control.Feedback type="invalid">
               {errors.name?.message}
@@ -368,6 +442,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                         {...register('unit')}
                         isInvalid={!!errors.unit}
                         placeholder="e.g., mmHg, kg, cm"
+                        disabled={isEditing && definition?.is_system}
                       />
                       <Form.Control.Feedback type="invalid">
                         {errors.unit?.message}
@@ -380,6 +455,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                       <Form.Select
                         {...register('decimal_places')}
                         isInvalid={!!errors.decimal_places}
+                        disabled={isEditing && definition?.is_system}
                       >
                         <option value="0">0 (Integer)</option>
                         <option value="1">1</option>
@@ -395,38 +471,142 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                 </Row>
 
                 {selectedMeasureType === 'numeric' && (
-                  <Row>
-                    <Col md={6}>
-                      <Form.Group className="mb-2">
-                        <Form.Label>Minimum Value</Form.Label>
-                        <Form.Control
-                          type="number"
-                          step="any"
-                          {...register('min_value')}
-                          isInvalid={!!errors.min_value}
-                          placeholder="Optional minimum"
+                  <>
+                    <Row>
+                      <Col md={6}>
+                        <Form.Group className="mb-2">
+                          <Form.Label>Minimum Value <small className="text-muted">(Validation)</small></Form.Label>
+                          <Form.Control
+                            type="number"
+                            step="any"
+                            {...register('min_value')}
+                            isInvalid={!!errors.min_value}
+                            placeholder="Optional minimum"
+                          />
+                          <Form.Control.Feedback type="invalid">
+                            {errors.min_value?.message}
+                          </Form.Control.Feedback>
+                        </Form.Group>
+                      </Col>
+                      <Col md={6}>
+                        <Form.Group className="mb-2">
+                          <Form.Label>Maximum Value <small className="text-muted">(Validation)</small></Form.Label>
+                          <Form.Control
+                            type="number"
+                            step="any"
+                            {...register('max_value')}
+                            isInvalid={!!errors.max_value}
+                            placeholder="Optional maximum"
+                          />
+                          <Form.Control.Feedback type="invalid">
+                            {errors.max_value?.message}
+                          </Form.Control.Feedback>
+                        </Form.Group>
+                      </Col>
+                    </Row>
+
+                    <hr className="my-3" />
+
+                    {/* Normal Ranges & Alerts Section */}
+                    <div className="mb-2">
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <h6 className="mb-0">Normal Ranges & Alerts</h6>
+                        <Form.Check
+                          type="switch"
+                          label="Enable Alerts"
+                          {...register('enable_alerts')}
                         />
-                        <Form.Control.Feedback type="invalid">
-                          {errors.min_value?.message}
-                        </Form.Control.Feedback>
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group className="mb-2">
-                        <Form.Label>Maximum Value</Form.Label>
-                        <Form.Control
-                          type="number"
-                          step="any"
-                          {...register('max_value')}
-                          isInvalid={!!errors.max_value}
-                          placeholder="Optional maximum"
-                        />
-                        <Form.Control.Feedback type="invalid">
-                          {errors.max_value?.message}
-                        </Form.Control.Feedback>
-                      </Form.Group>
-                    </Col>
-                  </Row>
+                      </div>
+                      <Form.Text className="text-muted d-block mb-3">
+                        Define healthy ranges and critical thresholds to generate automatic alerts for out-of-range values.
+                      </Form.Text>
+                    </div>
+
+                    <Row>
+                      <Col md={6}>
+                        <div className="mb-3">
+                          <Badge bg="success" className="mb-2">Normal/Healthy Range</Badge>
+                          <Form.Group className="mb-2">
+                            <Form.Label>Normal Min</Form.Label>
+                            <Form.Control
+                              type="number"
+                              step="any"
+                              {...register('normal_range_min')}
+                              isInvalid={!!errors.normal_range_min}
+                              placeholder="e.g., 18.5"
+                            />
+                            <Form.Control.Feedback type="invalid">
+                              {errors.normal_range_min?.message}
+                            </Form.Control.Feedback>
+                          </Form.Group>
+                          <Form.Group className="mb-2">
+                            <Form.Label>Normal Max</Form.Label>
+                            <Form.Control
+                              type="number"
+                              step="any"
+                              {...register('normal_range_max')}
+                              isInvalid={!!errors.normal_range_max}
+                              placeholder="e.g., 24.9"
+                            />
+                            <Form.Control.Feedback type="invalid">
+                              {errors.normal_range_max?.message}
+                            </Form.Control.Feedback>
+                          </Form.Group>
+                        </div>
+                      </Col>
+                      <Col md={6}>
+                        <div className="mb-3">
+                          <Badge bg="danger" className="mb-2">Critical Alert Thresholds</Badge>
+                          <Form.Group className="mb-2">
+                            <Form.Label>Critical Min</Form.Label>
+                            <Form.Control
+                              type="number"
+                              step="any"
+                              {...register('alert_threshold_min')}
+                              isInvalid={!!errors.alert_threshold_min}
+                              placeholder="e.g., 16"
+                            />
+                            <Form.Control.Feedback type="invalid">
+                              {errors.alert_threshold_min?.message}
+                            </Form.Control.Feedback>
+                          </Form.Group>
+                          <Form.Group className="mb-2">
+                            <Form.Label>Critical Max</Form.Label>
+                            <Form.Control
+                              type="number"
+                              step="any"
+                              {...register('alert_threshold_max')}
+                              isInvalid={!!errors.alert_threshold_max}
+                              placeholder="e.g., 30"
+                            />
+                            <Form.Control.Feedback type="invalid">
+                              {errors.alert_threshold_max?.message}
+                            </Form.Control.Feedback>
+                          </Form.Group>
+                        </div>
+                      </Col>
+                    </Row>
+
+                    {/* Range Preview Visual */}
+                    {(watch('normal_range_min') || watch('normal_range_max')) && (
+                      <Alert variant="info" className="mb-0">
+                        <strong>Range Preview:</strong>
+                        <div className="d-flex gap-2 mt-2 flex-wrap">
+                          {watch('alert_threshold_min') && (
+                            <Badge bg="danger">Critical Low (&lt; {watch('alert_threshold_min')})</Badge>
+                          )}
+                          <Badge bg="warning" text="dark">Warning Low</Badge>
+                          <Badge bg="success">
+                            Normal ({watch('normal_range_min') || '?'} - {watch('normal_range_max') || '?'})
+                          </Badge>
+                          <Badge bg="warning" text="dark">Warning High</Badge>
+                          {watch('alert_threshold_max') && (
+                            <Badge bg="danger">Critical High (&gt; {watch('alert_threshold_max')})</Badge>
+                          )}
+                        </div>
+                      </Alert>
+                    )}
+                  </>
                 )}
               </Card.Body>
             </Card>
