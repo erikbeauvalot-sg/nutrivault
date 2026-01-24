@@ -54,6 +54,39 @@ const formulaService = {
       console.error('Error getting operators:', error);
       throw error;
     }
+  },
+
+  /**
+   * Get all available formula templates
+   * @returns {Promise<Array>} Array of template objects
+   */
+  async getTemplates() {
+    try {
+      const response = await api.get('/formulas/templates');
+      return response.data.data;
+    } catch (error) {
+      console.error('Error getting templates:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Apply a template with field mapping
+   * @param {string} templateId - Template ID
+   * @param {Object} fieldMapping - Map of template variables to field names
+   * @returns {Promise<Object>} Applied template data
+   */
+  async applyTemplate(templateId, fieldMapping = {}) {
+    try {
+      const response = await api.post('/formulas/templates/apply', {
+        templateId,
+        fieldMapping
+      });
+      return response.data.data;
+    } catch (error) {
+      console.error('Error applying template:', error);
+      throw error;
+    }
   }
 };
 

@@ -11,6 +11,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useTranslation } from 'react-i18next';
 import customFieldService from '../services/customFieldService';
+import formulaService from '../services/formulaService';
 import TranslationEditor from './TranslationEditor';
 
 const FIELD_TYPES = [
@@ -62,6 +63,8 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
   const [decimalPlaces, setDecimalPlaces] = useState(2);
   const [formulaError, setFormulaError] = useState(null);
   const [dependencies, setDependencies] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState('');
 
   const isEditing = !!definition;
 
@@ -95,6 +98,34 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       setSelectedFieldType(watchFieldType);
     }
   }, [watchFieldType]);
+
+  // Load templates when calculated field type is selected
+  useEffect(() => {
+    if (selectedFieldType === 'calculated' && templates.length === 0) {
+      loadTemplates();
+    }
+  }, [selectedFieldType]);
+
+  const loadTemplates = async () => {
+    try {
+      const templatesData = await formulaService.getTemplates();
+      setTemplates(templatesData);
+    } catch (error) {
+      console.error('Error loading templates:', error);
+    }
+  };
+
+  const handleTemplateSelect = (templateId) => {
+    setSelectedTemplate(templateId);
+    if (templateId) {
+      const template = templates.find(t => t.id === templateId);
+      if (template) {
+        setFormula(template.formula);
+        setDecimalPlaces(template.decimal_places);
+        setDependencies(template.dependencies);
+      }
+    }
+  };
 
   // Reset form when definition changes or modal opens
   useEffect(() => {
@@ -429,6 +460,49 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
 
               {selectedFieldType === 'calculated' && (
                 <div>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Formula Template <Badge bg="secondary">Optional</Badge></Form.Label>
+                    <Form.Select
+                      value={selectedTemplate}
+                      onChange={(e) => handleTemplateSelect(e.target.value)}
+                    >
+                      <option value="">-- Start from scratch or choose a template --</option>
+                      {templates.length > 0 && (
+                        <>
+                          <optgroup label="Health & Nutrition">
+                            {templates.filter(t => t.category === 'health' || t.category === 'nutrition').map(template => (
+                              <option key={template.id} value={template.id}>
+                                {template.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Mathematics">
+                            {templates.filter(t => t.category === 'math').map(template => (
+                              <option key={template.id} value={template.id}>
+                                {template.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Date & Time">
+                            {templates.filter(t => t.category === 'date').map(template => (
+                              <option key={template.id} value={template.id}>
+                                {template.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        </>
+                      )}
+                    </Form.Select>
+                    {selectedTemplate && templates.find(t => t.id === selectedTemplate) && (
+                      <Form.Text className="text-muted d-block mt-1">
+                        <strong>📝 {templates.find(t => t.id === selectedTemplate).description}</strong>
+                        {templates.find(t => t.id === selectedTemplate).help_text && (
+                          <><br/>{templates.find(t => t.id === selectedTemplate).help_text}</>
+                        )}
+                      </Form.Text>
+                    )}
+                  </Form.Group>
+
                   <Form.Group className="mb-3">
                     <Form.Label>Formula * <Badge bg="info">Calculated</Badge></Form.Label>
                     <Form.Control

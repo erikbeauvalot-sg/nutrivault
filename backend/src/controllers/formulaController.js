@@ -4,6 +4,7 @@
  */
 
 const formulaEngine = require('../services/formulaEngine.service');
+const templatesService = require('../services/calculatedFieldTemplates.service');
 const auditService = require('../services/audit.service');
 
 /**
@@ -99,8 +100,66 @@ async function getOperators(req, res) {
   }
 }
 
+/**
+ * Get all formula templates
+ * @route GET /api/formulas/templates
+ */
+async function getTemplates(req, res) {
+  try {
+    const templates = templatesService.getAllTemplates();
+
+    res.json({
+      success: true,
+      data: templates
+    });
+  } catch (error) {
+    console.error('Error in getTemplates:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get templates'
+    });
+  }
+}
+
+/**
+ * Apply a template
+ * @route POST /api/formulas/templates/apply
+ */
+async function applyTemplate(req, res) {
+  try {
+    const { templateId, fieldMapping } = req.body;
+
+    const result = templatesService.applyTemplate(templateId, fieldMapping);
+
+    // Audit log
+    await auditService.log({
+      user_id: req.user.id,
+      username: req.user.username,
+      action: 'APPLY_TEMPLATE',
+      resource_type: 'formula_template',
+      resource_id: templateId,
+      details: { fieldMapping },
+      ip_address: req.ip,
+      user_agent: req.get('user-agent')
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Error in applyTemplate:', error);
+    res.status(400).json({
+      success: false,
+      error: error.message || 'Failed to apply template'
+    });
+  }
+}
+
 module.exports = {
   validateFormula,
   previewFormula,
-  getOperators
+  getOperators,
+  getTemplates,
+  applyTemplate
 };

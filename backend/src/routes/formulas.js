@@ -83,4 +83,46 @@ router.get(
   formulaController.getOperators
 );
 
+/**
+ * @route   GET /api/formulas/templates
+ * @desc    Get all available formula templates
+ * @access  Admin only
+ */
+router.get(
+  '/templates',
+  auth,
+  rbac(['ADMIN']),
+  formulaController.getTemplates
+);
+
+/**
+ * @route   POST /api/formulas/templates/apply
+ * @desc    Apply a template with field mapping
+ * @access  Admin only
+ */
+router.post(
+  '/templates/apply',
+  auth,
+  rbac(['ADMIN']),
+  [
+    body('templateId')
+      .notEmpty()
+      .withMessage('Template ID is required')
+      .isString()
+      .withMessage('Template ID must be a string'),
+    body('fieldMapping')
+      .optional()
+      .isObject()
+      .withMessage('Field mapping must be an object')
+  ],
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ error: errors.array()[0].msg });
+    }
+    next();
+  },
+  formulaController.applyTemplate
+);
+
 module.exports = router;
