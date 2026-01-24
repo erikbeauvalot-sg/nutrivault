@@ -215,11 +215,46 @@ async function getMeasuresByVisit(req, res) {
   }
 }
 
+/**
+ * GET /api/measures/patient-measures
+ * Get all patient measures (optionally filtered by measure_definition_id)
+ * DEV ONLY - for debugging and data inspection
+ */
+async function getAllPatientMeasures(req, res) {
+  try {
+    const { measure_definition_id, limit = 10000 } = req.query;
+
+    const requestMetadata = {
+      ip_address: req.ip,
+      user_agent: req.headers['user-agent']
+    };
+
+    const measures = await patientMeasureService.getAllMeasures(
+      { measure_definition_id, limit: parseInt(limit) },
+      req.user,
+      requestMetadata
+    );
+
+    res.json({
+      success: true,
+      data: measures,
+      count: measures.length
+    });
+  } catch (error) {
+    console.error('Error in getAllPatientMeasures:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch all patient measures'
+    });
+  }
+}
+
 module.exports = {
   logMeasure,
   getMeasures,
   getMeasureHistory,
   updateMeasure,
   deleteMeasure,
-  getMeasuresByVisit
+  getMeasuresByVisit,
+  getAllPatientMeasures
 };

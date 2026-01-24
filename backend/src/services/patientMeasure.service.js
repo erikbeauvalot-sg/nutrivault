@@ -469,11 +469,71 @@ async function getMeasuresByVisit(visitId, user, requestMetadata = {}) {
   }
 }
 
+/**
+ * Get all patient measures (across all patients)
+ * DEV ONLY - for debugging and data inspection
+ * @param {Object} filters - { measure_definition_id, limit }
+ * @param {Object} user - Authenticated user
+ * @param {Object} requestMetadata - Request metadata for audit
+ * @returns {Promise<Array>} All matching measures
+ */
+async function getAllMeasures(filters = {}, user, requestMetadata = {}) {
+  try {
+    const where = {};
+
+    // Filter by measure definition if provided
+    if (filters.measure_definition_id) {
+      where.measure_definition_id = filters.measure_definition_id;
+    }
+
+    const limit = filters.limit || 10000;
+
+    const measures = await PatientMeasure.findAll({
+      where,
+      include: [
+        {
+          model: MeasureDefinition,
+          as: 'measureDefinition'
+        },
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name']
+        },
+        {
+          model: User,
+          as: 'recorder',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        }
+      ],
+      order: [['measured_at', 'DESC']],
+      limit
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'READ',
+      resource_type: 'all_patient_measures',
+      resource_id: filters.measure_definition_id || 'all',
+      details: { filters, count: measures.length },
+      ...requestMetadata
+    });
+
+    return measures;
+  } catch (error) {
+    console.error('Error in getAllMeasures:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   logMeasure,
   getMeasures,
   getMeasureHistory,
   updateMeasure,
   deleteMeasure,
-  getMeasuresByVisit
+  getMeasuresByVisit,
+  getAllMeasures
 };
