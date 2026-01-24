@@ -36,6 +36,9 @@ const EditPatientPage = () => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [loadingCustomFields, setLoadingCustomFields] = useState(false);
 
+  // Measures refresh trigger
+  const [measuresRefreshTrigger, setMeasuresRefreshTrigger] = useState(0);
+
   // Basic patient info
   const [formData, setFormData] = useState({
     first_name: '',
@@ -641,7 +644,10 @@ const EditPatientPage = () => {
                   </div>
 
                   {/* Measures Table */}
-                  <PatientMeasuresTable patientId={id} />
+                  <PatientMeasuresTable
+                    patientId={id}
+                    refreshTrigger={measuresRefreshTrigger}
+                  />
                 </Tab>
               </Tabs>
 
