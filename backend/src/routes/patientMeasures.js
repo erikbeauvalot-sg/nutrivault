@@ -95,7 +95,7 @@ router.get(
 );
 
 /**
- * GET /api/measures/patient-measures
+ * GET /api/patient-measures/all
  * Get all patient measures (optionally filtered by measure_definition_id)
  * DEV ONLY - for debugging and data inspection
  * Permission: measures:read
@@ -105,7 +105,7 @@ router.get(
  * - limit: Max number of results (default 10000)
  */
 router.get(
-  '/measures/patient-measures',
+  '/patient-measures/all',
   authenticate,
   requirePermission('measures.read'),
   patientMeasureController.getAllPatientMeasures
