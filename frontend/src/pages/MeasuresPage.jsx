@@ -407,6 +407,15 @@ const MeasuresPage = () => {
                       </td>
                       <td>
                         <Button
+                          variant="outline-info"
+                          size="sm"
+                          className="me-2"
+                          onClick={() => navigate(`/settings/measures/${measure.id}/view`)}
+                          title="View raw data (dev only)"
+                        >
+                          🔍 View
+                        </Button>
+                        <Button
                           variant="outline-primary"
                           size="sm"
                           className="me-2"

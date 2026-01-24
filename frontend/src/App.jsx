@@ -35,6 +35,7 @@ const DocumentUploadPage = lazy(() => import('./pages/DocumentUploadPage'));
 const CustomFieldsPage = lazy(() => import('./pages/CustomFieldsPage'));
 const RolesManagementPage = lazy(() => import('./pages/RolesManagementPage'));
 const MeasuresPage = lazy(() => import('./pages/MeasuresPage'));
+const MeasureDetailPage = lazy(() => import('./pages/MeasureDetailPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -259,6 +260,15 @@ function App() {
         element={
           <ProtectedRoute>
             <MeasuresPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/measures/:id/view"
+        element={
+          <ProtectedRoute>
+            <MeasureDetailPage />
           </ProtectedRoute>
         }
       />
