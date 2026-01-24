@@ -53,3 +53,4 @@ temp_uploads/
 uploads/
 
 *.OLD
+backend/nutrivault_dev.db
