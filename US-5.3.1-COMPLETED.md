@@ -529,25 +529,40 @@ CREATE INDEX patient_measures_measured_at ON patient_measures(measured_at);
 
 ### Database Migration
 ```bash
-# Run migration
 cd backend
+
+# Step 1: Run migration (creates tables)
 npx sequelize-cli db:migrate
 
-# Run seeder
+# Step 2: Run default measures seeder
 npx sequelize-cli db:seed --seed 20260124120100-default-measures.js
+
+# Step 3: Run permissions seeder ⚠️ CRITICAL - DO NOT SKIP
+npx sequelize-cli db:seed --seed 20260124134038-add-measures-permissions.js
+```
+
+**⚠️ IMPORTANT**: Step 3 is MANDATORY. Without it, all measures endpoints will return:
+```
+403 Forbidden - Missing required permission: measures.read
 ```
 
 ### Environment Variables
 No new environment variables required.
 
-### Permissions Setup
-Ensure roles have appropriate permissions:
-```sql
--- Admin: all permissions
--- Dietitian: measures.read, measures.create, measures.update
--- Assistant: measures.read, measures.create
--- Viewer: measures.read only
-```
+### Permissions Created Automatically
+The seeder creates and assigns these permissions:
+
+**Permissions** (4):
+- `measures.read` - View measure definitions and patient measures
+- `measures.create` - Create measure definitions and log patient measures
+- `measures.update` - Update measure definitions and patient measures
+- `measures.delete` - Delete measure definitions and patient measures
+
+**Role Assignments** (10 total):
+- **ADMIN**: all 4 permissions (read, create, update, delete)
+- **DIETITIAN**: 3 permissions (read, create, update)
+- **ASSISTANT**: 2 permissions (read, create)
+- **VIEWER**: 1 permission (read only)
 
 ### Rollback Plan
 ```bash
