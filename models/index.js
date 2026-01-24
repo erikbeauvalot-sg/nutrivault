@@ -36,6 +36,7 @@ db.CustomFieldTranslation = require('./CustomFieldTranslation')(sequelize, DataT
 db.MeasureDefinition = require('./MeasureDefinition')(sequelize, DataTypes);
 db.MeasureTranslation = require('./MeasureTranslation')(sequelize, DataTypes);
 db.PatientMeasure = require('./PatientMeasure')(sequelize, DataTypes);
+db.MeasureAlert = require('./MeasureAlert')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -389,6 +390,46 @@ db.MeasureDefinition.hasMany(db.MeasureTranslation, {
     entity_type: 'measure_definition'
   },
   as: 'translations'
+});
+
+// MeasureAlert - Patient relationship
+db.MeasureAlert.belongsTo(db.Patient, {
+  foreignKey: 'patient_id',
+  as: 'patient'
+});
+db.Patient.hasMany(db.MeasureAlert, {
+  foreignKey: 'patient_id',
+  as: 'measure_alerts'
+});
+
+// MeasureAlert - PatientMeasure relationship
+db.MeasureAlert.belongsTo(db.PatientMeasure, {
+  foreignKey: 'patient_measure_id',
+  as: 'patientMeasure'
+});
+db.PatientMeasure.hasMany(db.MeasureAlert, {
+  foreignKey: 'patient_measure_id',
+  as: 'alerts'
+});
+
+// MeasureAlert - MeasureDefinition relationship
+db.MeasureAlert.belongsTo(db.MeasureDefinition, {
+  foreignKey: 'measure_definition_id',
+  as: 'measureDefinition'
+});
+db.MeasureDefinition.hasMany(db.MeasureAlert, {
+  foreignKey: 'measure_definition_id',
+  as: 'alerts'
+});
+
+// MeasureAlert - User (acknowledged_by) relationship
+db.MeasureAlert.belongsTo(db.User, {
+  foreignKey: 'acknowledged_by',
+  as: 'acknowledger'
+});
+db.User.hasMany(db.MeasureAlert, {
+  foreignKey: 'acknowledged_by',
+  as: 'acknowledged_measure_alerts'
 });
 
 module.exports = db;

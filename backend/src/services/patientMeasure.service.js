@@ -95,6 +95,17 @@ async function logMeasure(patientId, data, user, requestMetadata = {}) {
     // Save
     await measure.save();
 
+    // Generate alert if value is out of range (non-calculated measures only)
+    if (measureDef.enable_alerts && measureDef.measure_type !== 'calculated') {
+      try {
+        const measureAlertsService = require('./measureAlerts.service');
+        await measureAlertsService.generateMeasureAlert(measure, measureDef, user);
+      } catch (error) {
+        console.error('Error generating measure alert:', error);
+        // Don't fail the whole operation if alert generation fails
+      }
+    }
+
     // Trigger recalculation of dependent measures
     if (measureDef.measure_type !== 'calculated') {
       try {

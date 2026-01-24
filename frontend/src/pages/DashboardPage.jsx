@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import QuickPatientModal from '../components/QuickPatientModal';
 import AlertsWidget from '../components/AlertsWidget';
+import MeasureAlertsWidget from '../components/MeasureAlertsWidget';
 import api from '../services/api';
 import visitService from '../services/visitService';
 import userService from '../services/userService';
@@ -255,8 +256,11 @@ const DashboardPage = () => {
 
             {/* Alerts Widget */}
             <Row className="mb-4">
-              <Col>
+              <Col md={12} lg={6} className="mb-3 mb-lg-0">
                 <AlertsWidget />
+              </Col>
+              <Col md={12} lg={6}>
+                <MeasureAlertsWidget />
               </Col>
             </Row>
 
