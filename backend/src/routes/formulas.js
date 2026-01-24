@@ -7,8 +7,8 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const formulaController = require('../controllers/formulaController');
-const auth = require('../middleware/auth');
-const rbac = require('../middleware/rbac');
+const authenticate = require('../middleware/authenticate');
+const { requireRole } = require('../middleware/rbac');
 
 /**
  * @route   POST /api/formulas/validate
@@ -17,8 +17,8 @@ const rbac = require('../middleware/rbac');
  */
 router.post(
   '/validate',
-  auth,
-  rbac(['ADMIN']),
+  authenticate,
+  requireRole('ADMIN'),
   [
     body('formula')
       .notEmpty()
@@ -43,8 +43,8 @@ router.post(
  */
 router.post(
   '/preview',
-  auth,
-  rbac(['ADMIN']),
+  authenticate,
+  requireRole('ADMIN'),
   [
     body('formula')
       .notEmpty()
@@ -78,8 +78,8 @@ router.post(
  */
 router.get(
   '/operators',
-  auth,
-  rbac(['ADMIN']),
+  authenticate,
+  requireRole('ADMIN'),
   formulaController.getOperators
 );
 
@@ -90,8 +90,8 @@ router.get(
  */
 router.get(
   '/templates',
-  auth,
-  rbac(['ADMIN']),
+  authenticate,
+  requireRole('ADMIN'),
   formulaController.getTemplates
 );
 
@@ -102,8 +102,8 @@ router.get(
  */
 router.post(
   '/templates/apply',
-  auth,
-  rbac(['ADMIN']),
+  authenticate,
+  requireRole('ADMIN'),
   [
     body('templateId')
       .notEmpty()
