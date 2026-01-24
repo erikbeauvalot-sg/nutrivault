@@ -19,8 +19,10 @@ import MeasureComparison from '../components/MeasureComparison';
 import customFieldService from '../services/customFieldService';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import { getBMICategory, calculateBMI } from '../utils/bmiUtils';
+import { applyTranslationsToMeasures, fetchMeasureTranslations } from '../utils/measureTranslations';
 import * as gdprService from '../services/gdprService';
 import * as billingService from '../services/billingService';
+import * as measureService from '../services/measureService';
 import api from '../services/api';
 import './PatientDetailPage.css';
 
@@ -59,6 +61,7 @@ const PatientDetailPage = () => {
   const [patientMeasures, setPatientMeasures] = useState([]);
   const [measuresLoading, setMeasuresLoading] = useState(false);
   const [measuresDisplayLimit, setMeasuresDisplayLimit] = useState(20);
+  const [measureTranslations, setMeasureTranslations] = useState({});
 
   useEffect(() => {
     if (id) {
@@ -75,6 +78,19 @@ const PatientDetailPage = () => {
       fetchCustomFields();
     }
   }, [id, i18n.resolvedLanguage, i18n.language]);
+
+  // Re-apply measure translations when language changes
+  useEffect(() => {
+    if (patientMeasures.length > 0 && Object.keys(measureTranslations).length > 0) {
+      const currentLanguage = i18n.resolvedLanguage || i18n.language || 'en';
+      const translatedMeasures = applyTranslationsToMeasures(
+        patientMeasures,
+        measureTranslations,
+        currentLanguage
+      );
+      setPatientMeasures(translatedMeasures);
+    }
+  }, [i18n.resolvedLanguage, i18n.language]);
 
   const fetchPatientDetails = async () => {
     try {
@@ -122,7 +138,34 @@ const PatientDetailPage = () => {
       setMeasuresLoading(true);
       const response = await api.get(`/api/patients/${id}/measures`);
       const measuresData = response.data?.data || response.data || [];
-      setPatientMeasures(Array.isArray(measuresData) ? measuresData : []);
+      const measuresArray = Array.isArray(measuresData) ? measuresData : [];
+
+      // Get unique measure definition IDs
+      const measureDefIds = [...new Set(
+        measuresArray
+          .filter(m => m.measure_definition_id)
+          .map(m => m.measure_definition_id)
+      )];
+
+      // Fetch translations for all measure definitions
+      if (measureDefIds.length > 0) {
+        const translations = await fetchMeasureTranslations(
+          measureDefIds,
+          measureService.getAllMeasureTranslations
+        );
+        setMeasureTranslations(translations);
+
+        // Apply translations based on current language
+        const currentLanguage = i18n.resolvedLanguage || i18n.language || 'en';
+        const translatedMeasures = applyTranslationsToMeasures(
+          measuresArray,
+          translations,
+          currentLanguage
+        );
+        setPatientMeasures(translatedMeasures);
+      } else {
+        setPatientMeasures(measuresArray);
+      }
     } catch (err) {
       console.error('Error fetching patient measures:', err);
       // Don't set error for measures failure

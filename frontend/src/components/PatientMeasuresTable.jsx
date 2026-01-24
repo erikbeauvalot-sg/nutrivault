@@ -11,10 +11,12 @@ import {
   getPatientMeasures,
   getMeasureDefinitions,
   deletePatientMeasure,
-  formatMeasureValue
+  formatMeasureValue,
+  getAllMeasureTranslations
 } from '../services/measureService';
 import { formatDateTime } from '../utils/dateUtils';
 import { getCategoryBadgeVariant, getCategoryDisplayName } from '../utils/measureUtils';
+import { applyTranslationsToMeasures, fetchMeasureTranslations, applyMeasureTranslations } from '../utils/measureTranslations';
 import LogMeasureModal from './LogMeasureModal';
 
 const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
@@ -23,6 +25,7 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
   // State
   const [measures, setMeasures] = useState([]);
   const [measureDefinitions, setMeasureDefinitions] = useState([]);
+  const [measureTranslations, setMeasureTranslations] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -62,10 +65,50 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
     }
   }, [patientId, selectedMeasureType, startDate, endDate, refreshTrigger]);
 
+  // Re-apply translations when language changes
+  useEffect(() => {
+    if (Object.keys(measureTranslations).length > 0) {
+      const currentLanguage = i18n.resolvedLanguage || i18n.language || 'en';
+
+      // Re-translate measure definitions
+      if (measureDefinitions.length > 0) {
+        const translatedDefinitions = measureDefinitions.map(def =>
+          applyMeasureTranslations(def, measureTranslations[def.id]?.[currentLanguage] || {})
+        );
+        setMeasureDefinitions(translatedDefinitions);
+      }
+
+      // Re-translate measures
+      if (measures.length > 0) {
+        const translatedMeasures = applyTranslationsToMeasures(
+          measures,
+          measureTranslations,
+          currentLanguage
+        );
+        setMeasures(translatedMeasures);
+      }
+    }
+  }, [i18n.resolvedLanguage, i18n.language]);
+
   const fetchMeasureDefinitions = async () => {
     try {
       const definitions = await getMeasureDefinitions({ is_active: true });
-      setMeasureDefinitions(definitions);
+
+      // Fetch translations for all measure definitions
+      if (definitions && definitions.length > 0) {
+        const measureIds = definitions.map(d => d.id);
+        const translations = await fetchMeasureTranslations(measureIds, getAllMeasureTranslations);
+        setMeasureTranslations(translations);
+
+        // Apply translations based on current language
+        const currentLanguage = i18n.resolvedLanguage || i18n.language || 'en';
+        const translatedDefinitions = definitions.map(def =>
+          applyMeasureTranslations(def, translations[def.id]?.[currentLanguage] || {})
+        );
+        setMeasureDefinitions(translatedDefinitions);
+      } else {
+        setMeasureDefinitions(definitions);
+      }
     } catch (err) {
       console.error('Error fetching measure definitions:', err);
       setError(t('measures.errorFetchingDefinitions', 'Failed to load measure definitions'));
@@ -93,7 +136,15 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
         return new Date(b.measured_at) - new Date(a.measured_at);
       });
 
-      setMeasures(sortedData);
+      // Apply translations if available
+      const currentLanguage = i18n.resolvedLanguage || i18n.language || 'en';
+      const translatedMeasures = applyTranslationsToMeasures(
+        sortedData,
+        measureTranslations,
+        currentLanguage
+      );
+
+      setMeasures(translatedMeasures);
     } catch (err) {
       console.error('Error fetching patient measures:', err);
       setError(t('measures.errorFetchingMeasures', 'Failed to load patient measures'));
