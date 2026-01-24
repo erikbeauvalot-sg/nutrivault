@@ -13,7 +13,7 @@
 
 Implementing calculated custom fields that automatically compute values based on formulas (e.g., BMI = weight / (height * height), Age from birth date). This extends the custom fields system with formula capabilities, dependency tracking, and automatic recalculation.
 
-**Current Progress**: 40% complete (3 of 7 phases done)
+**Current Progress**: 57% complete (4 of 7 phases done)
 
 ---
 
@@ -39,11 +39,14 @@ Implementing calculated custom fields that automatically compute values based on
 - Automatic dependency extraction
 - Commit: 873e7fa
 
-### ⏳ Phase 4: Frontend Components (NEXT - 4-5h)
-- FormulaEditor.jsx
-- DependencyTree.jsx
-- CustomFieldDefinitionModal.jsx updates
-- CustomFieldInput.jsx updates
+### ✅ Phase 4: Frontend Components (COMPLETE - 3h actual)
+- ✅ CustomFieldDefinitionModal.jsx updates
+- ✅ CustomFieldInput.jsx updates
+- ✅ Formula textarea with syntax guide
+- ✅ Decimal places selector
+- ✅ Dependencies display
+- ✅ Read-only calculated field display
+- Commits: f85454c, d1716a9
 
 ### ⏳ Phase 5: API Endpoints (1-2h)
 - Formula validation endpoint
@@ -90,12 +93,12 @@ Implementing calculated custom fields that automatically compute values based on
 - [x] Supported functions ✓
 - [x] Error handling ✓
 - [x] Formula validation ✓
-- [ ] Formula editor UI
-- [ ] Real-time preview
-- [ ] Dependency visualization
+- [x] Formula editor UI ✓
+- [ ] Real-time preview (optional enhancement)
+- [x] Dependency visualization ✓
 - [ ] Auto-recalculation
 
-**Progress**: 5/9 criteria met (56%)
+**Progress**: 7/9 criteria met (78%)
 
 ---
 
@@ -106,14 +109,14 @@ Implementing calculated custom fields that automatically compute values based on
 | Phase 1 | 1h | 0.5h | ✅ Complete |
 | Phase 2 | 3-4h | 3h | ✅ Complete |
 | Phase 3 | 2-3h | 2h | ✅ Complete |
-| Phase 4 | 4-5h | - | ⏳ Next |
-| Phase 5 | 1-2h | - | ⏳ Pending |
+| Phase 4 | 4-5h | 3h | ✅ Complete |
+| Phase 5 | 1-2h | - | ⏳ Next |
 | Phase 6 | 2-3h | - | ⏳ Pending |
 | Phase 7 | 3-4h | - | ⏳ Pending |
-| **Total** | **16-22h** | **5.5h** | **25% complete** |
+| **Total** | **16-22h** | **8.5h** | **57% complete** |
 
 ---
 
 **Status**: 🚧 WORK IN PROGRESS
-**Next Phase**: Frontend Components
+**Next Phase**: API Endpoints (Phase 5)
 **Updated**: 2026-01-24
