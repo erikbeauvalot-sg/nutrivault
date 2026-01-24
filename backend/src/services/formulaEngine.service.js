@@ -28,6 +28,7 @@ const OPERATORS = {
  * Supported functions and their implementations
  */
 const FUNCTIONS = {
+  // Mathematical functions
   sqrt: (x) => {
     if (x < 0) throw new Error('Cannot take square root of negative number');
     return Math.sqrt(x);
@@ -40,7 +41,65 @@ const FUNCTIONS = {
   floor: (x) => Math.floor(x),
   ceil: (x) => Math.ceil(x),
   min: (...args) => Math.min(...args),
-  max: (...args) => Math.max(...args)
+  max: (...args) => Math.max(...args),
+
+  // Date functions
+  today: () => {
+    // Returns number of days since epoch (1970-01-01)
+    const now = new Date();
+    const epoch = new Date(1970, 0, 1);
+    const diffTime = Math.abs(now - epoch);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  },
+
+  year: (dateInput) => {
+    // If dateInput is a date string (YYYY-MM-DD), parse it
+    // If it's days since epoch, convert it
+    if (typeof dateInput === 'string') {
+      const date = new Date(dateInput);
+      if (isNaN(date.getTime())) {
+        throw new Error('Invalid date format');
+      }
+      return date.getFullYear();
+    } else if (typeof dateInput === 'number') {
+      // Assume it's days since epoch
+      const date = new Date(1970, 0, 1);
+      date.setDate(date.getDate() + dateInput);
+      return date.getFullYear();
+    }
+    throw new Error('Invalid date input');
+  },
+
+  month: (dateInput) => {
+    if (typeof dateInput === 'string') {
+      const date = new Date(dateInput);
+      if (isNaN(date.getTime())) {
+        throw new Error('Invalid date format');
+      }
+      return date.getMonth() + 1; // Return 1-12 instead of 0-11
+    } else if (typeof dateInput === 'number') {
+      const date = new Date(1970, 0, 1);
+      date.setDate(date.getDate() + dateInput);
+      return date.getMonth() + 1;
+    }
+    throw new Error('Invalid date input');
+  },
+
+  day: (dateInput) => {
+    if (typeof dateInput === 'string') {
+      const date = new Date(dateInput);
+      if (isNaN(date.getTime())) {
+        throw new Error('Invalid date format');
+      }
+      return date.getDate();
+    } else if (typeof dateInput === 'number') {
+      const date = new Date(1970, 0, 1);
+      date.setDate(date.getDate() + dateInput);
+      return date.getDate();
+    }
+    throw new Error('Invalid date input');
+  }
 };
 
 /**
@@ -415,13 +474,20 @@ function getAvailableOperators() {
   return {
     operators: Object.keys(OPERATORS),
     functions: [
-      { name: 'sqrt', description: 'Square root', example: 'sqrt({value})' },
-      { name: 'abs', description: 'Absolute value', example: 'abs({value})' },
-      { name: 'round', description: 'Round to N decimals', example: 'round({value}, 2)' },
-      { name: 'floor', description: 'Round down', example: 'floor({value})' },
-      { name: 'ceil', description: 'Round up', example: 'ceil({value})' },
-      { name: 'min', description: 'Minimum value', example: 'min({value1}, {value2})' },
-      { name: 'max', description: 'Maximum value', example: 'max({value1}, {value2})' }
+      // Mathematical functions
+      { name: 'sqrt', description: 'Square root', example: 'sqrt({value})', category: 'math' },
+      { name: 'abs', description: 'Absolute value', example: 'abs({value})', category: 'math' },
+      { name: 'round', description: 'Round to N decimals', example: 'round({value}, 2)', category: 'math' },
+      { name: 'floor', description: 'Round down', example: 'floor({value})', category: 'math' },
+      { name: 'ceil', description: 'Round up', example: 'ceil({value})', category: 'math' },
+      { name: 'min', description: 'Minimum value', example: 'min({value1}, {value2})', category: 'math' },
+      { name: 'max', description: 'Maximum value', example: 'max({value1}, {value2})', category: 'math' },
+
+      // Date functions
+      { name: 'today', description: 'Current date (days since epoch)', example: 'today()', category: 'date' },
+      { name: 'year', description: 'Extract year from date', example: 'year({birth_date})', category: 'date' },
+      { name: 'month', description: 'Extract month (1-12) from date', example: 'month({birth_date})', category: 'date' },
+      { name: 'day', description: 'Extract day from date', example: 'day({birth_date})', category: 'date' }
     ]
   };
 }

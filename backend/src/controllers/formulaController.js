@@ -4,7 +4,7 @@
  */
 
 const formulaEngine = require('../services/formulaEngine.service');
-const templatesService = require('../services/calculatedFieldTemplates.service');
+const templatesService = require('../services/formulaTemplates.service');
 const auditService = require('../services/audit.service');
 
 /**

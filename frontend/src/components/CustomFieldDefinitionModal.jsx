@@ -476,8 +476,15 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
                               </option>
                             ))}
                           </optgroup>
-                          <optgroup label="Mathematics">
-                            {templates.filter(t => t.category === 'math').map(template => (
+                          <optgroup label="Progress Tracking">
+                            {templates.filter(t => t.category === 'progress').map(template => (
+                              <option key={template.id} value={template.id}>
+                                {template.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Demographics">
+                            {templates.filter(t => t.category === 'demographics').map(template => (
                               <option key={template.id} value={template.id}>
                                 {template.name}
                               </option>
@@ -485,6 +492,13 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
                           </optgroup>
                           <optgroup label="Date & Time">
                             {templates.filter(t => t.category === 'date').map(template => (
+                              <option key={template.id} value={template.id}>
+                                {template.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Mathematics">
+                            {templates.filter(t => t.category === 'math').map(template => (
                               <option key={template.id} value={template.id}>
                                 {template.name}
                               </option>
@@ -525,8 +539,9 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
                     <Form.Text className="text-muted d-block mt-2">
                       <strong>Syntax:</strong> Use {'{field_name}'} for variables<br/>
                       <strong>Operators:</strong> + - * / ^ (power)<br/>
-                      <strong>Functions:</strong> sqrt(), abs(), round(), floor(), ceil(), min(), max()<br/>
-                      <strong>Example:</strong> {'{weight}'} / ({'{height}'} * {'{height}'})
+                      <strong>Math Functions:</strong> sqrt(), abs(), round(), floor(), ceil(), min(), max()<br/>
+                      <strong>Date Functions:</strong> today(), year(), month(), day()<br/>
+                      <strong>Example:</strong> {'{weight}'} / ({'{height}'} * {'{height}'}), or (today() - {'{birth_date}'}) / 365.25
                     </Form.Text>
                   </Form.Group>
 
