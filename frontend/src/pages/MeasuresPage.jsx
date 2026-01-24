@@ -446,7 +446,7 @@ const MeasuresPage = () => {
             setShowMeasureModal(false);
             setSelectedMeasure(null);
           }}
-          measure={selectedMeasure}
+          definition={selectedMeasure}
           onSuccess={() => {
             fetchMeasures();
             setShowMeasureModal(false);

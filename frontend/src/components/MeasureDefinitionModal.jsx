@@ -144,38 +144,40 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
 
   // Reset form when definition changes or modal opens
   useEffect(() => {
-    if (definition) {
-      reset({
-        name: definition.name || '',
-        display_name: definition.display_name || '',
-        description: definition.description || '',
-        category: definition.category || 'vitals',
-        measure_type: definition.measure_type || 'numeric',
-        unit: definition.unit || '',
-        min_value: definition.min_value ?? null,
-        max_value: definition.max_value ?? null,
-        decimal_places: definition.decimal_places ?? 2,
-        is_active: definition.is_active !== undefined ? definition.is_active : true,
-        formula: definition.formula || ''
-      });
-      setSelectedMeasureType(definition.measure_type || 'numeric');
-    } else {
-      reset({
-        name: '',
-        display_name: '',
-        description: '',
-        category: 'vitals',
-        measure_type: 'numeric',
-        unit: '',
-        min_value: null,
-        max_value: null,
-        decimal_places: 2,
-        is_active: true,
-        formula: ''
-      });
-      setSelectedMeasureType('numeric');
+    if (show) {
+      if (definition) {
+        reset({
+          name: definition.name || '',
+          display_name: definition.display_name || '',
+          description: definition.description || '',
+          category: definition.category || 'vitals',
+          measure_type: definition.measure_type || 'numeric',
+          unit: definition.unit || '',
+          min_value: definition.min_value ?? null,
+          max_value: definition.max_value ?? null,
+          decimal_places: definition.decimal_places ?? 2,
+          is_active: definition.is_active !== undefined ? definition.is_active : true,
+          formula: definition.formula || ''
+        });
+        setSelectedMeasureType(definition.measure_type || 'numeric');
+      } else {
+        reset({
+          name: '',
+          display_name: '',
+          description: '',
+          category: 'vitals',
+          measure_type: 'numeric',
+          unit: '',
+          min_value: null,
+          max_value: null,
+          decimal_places: 2,
+          is_active: true,
+          formula: ''
+        });
+        setSelectedMeasureType('numeric');
+      }
     }
-  }, [definition, reset]);
+  }, [show, definition, reset]);
 
   const onSubmit = async (data) => {
     try {
