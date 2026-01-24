@@ -9,6 +9,7 @@ const db = require('../../../models');
 const PatientMeasure = db.PatientMeasure;
 const MeasureDefinition = db.MeasureDefinition;
 const Patient = db.Patient;
+const User = db.User;
 const auditService = require('./audit.service');
 const { Op } = require('sequelize');
 
