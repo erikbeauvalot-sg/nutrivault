@@ -9,8 +9,9 @@
  */
 
 const { Op } = require('sequelize');
-const MeasureDefinition = require('../models/MeasureDefinition');
-const PatientMeasure = require('../models/PatientMeasure');
+const db = require('../../../models');
+const MeasureDefinition = db.MeasureDefinition;
+const PatientMeasure = db.PatientMeasure;
 const formulaEngine = require('./formulaEngine.service');
 
 // Cache for calculated measure definitions

@@ -113,6 +113,29 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: false,
       comment: 'System-defined measures cannot be deleted'
+    },
+    formula: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      validate: {
+        isRequiredForCalculated(value) {
+          if (this.measure_type === 'calculated' && !value) {
+            throw new Error('Formula is required for calculated measures');
+          }
+        }
+      },
+      comment: 'Formula for calculated measures (e.g., {weight} / ({height} * {height}))'
+    },
+    dependencies: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: [],
+      comment: 'Array of measure names this formula depends on'
+    },
+    last_formula_change: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Timestamp of last formula modification for audit trail'
     }
   }, {
     tableName: 'measure_definitions',
@@ -196,6 +219,48 @@ module.exports = (sequelize, DataTypes) => {
       default:
         return { valid: false, error: 'Unknown measure type' };
     }
+  };
+
+  /**
+   * Get formula dependencies
+   * @returns {Array<string>} Array of measure names this formula depends on
+   */
+  MeasureDefinition.prototype.getDependencies = function() {
+    return this.dependencies || [];
+  };
+
+  /**
+   * Validate that all formula dependencies exist
+   * @returns {Promise<Object>} { valid: boolean, error: string|null, missing: string[] }
+   */
+  MeasureDefinition.prototype.validateFormulaDependencies = async function() {
+    const deps = this.getDependencies();
+
+    if (deps.length === 0) {
+      return { valid: true, error: null, missing: [] };
+    }
+
+    const missing = [];
+
+    for (const depName of deps) {
+      const dep = await MeasureDefinition.findOne({
+        where: { name: depName, deleted_at: null }
+      });
+
+      if (!dep) {
+        missing.push(depName);
+      }
+    }
+
+    if (missing.length > 0) {
+      return {
+        valid: false,
+        error: `Dependencies not found: ${missing.join(', ')}`,
+        missing
+      };
+    }
+
+    return { valid: true, error: null, missing: [] };
   };
 
   return MeasureDefinition;
