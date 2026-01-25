@@ -38,10 +38,12 @@ This directory contains scripts to manage Docker deployments for NutriVault rele
 **Purpose**: Advanced Docker management for production deployments with versioned images
 
 **Features**:
-- Builds versioned Docker images
-- Pushes images to registry
+- Builds versioned Docker images from the root directory
+- Pushes images to container registries
 - Updates docker-compose.yml to use versioned images
 - Supports different deployment actions
+
+**Build Context**: Builds from the project root directory (`.`) to ensure Dockerfiles can access all necessary files (models/, migrations/, config/, etc.)
 
 **Usage**:
 ```bash
@@ -70,10 +72,12 @@ This directory contains scripts to manage Docker deployments for NutriVault rele
 **Features**:
 - Auto-detects version from git tags or package.json
 - Supports multiple environments (production, staging, development)
-- Builds and pushes images to container registries
+- Builds and pushes images to container registries from the root directory
 - Environment-specific deployments with health checks
 - Generates deployment reports
 - Supports GitHub Container Registry (GHCR) and other registries
+
+**Build Context**: Builds from the project root directory (`.`) to ensure Dockerfiles can access all necessary files and dependencies
 
 **Environment Variables**:
 - `VERSION`: Release version (auto-detected if not set)
@@ -122,6 +126,35 @@ export DOCKER_REGISTRY=myregistry.com
 export DOCKER_REPO=myorg/nutrivault
 ./update-docker-version.sh 5.0.0-alpha all
 ```
+
+## Docker Compose Configuration
+
+The scripts expect a `docker-compose.yml` file in the root directory. The compose file should include:
+
+```yaml
+version: '3.8'
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: production
+    container_name: nutrivault-backend
+    # ... other config
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: production
+    container_name: nutrivault-frontend
+    # ... other config
+
+  database:
+    # ... database config
+```
+
+**Important**: All Docker builds use the project root (`.`) as the build context. This allows Dockerfiles to access shared files like `models/`, `migrations/`, `config/`, and other directories that are outside the individual service directories.
 
 ## Workflow Examples
 

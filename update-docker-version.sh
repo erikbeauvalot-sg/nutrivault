@@ -70,7 +70,8 @@ build_images() {
         --build-arg VERSION="$version" \
         --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
         --build-arg GIT_COMMIT="$(git rev-parse HEAD)" \
-        ./backend
+        --file backend/Dockerfile \
+        .
 
     # Build frontend image
     log_info "Building frontend image..."
@@ -81,7 +82,8 @@ build_images() {
         --build-arg VERSION="$version" \
         --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
         --build-arg GIT_COMMIT="$(git rev-parse HEAD)" \
-        ./frontend
+        --file frontend/Dockerfile \
+        .
 
     log_success "Images built successfully"
 }

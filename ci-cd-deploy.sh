@@ -80,7 +80,8 @@ build_images() {
         --build-arg ENVIRONMENT="$ENVIRONMENT" \
         --label "org.opencontainers.image.version=$version" \
         --label "org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-        ./backend
+        --file backend/Dockerfile \
+        .
 
     # Build frontend
     docker build \
@@ -94,7 +95,8 @@ build_images() {
         --build-arg ENVIRONMENT="$ENVIRONMENT" \
         --label "org.opencontainers.image.version=$version" \
         --label "org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-        ./frontend
+        --file frontend/Dockerfile \
+        .
 
     log_success "Images built successfully"
 }
