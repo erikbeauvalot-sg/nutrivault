@@ -35,6 +35,7 @@ function createTestApp() {
   const billingTemplatesRoutes = require('../../src/routes/billingTemplates');
   const invoiceCustomizationsRoutes = require('../../src/routes/invoiceCustomizations');
   const exportRoutes = require('../../src/routes/export');
+  const measureAlertsRoutes = require('../../src/routes/measureAlerts');
 
   // Mount routes
   app.use('/api/auth', authRoutes);
@@ -50,6 +51,7 @@ function createTestApp() {
   app.use('/api/billing-templates', billingTemplatesRoutes);
   app.use('/api/invoice-customizations', invoiceCustomizationsRoutes);
   app.use('/api/export', exportRoutes);
+  app.use('/api', measureAlertsRoutes);
 
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(__dirname, '../../../uploads')));

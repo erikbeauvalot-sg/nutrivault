@@ -136,9 +136,8 @@ const permissionAssignments = {
  */
 const roleWithPermissions = {
   role: {
-    name: 'CUSTOM_ROLE',
+    name: 'VIEWER',
     description: 'Custom role with specific permissions',
-    is_system_role: false,
     is_active: true
   },
   permissions: ['patients.read', 'patients.update', 'visits.read', 'visits.create']

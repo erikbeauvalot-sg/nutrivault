@@ -56,7 +56,7 @@ const fieldDefinitions = {
     field_name: 'blood_type',
     field_label: 'Blood Type',
     field_type: 'text',
-    description: 'Patient blood type',
+    help_text: 'Patient blood type',
     is_required: false,
     display_order: 1,
     is_active: true,
@@ -68,31 +68,30 @@ const fieldDefinitions = {
     field_name: 'dietary_restriction',
     field_label: 'Dietary Restriction',
     field_type: 'select',
-    description: 'Primary dietary restriction',
+    help_text: 'Primary dietary restriction',
     is_required: false,
     display_order: 2,
     is_active: true,
-    options: ['None', 'Vegetarian', 'Vegan', 'Gluten-free', 'Lactose-free', 'Halal', 'Kosher']
+    select_options: ['None', 'Vegetarian', 'Vegan', 'Gluten-free', 'Lactose-free', 'Halal', 'Kosher']
   },
   numberField: {
     field_name: 'daily_water_intake',
     field_label: 'Daily Water Intake (L)',
     field_type: 'number',
-    description: 'Average daily water consumption in liters',
+    help_text: 'Average daily water consumption in liters',
     is_required: false,
     display_order: 3,
     is_active: true,
     validation_rules: {
       min: 0,
-      max: 10,
-      step: 0.1
+      max: 10
     }
   },
   booleanField: {
     field_name: 'smoker',
     field_label: 'Smoker',
     field_type: 'boolean',
-    description: 'Whether the patient smokes',
+    help_text: 'Whether the patient smokes',
     is_required: false,
     display_order: 4,
     is_active: true
@@ -101,7 +100,7 @@ const fieldDefinitions = {
     field_name: 'last_checkup',
     field_label: 'Last Medical Checkup',
     field_type: 'date',
-    description: 'Date of last general medical checkup',
+    help_text: 'Date of last general medical checkup',
     is_required: false,
     display_order: 5,
     is_active: true
@@ -110,23 +109,13 @@ const fieldDefinitions = {
     field_name: 'medical_notes',
     field_label: 'Medical Notes',
     field_type: 'textarea',
-    description: 'Additional medical notes',
+    help_text: 'Additional medical notes',
     is_required: false,
     display_order: 6,
     is_active: true,
     validation_rules: {
       maxLength: 2000
     }
-  },
-  multiselectField: {
-    field_name: 'allergies',
-    field_label: 'Allergies',
-    field_type: 'multiselect',
-    description: 'Known allergies',
-    is_required: false,
-    display_order: 7,
-    is_active: true,
-    options: ['Nuts', 'Dairy', 'Eggs', 'Shellfish', 'Soy', 'Wheat', 'Fish']
   }
 };
 
@@ -155,23 +144,23 @@ const invalidCategories = {
  */
 const invalidFields = {
   missingName: {
-    label: 'Field Without Name',
+    field_label: 'Field Without Name',
     field_type: 'text'
   },
   missingType: {
-    name: 'no_type_field',
-    label: 'Field Without Type'
+    field_name: 'no_type_field',
+    field_label: 'Field Without Type'
   },
   invalidType: {
-    name: 'invalid_type_field',
-    label: 'Invalid Type Field',
+    field_name: 'invalid_type_field',
+    field_label: 'Invalid Type Field',
     field_type: 'invalid_type'
   },
   selectWithoutOptions: {
-    name: 'select_no_options',
-    label: 'Select Without Options',
+    field_name: 'select_no_options',
+    field_label: 'Select Without Options',
     field_type: 'select'
-    // Missing options array
+    // Missing select_options array
   }
 };
 
@@ -184,8 +173,7 @@ const fieldValues = {
   number: 2.5,
   boolean: true,
   date: '2024-01-15',
-  textarea: 'Patient has history of high blood pressure. Currently controlled with medication.',
-  multiselect: ['Nuts', 'Dairy']
+  textarea: 'Patient has history of high blood pressure. Currently controlled with medication.'
 };
 
 /**
@@ -211,13 +199,13 @@ const categoryUpdates = {
  */
 const fieldUpdates = {
   updateLabel: {
-    label: 'Updated Field Label'
+    field_label: 'Updated Field Label'
   },
   makeRequired: {
     is_required: true
   },
   updateOptions: {
-    options: ['Option 1', 'Option 2', 'Option 3', 'Option 4']
+    select_options: ['Option 1', 'Option 2', 'Option 3', 'Option 4']
   },
   deactivate: {
     is_active: false

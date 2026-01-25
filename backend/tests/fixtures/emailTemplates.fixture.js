@@ -5,10 +5,11 @@
 
 /**
  * Valid email template
+ * category: invoice, document_share, payment_reminder, appointment_reminder, follow_up, general
  */
 const validTemplate = {
   name: 'Appointment Reminder',
-  code: 'APPOINTMENT_REMINDER',
+  slug: 'appointment_reminder',
   subject: 'Reminder: Your appointment on {{appointment_date}}',
   body_html: `Dear {{patient_name}},
 
@@ -23,41 +24,37 @@ If you need to reschedule, please contact us at least 24 hours in advance.
 Best regards,
 {{dietitian_name}}
 {{clinic_name}}`,
-  category: 'appointment',
-  language: 'en',
-  is_active: true,
-  variables: ['patient_name', 'appointment_date', 'appointment_time', 'clinic_address', 'dietitian_name', 'clinic_name']
+  category: 'appointment_reminder',
+  is_active: true
 };
 
 /**
  * Email template categories
+ * category: invoice, document_share, payment_reminder, appointment_reminder, follow_up, general
  */
 const templateCategories = {
   appointment: {
     name: 'Appointment Reminder',
-    code: 'APPOINTMENT_REMINDER',
+    slug: 'appointment_reminder_template',
     subject: 'Reminder: Appointment on {{appointment_date}}',
     body_html: 'Dear {{patient_name}}, you have an appointment on {{appointment_date}} at {{appointment_time}}.',
-    category: 'appointment',
-    language: 'en',
+    category: 'appointment_reminder',
     is_active: true
   },
   invoice: {
     name: 'Invoice Notification',
-    code: 'INVOICE_NOTIFICATION',
+    slug: 'invoice_notification',
     subject: 'Invoice #{{invoice_number}} from {{clinic_name}}',
     body_html: 'Dear {{patient_name}}, please find attached your invoice #{{invoice_number}} for {{total_amount}}.',
-    category: 'billing',
-    language: 'en',
+    category: 'invoice',
     is_active: true
   },
   followUp: {
     name: 'Follow-up Email',
-    code: 'FOLLOW_UP',
+    slug: 'follow_up_email',
     subject: 'Follow-up after your visit',
     body_html: 'Dear {{patient_name}}, thank you for your visit on {{visit_date}}. Here are your recommendations...',
     category: 'follow_up',
-    language: 'en',
     is_active: true
   },
   welcome: {

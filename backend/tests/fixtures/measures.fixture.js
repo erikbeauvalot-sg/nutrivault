@@ -181,25 +181,25 @@ function getMeasureTimeline(measureDefinitionId, patientId) {
     {
       measure_definition_id: measureDefinitionId,
       patient_id: patientId,
-      value: 80.0,
+      numeric_value: 80.0,
       measured_at: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString() // 90 days ago
     },
     {
       measure_definition_id: measureDefinitionId,
       patient_id: patientId,
-      value: 78.5,
+      numeric_value: 78.5,
       measured_at: new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000).toISOString() // 60 days ago
     },
     {
       measure_definition_id: measureDefinitionId,
       patient_id: patientId,
-      value: 77.0,
+      numeric_value: 77.0,
       measured_at: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days ago
     },
     {
       measure_definition_id: measureDefinitionId,
       patient_id: patientId,
-      value: 75.5,
+      numeric_value: 75.5,
       measured_at: new Date().toISOString() // Now
     }
   ];
@@ -272,7 +272,7 @@ const invalidPatientMeasures = {
  */
 const measureUpdates = {
   updateName: {
-    name: 'Updated Measure Name'
+    display_name: 'Updated Measure Name'
   },
   updateRange: {
     min_value: 10,
