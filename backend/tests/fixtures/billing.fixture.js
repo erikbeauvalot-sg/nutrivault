@@ -141,34 +141,31 @@ const invoiceStatuses = {
 
 /**
  * Payment data
+ * payment_method must be: CASH, CREDIT_CARD, BANK_TRANSFER, CHECK, INSURANCE, OTHER
  */
 const payments = {
   fullPayment: {
     amount: 85.00,
-    payment_method: 'card',
+    payment_method: 'CREDIT_CARD',
     payment_date: getDate(0),
-    reference: 'PAY-001',
     notes: 'Full payment received'
   },
   partialPayment: {
     amount: 50.00,
-    payment_method: 'cash',
+    payment_method: 'CASH',
     payment_date: getDate(0),
-    reference: 'PAY-002',
     notes: 'Partial payment'
   },
   chequePayment: {
     amount: 85.00,
-    payment_method: 'cheque',
+    payment_method: 'CHECK',
     payment_date: getDate(0),
-    reference: 'CHQ-12345',
     notes: 'Cheque payment'
   },
   bankTransfer: {
     amount: 85.00,
-    payment_method: 'bank_transfer',
+    payment_method: 'BANK_TRANSFER',
     payment_date: getDate(0),
-    reference: 'TRF-2024-001',
     notes: 'Bank transfer received'
   }
 };

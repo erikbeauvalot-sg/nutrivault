@@ -5,15 +5,17 @@
 
 /**
  * Valid measure definition
+ * category: vitals, lab_results, symptoms, anthropometric, lifestyle, other
+ * measure_type: numeric, text, boolean, calculated
  */
 const validMeasure = {
   code: 'WEIGHT',
-  name: 'Weight',
+  name: 'weight',
   display_name: 'Weight',
   description: 'Body weight in kilograms',
   unit: 'kg',
   category: 'anthropometric',
-  data_type: 'number',
+  measure_type: 'numeric',
   min_value: 0,
   max_value: 500,
   precision: 1,
@@ -24,16 +26,18 @@ const validMeasure = {
 
 /**
  * System measures (typically seeded)
+ * category: vitals, lab_results, symptoms, anthropometric, lifestyle, other
+ * measure_type: numeric, text, boolean, calculated
  */
 const systemMeasures = [
   {
     code: 'WEIGHT',
-    name: 'Weight',
+    name: 'weight',
     display_name: 'Weight',
     description: 'Body weight',
     unit: 'kg',
     category: 'anthropometric',
-    data_type: 'number',
+    measure_type: 'numeric',
     min_value: 0,
     max_value: 500,
     precision: 1,
@@ -43,12 +47,12 @@ const systemMeasures = [
   },
   {
     code: 'HEIGHT',
-    name: 'Height',
+    name: 'height',
     display_name: 'Height',
     description: 'Body height',
     unit: 'cm',
     category: 'anthropometric',
-    data_type: 'number',
+    measure_type: 'numeric',
     min_value: 0,
     max_value: 300,
     precision: 1,
@@ -58,12 +62,12 @@ const systemMeasures = [
   },
   {
     code: 'BMI',
-    name: 'Body Mass Index',
+    name: 'bmi',
     display_name: 'Body Mass Index (BMI)',
     description: 'Calculated BMI',
     unit: 'kg/m²',
-    category: 'calculated',
-    data_type: 'number',
+    category: 'anthropometric',
+    measure_type: 'calculated',
     min_value: 0,
     max_value: 100,
     precision: 1,
@@ -74,12 +78,12 @@ const systemMeasures = [
   },
   {
     code: 'BODY_FAT',
-    name: 'Body Fat Percentage',
+    name: 'body_fat',
     display_name: 'Body Fat %',
     description: 'Body fat as percentage',
     unit: '%',
-    category: 'body_composition',
-    data_type: 'number',
+    category: 'anthropometric',
+    measure_type: 'numeric',
     min_value: 0,
     max_value: 100,
     precision: 1,
@@ -89,12 +93,12 @@ const systemMeasures = [
   },
   {
     code: 'WAIST',
-    name: 'Waist Circumference',
+    name: 'waist',
     display_name: 'Waist Circumference',
     description: 'Waist measurement',
     unit: 'cm',
     category: 'anthropometric',
-    data_type: 'number',
+    measure_type: 'numeric',
     min_value: 0,
     max_value: 300,
     precision: 1,
@@ -106,16 +110,18 @@ const systemMeasures = [
 
 /**
  * Custom measures (user-defined)
+ * category: vitals, lab_results, symptoms, anthropometric, lifestyle, other
+ * measure_type: numeric, text, boolean, calculated
  */
 const customMeasures = [
   {
     code: 'BLOOD_GLUCOSE_FASTING',
-    name: 'Fasting Blood Glucose',
+    name: 'blood_glucose_fasting',
     display_name: 'Fasting Blood Glucose',
     description: 'Blood glucose level after fasting',
     unit: 'mg/dL',
-    category: 'biochemical',
-    data_type: 'number',
+    category: 'lab_results',
+    measure_type: 'numeric',
     min_value: 0,
     max_value: 1000,
     precision: 0,
@@ -125,12 +131,12 @@ const customMeasures = [
   },
   {
     code: 'ENERGY_LEVEL',
-    name: 'Energy Level',
+    name: 'energy_level',
     display_name: 'Energy Level',
     description: 'Self-reported energy level',
     unit: 'scale',
-    category: 'subjective',
-    data_type: 'number',
+    category: 'symptoms',
+    measure_type: 'numeric',
     min_value: 1,
     max_value: 10,
     precision: 0,
