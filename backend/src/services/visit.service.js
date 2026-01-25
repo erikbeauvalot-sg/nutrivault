@@ -383,10 +383,28 @@ async function updateVisit(user, visitId, updateData, requestMetadata = {}) {
       throw error;
     }
 
+    // Validate new dietitian if being changed
+    if (updateData.dietitian_id && updateData.dietitian_id !== visit.dietitian_id) {
+      const newDietitian = await User.findByPk(updateData.dietitian_id);
+      if (!newDietitian || !newDietitian.is_active) {
+        const error = new Error('New dietitian not found or inactive');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      // Validate dietitian role
+      const dietitianRole = await Role.findByPk(newDietitian.role_id);
+      if (dietitianRole.name !== 'DIETITIAN' && dietitianRole.name !== 'ADMIN') {
+        const error = new Error('Assigned user must have DIETITIAN or ADMIN role');
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
     // Track changes for audit
     const changes = {};
     const allowedFields = [
-      'visit_date', 'visit_type', 'status', 'duration_minutes',
+      'dietitian_id', 'visit_date', 'visit_type', 'status', 'duration_minutes',
       'chief_complaint', 'assessment', 'recommendations', 'notes', 'next_visit_date'
     ];
 
