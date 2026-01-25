@@ -4,6 +4,11 @@
  */
 
 const nodemailer = require('nodemailer');
+const { getTemplateBySlug } = require('./emailTemplate.service');
+const { renderTemplate, buildVariableContext } = require('./templateRenderer.service');
+const { generateInvoicePDF } = require('./invoicePDF.service');
+const db = require('../../../models');
+const EmailLog = db.EmailLog;
 
 /**
  * Create and configure email transporter
@@ -38,9 +43,10 @@ const createTransporter = () => {
  * @param {string} options.text - Plain text content
  * @param {string} options.html - HTML content
  * @param {string} options.from - Sender email (optional)
+ * @param {Array} options.attachments - Email attachments (optional)
  * @returns {Promise<Object>} Email send result
  */
-async function sendEmail({ to, subject, text, html, from }) {
+async function sendEmail({ to, subject, text, html, from, attachments }) {
   try {
     const transporter = createTransporter();
 
@@ -60,6 +66,11 @@ async function sendEmail({ to, subject, text, html, from }) {
       text,
       html
     };
+
+    // Add attachments if provided
+    if (attachments && attachments.length > 0) {
+      mailOptions.attachments = attachments;
+    }
 
     const info = await transporter.sendMail(mailOptions);
 
@@ -350,10 +361,97 @@ L'équipe NutriVault
   });
 }
 
+/**
+ * Send email using a template
+ * @param {Object} options - Email options
+ * @param {string} options.templateSlug - Template slug to use
+ * @param {string} options.to - Recipient email address
+ * @param {Object} options.variables - Raw data objects (patient, invoice, etc.)
+ * @param {Object} options.patient - Patient object (for logging)
+ * @param {Object} options.user - User sending the email (for logging)
+ * @param {string} options.from - Sender email (optional)
+ * @param {Array} options.attachments - Email attachments (optional)
+ * @returns {Promise<Object>} Email send result with log entry
+ */
+async function sendEmailFromTemplate({
+  templateSlug,
+  to,
+  variables = {},
+  patient = null,
+  user = null,
+  from = null,
+  attachments = null
+}) {
+  try {
+    // Get template
+    const template = await getTemplateBySlug(templateSlug);
+
+    if (!template.is_active) {
+      throw new Error(`Template '${templateSlug}' is not active`);
+    }
+
+    // Build variable context from raw data objects
+    const variableContext = buildVariableContext(variables);
+
+    // Render template
+    const { subject, html, text } = renderTemplate(template, variableContext);
+
+    // Create email log entry (before sending)
+    const emailLog = await EmailLog.create({
+      template_id: template.id,
+      template_slug: templateSlug,
+      sent_to: to,
+      patient_id: patient?.id || null,
+      subject,
+      variables_used: variableContext,
+      status: 'queued',
+      sent_by: user?.id || null
+    });
+
+    try {
+      // Send email
+      const result = await sendEmail({
+        to,
+        subject,
+        text,
+        html,
+        from,
+        attachments
+      });
+
+      // Update log entry on success
+      await emailLog.update({
+        status: 'sent',
+        sent_at: new Date()
+      });
+
+      return {
+        ...result,
+        logId: emailLog.id,
+        templateSlug,
+        subject
+      };
+    } catch (error) {
+      // Update log entry on failure
+      await emailLog.update({
+        status: 'failed',
+        error_message: error.message,
+        sent_at: new Date()
+      });
+
+      throw error;
+    }
+  } catch (error) {
+    console.error(`❌ Error sending email from template '${templateSlug}':`, error);
+    throw error;
+  }
+}
+
 module.exports = {
   sendEmail,
   sendInvoiceEmail,
   sendDocumentShareEmail,
   sendPaymentReminderEmail,
-  verifyEmailConfig
+  verifyEmailConfig,
+  sendEmailFromTemplate
 };

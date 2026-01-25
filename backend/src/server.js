@@ -1,7 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const db = require('../../models');
+const schedulerService = require('./services/scheduler.service');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -110,6 +112,25 @@ app.use('/api', annotationRoutes);
 const measureAlertsRoutes = require('./routes/measureAlerts');
 app.use('/api', measureAlertsRoutes);
 
+// Email Templates routes (protected - RBAC enforced in routes file)
+const emailTemplatesRoutes = require('./routes/emailTemplates');
+app.use('/api/email-templates', emailTemplatesRoutes);
+
+// Appointment Reminders routes (protected - RBAC enforced in routes file)
+const appointmentRemindersRoutes = require('./routes/appointmentReminders');
+app.use('/api/appointment-reminders', appointmentRemindersRoutes);
+
+// Billing Templates routes (protected - RBAC enforced in routes file)
+const billingTemplatesRoutes = require('./routes/billingTemplates');
+app.use('/api/billing-templates', billingTemplatesRoutes);
+
+// Invoice Customizations routes (protected - RBAC enforced in routes file)
+const invoiceCustomizationsRoutes = require('./routes/invoiceCustomizations');
+app.use('/api/invoice-customizations', invoiceCustomizationsRoutes);
+
+// Serve uploaded files (logos, signatures)
+app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+
 // Basic error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);
@@ -154,8 +175,12 @@ app.use((req, res) => {
 
 // Sync database and start server
 db.sequelize.sync()
-  .then(() => {
+  .then(async () => {
     console.log('Database synchronized');
+
+    // Initialize scheduled jobs
+    await schedulerService.initializeScheduledJobs();
+
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`✅ NutriVault POC server running on http://localhost:${PORT}`);
       console.log(`🌐 Accessible on network at http://0.0.0.0:${PORT}`);
@@ -170,5 +195,18 @@ db.sequelize.sync()
     console.error('Unable to sync database:', err);
     process.exit(1);
   });
+
+// Graceful shutdown handler
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  schedulerService.stopAllJobs();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT signal received: closing HTTP server');
+  schedulerService.stopAllJobs();
+  process.exit(0);
+});
 
 module.exports = app;

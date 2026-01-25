@@ -37,6 +37,12 @@ db.MeasureDefinition = require('./MeasureDefinition')(sequelize, DataTypes);
 db.MeasureTranslation = require('./MeasureTranslation')(sequelize, DataTypes);
 db.PatientMeasure = require('./PatientMeasure')(sequelize, DataTypes);
 db.MeasureAlert = require('./MeasureAlert')(sequelize, DataTypes);
+db.EmailTemplate = require('./EmailTemplate')(sequelize, DataTypes);
+db.EmailLog = require('./EmailLog')(sequelize, DataTypes);
+db.SystemSetting = require('./SystemSetting')(sequelize, DataTypes);
+db.BillingTemplate = require('./BillingTemplate')(sequelize, DataTypes);
+db.BillingTemplateItem = require('./BillingTemplateItem')(sequelize, DataTypes);
+db.InvoiceCustomization = require('./InvoiceCustomization')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -430,6 +436,87 @@ db.MeasureAlert.belongsTo(db.User, {
 db.User.hasMany(db.MeasureAlert, {
   foreignKey: 'acknowledged_by',
   as: 'acknowledged_measure_alerts'
+});
+
+// EmailTemplate - User (created_by) relationship
+db.EmailTemplate.belongsTo(db.User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+db.User.hasMany(db.EmailTemplate, {
+  foreignKey: 'created_by',
+  as: 'created_email_templates'
+});
+
+// EmailTemplate - User (updated_by) relationship
+db.EmailTemplate.belongsTo(db.User, {
+  foreignKey: 'updated_by',
+  as: 'updater'
+});
+db.User.hasMany(db.EmailTemplate, {
+  foreignKey: 'updated_by',
+  as: 'updated_email_templates'
+});
+
+// EmailLog - EmailTemplate relationship
+db.EmailLog.belongsTo(db.EmailTemplate, {
+  foreignKey: 'template_id',
+  as: 'template'
+});
+db.EmailTemplate.hasMany(db.EmailLog, {
+  foreignKey: 'template_id',
+  as: 'email_logs'
+});
+
+// EmailLog - Patient relationship
+db.EmailLog.belongsTo(db.Patient, {
+  foreignKey: 'patient_id',
+  as: 'patient'
+});
+db.Patient.hasMany(db.EmailLog, {
+  foreignKey: 'patient_id',
+  as: 'email_logs'
+});
+
+// EmailLog - User (sent_by) relationship
+db.EmailLog.belongsTo(db.User, {
+  foreignKey: 'sent_by',
+  as: 'sender'
+});
+db.User.hasMany(db.EmailLog, {
+  foreignKey: 'sent_by',
+  as: 'sent_emails'
+});
+
+// BillingTemplate - BillingTemplateItem relationship
+db.BillingTemplate.hasMany(db.BillingTemplateItem, {
+  foreignKey: 'billing_template_id',
+  as: 'items',
+  onDelete: 'CASCADE'
+});
+db.BillingTemplateItem.belongsTo(db.BillingTemplate, {
+  foreignKey: 'billing_template_id',
+  as: 'template'
+});
+
+// BillingTemplate - User (created_by) relationship
+db.BillingTemplate.belongsTo(db.User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+db.User.hasMany(db.BillingTemplate, {
+  foreignKey: 'created_by',
+  as: 'created_billing_templates'
+});
+
+// InvoiceCustomization - User relationship
+db.InvoiceCustomization.belongsTo(db.User, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
+db.User.hasOne(db.InvoiceCustomization, {
+  foreignKey: 'user_id',
+  as: 'invoiceCustomization'
 });
 
 module.exports = db;

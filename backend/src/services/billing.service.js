@@ -14,6 +14,7 @@ const Visit = db.Visit;
 const User = db.User;
 const auditService = require('./audit.service');
 const emailService = require('./email.service');
+const { generateInvoicePDF } = require('./invoicePDF.service');
 const { Op } = db.Sequelize;
 
 /**
@@ -137,7 +138,7 @@ async function getInvoiceById(invoiceId, user, requestMetadata = {}) {
         {
           model: Patient,
           as: 'patient',
-          attributes: ['id', 'first_name', 'last_name', 'email', 'phone', 'address'],
+          attributes: ['id', 'first_name', 'last_name', 'email', 'phone'],
           where: { is_active: true },
           required: true
         },
@@ -613,14 +614,46 @@ async function sendInvoiceEmail(invoiceId, user, requestMetadata = {}) {
       throw error;
     }
 
-    // Send invoice email
+    // Send invoice email using template system
     console.log('📧 Sending invoice email to:', invoice.patient.email);
 
     let emailStatus = 'SUCCESS';
     let errorMessage = null;
 
     try {
-      const emailResult = await emailService.sendInvoiceEmail(invoice, invoice.patient);
+      // Generate PDF as attachment
+      console.log('📄 Generating invoice PDF attachment...');
+      const pdfDoc = await generateInvoicePDF(invoiceId, user.id);
+
+      // Collect PDF stream into buffer
+      const pdfBuffer = await new Promise((resolve, reject) => {
+        const chunks = [];
+        pdfDoc.on('data', (chunk) => chunks.push(chunk));
+        pdfDoc.on('end', () => resolve(Buffer.concat(chunks)));
+        pdfDoc.on('error', reject);
+      });
+
+      console.log(`✅ PDF generated (${pdfBuffer.length} bytes)`);
+
+      // Use new template-based email system with PDF attachment
+      const emailResult = await emailService.sendEmailFromTemplate({
+        templateSlug: 'invoice_notification',
+        to: invoice.patient.email,
+        variables: {
+          patient: invoice.patient,
+          invoice: invoice,
+          dietitian: user
+        },
+        patient: invoice.patient,
+        user: user,
+        attachments: [
+          {
+            filename: `facture_${invoice.invoice_number}.pdf`,
+            content: pdfBuffer,
+            contentType: 'application/pdf'
+          }
+        ]
+      });
     } catch (emailError) {
       emailStatus = 'FAILED';
       errorMessage = emailError.message;

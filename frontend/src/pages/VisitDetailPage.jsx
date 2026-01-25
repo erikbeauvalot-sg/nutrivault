@@ -15,6 +15,7 @@ import visitService from '../services/visitService';
 import visitCustomFieldService from '../services/visitCustomFieldService';
 import CustomFieldDisplay from '../components/CustomFieldDisplay';
 import LogMeasureModal from '../components/LogMeasureModal';
+import SendReminderButton from '../components/SendReminderButton';
 import { getMeasuresByVisit, formatMeasureValue, getAllMeasureTranslations } from '../services/measureService';
 
 const VisitDetailPage = () => {
@@ -270,6 +271,10 @@ const VisitDetailPage = () => {
             </div>
           </Col>
           <Col xs="auto" className="d-flex gap-2">
+            <SendReminderButton
+              visit={visit}
+              onReminderSent={fetchVisitDetails}
+            />
             {canFinishVisit && (
               <Button
                 variant="success"

@@ -56,145 +56,76 @@ const InvoiceDetailPage = () => {
     }
   };
 
-  const handleDownloadPDF = () => {
-    // Create a clean HTML version for PDF generation
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+  const handleViewPDF = async () => {
+    try {
+      // Call backend API to generate customized PDF
+      const response = await billingService.downloadInvoicePDF(id);
 
-    const invoiceHTML = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Invoice ${invoice.invoice_number}</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; }
-          .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
-          .invoice-details { margin: 20px 0; }
-          .invoice-details table { width: 100%; border-collapse: collapse; }
-          .invoice-details td { padding: 8px; border: 1px solid #ddd; }
-          .invoice-details .label { font-weight: bold; background-color: #f5f5f5; }
-          .items { margin: 30px 0; }
-          .items table { width: 100%; border-collapse: collapse; }
-          .items th, .items td { padding: 10px; text-align: left; border: 1px solid #ddd; }
-          .items th { background-color: #f5f5f5; font-weight: bold; }
-          .totals { text-align: right; margin-top: 20px; }
-          .totals table { margin-left: auto; }
-          .totals td { padding: 5px 20px; }
-          .status { text-align: center; margin: 20px 0; font-size: 18px; font-weight: bold; }
-          .status.PAID { color: green; }
-          .status.SENT { color: blue; }
-          .status.OVERDUE { color: red; }
-          .status.DRAFT { color: gray; }
-          .status.CANCELLED { color: orange; }
-          @media print { body { margin: 0; } }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>INVOICE</h1>
-          <h2>${invoice.invoice_number}</h2>
-        </div>
+      // Create blob from response
+      const blob = new Blob([response.data], { type: 'application/pdf' });
 
-        <div class="invoice-details">
-          <table>
-            <tr>
-              <td class="label">Invoice Number:</td>
-              <td>${invoice.invoice_number}</td>
-              <td class="label">Date:</td>
-              <td>${formatDate(invoice.created_at)}</td>
-            </tr>
-            <tr>
-              <td class="label">Patient:</td>
-              <td>${invoice.patient?.first_name} ${invoice.patient?.last_name}</td>
-              <td class="label">Due Date:</td>
-              <td>${formatDate(invoice.due_date)}</td>
-            </tr>
-            <tr>
-              <td class="label">Status:</td>
-              <td class="status ${invoice.status}">${invoice.status}</td>
-              <td class="label">Total Amount:</td>
-              <td>${formatCurrency(invoice.total_amount)}</td>
-            </tr>
-          </table>
-        </div>
+      // Create URL and open in new window
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
 
-        <div class="items">
-          <h3>Invoice Items</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${invoice.items?.map(item => `
-                <tr>
-                  <td>${item.description}</td>
-                  <td>${item.quantity}</td>
-                  <td>${formatCurrency(item.unit_price)}</td>
-                  <td>${formatCurrency(item.total)}</td>
-                </tr>
-              `).join('') || '<tr><td colspan="4">No items found</td></tr>'}
-            </tbody>
-          </table>
-        </div>
+      // Cleanup after a delay to ensure window opens
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      setError(t('billing.failedToViewPDF', 'Failed to view PDF') + ': ' + (err.response?.data?.error || err.message));
+      console.error('Error viewing PDF:', err);
+    }
+  };
 
-        <div class="totals">
-          <table>
-            <tr>
-              <td>Subtotal:</td>
-              <td>${formatCurrency(invoice.subtotal)}</td>
-            </tr>
-            <tr>
-              <td>Tax (${invoice.tax_rate}%):</td>
-              <td>${formatCurrency(invoice.tax_amount)}</td>
-            </tr>
-            <tr style="font-weight: bold; font-size: 16px;">
-              <td>Total:</td>
-              <td>${formatCurrency(invoice.total_amount)}</td>
-            </tr>
-          </table>
-        </div>
+  const handleDownloadPDF = async () => {
+    try {
+      // Call backend API to generate customized PDF
+      const response = await billingService.downloadInvoicePDF(id);
 
-        ${payments.length > 0 ? `
-          <div class="payments" style="margin-top: 30px;">
-            <h3>Payment History</h3>
-            <table style="width: 100%; border-collapse: collapse;">
-              <thead>
-                <tr style="background-color: #f5f5f5;">
-                  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Date</th>
-                  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Amount</th>
-                  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Method</th>
-                  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Reference</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${payments.map(payment => `
-                  <tr>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${formatDate(payment.payment_date)}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${formatCurrency(payment.amount)}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${payment.payment_method}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd;">${payment.reference || '-'}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        ` : ''}
-      </body>
-      </html>
-    `;
+      // Create blob from response
+      const blob = new Blob([response.data], { type: 'application/pdf' });
 
-    printWindow.document.write(invoiceHTML);
-    printWindow.document.close();
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${invoice.invoice_number}.pdf`;
+      document.body.appendChild(link);
+      link.click();
 
-    // Wait for content to load, then trigger print dialog
-    printWindow.onload = () => {
-      printWindow.print();
-    };
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(t('billing.failedToDownloadPDF', 'Failed to download PDF') + ': ' + (err.response?.data?.error || err.message));
+      console.error('Error downloading PDF:', err);
+    }
+  };
+
+  const handlePrintPDF = async () => {
+    try {
+      // Call backend API to generate customized PDF
+      const response = await billingService.downloadInvoicePDF(id);
+
+      // Create blob from response
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+
+      // Create URL and open in new window
+      const url = window.URL.createObjectURL(blob);
+      const printWindow = window.open(url, '_blank');
+
+      // Wait for window to load, then trigger print
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
+
+      // Cleanup after a delay
+      setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+    } catch (err) {
+      setError(t('billing.failedToPrintPDF', 'Failed to print PDF') + ': ' + (err.response?.data?.error || err.message));
+      console.error('Error printing PDF:', err);
+    }
   };
 
   const handleBack = () => {
@@ -540,6 +471,14 @@ const InvoiceDetailPage = () => {
                 )}
 
                 <Button
+                  variant="outline-primary"
+                  className="w-100 mb-2"
+                  onClick={handleViewPDF}
+                >
+                  👁️ {t('billing.viewInvoice', 'View Invoice')}
+                </Button>
+
+                <Button
                   variant="outline-secondary"
                   className="w-100 mb-2"
                   onClick={handleDownloadPDF}
@@ -550,7 +489,7 @@ const InvoiceDetailPage = () => {
                 <Button
                   variant="outline-secondary"
                   className="w-100"
-                  onClick={() => window.print()}
+                  onClick={handlePrintPDF}
                 >
                   🖨️ {t('billing.printInvoice')}
                 </Button>

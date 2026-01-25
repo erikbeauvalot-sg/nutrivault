@@ -159,3 +159,16 @@ export const changePaymentStatus = async (paymentId, status) => {
   const response = await api.patch(`/api/billing/payments/${paymentId}/status`, { status });
   return response.data;
 };
+
+/**
+ * Download invoice as customized PDF
+ * Generates PDF with user's branding customization (logo, colors, contact info)
+ * @param {string} id - Invoice UUID
+ * @returns {Promise<Blob>} PDF file as blob
+ */
+export const downloadInvoicePDF = async (id) => {
+  const response = await api.get(`/api/billing/${id}/pdf`, {
+    responseType: 'blob'
+  });
+  return response;
+};

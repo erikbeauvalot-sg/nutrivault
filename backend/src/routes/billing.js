@@ -218,6 +218,20 @@ router.get(
 );
 
 /**
+ * GET /api/billing/:id/pdf - Download invoice as PDF
+ * Requires: billing.read permission
+ * Generates customized PDF with user's branding settings
+ */
+router.get(
+  '/:id/pdf',
+  authenticate,
+  requirePermission('billing.read'),
+  invoiceIdValidation,
+  validate,
+  billingController.downloadInvoicePDF
+);
+
+/**
  * POST /api/billing - Create new invoice
  * Requires: billing.create permission
  * ADMIN, DIETITIAN, and ASSISTANT can create invoices

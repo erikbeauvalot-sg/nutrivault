@@ -753,12 +753,19 @@ async function sendDocumentToPatient(user, documentId, patientId, shareData = {}
     // Send email notification if sent_via is email
     if (shareData.sent_via === 'email' || !shareData.sent_via) {
       console.log(`📄 Sending document share email to: ${patient.email}`);
-      await emailService.sendDocumentShareEmail(
-        document,
-        patient,
-        user,
-        shareData.notes
-      );
+      // Use new template-based email system
+      await emailService.sendEmailFromTemplate({
+        templateSlug: 'document_share_notification',
+        to: patient.email,
+        variables: {
+          patient: patient,
+          document: document,
+          sharedBy: user,
+          notes: shareData.notes
+        },
+        patient: patient,
+        user: user
+      });
     } else {
       console.log(`📄 Document shared with patient via ${shareData.sent_via}: ${patient.email}`);
     }

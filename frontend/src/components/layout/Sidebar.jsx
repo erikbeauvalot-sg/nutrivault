@@ -26,6 +26,9 @@ const Sidebar = ({ isOpen, onClose }) => {
     ...(user?.role === 'ADMIN' ? [
       { path: '/settings/custom-fields', icon: '🔧', label: t('navigation.customFields') },
       { path: '/settings/measures', icon: '📏', label: t('navigation.measures') },
+      { path: '/settings/email-templates', icon: '✉️', label: t('navigation.emailTemplates', 'Email Templates') },
+      { path: '/settings/billing-templates', icon: '📋', label: t('navigation.billingTemplates', 'Billing Templates') },
+      { path: '/settings/invoice-customization', icon: '🎨', label: t('navigation.invoiceCustomization', 'Invoice Customization') },
       { path: '/settings/roles', icon: '🔐', label: t('navigation.roles', 'Manage Roles') }
     ] : []),
   ];

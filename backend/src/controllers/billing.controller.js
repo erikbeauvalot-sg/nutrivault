@@ -6,6 +6,7 @@
  */
 
 const billingService = require('../services/billing.service');
+const invoicePDFService = require('../services/invoicePDF.service');
 
 /**
  * Extract request metadata for audit logging
@@ -341,6 +342,29 @@ exports.changePaymentStatus = async (req, res, next) => {
       message: 'Payment status changed successfully'
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/billing/:id/pdf - Download invoice as PDF
+ */
+exports.downloadInvoicePDF = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+
+    // Generate PDF with user's customization
+    const pdfDoc = await invoicePDFService.generateInvoicePDF(id, user.id);
+
+    // Set headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice-${id}.pdf`);
+
+    // Pipe PDF to response
+    pdfDoc.pipe(res);
+  } catch (error) {
+    console.error('Error downloading invoice PDF:', error);
     next(error);
   }
 };

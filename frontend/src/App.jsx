@@ -36,6 +36,9 @@ const CustomFieldsPage = lazy(() => import('./pages/CustomFieldsPage'));
 const RolesManagementPage = lazy(() => import('./pages/RolesManagementPage'));
 const MeasuresPage = lazy(() => import('./pages/MeasuresPage'));
 const MeasureDetailPage = lazy(() => import('./pages/MeasureDetailPage'));
+const EmailTemplatesPage = lazy(() => import('./pages/EmailTemplatesPage'));
+const BillingTemplatesPage = lazy(() => import('./pages/BillingTemplatesPage'));
+const InvoiceCustomizationPage = lazy(() => import('./pages/InvoiceCustomizationPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -269,6 +272,33 @@ function App() {
         element={
           <ProtectedRoute>
             <MeasureDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/email-templates"
+        element={
+          <ProtectedRoute>
+            <EmailTemplatesPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/billing-templates"
+        element={
+          <ProtectedRoute permission="billing.read">
+            <BillingTemplatesPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/invoice-customization"
+        element={
+          <ProtectedRoute permission="billing.update">
+            <InvoiceCustomizationPage />
           </ProtectedRoute>
         }
       />

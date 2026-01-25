@@ -4,6 +4,8 @@
  * All other data is managed via custom fields
  */
 
+const { v4: uuidv4 } = require('uuid');
+
 module.exports = (sequelize, DataTypes) => {
   const Patient = sequelize.define('Patient', {
     id: {
@@ -58,11 +60,31 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true
+    },
+    appointment_reminders_enabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+      comment: 'Whether patient wants to receive appointment reminder emails'
+    },
+    unsubscribe_token: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      unique: true,
+      comment: 'Unique token for unsubscribe link'
     }
   }, {
     tableName: 'patients',
     timestamps: true,
     underscored: true,
+    hooks: {
+      beforeCreate: async (patient) => {
+        // Generate unsubscribe token for new patients
+        if (!patient.unsubscribe_token) {
+          patient.unsubscribe_token = uuidv4();
+        }
+      }
+    },
     indexes: [
       {
         fields: ['email'],
