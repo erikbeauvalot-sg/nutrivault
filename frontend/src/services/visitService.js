@@ -64,40 +64,6 @@ export const deleteVisit = async (id) => {
 };
 
 /**
- * Add measurements to visit
- * @param {string} id - Visit UUID
- * @param {Object} measurements - Measurement data
- * @returns {Promise} API response
- */
-export const addMeasurements = async (id, measurements) => {
-  const response = await api.post(`/api/visits/${id}/measurements`, measurements);
-  return response;
-};
-
-/**
- * Update measurement
- * @param {string} visitId - Visit UUID
- * @param {string} measurementId - Measurement UUID
- * @param {Object} measurements - Measurement data
- * @returns {Promise} API response
- */
-export const updateMeasurement = async (visitId, measurementId, measurements) => {
-  const response = await api.put(`/api/visits/${visitId}/measurements/${measurementId}`, measurements);
-  return response;
-};
-
-/**
- * Delete measurement
- * @param {string} visitId - Visit UUID
- * @param {string} measurementId - Measurement UUID
- * @returns {Promise} API response
- */
-export const deleteMeasurement = async (visitId, measurementId) => {
-  const response = await api.delete(`/api/visits/${visitId}/measurements/${measurementId}`);
-  return response;
-};
-
-/**
  * Finish visit and generate invoice with email
  * Completes the visit, auto-generates invoice, and sends email to patient
  * @param {string} id - Visit UUID
@@ -114,8 +80,5 @@ export default {
   createVisit,
   updateVisit,
   deleteVisit,
-  addMeasurements,
-  updateMeasurement,
-  deleteMeasurement,
   finishAndInvoice
 };

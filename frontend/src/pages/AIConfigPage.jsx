@@ -25,6 +25,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import aiConfigService from '../services/aiConfigService';
+import aiPromptService from '../services/aiPromptService';
+import AIPromptEditor from '../components/AIPromptEditor';
 import {
   FaRobot,
   FaCheck,
@@ -32,7 +34,13 @@ import {
   FaSave,
   FaPlay,
   FaInfoCircle,
-  FaDollarSign
+  FaDollarSign,
+  FaEdit,
+  FaPlus,
+  FaTrash,
+  FaCopy,
+  FaStar,
+  FaFileAlt
 } from 'react-icons/fa';
 
 const AIConfigPage = () => {
@@ -52,6 +60,12 @@ const AIConfigPage = () => {
   // Form state
   const [selectedProvider, setSelectedProvider] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
+
+  // Prompts state
+  const [prompts, setPrompts] = useState([]);
+  const [promptsLoading, setPromptsLoading] = useState(false);
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
+  const [editingPrompt, setEditingPrompt] = useState(null);
 
   // Redirect if not admin
   useEffect(() => {
@@ -84,6 +98,9 @@ const AIConfigPage = () => {
         setSelectedProvider(configRes.data.provider);
         setSelectedModel(configRes.data.model);
       }
+
+      // Also fetch prompts
+      fetchPrompts();
     } catch (err) {
       console.error('Error fetching AI config:', err);
       setError(err.response?.data?.error || t('aiConfig.fetchError'));
@@ -91,6 +108,78 @@ const AIConfigPage = () => {
       setLoading(false);
     }
   };
+
+  const fetchPrompts = async () => {
+    try {
+      setPromptsLoading(true);
+      const response = await aiPromptService.getAll();
+      setPrompts(response.data || []);
+    } catch (err) {
+      console.error('Error fetching prompts:', err);
+    } finally {
+      setPromptsLoading(false);
+    }
+  };
+
+  const handleEditPrompt = (prompt) => {
+    setEditingPrompt(prompt);
+    setShowPromptEditor(true);
+  };
+
+  const handleNewPrompt = () => {
+    setEditingPrompt(null);
+    setShowPromptEditor(true);
+  };
+
+  const handlePromptSaved = () => {
+    fetchPrompts();
+  };
+
+  const handleDeletePrompt = async (promptId) => {
+    if (!window.confirm(t('aiPrompt.confirmDelete'))) {
+      return;
+    }
+
+    try {
+      await aiPromptService.delete(promptId);
+      setSuccess(t('aiPrompt.deletedSuccess'));
+      fetchPrompts();
+    } catch (err) {
+      console.error('Error deleting prompt:', err);
+      setError(err.response?.data?.error || t('aiPrompt.deleteError'));
+    }
+  };
+
+  const handleDuplicatePrompt = async (promptId) => {
+    try {
+      await aiPromptService.duplicate(promptId);
+      setSuccess(t('aiPrompt.duplicatedSuccess'));
+      fetchPrompts();
+    } catch (err) {
+      console.error('Error duplicating prompt:', err);
+      setError(err.response?.data?.error || t('aiPrompt.duplicateError'));
+    }
+  };
+
+  const handleSetDefault = async (promptId) => {
+    try {
+      await aiPromptService.setAsDefault(promptId);
+      setSuccess(t('aiPrompt.setDefaultSuccess'));
+      fetchPrompts();
+    } catch (err) {
+      console.error('Error setting default:', err);
+      setError(err.response?.data?.error || t('aiPrompt.setDefaultError'));
+    }
+  };
+
+  // Group prompts by usage
+  const promptsByUsage = prompts.reduce((acc, prompt) => {
+    if (!acc[prompt.usage]) {
+      acc[prompt.usage] = [];
+    }
+    acc[prompt.usage].push(prompt);
+    return acc;
+  }, {});
 
   const handleProviderChange = (providerId) => {
     setSelectedProvider(providerId);
@@ -480,6 +569,149 @@ const AIConfigPage = () => {
             </Col>
           </Row>
         )}
+
+        {/* AI Prompts Section */}
+        <Row className="mt-4">
+          <Col>
+            <Card>
+              <Card.Header className="d-flex justify-content-between align-items-center">
+                <h5 className="mb-0">
+                  <FaFileAlt className="me-2" />
+                  {t('aiPrompt.title')}
+                </h5>
+                <Button variant="primary" size="sm" onClick={handleNewPrompt}>
+                  <FaPlus className="me-1" />
+                  {t('aiPrompt.create')}
+                </Button>
+              </Card.Header>
+              <Card.Body>
+                {promptsLoading ? (
+                  <div className="text-center py-4">
+                    <Spinner animation="border" size="sm" />
+                  </div>
+                ) : prompts.length === 0 ? (
+                  <Alert variant="info">
+                    {t('aiPrompt.noPrompts')}
+                  </Alert>
+                ) : (
+                  <Table striped bordered hover responsive>
+                    <thead className="table-dark">
+                      <tr>
+                        <th>{t('aiPrompt.usage')}</th>
+                        <th>{t('aiPrompt.name')}</th>
+                        <th>{t('aiPrompt.language')}</th>
+                        <th>{t('aiPrompt.version')}</th>
+                        <th>{t('aiPrompt.status')}</th>
+                        <th style={{ width: '180px' }}>{t('common.actions')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {prompts.map(prompt => (
+                        <tr key={prompt.id}>
+                          <td>
+                            <Badge bg="info">
+                              {t(`aiPrompt.usage${prompt.usage.charAt(0).toUpperCase() + prompt.usage.slice(1)}`)}
+                            </Badge>
+                          </td>
+                          <td>
+                            {prompt.name}
+                            {prompt.is_default && (
+                              <Badge bg="warning" className="ms-2">
+                                <FaStar className="me-1" />
+                                {t('aiPrompt.default')}
+                              </Badge>
+                            )}
+                          </td>
+                          <td>
+                            {prompt.language_code === 'fr' && '🇫🇷'}
+                            {prompt.language_code === 'en' && '🇬🇧'}
+                            {prompt.language_code === 'es' && '🇪🇸'}
+                            {prompt.language_code === 'nl' && '🇳🇱'}
+                            {prompt.language_code === 'de' && '🇩🇪'}
+                            {' '}{prompt.language_code.toUpperCase()}
+                          </td>
+                          <td>v{prompt.version}</td>
+                          <td>
+                            {prompt.is_active ? (
+                              <Badge bg="success">{t('aiPrompt.active')}</Badge>
+                            ) : (
+                              <Badge bg="secondary">{t('aiPrompt.inactive')}</Badge>
+                            )}
+                          </td>
+                          <td>
+                            <div className="d-flex gap-1">
+                              <OverlayTrigger
+                                placement="top"
+                                overlay={<Tooltip>{t('common.edit')}</Tooltip>}
+                              >
+                                <Button
+                                  variant="outline-primary"
+                                  size="sm"
+                                  onClick={() => handleEditPrompt(prompt)}
+                                >
+                                  <FaEdit />
+                                </Button>
+                              </OverlayTrigger>
+                              <OverlayTrigger
+                                placement="top"
+                                overlay={<Tooltip>{t('aiPrompt.duplicate')}</Tooltip>}
+                              >
+                                <Button
+                                  variant="outline-secondary"
+                                  size="sm"
+                                  onClick={() => handleDuplicatePrompt(prompt.id)}
+                                >
+                                  <FaCopy />
+                                </Button>
+                              </OverlayTrigger>
+                              {!prompt.is_default && (
+                                <OverlayTrigger
+                                  placement="top"
+                                  overlay={<Tooltip>{t('aiPrompt.setDefault')}</Tooltip>}
+                                >
+                                  <Button
+                                    variant="outline-warning"
+                                    size="sm"
+                                    onClick={() => handleSetDefault(prompt.id)}
+                                  >
+                                    <FaStar />
+                                  </Button>
+                                </OverlayTrigger>
+                              )}
+                              <OverlayTrigger
+                                placement="top"
+                                overlay={<Tooltip>{t('common.delete')}</Tooltip>}
+                              >
+                                <Button
+                                  variant="outline-danger"
+                                  size="sm"
+                                  onClick={() => handleDeletePrompt(prompt.id)}
+                                >
+                                  <FaTrash />
+                                </Button>
+                              </OverlayTrigger>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                )}
+                <small className="text-muted">
+                  {t('aiPrompt.helpText')}
+                </small>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Prompt Editor Modal */}
+        <AIPromptEditor
+          show={showPromptEditor}
+          onHide={() => setShowPromptEditor(false)}
+          prompt={editingPrompt}
+          onSaved={handlePromptSaved}
+        />
       </Container>
     </Layout>
   );

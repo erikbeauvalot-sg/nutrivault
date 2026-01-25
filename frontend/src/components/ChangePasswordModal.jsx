@@ -122,7 +122,7 @@ const ChangePasswordModal = ({ show, onHide, userId, username, isAdmin, onSucces
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg">
+    <Modal show={show} onHide={handleClose} size="lg" scrollable>
       <Modal.Header closeButton>
         <Modal.Title>🔑 Change Password</Modal.Title>
       </Modal.Header>

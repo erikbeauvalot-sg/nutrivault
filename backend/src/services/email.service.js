@@ -375,6 +375,8 @@ L'équipe NutriVault
  * @param {string} options.from - Sender email (optional)
  * @param {Array} options.attachments - Email attachments (optional)
  * @param {string} options.languageCode - Override language code (optional)
+ * @param {string} options.visitId - Visit ID for linking email to visit (optional)
+ * @param {string} options.billingId - Billing ID for linking email to invoice (optional)
  * @returns {Promise<Object>} Email send result with log entry
  */
 async function sendEmailFromTemplate({
@@ -385,7 +387,9 @@ async function sendEmailFromTemplate({
   user = null,
   from = null,
   attachments = null,
-  languageCode = null
+  languageCode = null,
+  visitId = null,
+  billingId = null
 }) {
   try {
     // Get template
@@ -438,13 +442,30 @@ async function sendEmailFromTemplate({
     // Render template
     const { subject, html, text } = renderTemplate(templateToRender, variableContext);
 
+    // Determine email type from template slug/category
+    const getEmailTypeFromTemplate = (slug, category) => {
+      if (slug.includes('invoice') || slug.includes('facture')) return 'invoice';
+      if (slug.includes('reminder') || slug.includes('rappel')) return 'reminder';
+      if (slug.includes('payment') || slug.includes('relance')) return 'payment_reminder';
+      if (slug.includes('welcome') || slug.includes('bienvenue')) return 'welcome';
+      if (slug.includes('followup') || slug.includes('suivi')) return 'followup';
+      if (category === 'billing') return 'invoice';
+      if (category === 'reminder') return 'reminder';
+      return 'other';
+    };
+
     // Create email log entry (before sending)
     const emailLog = await EmailLog.create({
       template_id: template.id,
       template_slug: templateSlug,
+      email_type: getEmailTypeFromTemplate(templateSlug, template.category),
       sent_to: to,
       patient_id: patient?.id || null,
+      visit_id: visitId || null,
+      billing_id: billingId || null,
       subject,
+      body_html: html,
+      body_text: text,
       variables_used: variableContext,
       status: 'queued',
       sent_by: user?.id || null,

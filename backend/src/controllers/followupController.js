@@ -117,13 +117,17 @@ const sendFollowup = async (req, res) => {
       text: body_text || ''
     });
 
-    // Log the email
+    // Log the email with full content
     const emailLog = await EmailLog.create({
       template_id: null,
       template_slug: 'ai_followup',
+      email_type: 'followup',
       sent_to: visit.patient.email,
       patient_id: visit.patient.id,
+      visit_id: visitId,
       subject,
+      body_html: body_html,
+      body_text: body_text || '',
       variables_used: {
         visit_id: visitId,
         ai_generated: ai_generated === true

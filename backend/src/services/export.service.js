@@ -117,10 +117,9 @@ class ExportService {
       'Visit Date': new Date(visit.visit_date).toLocaleDateString(),
       'Visit Type': visit.visit_type || '',
       'Status': visit.status,
-      'Chief Complaint': visit.chief_complaint || '',
       'Dietitian': visit.dietitian ?
         `${visit.dietitian.first_name} ${visit.dietitian.last_name}` : '',
-      'Duration (min)': visit.duration || '',
+      'Duration (min)': visit.duration_minutes || '',
       'Created At': new Date(visit.created_at).toLocaleDateString()
     }));
 

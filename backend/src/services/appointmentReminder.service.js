@@ -167,9 +167,13 @@ async function sendVisitReminder(visitId, userId, manual = false) {
     await EmailLog.create({
       template_id: template.id,
       template_slug: template.slug,
+      email_type: 'reminder',
       sent_to: visit.patient.email,
       patient_id: visit.patient.id,
+      visit_id: visit.id,
       subject: rendered.subject,
+      body_html: rendered.html,
+      body_text: rendered.text,
       status: 'sent',
       sent_by: userId,
       variables_used: {

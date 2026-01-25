@@ -66,27 +66,10 @@ const createVisitValidation = [
     .optional()
     .isInt({ min: 1, max: 480 })
     .withMessage('Duration must be between 1 and 480 minutes'),
-  
-  body('chief_complaint')
-    .optional({ checkFalsy: true })
-    .isString()
-    .withMessage('Chief complaint must be a string'),
 
-  body('assessment')
-    .optional({ checkFalsy: true })
-    .isString()
-    .withMessage('Assessment must be a string'),
+  // Clinical fields (chief_complaint, assessment, recommendations, notes) removed
+  // Now managed via custom fields
 
-  body('recommendations')
-    .optional({ checkFalsy: true })
-    .isString()
-    .withMessage('Recommendations must be a string'),
-
-  body('notes')
-    .optional({ checkFalsy: true })
-    .isString()
-    .withMessage('Notes must be a string'),
-  
   body('next_visit_date')
     .optional({ checkFalsy: true })
     .isISO8601()
@@ -118,82 +101,14 @@ const updateVisitValidation = [
     .optional()
     .isInt({ min: 1, max: 480 })
     .withMessage('Duration must be between 1 and 480 minutes'),
-  
-  body('chief_complaint')
-    .optional({ checkFalsy: true })
-    .isString()
-    .withMessage('Chief complaint must be a string'),
 
-  body('assessment')
-    .optional({ checkFalsy: true })
-    .isString()
-    .withMessage('Assessment must be a string'),
+  // Clinical fields (chief_complaint, assessment, recommendations, notes) removed
+  // Now managed via custom fields
 
-  body('recommendations')
-    .optional({ checkFalsy: true })
-    .isString()
-    .withMessage('Recommendations must be a string'),
-
-  body('notes')
-    .optional({ checkFalsy: true })
-    .isString()
-    .withMessage('Notes must be a string'),
-  
   body('next_visit_date')
     .optional({ checkFalsy: true })
     .isISO8601()
     .withMessage('Next visit date must be a valid ISO 8601 date')
-];
-
-/**
- * Validation rules for adding measurements
- * Beta feature: All fields are optional - any combination can be recorded
- */
-const addMeasurementsValidation = [
-  body('weight_kg')
-    .optional({ checkFalsy: true })
-    .isFloat({ min: 1, max: 500 })
-    .withMessage('Weight must be between 1 and 500 kg'),
-  
-  body('height_cm')
-    .optional({ checkFalsy: true })
-    .isFloat({ min: 30, max: 300 })
-    .withMessage('Height must be between 30 and 300 cm'),
-  
-  body('bmi')
-    .optional({ checkFalsy: true })
-    .isFloat({ min: 10, max: 100 })
-    .withMessage('BMI must be between 10 and 100'),
-  
-  body('blood_pressure_systolic')
-    .optional({ checkFalsy: true })
-    .isInt({ min: 50, max: 300 })
-    .withMessage('Systolic blood pressure must be between 50 and 300 mmHg'),
-  
-  body('blood_pressure_diastolic')
-    .optional({ checkFalsy: true })
-    .isInt({ min: 30, max: 200 })
-    .withMessage('Diastolic blood pressure must be between 30 and 200 mmHg'),
-  
-  body('waist_circumference_cm')
-    .optional({ checkFalsy: true })
-    .isFloat({ min: 20, max: 300 })
-    .withMessage('Waist circumference must be between 20 and 300 cm'),
-  
-  body('body_fat_percentage')
-    .optional({ checkFalsy: true })
-    .isFloat({ min: 1, max: 80 })
-    .withMessage('Body fat percentage must be between 1 and 80%'),
-  
-  body('muscle_mass_percentage')
-    .optional({ checkFalsy: true })
-    .isFloat({ min: 10, max: 90 })
-    .withMessage('Muscle mass percentage must be between 10 and 90%'),
-  
-  body('notes')
-    .optional({ checkFalsy: true })
-    .isString()
-    .withMessage('Notes must be a string')
 ];
 
 /**
@@ -300,44 +215,6 @@ router.delete(
   visitController.deleteVisit
 );
 
-// POST /api/visits/:id/measurements - Add measurements to visit
-router.post(
-  '/:id/measurements',
-  authenticate,
-  requirePermission('visits.update'),
-  uuidParamValidation,
-  addMeasurementsValidation,
-  validate,
-  visitController.addMeasurements
-);
-
-// PUT /api/visits/:visitId/measurements/:measurementId - Update measurement
-router.put(
-  '/:visitId/measurements/:measurementId',
-  authenticate,
-  requirePermission('visits.update'),
-  [
-    param('visitId').isUUID().withMessage('Visit ID must be a valid UUID'),
-    param('measurementId').isUUID().withMessage('Measurement ID must be a valid UUID')
-  ],
-  addMeasurementsValidation,
-  validate,
-  visitController.updateMeasurement
-);
-
-// DELETE /api/visits/:visitId/measurements/:measurementId - Delete measurement
-router.delete(
-  '/:visitId/measurements/:measurementId',
-  authenticate,
-  requirePermission('visits.update'),
-  [
-    param('visitId').isUUID().withMessage('Visit ID must be a valid UUID'),
-    param('measurementId').isUUID().withMessage('Measurement ID must be a valid UUID')
-  ],
-  validate,
-  visitController.deleteMeasurement
-);
-
 // POST /api/visits/:id/finish-and-invoice - Complete visit and generate invoice with email
 router.post(
   '/:id/finish-and-invoice',
@@ -382,6 +259,17 @@ router.delete(
   ],
   validate,
   visitCustomFieldController.deleteVisitCustomField
+);
+
+// GET /api/visits/:visitId/email-logs - Get email logs related to a visit
+const emailLogController = require('../controllers/emailLogController');
+router.get(
+  '/:visitId/email-logs',
+  authenticate,
+  requirePermission('visits.read'),
+  [param('visitId').isUUID().withMessage('Visit ID must be a valid UUID')],
+  validate,
+  emailLogController.getVisitEmailLogs
 );
 
 module.exports = router;

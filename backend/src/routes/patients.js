@@ -352,4 +352,32 @@ router.delete(
   patientController.deletePatient
 );
 
+// =============================================
+// EMAIL LOG ROUTES
+// =============================================
+
+const emailLogController = require('../controllers/emailLogController');
+
+/**
+ * GET /api/patients/:patientId/email-logs - Get email logs for a patient
+ * Requires: patients.read permission
+ */
+router.get(
+  '/:patientId/email-logs',
+  authenticate,
+  requirePermission('patients.read'),
+  emailLogController.getPatientEmailLogs
+);
+
+/**
+ * GET /api/patients/:patientId/email-stats - Get email statistics for a patient
+ * Requires: patients.read permission
+ */
+router.get(
+  '/:patientId/email-stats',
+  authenticate,
+  requirePermission('patients.read'),
+  emailLogController.getPatientEmailStats
+);
+
 module.exports = router;

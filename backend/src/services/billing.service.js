@@ -145,7 +145,7 @@ async function getInvoiceById(invoiceId, user, requestMetadata = {}) {
         {
           model: Visit,
           as: 'visit',
-          attributes: ['id', 'visit_date', 'status', 'notes'],
+          attributes: ['id', 'visit_date', 'status', 'visit_type'],
           required: false
         },
         {
@@ -646,6 +646,8 @@ async function sendInvoiceEmail(invoiceId, user, requestMetadata = {}) {
         },
         patient: invoice.patient,
         user: user,
+        visitId: invoice.visit_id || null,
+        billingId: invoice.id,
         attachments: [
           {
             filename: `facture_${invoice.invoice_number}.pdf`,

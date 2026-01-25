@@ -74,7 +74,7 @@ const ExportModal = ({ show, onHide, dataType }) => {
   };
 
   return (
-    <Modal show={show} onHide={onHide} centered>
+    <Modal show={show} onHide={onHide} centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
           {t('common.export', 'Export')} {getDataTypeLabel()}

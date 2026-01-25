@@ -5,14 +5,15 @@
  */
 
 import { useState } from 'react';
-import { Button, Spinner, OverlayTrigger, Tooltip } from 'react-bootstrap';
-import { FaEnvelope } from 'react-icons/fa';
+import { Button, Spinner, OverlayTrigger, Tooltip, Alert } from 'react-bootstrap';
+import { FaEnvelope, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
 import appointmentReminderService from '../services/appointmentReminderService';
 
 const SendReminderButton = ({ visit, onReminderSent }) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState(null); // { type: 'success' | 'danger', text: string }
 
   // Determine if reminder can be sent
   const canSendReminder =
@@ -46,11 +47,18 @@ const SendReminderButton = ({ visit, onReminderSent }) => {
     }
 
     setLoading(true);
+    setMessage(null);
     try {
       const response = await appointmentReminderService.sendReminderManually(visit.id);
 
       // Show success message
-      alert(`✅ ${t('appointmentReminders.successMessage', { email: visit.patient.email })}`);
+      setMessage({
+        type: 'success',
+        text: t('appointmentReminders.successMessage', { email: visit.patient.email })
+      });
+
+      // Auto-hide after 5 seconds
+      setTimeout(() => setMessage(null), 5000);
 
       // Trigger callback to refresh visit data
       if (onReminderSent) {
@@ -61,46 +69,70 @@ const SendReminderButton = ({ visit, onReminderSent }) => {
 
       // Show error message
       const errorMessage = error.response?.data?.error || t('appointmentReminders.errorMessage');
-      alert(`❌ ${errorMessage}`);
+      setMessage({
+        type: 'danger',
+        text: errorMessage
+      });
+
+      // Auto-hide after 8 seconds
+      setTimeout(() => setMessage(null), 8000);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <OverlayTrigger
-      placement="top"
-      overlay={<Tooltip id={`reminder-tooltip-${visit?.id}`}>{getTooltipMessage()}</Tooltip>}
-    >
-      <span className="d-inline-block">
-        <Button
-          variant="outline-primary"
-          onClick={handleSendReminder}
-          disabled={!canSendReminder || loading}
-          style={{ pointerEvents: canSendReminder && !loading ? 'auto' : 'none' }}
+    <div className="d-inline-block">
+      {message && (
+        <Alert
+          variant={message.type}
+          dismissible
+          onClose={() => setMessage(null)}
+          className="mb-2 py-2 px-3"
+          style={{ fontSize: '0.9rem' }}
         >
-          {loading ? (
-            <>
-              <Spinner
-                as="span"
-                animation="border"
-                size="sm"
-                role="status"
-                aria-hidden="true"
-                className="me-1"
-              />
-              {t('appointmentReminders.sending')}
-            </>
+          {message.type === 'success' ? (
+            <FaCheckCircle className="me-2" />
           ) : (
-            <>
-              <FaEnvelope className="me-1" />
-              {t('appointmentReminders.sendReminder')}
-              {visit?.reminders_sent > 0 && ` (${t('appointmentReminders.remindersSent', { count: visit.reminders_sent })})`}
-            </>
+            <FaTimesCircle className="me-2" />
           )}
-        </Button>
-      </span>
-    </OverlayTrigger>
+          {message.text}
+        </Alert>
+      )}
+      <OverlayTrigger
+        placement="top"
+        overlay={<Tooltip id={`reminder-tooltip-${visit?.id}`}>{getTooltipMessage()}</Tooltip>}
+      >
+        <span className="d-inline-block">
+          <Button
+            variant="outline-primary"
+            onClick={handleSendReminder}
+            disabled={!canSendReminder || loading}
+            style={{ pointerEvents: canSendReminder && !loading ? 'auto' : 'none' }}
+          >
+            {loading ? (
+              <>
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  role="status"
+                  aria-hidden="true"
+                  className="me-1"
+                />
+                {t('appointmentReminders.sending')}
+              </>
+            ) : (
+              <>
+                <FaEnvelope className="me-1" />
+                {t('appointmentReminders.sendReminder')}
+                {visit?.reminders_sent > 0 && ` (${visit.reminders_sent})`}
+              </>
+            )}
+          </Button>
+        </span>
+      </OverlayTrigger>
+    </div>
   );
 };
 

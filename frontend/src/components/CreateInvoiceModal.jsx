@@ -161,7 +161,7 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="xl">
+    <Modal show={show} onHide={handleClose} size="xl" scrollable>
       <Modal.Header closeButton>
         <Modal.Title>{t('billing.createInvoice', 'Create Invoice')}</Modal.Title>
       </Modal.Header>

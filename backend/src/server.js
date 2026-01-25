@@ -136,6 +136,14 @@ app.use('/api/followups', followupsRoutes);
 const aiConfigRoutes = require('./routes/aiConfig');
 app.use('/api/ai-config', aiConfigRoutes);
 
+// AI Prompts routes (protected - Admin only for management)
+const aiPromptsRoutes = require('./routes/aiPrompts');
+app.use('/api/ai-prompts', aiPromptsRoutes);
+
+// Email logs routes (protected)
+const emailLogsRoutes = require('./routes/emailLogs');
+app.use('/api/email-logs', emailLogsRoutes);
+
 // Serve uploaded files (logos, signatures)
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 

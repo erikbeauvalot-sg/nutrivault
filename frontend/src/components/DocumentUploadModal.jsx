@@ -125,7 +125,7 @@ const DocumentUploadModal = ({
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="xl">
+    <Modal show={show} onHide={handleClose} size="xl" scrollable>
       <Modal.Header closeButton>
         <Modal.Title>{t('documents.uploadDocuments', 'Upload Documents')}</Modal.Title>
       </Modal.Header>

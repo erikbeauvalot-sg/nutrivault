@@ -58,7 +58,7 @@ const VisitEventModal = ({ show, onHide, event }) => {
   };
 
   return (
-    <Modal show={show} onHide={onHide} centered>
+    <Modal show={show} onHide={onHide} centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>{t('agenda.eventDetails')}</Modal.Title>
       </Modal.Header>

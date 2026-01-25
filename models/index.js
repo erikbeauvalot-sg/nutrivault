@@ -19,7 +19,6 @@ db.RolePermission = require('./RolePermission')(sequelize, DataTypes);
 db.Patient = require('./Patient')(sequelize, DataTypes);
 db.PatientTag = require('./PatientTag')(sequelize, DataTypes);
 db.Visit = require('./Visit')(sequelize, DataTypes);
-db.VisitMeasurement = require('./VisitMeasurement')(sequelize, DataTypes);
 db.Billing = require('./Billing')(sequelize, DataTypes);
 db.Payment = require('./Payment')(sequelize, DataTypes);
 db.InvoiceEmail = require('./InvoiceEmail')(sequelize, DataTypes);
@@ -43,6 +42,7 @@ db.SystemSetting = require('./SystemSetting')(sequelize, DataTypes);
 db.BillingTemplate = require('./BillingTemplate')(sequelize, DataTypes);
 db.BillingTemplateItem = require('./BillingTemplateItem')(sequelize, DataTypes);
 db.InvoiceCustomization = require('./InvoiceCustomization')(sequelize, DataTypes);
+db.AIPrompt = require('./AIPrompt')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -117,17 +117,6 @@ db.Visit.belongsTo(db.User, {
 db.User.hasMany(db.Visit, {
   foreignKey: 'dietitian_id',
   as: 'dietitian_visits'
-});
-
-// VisitMeasurement - Visit relationship
-// Beta feature: Changed from hasOne to hasMany to support measurement history
-db.VisitMeasurement.belongsTo(db.Visit, {
-  foreignKey: 'visit_id',
-  as: 'visit'
-});
-db.Visit.hasMany(db.VisitMeasurement, {
-  foreignKey: 'visit_id',
-  as: 'measurements'
 });
 
 // Billing - Patient relationship
@@ -488,6 +477,26 @@ db.User.hasMany(db.EmailLog, {
   as: 'sent_emails'
 });
 
+// EmailLog - Visit relationship
+db.EmailLog.belongsTo(db.Visit, {
+  foreignKey: 'visit_id',
+  as: 'visit'
+});
+db.Visit.hasMany(db.EmailLog, {
+  foreignKey: 'visit_id',
+  as: 'email_logs'
+});
+
+// EmailLog - Billing relationship
+db.EmailLog.belongsTo(db.Billing, {
+  foreignKey: 'billing_id',
+  as: 'billing'
+});
+db.Billing.hasMany(db.EmailLog, {
+  foreignKey: 'billing_id',
+  as: 'email_logs'
+});
+
 // BillingTemplate - BillingTemplateItem relationship
 db.BillingTemplate.hasMany(db.BillingTemplateItem, {
   foreignKey: 'billing_template_id',
@@ -517,6 +526,26 @@ db.InvoiceCustomization.belongsTo(db.User, {
 db.User.hasOne(db.InvoiceCustomization, {
   foreignKey: 'user_id',
   as: 'invoiceCustomization'
+});
+
+// AIPrompt - User (created_by) relationship
+db.AIPrompt.belongsTo(db.User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+db.User.hasMany(db.AIPrompt, {
+  foreignKey: 'created_by',
+  as: 'created_ai_prompts'
+});
+
+// AIPrompt - User (updated_by) relationship
+db.AIPrompt.belongsTo(db.User, {
+  foreignKey: 'updated_by',
+  as: 'updater'
+});
+db.User.hasMany(db.AIPrompt, {
+  foreignKey: 'updated_by',
+  as: 'updated_ai_prompts'
 });
 
 module.exports = db;

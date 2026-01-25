@@ -276,8 +276,8 @@ async function getPatientDetails(patientId, user, requestMetadata = {}) {
           required: false,
           include: [
             {
-              model: db.VisitMeasurement,
-              as: 'measurements',
+              model: db.PatientMeasure,
+              as: 'measures',
               required: false
             },
             {
@@ -290,7 +290,7 @@ async function getPatientDetails(patientId, user, requestMetadata = {}) {
       ],
       order: [
         [{ model: db.Visit, as: 'visits' }, 'visit_date', 'ASC'],
-        [{ model: db.Visit, as: 'visits' }, { model: db.VisitMeasurement, as: 'measurements' }, 'created_at', 'ASC']
+        [{ model: db.Visit, as: 'visits' }, { model: db.PatientMeasure, as: 'measures' }, 'created_at', 'ASC']
       ]
     });
 

@@ -121,7 +121,7 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
   };
 
   return (
-    <Modal show={show} onHide={handleClose} centered>
+    <Modal show={show} onHide={handleClose} centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
           ⚡ {t('patients.quickCreate', 'Quick Patient Creation')}

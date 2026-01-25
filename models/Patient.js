@@ -48,6 +48,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(20),
       allowNull: true
     },
+    language_preference: {
+      type: DataTypes.STRING(5),
+      allowNull: true,
+      defaultValue: 'fr',
+      comment: 'Patient preferred language for communications (fr, en, es, nl, de)'
+    },
     assigned_dietitian_id: {
       type: DataTypes.UUID,
       allowNull: true,

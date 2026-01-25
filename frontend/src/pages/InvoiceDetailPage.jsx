@@ -595,7 +595,7 @@ const InvoiceDetailPage = () => {
         </Card>
 
         {/* Change Payment Status Modal */}
-        <Modal show={showPaymentStatusModal} onHide={() => setShowPaymentStatusModal(false)} centered>
+        <Modal show={showPaymentStatusModal} onHide={() => setShowPaymentStatusModal(false)} centered scrollable>
           <Modal.Header closeButton>
             <Modal.Title>🔄 {t('billing.changePaymentStatus', 'Change Payment Status')}</Modal.Title>
           </Modal.Header>
@@ -678,7 +678,7 @@ const InvoiceDetailPage = () => {
         </Modal>
 
         {/* Change Status Modal */}
-        <Modal show={showStatusModal} onHide={() => setShowStatusModal(false)} centered>
+        <Modal show={showStatusModal} onHide={() => setShowStatusModal(false)} centered scrollable>
           <Modal.Header closeButton>
             <Modal.Title>🔄 {t('billing.changeStatus', 'Change Invoice Status')}</Modal.Title>
           </Modal.Header>

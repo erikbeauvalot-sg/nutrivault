@@ -33,10 +33,6 @@ const CreateVisitPage = () => {
     visit_type: '',
     duration_minutes: '',
     status: 'SCHEDULED',
-    chief_complaint: '',
-    assessment: '',
-    recommendations: '',
-    notes: '',
     next_visit_date: ''
   });
 
@@ -102,26 +98,56 @@ const CreateVisitPage = () => {
     setError(null);
   };
 
+  // Helper to extract date and time parts from datetime string
+  const extractDateTimeParts = (dateTimeStr) => {
+    if (!dateTimeStr) return { date: '', hour: '09', minute: '00' };
+    const [datePart, timePart] = dateTimeStr.split('T');
+    const [hour, minute] = (timePart || '09:00').split(':');
+    return { date: datePart || '', hour: hour || '09', minute: minute || '00' };
+  };
+
+  // Helper to combine date and time parts into datetime string
+  const combineDateTimeParts = (date, hour, minute) => {
+    if (!date) return '';
+    return `${date}T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+  };
+
+  // Handle date/time component changes
+  const handleDateTimeChange = (field, component, value) => {
+    const current = extractDateTimeParts(formData[field]);
+    let newDateTime;
+
+    if (component === 'date') {
+      newDateTime = combineDateTimeParts(value, current.hour, current.minute);
+    } else if (component === 'hour') {
+      newDateTime = combineDateTimeParts(current.date, value, current.minute);
+    } else if (component === 'minute') {
+      newDateTime = combineDateTimeParts(current.date, current.hour, value);
+    }
+
+    setFormData(prev => ({ ...prev, [field]: newDateTime }));
+    setError(null);
+  };
+
   const handleBack = () => {
     navigate('/visits');
   };
 
   const setToNow = () => {
     // Get current time in Paris timezone (Europe/Paris)
-    const nowInParis = new Date().toLocaleString('en-US', {
-      timeZone: 'Europe/Paris',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
+    const now = new Date();
+    const parisTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
 
-    // Parse the formatted string to create a proper datetime-local format (YYYY-MM-DDTHH:mm)
-    const [datePart, timePart] = nowInParis.split(', ');
-    const [month, day, year] = datePart.split('/');
-    const formattedNow = `${year}-${month}-${day}T${timePart}`;
+    const year = parisTime.getFullYear();
+    const month = String(parisTime.getMonth() + 1).padStart(2, '0');
+    const day = String(parisTime.getDate()).padStart(2, '0');
+    const hour = String(parisTime.getHours()).padStart(2, '0');
+
+    // Round minutes to nearest 15-minute interval
+    const minutes = parisTime.getMinutes();
+    const roundedMinutes = String(Math.round(minutes / 15) * 15 % 60).padStart(2, '0');
+
+    const formattedNow = `${year}-${month}-${day}T${hour}:${roundedMinutes}`;
 
     setFormData(prev => ({ ...prev, visit_date: formattedNow }));
   };
@@ -277,22 +303,44 @@ const CreateVisitPage = () => {
 
                           <Form.Group className="mb-3">
                             <Form.Label>{t('visits.visitDateTime')} *</Form.Label>
-                            <div className="d-flex gap-2">
+                            <div className="d-flex gap-2 align-items-center">
                               <Form.Control
-                                type="datetime-local"
-                                name="visit_date"
-                                value={formData.visit_date}
-                                onChange={handleInputChange}
+                                type="date"
+                                value={extractDateTimeParts(formData.visit_date).date}
+                                onChange={(e) => handleDateTimeChange('visit_date', 'date', e.target.value)}
                                 required
-                                className="flex-grow-1"
+                                style={{ flex: 2 }}
                               />
+                              <Form.Select
+                                value={extractDateTimeParts(formData.visit_date).hour}
+                                onChange={(e) => handleDateTimeChange('visit_date', 'hour', e.target.value)}
+                                required
+                                style={{ flex: 1 }}
+                              >
+                                {Array.from({ length: 24 }, (_, i) => (
+                                  <option key={i} value={String(i).padStart(2, '0')}>
+                                    {String(i).padStart(2, '0')}h
+                                  </option>
+                                ))}
+                              </Form.Select>
+                              <Form.Select
+                                value={extractDateTimeParts(formData.visit_date).minute}
+                                onChange={(e) => handleDateTimeChange('visit_date', 'minute', e.target.value)}
+                                required
+                                style={{ flex: 1 }}
+                              >
+                                <option value="00">00</option>
+                                <option value="15">15</option>
+                                <option value="30">30</option>
+                                <option value="45">45</option>
+                              </Form.Select>
                               <Button
                                 variant="outline-secondary"
                                 size="sm"
                                 onClick={setToNow}
                                 title={t('visits.setToNow', 'Set to current time (Paris)')}
                               >
-                                🕐 {t('visits.now', 'Maintenant')}
+                                🕐
                               </Button>
                             </div>
                           </Form.Group>
@@ -350,12 +398,37 @@ const CreateVisitPage = () => {
 
                           <Form.Group className="mb-3">
                             <Form.Label>{t('visits.nextVisitDate')}</Form.Label>
-                            <Form.Control
-                              type="datetime-local"
-                              name="next_visit_date"
-                              value={formData.next_visit_date}
-                              onChange={handleInputChange}
-                            />
+                            <div className="d-flex gap-2">
+                              <Form.Control
+                                type="date"
+                                value={extractDateTimeParts(formData.next_visit_date).date}
+                                onChange={(e) => handleDateTimeChange('next_visit_date', 'date', e.target.value)}
+                                style={{ flex: 2 }}
+                              />
+                              <Form.Select
+                                value={extractDateTimeParts(formData.next_visit_date).hour}
+                                onChange={(e) => handleDateTimeChange('next_visit_date', 'hour', e.target.value)}
+                                style={{ flex: 1 }}
+                                disabled={!extractDateTimeParts(formData.next_visit_date).date}
+                              >
+                                {Array.from({ length: 24 }, (_, i) => (
+                                  <option key={i} value={String(i).padStart(2, '0')}>
+                                    {String(i).padStart(2, '0')}h
+                                  </option>
+                                ))}
+                              </Form.Select>
+                              <Form.Select
+                                value={extractDateTimeParts(formData.next_visit_date).minute}
+                                onChange={(e) => handleDateTimeChange('next_visit_date', 'minute', e.target.value)}
+                                style={{ flex: 1 }}
+                                disabled={!extractDateTimeParts(formData.next_visit_date).date}
+                              >
+                                <option value="00">00</option>
+                                <option value="15">15</option>
+                                <option value="30">30</option>
+                                <option value="45">45</option>
+                              </Form.Select>
+                            </div>
                             <Form.Text className="text-muted">
                               {t('visits.scheduleFollowUp')}
                             </Form.Text>
@@ -366,67 +439,6 @@ const CreateVisitPage = () => {
                   </Row>
                 </Tab>
 
-                {/* Clinical Information Tab */}
-                <Tab eventKey="clinical" title={`🏥 ${t('visits.clinicalInformationTab')}`}>
-                  <Row>
-                    <Col md={12}>
-                      <Card className="mb-3">
-                        <Card.Header className="bg-success text-white">
-                          <h6 className="mb-0">{t('visits.clinicalDetails')}</h6>
-                        </Card.Header>
-                        <Card.Body>
-                          <Form.Group className="mb-3">
-                            <Form.Label>{t('visits.chiefComplaint')}</Form.Label>
-                            <Form.Control
-                              as="textarea"
-                              rows={3}
-                              name="chief_complaint"
-                              value={formData.chief_complaint}
-                              onChange={handleInputChange}
-                              placeholder={t('visits.patientMainConcerns')}
-                            />
-                          </Form.Group>
-
-                          <Form.Group className="mb-3">
-                            <Form.Label>{t('visits.assessment')}</Form.Label>
-                            <Form.Control
-                              as="textarea"
-                              rows={4}
-                              name="assessment"
-                              value={formData.assessment}
-                              onChange={handleInputChange}
-                              placeholder={t('visits.clinicalAssessmentFindings')}
-                            />
-                          </Form.Group>
-
-                          <Form.Group className="mb-3">
-                            <Form.Label>{t('visits.recommendations')}</Form.Label>
-                            <Form.Control
-                              as="textarea"
-                              rows={4}
-                              name="recommendations"
-                              value={formData.recommendations}
-                              onChange={handleInputChange}
-                              placeholder={t('visits.treatmentPlanRecommendations')}
-                            />
-                          </Form.Group>
-
-                          <Form.Group className="mb-3">
-                            <Form.Label>{t('patients.additionalNotes')}</Form.Label>
-                            <Form.Control
-                              as="textarea"
-                              rows={3}
-                              name="notes"
-                              value={formData.notes}
-                              onChange={handleInputChange}
-                              placeholder={t('visits.additionalVisitNotes')}
-                            />
-                          </Form.Group>
-                        </Card.Body>
-                      </Card>
-                    </Col>
-                  </Row>
-                </Tab>
               </Tabs>
 
               {/* Action Buttons */}

@@ -18,6 +18,7 @@ import LogMeasureModal from '../components/LogMeasureModal';
 import SendReminderButton from '../components/SendReminderButton';
 import GenerateFollowupModal from '../components/GenerateFollowupModal';
 import { getMeasuresByVisit, formatMeasureValue, getAllMeasureTranslations } from '../services/measureService';
+import VisitEmailHistory from '../components/VisitEmailHistory';
 
 const VisitDetailPage = () => {
   const { t, i18n } = useTranslation();
@@ -43,6 +44,10 @@ const VisitDetailPage = () => {
 
   // Follow-up modal state
   const [showFollowupModal, setShowFollowupModal] = useState(false);
+
+  // Email history refresh key - increment to force refresh
+  const [emailRefreshKey, setEmailRefreshKey] = useState(0);
+  const refreshEmailHistory = () => setEmailRefreshKey(prev => prev + 1);
 
   useEffect(() => {
     if (id && i18n.resolvedLanguage) {
@@ -166,8 +171,9 @@ const VisitDetailPage = () => {
         invoice: result.invoice
       });
 
-      // Refresh visit details
+      // Refresh visit details and email history
       await fetchVisitDetails();
+      refreshEmailHistory();
 
       // Close modal
       setShowFinishModal(false);
@@ -277,7 +283,7 @@ const VisitDetailPage = () => {
           <Col xs="auto" className="d-flex gap-2">
             <SendReminderButton
               visit={visit}
-              onReminderSent={fetchVisitDetails}
+              onReminderSent={() => { fetchVisitDetails(); refreshEmailHistory(); }}
             />
             {/* AI Follow-up button - only for completed visits with clinical notes */}
             {visit.status === 'COMPLETED' && visit.patient?.email && (
@@ -420,144 +426,8 @@ const VisitDetailPage = () => {
                 </Row>
               </Tab>
 
-              {/* Clinical Information Tab */}
-              <Tab eventKey="clinical" title={`🏥 ${t('visits.clinicalInformationTab')}`}>
-                <Row>
-                  <Col md={12}>
-                    <Card className="mb-3">
-                      <Card.Header className="bg-success text-white">
-                        <h6 className="mb-0">{t('visits.clinicalDetails')}</h6>
-                      </Card.Header>
-                      <Card.Body>
-                        {visit.chief_complaint && (
-                          <div className="mb-3">
-                            <strong>{t('visits.chiefComplaint')}:</strong>
-                            <div className="mt-2" style={{ whiteSpace: 'pre-wrap', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
-                              {visit.chief_complaint}
-                            </div>
-                          </div>
-                        )}
-
-                        {visit.assessment && (
-                          <div className="mb-3">
-                            <strong>{t('visits.assessment')}:</strong>
-                            <div className="mt-2" style={{ whiteSpace: 'pre-wrap', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
-                              {visit.assessment}
-                            </div>
-                          </div>
-                        )}
-
-                        {visit.recommendations && (
-                          <div className="mb-3">
-                            <strong>{t('visits.recommendations')}:</strong>
-                            <div className="mt-2" style={{ whiteSpace: 'pre-wrap', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
-                              {visit.recommendations}
-                            </div>
-                          </div>
-                        )}
-
-                        {visit.notes && (
-                          <div className="mb-3">
-                            <strong>{t('visits.notes')}:</strong>
-                            <div className="mt-2" style={{ whiteSpace: 'pre-wrap', backgroundColor: '#f8f9fa', padding: '10px', borderRadius: '4px' }}>
-                              {visit.notes}
-                            </div>
-                          </div>
-                        )}
-
-                        {!visit.chief_complaint && !visit.assessment && !visit.recommendations && !visit.notes && (
-                          <div className="text-muted fst-italic">{t('visits.noClinicalInfo')}</div>
-                        )}
-                      </Card.Body>
-                    </Card>
-                  </Col>
-                </Row>
-              </Tab>
-
-              {/* Measurements Tab */}
-              <Tab eventKey="measurements" title={`📏 ${t('visits.measurementsTab')} (${visit.measurements?.length || 0})`}>
-                <Row>
-                  <Col md={12}>
-                    {visit.measurements && visit.measurements.length > 0 ? (
-                      <div>
-                        <h6 className="mb-3">{t('visits.measurementsHistory')}</h6>
-                        {visit.measurements
-                          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-                          .map((measurement, index) => (
-                            <Card key={measurement.id} className="mb-3">
-                              <Card.Header className={index === 0 ? 'bg-primary text-white' : 'bg-secondary text-white'}>
-                                <div className="d-flex justify-content-between align-items-center">
-                                  <span>
-                                    {index === 0 && `🔵 ${t('visits.latestMeasurement')} - `}
-                                    {formatDateTime(measurement.created_at)}
-                                  </span>
-                                </div>
-                              </Card.Header>
-                              <Card.Body>
-                                <Row>
-                                  {measurement.weight_kg && (
-                                    <Col md={3} className="mb-2">
-                                      <strong>{t('visits.weight')}:</strong> {measurement.weight_kg} kg
-                                    </Col>
-                                  )}
-                                  {measurement.height_cm && (
-                                    <Col md={3} className="mb-2">
-                                      <strong>{t('visits.height')}:</strong> {measurement.height_cm} cm
-                                    </Col>
-                                  )}
-                                  {measurement.bmi && (
-                                    <Col md={3} className="mb-2">
-                                      <strong>BMI:</strong> {measurement.bmi}
-                                    </Col>
-                                  )}
-                                  {measurement.blood_pressure_systolic && measurement.blood_pressure_diastolic && (
-                                    <Col md={3} className="mb-2">
-                                      <strong>{t('visits.bloodPressure')}:</strong> {measurement.blood_pressure_systolic}/{measurement.blood_pressure_diastolic} mmHg
-                                    </Col>
-                                  )}
-                                  {measurement.waist_circumference_cm && (
-                                    <Col md={4} className="mb-2">
-                                      <strong>{t('visits.waistCircumference')}:</strong> {measurement.waist_circumference_cm} cm
-                                    </Col>
-                                  )}
-                                  {measurement.body_fat_percentage && (
-                                    <Col md={4} className="mb-2">
-                                      <strong>{t('visits.bodyFat')}:</strong> {measurement.body_fat_percentage}%
-                                    </Col>
-                                  )}
-                                  {measurement.muscle_mass_percentage && (
-                                    <Col md={4} className="mb-2">
-                                      <strong>{t('visits.muscleMass')}:</strong> {measurement.muscle_mass_percentage}%
-                                    </Col>
-                                  )}
-                                </Row>
-                                {measurement.notes && (
-                                  <div className="mt-2">
-                                    <strong>{t('visits.notes')}:</strong>
-                                    <div style={{ whiteSpace: 'pre-wrap' }}>{measurement.notes}</div>
-                                  </div>
-                                )}
-                              </Card.Body>
-                            </Card>
-                          ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-5">
-                        <h5 className="text-muted">{t('visits.noMeasurementsRecorded')}</h5>
-                        <p className="text-muted">{t('visits.measurementsCanBeAdded')}</p>
-                        {canEditVisit && (
-                          <Button variant="primary" onClick={handleEdit}>
-                            {t('visits.editVisitToAddMeasurements')}
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </Col>
-                </Row>
-              </Tab>
-
-              {/* Health Measures Tab - New Measures System */}
-              <Tab eventKey="health-measures" title={`📊 ${t('measures.healthMeasures', 'Health Measures')} (${measures.length})`}>
+              {/* Health Measures Tab */}
+              <Tab eventKey="measures" title={`📏 ${t('measures.healthMeasures', 'Measures')} (${measures.length})`}>
                 <Row className="mb-3">
                   <Col>
                     <div className="d-flex justify-content-between align-items-center">
@@ -597,30 +467,34 @@ const VisitDetailPage = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {measures.map(measure => (
-                        <tr key={measure.id}>
-                          <td>
-                            <strong>{measure.measureDefinition?.display_name || '-'}</strong>
-                            {measure.measureDefinition?.category && (
-                              <div className="mt-1">
-                                <Badge bg="light" text="dark" style={{ fontSize: '0.75rem' }}>
-                                  {measure.measureDefinition.category}
-                                </Badge>
-                              </div>
-                            )}
-                          </td>
-                          <td>
-                            <strong>
-                              {formatMeasureValue(measure, measure.measureDefinition)}
-                            </strong>
-                          </td>
-                          <td>{formatDateTime(measure.measured_at)}</td>
-                          <td>{measure.recorder?.username || '-'}</td>
-                          <td style={{ maxWidth: '200px', whiteSpace: 'pre-wrap' }}>
-                            {measure.notes || '-'}
-                          </td>
-                        </tr>
-                      ))}
+                      {measures.map(measure => {
+                        // Support both snake_case (from API) and camelCase (from translations)
+                        const measureDef = measure.measure_definition || measure.measureDefinition;
+                        return (
+                          <tr key={measure.id}>
+                            <td>
+                              <strong>{measureDef?.display_name || measureDef?.name || '-'}</strong>
+                              {measureDef?.category && (
+                                <div className="mt-1">
+                                  <Badge bg="light" text="dark" style={{ fontSize: '0.75rem' }}>
+                                    {measureDef.category}
+                                  </Badge>
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              <strong>
+                                {measure.formatted_value || formatMeasureValue(measure, measureDef) || '-'}
+                              </strong>
+                            </td>
+                            <td>{formatDateTime(measure.measured_at)}</td>
+                            <td>{measure.recorder?.username || '-'}</td>
+                            <td style={{ maxWidth: '200px', whiteSpace: 'pre-wrap' }}>
+                              {measure.notes || '-'}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </Table>
                 )}
@@ -723,6 +597,13 @@ const VisitDetailPage = () => {
                     </Card>
                   </Col>
                 </Row>
+
+                {/* Visit Email Communications */}
+                <Row className="mt-3">
+                  <Col>
+                    <VisitEmailHistory visitId={visit.id} refreshKey={emailRefreshKey} />
+                  </Col>
+                </Row>
               </Tab>
             </Tabs>
           </Card.Body>
@@ -809,7 +690,7 @@ const VisitDetailPage = () => {
             visit={visit}
             onSent={() => {
               setShowFollowupModal(false);
-              // Optionally show success notification
+              refreshEmailHistory();
             }}
           />
         )}

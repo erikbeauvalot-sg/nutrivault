@@ -16,6 +16,7 @@ import CustomFieldInput from '../components/CustomFieldInput';
 import CustomFieldDisplay from '../components/CustomFieldDisplay';
 import MeasureHistory from '../components/MeasureHistory';
 import MeasureComparison from '../components/MeasureComparison';
+import EmailHistory from '../components/EmailHistory';
 import customFieldService from '../services/customFieldService';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import { getBMICategory, calculateBMI } from '../utils/bmiUtils';
@@ -1008,34 +1009,35 @@ const PatientDetailPage = () => {
 
               {/* Administrative Tab */}
               {canEditPatient && (
-                <Tab eventKey="admin" title="Administrative">
-                  <Card>
+                <Tab eventKey="admin" title={t('patients.administrativeTab', 'Administratif')}>
+                  {/* Administrative Info Card */}
+                  <Card className="mb-4">
                     <Card.Header>
-                      <h5 className="mb-0">Administrative Information</h5>
+                      <h5 className="mb-0">{t('patients.administrativeInfo', 'Informations administratives')}</h5>
                     </Card.Header>
                     <Card.Body>
                       <Row>
                         <Col md={6}>
                           <Row>
-                            <Col sm={5}><strong>Assigned Dietitian:</strong></Col>
+                            <Col sm={5}><strong>{t('patients.assignedDietitian', 'Diététicien assigné')}:</strong></Col>
                             <Col sm={7}>
                               {patient.assigned_dietitian ? (
                                 `${patient.assigned_dietitian.first_name} ${patient.assigned_dietitian.last_name}`
-                              ) : 'Not assigned'}
+                              ) : t('patients.notAssigned', 'Non assigné')}
                             </Col>
                           </Row>
                           <Row className="mt-3">
-                            <Col sm={5}><strong>{t('patients.createdLabel', 'Created:')}</strong></Col>
+                            <Col sm={5}><strong>{t('patients.createdLabel', 'Créé le')}:</strong></Col>
                             <Col sm={7}>{formatDateTime(patient.created_at)}</Col>
                           </Row>
                           <Row className="mt-3">
-                            <Col sm={5}><strong>Last Updated:</strong></Col>
+                            <Col sm={5}><strong>{t('patients.lastUpdated', 'Mis à jour le')}:</strong></Col>
                             <Col sm={7}>{formatDateTime(patient.updated_at)}</Col>
                           </Row>
                         </Col>
                         <Col md={6}>
                           <Row>
-                            <Col sm={4}><strong>{t('patients.notes', 'Notes:')}</strong></Col>
+                            <Col sm={4}><strong>{t('patients.notes', 'Notes')}:</strong></Col>
                             <Col sm={8}>
                               {patient.notes ? (
                                 <div style={{ whiteSpace: 'pre-wrap' }}>{patient.notes}</div>
@@ -1046,6 +1048,9 @@ const PatientDetailPage = () => {
                       </Row>
                     </Card.Body>
                   </Card>
+
+                  {/* Email Communication History */}
+                  <EmailHistory patientId={id} />
                 </Tab>
               )}
 
@@ -1155,7 +1160,7 @@ const PatientDetailPage = () => {
 
 
         {/* Delete Permanently Modal */}
-        <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered>
+        <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered scrollable>
           <Modal.Header closeButton className="bg-danger text-white">
             <Modal.Title>⚠️ {t('gdpr.confirmDeleteTitle', 'Confirm Permanent Deletion')}</Modal.Title>
           </Modal.Header>

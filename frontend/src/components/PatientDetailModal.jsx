@@ -114,7 +114,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
 
   if (loading) {
     return (
-      <Modal show={show} onHide={onHide} size="xl">
+      <Modal show={show} onHide={onHide} size="xl" scrollable>
         <Modal.Header closeButton>
           <Modal.Title>{t('patients.loadingDetails')}</Modal.Title>
         </Modal.Header>
@@ -130,7 +130,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
 
   if (error) {
     return (
-      <Modal show={show} onHide={onHide} size="lg">
+      <Modal show={show} onHide={onHide} size="lg" scrollable>
         <Modal.Header closeButton>
           <Modal.Title>{t('patients.error')}</Modal.Title>
         </Modal.Header>
@@ -160,7 +160,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
   ) || [];
 
   return (
-    <Modal show={show} onHide={onHide} size="xl" className="patient-detail-modal">
+    <Modal show={show} onHide={onHide} size="xl" className="patient-detail-modal" scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
           👤 {patient.first_name} {patient.last_name}
