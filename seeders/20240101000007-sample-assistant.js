@@ -8,9 +8,20 @@ module.exports = {
     const bcrypt = require('bcryptjs');
     const { v4: uuidv4 } = require('uuid');
 
+    // Check if assistant already exists
+    const existingAssistant = await queryInterface.sequelize.query(
+      "SELECT COUNT(*) as count FROM users WHERE username = 'assistant' OR email = 'assistant@example.com'",
+      { type: Sequelize.QueryTypes.SELECT }
+    );
+
+    if (existingAssistant[0].count > 0) {
+      console.log('ℹ️  Sample assistant already exists, skipping seed');
+      return;
+    }
+
     // Get ASSISTANT role ID from roles table
     const roles = await queryInterface.sequelize.query(
-      'SELECT id FROM roles WHERE name = "ASSISTANT" LIMIT 1'
+      "SELECT id FROM roles WHERE name = 'ASSISTANT' LIMIT 1"
     );
 
     if (roles[0].length === 0) {
@@ -44,7 +55,7 @@ module.exports = {
 
   down: async (queryInterface, Sequelize) => {
     await queryInterface.sequelize.query(
-      'DELETE FROM users WHERE username = "assistant"'
+      "DELETE FROM users WHERE username = 'assistant'"
     );
   }
 };
