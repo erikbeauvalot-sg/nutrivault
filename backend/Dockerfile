@@ -2,6 +2,11 @@
 # Multi-stage build for optimized production image
 # Build context: project root
 
+# Build arguments for versioning
+ARG VERSION=latest
+ARG BUILD_DATE
+ARG GIT_COMMIT
+
 FROM node:20-alpine AS base
 
 # Install system dependencies
@@ -32,6 +37,22 @@ CMD ["npm", "run", "dev"]
 
 # Production stage
 FROM base AS production
+
+# Re-declare ARGs for this stage (ARGs don't persist across FROM)
+ARG VERSION=latest
+ARG BUILD_DATE
+ARG GIT_COMMIT
+
+# Add image labels for version tracking
+LABEL org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${GIT_COMMIT}" \
+      org.opencontainers.image.title="NutriVault Backend" \
+      org.opencontainers.image.description="NutriVault Backend API Server" \
+      org.opencontainers.image.vendor="NutriVault"
+
+# Expose version as environment variable for runtime access
+ENV APP_VERSION=${VERSION}
 
 # Copy backend application code
 COPY backend/src ./src

@@ -15,6 +15,11 @@ backend/data/*.db-wal
 *.sqlite
 *.sqlite3
 
+# Backups (keep .gitkeep)
+backups/*.db
+backups/*.db.gz
+backups/.last_version
+
 # Logs
 backend/logs/*.log
 *.log
