@@ -39,7 +39,7 @@ const MeasureHistory = ({ patientId }) => {
   const [chartData, setChartData] = useState([]);
   const [dateRange, setDateRange] = useState({
     start_date: getDefaultStartDate(),
-    end_date: new Date().toISOString().split('T')[0]
+    end_date: getDefaultEndDate()
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -63,6 +63,13 @@ const MeasureHistory = ({ patientId }) => {
   function getDefaultStartDate() {
     const date = new Date();
     date.setDate(date.getDate() - 90);
+    return date.toISOString().split('T')[0];
+  }
+
+  // Get default end date (tomorrow to include today's values)
+  function getDefaultEndDate() {
+    const date = new Date();
+    date.setDate(date.getDate() + 1);
     return date.toISOString().split('T')[0];
   }
 

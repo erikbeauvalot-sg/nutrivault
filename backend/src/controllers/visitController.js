@@ -146,14 +146,23 @@ exports.deleteVisit = async (req, res, next) => {
 
 /**
  * POST /api/visits/:id/finish-and-invoice - Complete visit and generate invoice with email
+ * Options in body:
+ *   - markCompleted: boolean (default: true) - Mark visit as COMPLETED
+ *   - generateInvoice: boolean (default: true) - Generate invoice automatically
+ *   - sendEmail: boolean (default: false) - Send invoice email to patient
  */
 exports.finishAndInvoice = async (req, res, next) => {
   try {
     const user = req.user;
     const visitId = req.params.id;
     const requestMetadata = getRequestMetadata(req);
+    const options = {
+      markCompleted: req.body.markCompleted !== false, // default true
+      generateInvoice: req.body.generateInvoice !== false, // default true
+      sendEmail: req.body.sendEmail === true // default false
+    };
 
-    const result = await visitService.finishAndInvoice(user, visitId, requestMetadata);
+    const result = await visitService.finishAndInvoice(user, visitId, options, requestMetadata);
 
     res.json({
       success: true,

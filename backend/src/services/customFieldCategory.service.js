@@ -39,7 +39,7 @@ async function getAllCategories(user, filters = {}, requestMetadata = {}) {
           as: 'field_definitions',
           where: { is_active: true },
           required: false,
-          attributes: ['id', 'field_name', 'field_label', 'field_type', 'is_required', 'display_order']
+          attributes: ['id', 'field_name', 'field_label', 'field_type', 'is_required', 'display_order', 'select_options', 'validation_rules', 'help_text']
         }
       ]
     });

@@ -17,6 +17,7 @@ const AlertsWidget = () => {
   const [error, setError] = useState(null);
   const [expandedSections, setExpandedSections] = useState({
     overdue_invoices: true,
+    overdue_visits: true,
     visits_without_notes: false,
     patients_followup: false
   });
@@ -181,6 +182,55 @@ const AlertsWidget = () => {
                   {alerts.overdue_invoices.length > 5 && (
                     <ListGroup.Item className="text-center text-muted small">
                       +{alerts.overdue_invoices.length - 5} {t('alerts.more', 'more')}
+                    </ListGroup.Item>
+                  )}
+                </ListGroup>
+              </div>
+            </Collapse>
+          </div>
+        )}
+
+        {/* Overdue Visits Section */}
+        {alerts.overdue_visits && alerts.overdue_visits.length > 0 && (
+          <div className="border-bottom">
+            <div
+              className="p-3 bg-light d-flex justify-content-between align-items-center"
+              style={{ cursor: 'pointer' }}
+              onClick={() => toggleSection('overdue_visits')}
+            >
+              <div>
+                <strong>⏰ {t('alerts.overdueVisits', 'Overdue Scheduled Visits')}</strong>
+                <Badge bg="danger" className="ms-2">{alerts.overdue_visits.length}</Badge>
+              </div>
+              <span>{expandedSections.overdue_visits ? '▼' : '▶'}</span>
+            </div>
+            <Collapse in={expandedSections.overdue_visits}>
+              <div>
+                <ListGroup variant="flush">
+                  {alerts.overdue_visits.slice(0, 5).map((alert, index) => (
+                    <ListGroup.Item key={index} className="d-flex justify-content-between align-items-start">
+                      <div className="flex-grow-1">
+                        <div className="d-flex align-items-center gap-2 mb-1">
+                          <span>{getSeverityIcon(alert.severity)}</span>
+                          <strong>{alert.patient_name}</strong>
+                          {alert.visit_type && <Badge bg="secondary">{alert.visit_type}</Badge>}
+                        </div>
+                        <div className="text-muted small">
+                          {t('alerts.overdueBy', 'Overdue by')} {alert.overdue_text}
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => handleAlertAction(alert)}
+                      >
+                        {t('alerts.updateVisit', 'Update')}
+                      </Button>
+                    </ListGroup.Item>
+                  ))}
+                  {alerts.overdue_visits.length > 5 && (
+                    <ListGroup.Item className="text-center text-muted small">
+                      +{alerts.overdue_visits.length - 5} {t('alerts.more', 'more')}
                     </ListGroup.Item>
                   )}
                 </ListGroup>

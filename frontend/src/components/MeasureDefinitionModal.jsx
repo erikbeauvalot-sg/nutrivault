@@ -9,26 +9,11 @@ import { Modal, Button, Form, Alert, Spinner, Card, Row, Col, Badge } from 'reac
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { useTranslation } from 'react-i18next';
 import { createMeasureDefinition, updateMeasureDefinition } from '../services/measureService';
 import FormulaValidator from './FormulaValidator';
 import FormulaPreviewModal from './FormulaPreviewModal';
 import FormulaTemplatesModal from './FormulaTemplatesModal';
-
-const MEASURE_TYPES = [
-  { value: 'numeric', label: 'Numeric' },
-  { value: 'text', label: 'Text' },
-  { value: 'boolean', label: 'Boolean (Yes/No)' },
-  { value: 'calculated', label: 'Calculated' }
-];
-
-const CATEGORIES = [
-  { value: 'vitals', label: 'Vitals' },
-  { value: 'lab_results', label: 'Lab Results' },
-  { value: 'symptoms', label: 'Symptoms' },
-  { value: 'anthropometric', label: 'Anthropometric' },
-  { value: 'lifestyle', label: 'Lifestyle' },
-  { value: 'other', label: 'Other' }
-];
 
 // Validation schema
 const measureSchema = yup.object().shape({
@@ -101,6 +86,7 @@ const measureSchema = yup.object().shape({
 });
 
 const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -110,6 +96,24 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
   const [dependencies, setDependencies] = useState([]);
 
   const isEditing = !!definition;
+
+  // Translated measure types
+  const MEASURE_TYPES = [
+    { value: 'numeric', label: t('measures.types.numeric', 'Numeric') },
+    { value: 'text', label: t('measures.types.text', 'Text') },
+    { value: 'boolean', label: t('measures.types.boolean', 'Boolean (Yes/No)') },
+    { value: 'calculated', label: t('measures.types.calculated', 'Calculated') }
+  ];
+
+  // Translated categories
+  const CATEGORIES = [
+    { value: 'vitals', label: t('measures.categories.vitals', 'Vitals') },
+    { value: 'lab_results', label: t('measures.categories.labResults', 'Lab Results') },
+    { value: 'symptoms', label: t('measures.categories.symptoms', 'Symptoms') },
+    { value: 'anthropometric', label: t('measures.categories.anthropometric', 'Anthropometric') },
+    { value: 'lifestyle', label: t('measures.categories.lifestyle', 'Lifestyle') },
+    { value: 'other', label: t('measures.categories.other', 'Other') }
+  ];
 
   const {
     register,
@@ -320,7 +324,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
     <Modal show={show} onHide={handleClose} size="lg" centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
-          {isEditing ? 'Edit Measure Definition' : 'Create Measure Definition'}
+          {isEditing ? t('measures.modal.editTitle', 'Edit Measure Definition') : t('measures.modal.createTitle', 'Create Measure Definition')}
         </Modal.Title>
       </Modal.Header>
 
@@ -333,20 +337,20 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
           )}
           {success && (
             <Alert variant="success">
-              Measure definition {isEditing ? 'updated' : 'created'} successfully!
+              {isEditing ? t('measures.modal.updateSuccess', 'Measure definition updated successfully!') : t('measures.modal.createSuccess', 'Measure definition created successfully!')}
             </Alert>
           )}
 
           {isEditing && definition?.is_system && (
             <Alert variant="info">
-              <strong>System Measure:</strong> This is a system-defined measure. Only display name, description, active status, validation ranges (min/max), and alert ranges can be modified.
+              <strong>{t('measures.modal.systemMeasure', 'System Measure')}:</strong> {t('measures.modal.systemMeasureInfo', 'This is a system-defined measure. Only display name, description, active status, validation ranges (min/max), and alert ranges can be modified.')}
             </Alert>
           )}
 
           <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Category *</Form.Label>
+                <Form.Label>{t('measures.category', 'Category')} *</Form.Label>
                 <Form.Select
                   {...register('category')}
                   isInvalid={!!errors.category}
@@ -364,7 +368,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
 
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Measure Type *</Form.Label>
+                <Form.Label>{t('measures.measureType', 'Measure Type')} *</Form.Label>
                 <Form.Select
                   {...register('measure_type')}
                   isInvalid={!!errors.measure_type}
@@ -384,12 +388,12 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
           </Row>
 
           <Form.Group className="mb-3">
-            <Form.Label>Name * <small className="text-muted">(Internal ID)</small></Form.Label>
+            <Form.Label>{t('measures.name', 'Name')} * <small className="text-muted">({t('measures.modal.internalId', 'Internal ID')})</small></Form.Label>
             <Form.Control
               type="text"
               {...register('name')}
               isInvalid={!!errors.name}
-              placeholder="e.g., blood_pressure_systolic"
+              placeholder={t('measures.modal.namePlaceholder', 'e.g., blood_pressure_systolic')}
               autoFocus
               disabled={isEditing && definition?.is_system}
             />
@@ -397,17 +401,17 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
               {errors.name?.message}
             </Form.Control.Feedback>
             <Form.Text className="text-muted">
-              Lowercase letters, numbers, and underscores only
+              {t('measures.modal.nameHelp', 'Lowercase letters, numbers, and underscores only')}
             </Form.Text>
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label>Display Name *</Form.Label>
+            <Form.Label>{t('measures.displayName', 'Display Name')} *</Form.Label>
             <Form.Control
               type="text"
               {...register('display_name')}
               isInvalid={!!errors.display_name}
-              placeholder="e.g., Blood Pressure (Systolic)"
+              placeholder={t('measures.modal.displayNamePlaceholder', 'e.g., Blood Pressure (Systolic)')}
             />
             <Form.Control.Feedback type="invalid">
               {errors.display_name?.message}
@@ -415,13 +419,13 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label>Description</Form.Label>
+            <Form.Label>{t('measures.description', 'Description')}</Form.Label>
             <Form.Control
               as="textarea"
               rows={2}
               {...register('description')}
               isInvalid={!!errors.description}
-              placeholder="Optional description of this measure"
+              placeholder={t('measures.modal.descriptionPlaceholder', 'Optional description of this measure')}
             />
             <Form.Control.Feedback type="invalid">
               {errors.description?.message}
@@ -431,17 +435,17 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
           {/* Conditional fields based on measure type */}
           {(selectedMeasureType === 'numeric' || selectedMeasureType === 'calculated') && (
             <Card className="mb-3">
-              <Card.Header>Numeric Configuration</Card.Header>
+              <Card.Header>{t('measures.modal.numericConfig', 'Numeric Configuration')}</Card.Header>
               <Card.Body>
                 <Row>
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Unit</Form.Label>
+                      <Form.Label>{t('measures.unit', 'Unit')}</Form.Label>
                       <Form.Control
                         type="text"
                         {...register('unit')}
                         isInvalid={!!errors.unit}
-                        placeholder="e.g., mmHg, kg, cm"
+                        placeholder={t('measures.modal.unitPlaceholder', 'e.g., mmHg, kg, cm')}
                         disabled={isEditing && definition?.is_system}
                       />
                       <Form.Control.Feedback type="invalid">
@@ -451,15 +455,15 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                   </Col>
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Decimal Places</Form.Label>
+                      <Form.Label>{t('measures.decimalPlaces', 'Decimal Places')}</Form.Label>
                       <Form.Select
                         {...register('decimal_places')}
                         isInvalid={!!errors.decimal_places}
                         disabled={isEditing && definition?.is_system}
                       >
-                        <option value="0">0 (Integer)</option>
+                        <option value="0">0 ({t('measures.modal.integer', 'Integer')})</option>
                         <option value="1">1</option>
-                        <option value="2">2 (Default)</option>
+                        <option value="2">2 ({t('measures.modal.default', 'Default')})</option>
                         <option value="3">3</option>
                         <option value="4">4</option>
                       </Form.Select>
@@ -475,13 +479,13 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                     <Row>
                       <Col md={6}>
                         <Form.Group className="mb-2">
-                          <Form.Label>Minimum Value <small className="text-muted">(Validation)</small></Form.Label>
+                          <Form.Label>{t('measures.minValue', 'Minimum Value')} <small className="text-muted">({t('measures.modal.validation', 'Validation')})</small></Form.Label>
                           <Form.Control
                             type="number"
                             step="any"
                             {...register('min_value')}
                             isInvalid={!!errors.min_value}
-                            placeholder="Optional minimum"
+                            placeholder={t('measures.modal.optionalMin', 'Optional minimum')}
                           />
                           <Form.Control.Feedback type="invalid">
                             {errors.min_value?.message}
@@ -490,13 +494,13 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                       </Col>
                       <Col md={6}>
                         <Form.Group className="mb-2">
-                          <Form.Label>Maximum Value <small className="text-muted">(Validation)</small></Form.Label>
+                          <Form.Label>{t('measures.maxValue', 'Maximum Value')} <small className="text-muted">({t('measures.modal.validation', 'Validation')})</small></Form.Label>
                           <Form.Control
                             type="number"
                             step="any"
                             {...register('max_value')}
                             isInvalid={!!errors.max_value}
-                            placeholder="Optional maximum"
+                            placeholder={t('measures.modal.optionalMax', 'Optional maximum')}
                           />
                           <Form.Control.Feedback type="invalid">
                             {errors.max_value?.message}
@@ -510,24 +514,24 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                     {/* Normal Ranges & Alerts Section */}
                     <div className="mb-2">
                       <div className="d-flex justify-content-between align-items-center mb-2">
-                        <h6 className="mb-0">Normal Ranges & Alerts</h6>
+                        <h6 className="mb-0">{t('measures.modal.normalRangesAlerts', 'Normal Ranges & Alerts')}</h6>
                         <Form.Check
                           type="switch"
-                          label="Enable Alerts"
+                          label={t('measures.modal.enableAlerts', 'Enable Alerts')}
                           {...register('enable_alerts')}
                         />
                       </div>
                       <Form.Text className="text-muted d-block mb-3">
-                        Define healthy ranges and critical thresholds to generate automatic alerts for out-of-range values.
+                        {t('measures.modal.rangesHelp', 'Define healthy ranges and critical thresholds to generate automatic alerts for out-of-range values.')}
                       </Form.Text>
                     </div>
 
                     <Row>
                       <Col md={6}>
                         <div className="mb-3">
-                          <Badge bg="success" className="mb-2">Normal/Healthy Range</Badge>
+                          <Badge bg="success" className="mb-2">{t('measures.modal.normalRange', 'Normal/Healthy Range')}</Badge>
                           <Form.Group className="mb-2">
-                            <Form.Label>Normal Min</Form.Label>
+                            <Form.Label>{t('measures.modal.normalMin', 'Normal Min')}</Form.Label>
                             <Form.Control
                               type="number"
                               step="any"
@@ -540,7 +544,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                             </Form.Control.Feedback>
                           </Form.Group>
                           <Form.Group className="mb-2">
-                            <Form.Label>Normal Max</Form.Label>
+                            <Form.Label>{t('measures.modal.normalMax', 'Normal Max')}</Form.Label>
                             <Form.Control
                               type="number"
                               step="any"
@@ -556,9 +560,9 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                       </Col>
                       <Col md={6}>
                         <div className="mb-3">
-                          <Badge bg="danger" className="mb-2">Critical Alert Thresholds</Badge>
+                          <Badge bg="danger" className="mb-2">{t('measures.modal.criticalThresholds', 'Critical Alert Thresholds')}</Badge>
                           <Form.Group className="mb-2">
-                            <Form.Label>Critical Min</Form.Label>
+                            <Form.Label>{t('measures.modal.criticalMin', 'Critical Min')}</Form.Label>
                             <Form.Control
                               type="number"
                               step="any"
@@ -571,7 +575,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                             </Form.Control.Feedback>
                           </Form.Group>
                           <Form.Group className="mb-2">
-                            <Form.Label>Critical Max</Form.Label>
+                            <Form.Label>{t('measures.modal.criticalMax', 'Critical Max')}</Form.Label>
                             <Form.Control
                               type="number"
                               step="any"
@@ -590,18 +594,18 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                     {/* Range Preview Visual */}
                     {(watch('normal_range_min') || watch('normal_range_max')) && (
                       <Alert variant="info" className="mb-0">
-                        <strong>Range Preview:</strong>
+                        <strong>{t('measures.modal.rangePreview', 'Range Preview')}:</strong>
                         <div className="d-flex gap-2 mt-2 flex-wrap">
                           {watch('alert_threshold_min') && (
-                            <Badge bg="danger">Critical Low (&lt; {watch('alert_threshold_min')})</Badge>
+                            <Badge bg="danger">{t('measures.modal.criticalLow', 'Critical Low')} (&lt; {watch('alert_threshold_min')})</Badge>
                           )}
-                          <Badge bg="warning" text="dark">Warning Low</Badge>
+                          <Badge bg="warning" text="dark">{t('measures.modal.warningLow', 'Warning Low')}</Badge>
                           <Badge bg="success">
-                            Normal ({watch('normal_range_min') || '?'} - {watch('normal_range_max') || '?'})
+                            {t('measures.modal.normal', 'Normal')} ({watch('normal_range_min') || '?'} - {watch('normal_range_max') || '?'})
                           </Badge>
-                          <Badge bg="warning" text="dark">Warning High</Badge>
+                          <Badge bg="warning" text="dark">{t('measures.modal.warningHigh', 'Warning High')}</Badge>
                           {watch('alert_threshold_max') && (
-                            <Badge bg="danger">Critical High (&gt; {watch('alert_threshold_max')})</Badge>
+                            <Badge bg="danger">{t('measures.modal.criticalHigh', 'Critical High')} (&gt; {watch('alert_threshold_max')})</Badge>
                           )}
                         </div>
                       </Alert>
@@ -616,19 +620,19 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
             <Card className="mb-3">
               <Card.Header>
                 <div className="d-flex justify-content-between align-items-center">
-                  <span>Formula Configuration</span>
+                  <span>{t('measures.modal.formulaConfig', 'Formula Configuration')}</span>
                   <Button
                     size="sm"
                     variant="outline-primary"
                     onClick={() => setShowTemplates(true)}
                   >
-                    📋 Templates
+                    📋 {t('measures.modal.templates', 'Templates')}
                   </Button>
                 </div>
               </Card.Header>
               <Card.Body>
                 <Form.Group className="mb-3">
-                  <Form.Label>Formula *</Form.Label>
+                  <Form.Label>{t('measures.modal.formula', 'Formula')} *</Form.Label>
                   <Form.Control
                     as="textarea"
                     rows={3}
@@ -641,10 +645,9 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                     {errors.formula?.message}
                   </Form.Control.Feedback>
                   <Form.Text className="text-muted">
-                    Use {'{measure_name}'} to reference measures.
-                    Time-series: {'{current:name}'}, {'{previous:name}'}, {'{delta:name}'}, {'{avg30:name}'}
+                    {t('measures.modal.formulaHelp', "Use {measure_name} to reference measures. Time-series: {current:name}, {previous:name}, {delta:name}, {avg30:name}")}
                     <br />
-                    Operators: +, -, *, /, ^. Functions: sqrt, abs, min, max, round
+                    {t('measures.modal.formulaOperators', 'Operators: +, -, *, /, ^. Functions: sqrt, abs, min, max, round')}
                   </Form.Text>
                 </Form.Group>
 
@@ -654,7 +657,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                 {/* Dependencies display */}
                 {dependencies.length > 0 && (
                   <Alert variant="info" className="mt-2 small mb-0">
-                    <strong>Dependencies:</strong>{' '}
+                    <strong>{t('measures.modal.dependencies', 'Dependencies')}:</strong>{' '}
                     {dependencies.map(dep => (
                       <Badge key={dep} bg="secondary" className="me-1">{dep}</Badge>
                     ))}
@@ -669,7 +672,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                     className="mt-2 p-0"
                     onClick={() => setShowPreview(true)}
                   >
-                    🔍 Preview Calculation
+                    🔍 {t('measures.modal.previewCalculation', 'Preview Calculation')}
                   </Button>
                 )}
               </Card.Body>
@@ -679,7 +682,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
           {selectedMeasureType === 'text' && (
             <Alert variant="info">
               <small>
-                <strong>Note:</strong> Text measures can store free-form text values.
+                <strong>{t('common.note', 'Note')}:</strong> {t('measures.modal.textNote', 'Text measures can store free-form text values.')}
               </small>
             </Alert>
           )}
@@ -687,7 +690,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
           {selectedMeasureType === 'boolean' && (
             <Alert variant="info">
               <small>
-                <strong>Note:</strong> Boolean measures store Yes/No values.
+                <strong>{t('common.note', 'Note')}:</strong> {t('measures.modal.booleanNote', 'Boolean measures store Yes/No values.')}
               </small>
             </Alert>
           )}
@@ -695,24 +698,24 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
           <Form.Group className="mb-3">
             <Form.Check
               type="checkbox"
-              label="Active"
+              label={t('measures.isActive', 'Active')}
               {...register('is_active')}
             />
             <Form.Text className="text-muted">
-              Inactive measures will not be available for logging
+              {t('measures.modal.activeHelp', 'Inactive measures will not be available for logging')}
             </Form.Text>
           </Form.Group>
         </Modal.Body>
 
         <Modal.Footer>
           <Button variant="secondary" onClick={handleClose} disabled={loading}>
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button variant="primary" type="submit" disabled={loading || success}>
             {loading ? (
               <Spinner animation="border" size="sm" />
             ) : (
-              isEditing ? 'Update Measure' : 'Create Measure'
+              isEditing ? t('measures.updateMeasure', 'Update Measure') : t('measures.createMeasure', 'Create Measure')
             )}
           </Button>
         </Modal.Footer>

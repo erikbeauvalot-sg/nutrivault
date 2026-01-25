@@ -26,7 +26,7 @@ module.exports = {
         email: 'john.smith@example.com',
         phone: '555-0101',
         assigned_dietitian_id: null,
-        is_active: true,
+        is_active: false,
         created_at: new Date(),
         updated_at: new Date()
       },
@@ -37,7 +37,7 @@ module.exports = {
         email: 'sarah.johnson@example.com',
         phone: '555-0102',
         assigned_dietitian_id: null,
-        is_active: true,
+        is_active: false,
         created_at: new Date(),
         updated_at: new Date()
       },
@@ -48,7 +48,7 @@ module.exports = {
         email: 'michael.brown@example.com',
         phone: '555-0103',
         assigned_dietitian_id: null,
-        is_active: true,
+        is_active: false,
         created_at: new Date(),
         updated_at: new Date()
       },
@@ -59,7 +59,7 @@ module.exports = {
         email: 'emily.davis@example.com',
         phone: '555-0104',
         assigned_dietitian_id: null,
-        is_active: true,
+        is_active: false,
         created_at: new Date(),
         updated_at: new Date()
       }

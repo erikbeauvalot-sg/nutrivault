@@ -44,7 +44,7 @@ module.exports = {
         last_name: 'Wilson',
         phone: '555-0201',
         role_id: dietitianRoleId,
-        is_active: true,
+        is_active: false,
         failed_login_attempts: 0,
         locked_until: null,
         created_at: new Date(),

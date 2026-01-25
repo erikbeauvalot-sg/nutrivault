@@ -46,12 +46,12 @@ const MeasuresPage = () => {
 
   // Define available categories
   const categories = [
-    { id: 'vitals', name: 'Vitals', icon: '💓' },
-    { id: 'lab_results', name: 'Lab Results', icon: '🧪' },
-    { id: 'anthropometric', name: 'Anthropometric', icon: '📏' },
-    { id: 'lifestyle', name: 'Lifestyle', icon: '🏃' },
-    { id: 'symptoms', name: 'Symptoms', icon: '🤒' },
-    { id: 'other', name: 'Other', icon: '📊' }
+    { id: 'vitals', name: t('measures.categories.vitals', 'Vitals'), icon: '💓' },
+    { id: 'lab_results', name: t('measures.categories.labResults', 'Lab Results'), icon: '🧪' },
+    { id: 'anthropometric', name: t('measures.categories.anthropometric', 'Anthropometric'), icon: '📏' },
+    { id: 'lifestyle', name: t('measures.categories.lifestyle', 'Lifestyle'), icon: '🏃' },
+    { id: 'symptoms', name: t('measures.categories.symptoms', 'Symptoms'), icon: '🤒' },
+    { id: 'other', name: t('measures.categories.other', 'Other'), icon: '📊' }
   ];
 
   // Redirect if not admin

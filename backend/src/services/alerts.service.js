@@ -26,6 +26,7 @@ async function getAlerts(user, requestMetadata = {}) {
   try {
     const alerts = {
       overdue_invoices: [],
+      overdue_visits: [],
       visits_without_notes: [],
       patients_followup: [],
       summary: {
@@ -71,7 +72,58 @@ async function getAlerts(user, requestMetadata = {}) {
       };
     });
 
-    // 2. Get completed visits without custom field values
+    // 2. Get overdue scheduled visits (scheduled but date passed by more than 30 minutes)
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const overdueVisits = await Visit.findAll({
+      where: {
+        status: 'SCHEDULED',
+        visit_date: {
+          [Op.lt]: thirtyMinutesAgo
+        }
+      },
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name'],
+          where: { is_active: true },
+          required: true
+        }
+      ],
+      order: [['visit_date', 'DESC']],
+      limit: 50
+    });
+
+    alerts.overdue_visits = overdueVisits.map(visit => {
+      const minutesOverdue = Math.floor((new Date() - new Date(visit.visit_date)) / (1000 * 60));
+      const hoursOverdue = Math.floor(minutesOverdue / 60);
+      const daysOverdue = Math.floor(hoursOverdue / 24);
+
+      let overdueText;
+      if (daysOverdue > 0) {
+        overdueText = `${daysOverdue} day${daysOverdue > 1 ? 's' : ''}`;
+      } else if (hoursOverdue > 0) {
+        overdueText = `${hoursOverdue} hour${hoursOverdue > 1 ? 's' : ''}`;
+      } else {
+        overdueText = `${minutesOverdue} minute${minutesOverdue > 1 ? 's' : ''}`;
+      }
+
+      return {
+        type: 'OVERDUE_VISIT',
+        severity: daysOverdue >= 1 ? 'critical' : 'warning',
+        visit_id: visit.id,
+        patient_id: visit.patient_id,
+        patient_name: `${visit.patient.first_name} ${visit.patient.last_name}`,
+        visit_date: visit.visit_date,
+        visit_type: visit.visit_type,
+        minutes_overdue: minutesOverdue,
+        overdue_text: overdueText,
+        message: `Scheduled visit overdue by ${overdueText}`,
+        action: 'edit_visit'
+      };
+    });
+
+    // 3. Get completed visits without custom field values
     // First, get all completed visits
     const completedVisits = await Visit.findAll({
       where: {
@@ -212,15 +264,19 @@ async function getAlerts(user, requestMetadata = {}) {
     alerts.patients_followup = Array.from(followupMap.values());
 
     // Calculate summary
-    const criticalCount = alerts.overdue_invoices.filter(a => a.severity === 'critical').length;
+    const criticalCount =
+      alerts.overdue_invoices.filter(a => a.severity === 'critical').length +
+      alerts.overdue_visits.filter(a => a.severity === 'critical').length;
     const warningCount =
       alerts.overdue_invoices.filter(a => a.severity === 'warning').length +
+      alerts.overdue_visits.filter(a => a.severity === 'warning').length +
       alerts.visits_without_notes.length +
       alerts.patients_followup.filter(a => a.severity === 'warning').length;
 
     alerts.summary = {
       total_count:
         alerts.overdue_invoices.length +
+        alerts.overdue_visits.length +
         alerts.visits_without_notes.length +
         alerts.patients_followup.length,
       critical_count: criticalCount,

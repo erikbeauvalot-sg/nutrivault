@@ -65,12 +65,16 @@ export const deleteVisit = async (id) => {
 
 /**
  * Finish visit and generate invoice with email
- * Completes the visit, auto-generates invoice, and sends email to patient
+ * Completes the visit, auto-generates invoice, and optionally sends email to patient
  * @param {string} id - Visit UUID
+ * @param {Object} options - Options for the action
+ * @param {boolean} options.markCompleted - Mark visit as COMPLETED (default: true)
+ * @param {boolean} options.generateInvoice - Generate invoice automatically (default: true)
+ * @param {boolean} options.sendEmail - Send invoice email to patient (default: false)
  * @returns {Promise} API response with visit, invoice, and email status
  */
-export const finishAndInvoice = async (id) => {
-  const response = await api.post(`/api/visits/${id}/finish-and-invoice`);
+export const finishAndInvoice = async (id, options = {}) => {
+  const response = await api.post(`/api/visits/${id}/finish-and-invoice`, options);
   return response;
 };
 

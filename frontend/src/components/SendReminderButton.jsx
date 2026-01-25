@@ -108,7 +108,7 @@ const SendReminderButton = ({ visit, onReminderSent }) => {
             variant="outline-primary"
             onClick={handleSendReminder}
             disabled={!canSendReminder || loading}
-            style={{ pointerEvents: canSendReminder && !loading ? 'auto' : 'none' }}
+            style={{ pointerEvents: canSendReminder && !loading ? 'auto' : 'none', whiteSpace: 'nowrap', border: '1px solid' }}
           >
             {loading ? (
               <>

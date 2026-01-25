@@ -32,7 +32,7 @@ const MeasureComparison = ({ patientId }) => {
   const [comparisonData, setComparisonData] = useState(null);
   const [dateRange, setDateRange] = useState({
     start_date: getDefaultStartDate(),
-    end_date: new Date().toISOString().split('T')[0]
+    end_date: getDefaultEndDate()
   });
   const [normalizeView, setNormalizeView] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -42,6 +42,13 @@ const MeasureComparison = ({ patientId }) => {
   function getDefaultStartDate() {
     const date = new Date();
     date.setDate(date.getDate() - 180);
+    return date.toISOString().split('T')[0];
+  }
+
+  // Get default end date (tomorrow to include today's values)
+  function getDefaultEndDate() {
+    const date = new Date();
+    date.setDate(date.getDate() + 1);
     return date.toISOString().split('T')[0];
   }
 

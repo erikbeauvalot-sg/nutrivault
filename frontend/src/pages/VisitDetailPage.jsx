@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Container, Row, Col, Card, Tab, Tabs, Button, Badge, Alert, Spinner, Modal, Table } from 'react-bootstrap';
+import { Container, Row, Col, Card, Tab, Tabs, Button, Badge, Alert, Spinner, Modal, Table, Form } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
@@ -33,6 +33,16 @@ const VisitDetailPage = () => {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [finishingVisit, setFinishingVisit] = useState(false);
   const [finishSuccess, setFinishSuccess] = useState(null);
+  // Finish modal options
+  const [finishOptions, setFinishOptions] = useState({
+    markCompleted: true,
+    generateInvoice: true,
+    sendEmail: false
+  });
+  // Cancel modal state
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancellingVisit, setCancellingVisit] = useState(false);
+  const [cancelReason, setCancelReason] = useState('CANCEL'); // Default: CANCEL
   const [customFieldCategories, setCustomFieldCategories] = useState([]);
   const [fieldValues, setFieldValues] = useState({});
 
@@ -161,12 +171,12 @@ const VisitDetailPage = () => {
       setFinishingVisit(true);
       setError(null);
 
-      const response = await visitService.finishAndInvoice(id);
+      const response = await visitService.finishAndInvoice(id, finishOptions);
       const result = response.data.data || response.data;
 
-      // Show success message
+      // Show success message with actions taken
       setFinishSuccess({
-        message: result.message,
+        actions: result.actions || {},
         emailSent: result.emailSent,
         invoice: result.invoice
       });
@@ -183,6 +193,31 @@ const VisitDetailPage = () => {
       setShowFinishModal(false);
     } finally {
       setFinishingVisit(false);
+    }
+  };
+
+  const handleCancelVisit = async () => {
+    try {
+      setCancellingVisit(true);
+      setError(null);
+
+      // Determine status based on reason
+      const newStatus = cancelReason === 'NO_SHOW' ? 'NO_SHOW' : 'CANCELLED';
+
+      await visitService.updateVisit(id, { status: newStatus });
+
+      // Refresh visit details
+      await fetchVisitDetails();
+
+      // Close modal and reset
+      setShowCancelModal(false);
+      setCancelReason('CANCEL');
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || t('visits.cancelError'));
+      console.error('Error cancelling visit:', err);
+      setShowCancelModal(false);
+    } finally {
+      setCancellingVisit(false);
     }
   };
 
@@ -210,6 +245,33 @@ const VisitDetailPage = () => {
       NO_SHOW: t('visits.noShow')
     };
     return <Badge bg={variants[status] || 'secondary'}>{statusText[status] || status}</Badge>;
+  };
+
+  // Check if visit is overdue (scheduled but past by more than 30 minutes)
+  const isVisitOverdue = () => {
+    if (!visit || visit.status !== 'SCHEDULED') return false;
+    const visitDate = new Date(visit.visit_date);
+    const now = new Date();
+    const diffMinutes = (now - visitDate) / (1000 * 60);
+    return diffMinutes > 30;
+  };
+
+  // Get how long the visit is overdue
+  const getOverdueTime = () => {
+    if (!visit) return '';
+    const visitDate = new Date(visit.visit_date);
+    const now = new Date();
+    const diffMinutes = Math.floor((now - visitDate) / (1000 * 60));
+
+    if (diffMinutes < 60) {
+      return t('visits.overdueMinutes', { count: diffMinutes });
+    }
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) {
+      return t('visits.overdueHours', { count: diffHours });
+    }
+    const diffDays = Math.floor(diffHours / 24);
+    return t('visits.overdueDays', { count: diffDays });
   };
 
   // Check permissions
@@ -280,7 +342,8 @@ const VisitDetailPage = () => {
               </span>
             </div>
           </Col>
-          <Col xs="auto" className="d-flex gap-2">
+          <Col xs="auto" className="d-flex gap-2 align-items-start flex-nowrap" style={{ marginTop: '4.5rem' }}>
+            {/* 1) Envoyer un mail */}
             <SendReminderButton
               visit={visit}
               onReminderSent={() => { fetchVisitDetails(); refreshEmailHistory(); }}
@@ -291,26 +354,50 @@ const VisitDetailPage = () => {
                 variant="outline-info"
                 onClick={() => setShowFollowupModal(true)}
                 title={t('followup.generateFollowupTooltip')}
+                style={{ whiteSpace: 'nowrap', border: '1px solid' }}
               >
                 🤖 {t('followup.generateFollowup')}
               </Button>
             )}
-            {canFinishVisit && (
-              <Button
-                variant="success"
-                onClick={() => setShowFinishModal(true)}
-                disabled={finishingVisit}
-              >
-                ✅ {t('visits.finishAndInvoice')}
+            {/* 2) Modifier */}
+            {canEditVisit && (
+              <Button variant="outline-primary" onClick={handleEdit} style={{ whiteSpace: 'nowrap', border: '1px solid' }}>
+                ✏️ {t('visits.editVisit')}
               </Button>
             )}
-            {canEditVisit && (
-              <Button variant="primary" onClick={handleEdit}>
-                {t('visits.editVisit')}
-              </Button>
+            {/* 3) Terminer & 4) Annuler */}
+            {canFinishVisit && (
+              <>
+                <Button
+                  variant="outline-success"
+                  onClick={() => setShowFinishModal(true)}
+                  disabled={finishingVisit}
+                  style={{ whiteSpace: 'nowrap', border: '1px solid' }}
+                >
+                  ✅ {t('visits.finishAndInvoice')}
+                </Button>
+                <Button
+                  variant="outline-danger"
+                  onClick={() => setShowCancelModal(true)}
+                  disabled={cancellingVisit}
+                  style={{ whiteSpace: 'nowrap', border: '1px solid' }}
+                >
+                  ❌ {t('visits.cancelVisit')}
+                </Button>
+              </>
             )}
           </Col>
         </Row>
+
+        {/* Overdue Visit Alert */}
+        {isVisitOverdue() && (
+          <Alert variant="warning" className="mb-4">
+            <Alert.Heading>⚠️ {t('visits.overdueAlertTitle')}</Alert.Heading>
+            <p className="mb-0">
+              {t('visits.overdueAlertMessage', { time: getOverdueTime() })}
+            </p>
+          </Alert>
+        )}
 
         {/* Success Alert */}
         {finishSuccess && (
@@ -320,18 +407,24 @@ const VisitDetailPage = () => {
             onClose={() => setFinishSuccess(null)}
             className="mb-4"
           >
-            <Alert.Heading>✅ {t('visits.visitCompleted')}</Alert.Heading>
-            <p>{finishSuccess.message}</p>
-            {finishSuccess.emailSent && (
-              <p className="mb-0">
-                📧 {t('visits.invoiceEmailSent')}
-              </p>
-            )}
-            {!finishSuccess.emailSent && finishSuccess.invoice && (
-              <p className="mb-0 text-warning">
-                ⚠️ {t('visits.invoiceCreatedNoEmail')}
-              </p>
-            )}
+            <Alert.Heading>✅ {t('visits.actionsCompleted')}</Alert.Heading>
+            <ul className="mb-0">
+              {finishSuccess.actions?.markCompleted && (
+                <li>✅ {t('visits.actionVisitCompleted')}</li>
+              )}
+              {finishSuccess.actions?.generateInvoice && (
+                <li>✅ {t('visits.actionInvoiceGenerated')}</li>
+              )}
+              {finishSuccess.actions?.sendEmailRequested && finishSuccess.emailSent && (
+                <li>✅ {t('visits.actionEmailSent')}</li>
+              )}
+              {finishSuccess.actions?.sendEmailRequested && !finishSuccess.emailSent && !finishSuccess.actions?.patientHasEmail && (
+                <li className="text-warning">⚠️ {t('visits.actionEmailFailedNoAddress')}</li>
+              )}
+              {finishSuccess.actions?.sendEmailRequested && !finishSuccess.emailSent && finishSuccess.actions?.patientHasEmail && (
+                <li className="text-warning">⚠️ {t('visits.actionEmailFailed')}</li>
+              )}
+            </ul>
           </Alert>
         )}
 
@@ -624,21 +717,44 @@ const VisitDetailPage = () => {
             <Alert variant="info" className="mb-3">
               <strong>{t('visits.finishAndInvoiceConfirmTitle')}</strong>
             </Alert>
-            <p>{t('visits.finishAndInvoiceConfirmMessage')}</p>
-            <ul>
-              <li>{t('visits.finishAndInvoiceStep1')}</li>
-              <li>{t('visits.finishAndInvoiceStep2')}</li>
-              {visit?.patient?.email && (
-                <li>{t('visits.finishAndInvoiceStep3')}</li>
-              )}
+            <p>{t('visits.finishAndInvoiceSelectActions')}</p>
+
+            <Form>
+              <Form.Check
+                type="checkbox"
+                id="finish-mark-completed"
+                label={t('visits.finishAndInvoiceStep1')}
+                checked={finishOptions.markCompleted}
+                onChange={(e) => setFinishOptions(prev => ({ ...prev, markCompleted: e.target.checked }))}
+                className="mb-2"
+              />
+              <Form.Check
+                type="checkbox"
+                id="finish-generate-invoice"
+                label={t('visits.finishAndInvoiceStep2')}
+                checked={finishOptions.generateInvoice}
+                onChange={(e) => setFinishOptions(prev => ({ ...prev, generateInvoice: e.target.checked }))}
+                className="mb-2"
+              />
+              <Form.Check
+                type="checkbox"
+                id="finish-send-email"
+                label={t('visits.finishAndInvoiceStep3')}
+                checked={finishOptions.sendEmail}
+                onChange={(e) => setFinishOptions(prev => ({ ...prev, sendEmail: e.target.checked }))}
+                disabled={!visit?.patient?.email}
+                className="mb-2"
+              />
               {!visit?.patient?.email && (
-                <li className="text-warning">
+                <Alert variant="warning" className="mt-2 py-2">
                   ⚠️ {t('visits.finishAndInvoiceNoEmail')}
-                </li>
+                </Alert>
               )}
-            </ul>
-            <p className="mb-0">
-              <strong>{t('visits.finishAndInvoiceContinue')}</strong>
+            </Form>
+
+            <hr />
+            <p className="mb-0 text-muted">
+              <small>{t('visits.finishAndInvoiceContinue')}</small>
             </p>
           </Modal.Body>
           <Modal.Footer>
@@ -652,7 +768,7 @@ const VisitDetailPage = () => {
             <Button
               variant="success"
               onClick={handleFinishAndInvoice}
-              disabled={finishingVisit}
+              disabled={finishingVisit || (!finishOptions.markCompleted && !finishOptions.generateInvoice && !finishOptions.sendEmail)}
             >
               {finishingVisit ? (
                 <>
@@ -661,7 +777,81 @@ const VisitDetailPage = () => {
                 </>
               ) : (
                 <>
-                  ✅ {t('visits.finishAndInvoice')}
+                  ✅ {t('visits.confirmActions')}
+                </>
+              )}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Cancel Visit Modal */}
+        <Modal
+          show={showCancelModal}
+          onHide={() => setShowCancelModal(false)}
+          centered
+        >
+          <Modal.Header closeButton>
+            <Modal.Title>
+              ❌ {t('visits.cancelVisit')}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Alert variant="warning" className="mb-3">
+              <strong>{t('visits.cancelVisitConfirmTitle')}</strong>
+            </Alert>
+            <p>{t('visits.cancelVisitSelectReason')}</p>
+
+            <Form>
+              <Form.Check
+                type="radio"
+                name="cancelReason"
+                id="cancel-reason-cancel"
+                label={t('visits.cancelReasonCancel')}
+                checked={cancelReason === 'CANCEL'}
+                onChange={() => setCancelReason('CANCEL')}
+                className="mb-2"
+              />
+              <Form.Check
+                type="radio"
+                name="cancelReason"
+                id="cancel-reason-noshow"
+                label={t('visits.cancelReasonNoShow')}
+                checked={cancelReason === 'NO_SHOW'}
+                onChange={() => setCancelReason('NO_SHOW')}
+                className="mb-2"
+              />
+              <Form.Check
+                type="radio"
+                name="cancelReason"
+                id="cancel-reason-other"
+                label={t('visits.cancelReasonOther')}
+                checked={cancelReason === 'OTHER'}
+                onChange={() => setCancelReason('OTHER')}
+                className="mb-2"
+              />
+            </Form>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button
+              variant="secondary"
+              onClick={() => setShowCancelModal(false)}
+              disabled={cancellingVisit}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleCancelVisit}
+              disabled={cancellingVisit}
+            >
+              {cancellingVisit ? (
+                <>
+                  <Spinner animation="border" size="sm" className="me-2" />
+                  {t('visits.cancelling')}
+                </>
+              ) : (
+                <>
+                  ❌ {t('visits.confirmCancel')}
                 </>
               )}
             </Button>

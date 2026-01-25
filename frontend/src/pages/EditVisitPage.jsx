@@ -5,13 +5,15 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Container, Row, Col, Card, Tab, Tabs, Button, Form, Alert, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Card, Tab, Tabs, Button, Form, Alert, Spinner, Badge } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import visitService from '../services/visitService';
 import visitCustomFieldService from '../services/visitCustomFieldService';
 import userService from '../services/userService';
+import { getMeasureDefinitions, getMeasuresByVisit, logPatientMeasure, getAllMeasureTranslations } from '../services/measureService';
+import { fetchMeasureTranslations } from '../utils/measureTranslations';
 import CustomFieldInput from '../components/CustomFieldInput';
 
 const EditVisitPage = () => {
@@ -41,11 +43,19 @@ const EditVisitPage = () => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [dietitians, setDietitians] = useState([]);
 
+  // Measures state
+  const [measureDefinitions, setMeasureDefinitions] = useState([]);
+  const [measureTranslations, setMeasureTranslations] = useState({});
+  const [measureValues, setMeasureValues] = useState({});
+  const [existingMeasureIds, setExistingMeasureIds] = useState({});
+
   useEffect(() => {
     if (i18n.resolvedLanguage) {
       fetchVisitData();
       fetchCustomFields();
       fetchDietitians();
+      fetchMeasureDefinitions();
+      fetchExistingMeasures();
     }
   }, [id, i18n.resolvedLanguage]);
 
@@ -168,6 +178,87 @@ const EditVisitPage = () => {
     });
   };
 
+  const fetchMeasureDefinitions = async () => {
+    try {
+      const data = await getMeasureDefinitions({ is_active: true });
+      setMeasureDefinitions(data || []);
+
+      // Fetch translations for all measure definitions
+      if (data && data.length > 0) {
+        const measureIds = data.map(m => m.id);
+        const translations = await fetchMeasureTranslations(measureIds, getAllMeasureTranslations);
+        setMeasureTranslations(translations);
+      }
+    } catch (err) {
+      console.error('Error fetching measure definitions:', err);
+    }
+  };
+
+  // Get translated display name for a measure
+  const getTranslatedMeasureName = (definition) => {
+    const currentLang = i18n.language || 'fr';
+    const translations = measureTranslations[definition.id]?.[currentLang];
+    return translations?.display_name || definition.display_name || definition.name;
+  };
+
+  // Get translated unit for a measure
+  const getTranslatedMeasureUnit = (definition) => {
+    const currentLang = i18n.language || 'fr';
+    const translations = measureTranslations[definition.id]?.[currentLang];
+    return translations?.unit || definition.unit;
+  };
+
+  const fetchExistingMeasures = async () => {
+    try {
+      const measures = await getMeasuresByVisit(id);
+      // Build a map of definition_id -> value and track existing measure IDs
+      const values = {};
+      const existingIds = {};
+      (measures || []).forEach(m => {
+        const defId = m.measure_definition_id;
+        // Store the appropriate value based on type
+        if (m.numeric_value !== null) {
+          values[defId] = m.numeric_value;
+        } else if (m.text_value !== null) {
+          values[defId] = m.text_value;
+        } else if (m.boolean_value !== null) {
+          values[defId] = m.boolean_value;
+        }
+        existingIds[defId] = m.id;
+      });
+      setMeasureValues(values);
+      setExistingMeasureIds(existingIds);
+    } catch (err) {
+      console.error('Error fetching existing measures:', err);
+    }
+  };
+
+  const handleMeasureChange = (definitionId, value) => {
+    setMeasureValues(prev => ({
+      ...prev,
+      [definitionId]: value
+    }));
+  };
+
+  // Group measure definitions by category
+  const groupedMeasures = measureDefinitions.reduce((acc, def) => {
+    const category = def.category || 'other';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(def);
+    return acc;
+  }, {});
+
+  const measureCategoryLabels = {
+    vitals: t('measures.categories.vitals', 'Vitals'),
+    anthropometric: t('measures.categories.anthropometric', 'Anthropometric'),
+    lab_results: t('measures.categories.labResults', 'Lab Results'),
+    symptoms: t('measures.categories.symptoms', 'Symptoms'),
+    lifestyle: t('measures.categories.lifestyle', 'Lifestyle'),
+    other: t('measures.categories.other', 'Other')
+  };
+
   const handleBack = () => {
     navigate('/visits');
   };
@@ -230,7 +321,50 @@ const EditVisitPage = () => {
         }
       }
 
-      navigate('/visits');
+      // Step 3: Save measures (only values that have been set)
+      if (visit?.patient_id && Object.keys(measureValues).length > 0) {
+        const measuresToSave = Object.entries(measureValues)
+          .filter(([_, value]) => value !== null && value !== undefined && value !== '');
+
+        console.log('[EditVisit] Measures to save:', measuresToSave);
+
+        for (const [definitionId, value] of measuresToSave) {
+          const definition = measureDefinitions.find(d => d.id === definitionId);
+          if (!definition) continue;
+
+          const payload = {
+            measure_definition_id: definitionId,
+            visit_id: id,
+            measured_at: new Date().toISOString()
+          };
+
+          // Set the appropriate value field based on measure type
+          switch (definition.measure_type) {
+            case 'numeric':
+            case 'calculated':
+              payload.numeric_value = parseFloat(value);
+              break;
+            case 'text':
+              payload.text_value = value;
+              break;
+            case 'boolean':
+              payload.boolean_value = value;
+              break;
+            default:
+              payload.numeric_value = parseFloat(value);
+          }
+
+          try {
+            const measureResult = await logPatientMeasure(visit.patient_id, payload);
+            console.log('[EditVisit] Measure saved:', measureResult);
+          } catch (measureError) {
+            console.error('❌ Error saving measure:', measureError);
+            // Don't throw, continue with other measures
+          }
+        }
+      }
+
+      navigate(`/visits/${id}`);
     } catch (err) {
       const errorMsg = err.response?.data?.details
         ? err.response.data.details.map(d => d.msg).join(', ')
@@ -557,6 +691,76 @@ const EditVisitPage = () => {
                     </div>
                   </Tab>
                 ))}
+
+                {/* Measures Tab */}
+                {measureDefinitions.length > 0 && (
+                  <Tab eventKey="measures" title={`📏 ${t('measures.healthMeasures', 'Measures')}`}>
+                    <Alert variant="info" className="mb-3">
+                      {t('measures.editVisitMeasuresInfo', 'Record or update health measurements for this visit.')}
+                    </Alert>
+                    {Object.keys(groupedMeasures).map(category => (
+                      <Card key={category} className="mb-3">
+                        <Card.Header className="bg-light">
+                          <strong>{measureCategoryLabels[category] || category}</strong>
+                        </Card.Header>
+                        <Card.Body>
+                          <Row>
+                            {groupedMeasures[category].map(definition => (
+                              <Col key={definition.id} md={6} lg={4}>
+                                <Form.Group className="mb-3">
+                                  <Form.Label>
+                                    {getTranslatedMeasureName(definition)}
+                                    {(getTranslatedMeasureUnit(definition)) && (
+                                      <Badge bg="secondary" className="ms-2">{getTranslatedMeasureUnit(definition)}</Badge>
+                                    )}
+                                    {existingMeasureIds[definition.id] && (
+                                      <Badge bg="success" className="ms-1" title={t('measures.alreadyRecorded', 'Already recorded')}>✓</Badge>
+                                    )}
+                                  </Form.Label>
+                                  {definition.measure_type === 'boolean' ? (
+                                    <Form.Check
+                                      type="checkbox"
+                                      checked={measureValues[definition.id] || false}
+                                      onChange={(e) => handleMeasureChange(definition.id, e.target.checked)}
+                                      label={t('measures.yesNo', 'Yes / No')}
+                                    />
+                                  ) : definition.measure_type === 'text' ? (
+                                    <Form.Control
+                                      type="text"
+                                      value={measureValues[definition.id] || ''}
+                                      onChange={(e) => handleMeasureChange(definition.id, e.target.value)}
+                                      placeholder={definition.description || t('measures.enterValue', 'Enter value')}
+                                    />
+                                  ) : (
+                                    <Form.Control
+                                      type="number"
+                                      step="any"
+                                      value={measureValues[definition.id] || ''}
+                                      onChange={(e) => handleMeasureChange(definition.id, e.target.value)}
+                                      placeholder={definition.description || t('measures.enterValue', 'Enter value')}
+                                      min={definition.min_value !== null ? definition.min_value : undefined}
+                                      max={definition.max_value !== null ? definition.max_value : undefined}
+                                    />
+                                  )}
+                                  {(definition.min_value !== null || definition.max_value !== null) && (
+                                    <Form.Text className="text-muted">
+                                      {definition.min_value !== null && definition.max_value !== null
+                                        ? `${t('measures.range', 'Range')}: ${definition.min_value} - ${definition.max_value}`
+                                        : definition.min_value !== null
+                                        ? `${t('measures.minimum', 'Min')}: ${definition.min_value}`
+                                        : `${t('measures.maximum', 'Max')}: ${definition.max_value}`
+                                      }
+                                    </Form.Text>
+                                  )}
+                                </Form.Group>
+                              </Col>
+                            ))}
+                          </Row>
+                        </Card.Body>
+                      </Card>
+                    ))}
+                  </Tab>
+                )}
               </Tabs>
 
               {/* Action Buttons */}
