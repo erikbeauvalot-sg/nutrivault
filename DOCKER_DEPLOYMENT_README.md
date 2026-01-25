@@ -129,30 +129,67 @@ export DOCKER_REPO=myorg/nutrivault
 
 ## Docker Compose Configuration
 
-The scripts expect a `docker-compose.yml` file in the root directory. The compose file should include:
+The scripts expect a `docker-compose.yml` file in the root directory. The compose file supports both **development mode** (build from source) and **production mode** (use pre-built images).
+
+### Development Mode (Build from Source)
+```bash
+# Build and run from source code
+docker-compose up --build
+
+# Or with specific version
+VERSION=5.0.0-alpha docker-compose up --build
+```
+
+### Production Mode (Pre-built Images)
+```bash
+# Use pre-built images (after running deployment scripts)
+VERSION=5.0.0-alpha docker-compose up
+
+# With custom registry
+VERSION=5.0.0-alpha DOCKER_REGISTRY=ghcr.io DOCKER_REPO=user/repo docker-compose up
+```
+
+### Configuration
 
 ```yaml
 version: '3.8'
+
 services:
   backend:
+    # Uses pre-built image if VERSION is set, otherwise builds from source
+    image: ${DOCKER_REGISTRY}/${DOCKER_REPO}-backend:${VERSION:-latest}
     build:
       context: .
       dockerfile: backend/Dockerfile
       target: production
-    container_name: nutrivault-backend
-    # ... other config
+      args:
+        VERSION: ${VERSION}
+        BUILD_DATE: ${BUILD_DATE}
+        GIT_COMMIT: ${GIT_COMMIT}
+    # ... rest of configuration
 
   frontend:
+    # Same logic as backend
+    image: ${DOCKER_REGISTRY}/${DOCKER_REPO}-frontend:${VERSION:-latest}
     build:
       context: .
       dockerfile: frontend/Dockerfile
       target: production
-    container_name: nutrivault-frontend
-    # ... other config
-
-  database:
-    # ... database config
+      args:
+        VERSION: ${VERSION}
+        BUILD_DATE: ${BUILD_DATE}
+        GIT_COMMIT: ${GIT_COMMIT}
 ```
+
+### Environment Variables
+
+See `env.example` for all available environment variables. Key variables:
+
+- `VERSION`: Application version (used for image tagging)
+- `DOCKER_REGISTRY`: Container registry (default: `nutrivault`)
+- `DOCKER_REPO`: Repository name (default: `erikbeauvalot-sg/nutrivault`)
+- `BUILD_DATE`: Build timestamp (set by deployment scripts)
+- `GIT_COMMIT`: Git commit hash (set by deployment scripts)
 
 **Important**: All Docker builds use the project root (`.`) as the build context. This allows Dockerfiles to access shared files like `models/`, `migrations/`, `config/`, and other directories that are outside the individual service directories.
 

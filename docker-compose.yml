@@ -1,10 +1,26 @@
+version: '3.8'
+
+# Docker Compose configuration for NutriVault
+# Supports both development (build) and production (pre-built images) modes
+#
+# Usage:
+# - Development: docker-compose up --build
+# - Production: VERSION=5.0.0-alpha docker-compose up
+# - With registry: DOCKER_REGISTRY=ghcr.io DOCKER_REPO=user/repo VERSION=5.0.0-alpha docker-compose up
+
 services:
   # Backend API Service
   backend:
+    # Use pre-built image (set by deployment scripts) or build from source
+    image: ${DOCKER_REGISTRY:-nutrivault}/${DOCKER_REPO:-erikbeauvalot-sg/nutrivault}-backend:${VERSION:-latest}
     build:
       context: .
       dockerfile: backend/Dockerfile
       target: production
+      args:
+        VERSION: ${VERSION:-latest}
+        BUILD_DATE: ${BUILD_DATE}
+        GIT_COMMIT: ${GIT_COMMIT}
     container_name: nutrivault-backend
     restart: unless-stopped
     ports:
@@ -52,10 +68,16 @@ services:
 
   # Frontend Web Application
   frontend:
+    # Use pre-built image (set by deployment scripts) or build from source
+    image: ${DOCKER_REGISTRY:-nutrivault}/${DOCKER_REPO:-erikbeauvalot-sg/nutrivault}-frontend:${VERSION:-latest}
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
       target: production
+      args:
+        VERSION: ${VERSION:-latest}
+        BUILD_DATE: ${BUILD_DATE}
+        GIT_COMMIT: ${GIT_COMMIT}
     container_name: nutrivault-frontend
     restart: unless-stopped
     ports:
