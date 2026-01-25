@@ -2,7 +2,8 @@
 # Docker entrypoint script for NutriVault Backend
 # Handles database migrations and initialization before starting the server
 
-set -e
+# Don't exit on error - we want the server to start even if migrations have issues
+# set -e
 
 echo "🚀 Starting NutriVault Backend..."
 
@@ -15,19 +16,27 @@ if [ ! -f "/app/data/nutrivault.db" ]; then
   echo "🆕 Database not found. Will be created on first migration."
 fi
 
-# Consolidate all migrations from both directories
-echo "📦 Consolidating migrations..."
-if [ -d "/app/backend-migrations" ]; then
-  echo "   Copying backend migrations to main migrations folder..."
-  cp -n /app/backend-migrations/*.js /app/migrations/ 2>/dev/null || echo "   Backend migrations already present"
-fi
+# List available migrations
+echo "📦 Checking migrations..."
+ls -la /app/migrations/ 2>/dev/null | head -5 || echo "   No migrations found"
+echo "   Total migrations: $(ls /app/migrations/*.js 2>/dev/null | wc -l)"
+
+# Debug: Show configuration
+echo "📋 Database configuration:"
+echo "   DB_STORAGE: ${DB_STORAGE:-not set}"
+echo "   NODE_ENV: ${NODE_ENV:-not set}"
 
 # Run database migrations
 echo "🔄 Running database migrations..."
-if npm run db:migrate; then
+npm run db:migrate 2>&1
+MIGRATE_STATUS=$?
+if [ $MIGRATE_STATUS -eq 0 ]; then
   echo "✅ Migrations completed successfully"
 else
-  echo "⚠️  Migrations failed or no migrations to run"
+  echo "⚠️  Migrations failed (exit code: $MIGRATE_STATUS)"
+  echo "   .sequelizerc contents:"
+  cat /app/.sequelizerc 2>/dev/null || echo "   No .sequelizerc found"
+  echo "   Continuing anyway - server will start"
 fi
 
 # Check if we need to seed the database (only if SEED_DB is set)

@@ -44,9 +44,43 @@ module.exports = {
       'notes'
     ];
 
-    // Remove each column
+    // Detect database dialect
+    const dialect = queryInterface.sequelize.getDialect();
+
+    // Helper function to check if column exists (works for both PostgreSQL and SQLite)
+    const columnExists = async (tableName, columnName) => {
+      try {
+        if (dialect === 'postgres') {
+          const [results] = await queryInterface.sequelize.query(`
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = '${tableName}' AND column_name = '${columnName}'
+          `);
+          return results.length > 0;
+        } else {
+          // SQLite
+          const [results] = await queryInterface.sequelize.query(`PRAGMA table_info(${tableName})`);
+          return results.some(col => col.name === columnName);
+        }
+      } catch (error) {
+        console.log(`Error checking column ${columnName}: ${error.message}`);
+        return false;
+      }
+    };
+
+    // Remove each column only if it exists
     for (const column of columnsToRemove) {
-      await queryInterface.removeColumn('patients', column);
+      const exists = await columnExists('patients', column);
+      if (exists) {
+        try {
+          await queryInterface.removeColumn('patients', column);
+          console.log(`Removed column: ${column}`);
+        } catch (error) {
+          console.log(`Could not remove column ${column}: ${error.message}`);
+        }
+      } else {
+        console.log(`Column ${column} does not exist, skipping`);
+      }
     }
   },
 

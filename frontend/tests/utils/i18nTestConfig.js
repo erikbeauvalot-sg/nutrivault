@@ -78,7 +78,44 @@ const resources = {
       'form.required': 'This field is required',
       'form.invalidEmail': 'Invalid email address',
       'form.minLength': 'Minimum {{min}} characters required',
-      'form.maxLength': 'Maximum {{max}} characters allowed'
+      'form.maxLength': 'Maximum {{max}} characters allowed',
+      'forms.required': 'This field is required',
+      'forms.minLength': 'Minimum {{count}} characters',
+      'forms.maxLength': 'Maximum {{count}} characters',
+
+      // Patients extended
+      'patients.createPatient': 'Create Patient',
+      'patients.management': 'Patient Management',
+      'patients.confirmDelete': 'Are you sure you want to delete this patient?',
+      'patients.searchPlaceholder': 'Search by name, email, or phone',
+      'patients.showingResults': 'Showing {{count}} of {{total}} patients',
+
+      // Dashboard
+      'dashboard.welcomeBack': 'Welcome back, {{username}}',
+      'dashboard.myDay': 'My Day',
+      'dashboard.myOffice': 'My Office',
+      'dashboard.quickPatient': 'Quick Patient',
+      'dashboard.scheduleVisit': 'Schedule Visit',
+      'dashboard.viewAgenda': 'View Agenda',
+      'dashboard.todaysAppointments': "Today's Appointments",
+      'dashboard.noAppointmentsToday': 'No appointments today',
+      'dashboard.completedToday': 'Completed Today',
+      'dashboard.upcomingVisits': 'Upcoming Visits',
+      'dashboard.activePatients': 'Active Patients',
+      'dashboard.quickStats': 'Quick Stats',
+      'dashboard.totalPatients': 'Total Patients',
+      'dashboard.scheduledVisits': 'Scheduled Visits',
+      'dashboard.totalVisits': 'Total Visits',
+      'dashboard.totalUsers': 'Total Users',
+      'dashboard.yourRole': 'Your Role',
+      'dashboard.managePatientRecords': 'Manage patient records',
+      'dashboard.scheduleAndTrackVisits': 'Schedule and track visits',
+      'dashboard.manageInvoicesAndPayments': 'Manage invoices and payments',
+      'dashboard.viewPatients': 'View Patients',
+      'dashboard.viewBilling': 'View Billing',
+
+      // Errors
+      'errors.failedToLoadPatients': 'Failed to load patients: {{error}}'
     }
   }
 };

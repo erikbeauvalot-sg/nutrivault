@@ -11,14 +11,9 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // For SQLite, we need to recreate the table with the new ENUM values
-    // because SQLite doesn't support ALTER COLUMN for ENUMs
-
-    // First, check if we need to update (SQLite doesn't have proper ENUM support)
-    const tableInfo = await queryInterface.describeTable('measure_translations');
-
-    // SQLite stores ENUM as TEXT, so we just need to update the model validation
-    // The actual constraint is handled by the model, not the database for SQLite
+    // This is a no-op migration - the table schema doesn't need changes
+    // Both SQLite and PostgreSQL store ENUM as TEXT/VARCHAR
+    // The actual constraint is handled by the model validation
 
     // Add a comment to indicate this table now supports email_template entity_type
     console.log('Migration: measure_translations now supports entity_type: measure_definition, email_template');
@@ -26,7 +21,7 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    // No database changes to revert for SQLite
-    console.log('Rollback: No database changes needed for SQLite');
+    // No database changes to revert
+    console.log('Rollback: No database changes needed');
   }
 };

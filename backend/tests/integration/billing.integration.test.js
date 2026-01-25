@@ -104,7 +104,7 @@ describe('Billing API', () => {
 
     it('should filter by status', async () => {
       const res = await request(app)
-        .get('/api/billing?status=draft')
+        .get('/api/billing?status=DRAFT')
         .set('Authorization', adminAuth.authHeader);
 
       expect(res.status).toBe(200);
@@ -139,7 +139,7 @@ describe('Billing API', () => {
     beforeEach(async () => {
       const db = testDb.getDb();
       testInvoice = await db.Billing.create({
-        ...billingFixtures.validInvoice,
+        ...billingFixtures.validInvoiceDB,
         patient_id: testPatient.id
       });
     });
@@ -284,7 +284,7 @@ describe('Billing API', () => {
     beforeEach(async () => {
       const db = testDb.getDb();
       testInvoice = await db.Billing.create({
-        ...billingFixtures.validInvoice,
+        ...billingFixtures.validInvoiceDB,
         patient_id: testPatient.id
       });
     });
@@ -317,7 +317,7 @@ describe('Billing API', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.status).toBe('sent');
+      expect(res.body.data.status).toBe('SENT');
     });
 
     it('should mark invoice as paid', async () => {
@@ -328,7 +328,7 @@ describe('Billing API', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.status).toBe('paid');
+      expect(res.body.data.status).toBe('PAID');
     });
 
     it('should cancel invoice', async () => {
@@ -339,7 +339,7 @@ describe('Billing API', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.data.status).toBe('cancelled');
+      expect(res.body.data.status).toBe('CANCELLED');
     });
 
     it('should return 404 for non-existent invoice', async () => {
@@ -361,7 +361,7 @@ describe('Billing API', () => {
     beforeEach(async () => {
       const db = testDb.getDb();
       testInvoice = await db.Billing.create({
-        ...billingFixtures.validInvoice,
+        ...billingFixtures.validInvoiceDB,
         patient_id: testPatient.id
       });
     });
@@ -475,7 +475,7 @@ describe('Billing API', () => {
     beforeEach(async () => {
       const db = testDb.getDb();
       testInvoice = await db.Billing.create({
-        ...billingFixtures.validInvoice,
+        ...billingFixtures.validInvoiceDB,
         patient_id: testPatient.id
       });
     });
@@ -504,7 +504,7 @@ describe('Billing API', () => {
     beforeEach(async () => {
       const db = testDb.getDb();
       testInvoice = await db.Billing.create({
-        ...billingFixtures.validInvoice,
+        ...billingFixtures.validInvoiceDB,
         patient_id: testPatient.id
       });
     });

@@ -94,7 +94,8 @@ describe('LoginPage', () => {
       await user.click(screen.getByRole('button', { name: /sign in/i }));
 
       await waitFor(() => {
-        expect(screen.getByText(/minimum.*3/i)).toBeInTheDocument();
+        // Check for minimum character validation message
+        expect(screen.getByText(/minimum.*3.*characters/i)).toBeInTheDocument();
       });
     });
 
@@ -107,7 +108,8 @@ describe('LoginPage', () => {
       await user.click(screen.getByRole('button', { name: /sign in/i }));
 
       await waitFor(() => {
-        expect(screen.getByText(/minimum.*8/i)).toBeInTheDocument();
+        // Check for minimum character validation message
+        expect(screen.getByText(/minimum.*8.*characters/i)).toBeInTheDocument();
       });
     });
   });

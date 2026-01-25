@@ -40,10 +40,12 @@ COPY backend/.sequelizerc.docker ./.sequelizerc
 COPY backend/migrate.js ./migrate.js
 COPY backend/seed.js ./seed.js
 
-# Copy models, migrations and config from project root
+# Copy models, migrations, seeders and config from project root
 COPY models/ ./models/
 COPY migrations/ ./migrations/
-COPY backend/migrations/ ./backend-migrations/
+COPY backend/migrations/ ./migrations/
+COPY seeders/ ./seeders/
+COPY backend/seeders/ ./seeders/
 COPY config/ ./config/
 
 # Create symbolic link for models at root level (for ../../models require in server.js)

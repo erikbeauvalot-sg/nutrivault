@@ -3,93 +3,45 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
-    // Add missing patient fields that exist in the model but not in the database
-    await queryInterface.addColumn('patients', 'medical_record_number', {
-      type: Sequelize.STRING(100),
-      allowNull: true
-    });
+    const [cols] = await queryInterface.sequelize.query(`PRAGMA table_info(patients)`);
+    const hasColumn = (name) => cols.some(c => c.name === name);
 
-    await queryInterface.addColumn('patients', 'insurance_provider', {
-      type: Sequelize.STRING(200),
-      allowNull: true
-    });
+    const columnsToAdd = [
+      { name: 'medical_record_number', type: Sequelize.STRING(100) },
+      { name: 'insurance_provider', type: Sequelize.STRING(200) },
+      { name: 'insurance_policy_number', type: Sequelize.STRING(100) },
+      { name: 'primary_care_physician', type: Sequelize.STRING(200) },
+      { name: 'current_medications', type: Sequelize.TEXT },
+      { name: 'height_cm', type: Sequelize.DECIMAL(5, 2) },
+      { name: 'weight_kg', type: Sequelize.DECIMAL(5, 2) },
+      { name: 'blood_type', type: Sequelize.STRING(10) },
+      { name: 'food_preferences', type: Sequelize.TEXT },
+      { name: 'nutritional_goals', type: Sequelize.TEXT },
+      { name: 'exercise_habits', type: Sequelize.TEXT },
+      { name: 'smoking_status', type: Sequelize.STRING(50) },
+      { name: 'alcohol_consumption', type: Sequelize.STRING(50) },
+      { name: 'notes', type: Sequelize.TEXT }
+    ];
 
-    await queryInterface.addColumn('patients', 'insurance_policy_number', {
-      type: Sequelize.STRING(100),
-      allowNull: true
-    });
-
-    await queryInterface.addColumn('patients', 'primary_care_physician', {
-      type: Sequelize.STRING(200),
-      allowNull: true
-    });
-
-    await queryInterface.addColumn('patients', 'current_medications', {
-      type: Sequelize.TEXT,
-      allowNull: true
-    });
-
-    await queryInterface.addColumn('patients', 'height_cm', {
-      type: Sequelize.DECIMAL(5, 2),
-      allowNull: true
-    });
-
-    await queryInterface.addColumn('patients', 'weight_kg', {
-      type: Sequelize.DECIMAL(5, 2),
-      allowNull: true
-    });
-
-    await queryInterface.addColumn('patients', 'blood_type', {
-      type: Sequelize.STRING(10),
-      allowNull: true
-    });
-
-    await queryInterface.addColumn('patients', 'food_preferences', {
-      type: Sequelize.TEXT,
-      allowNull: true
-    });
-
-    await queryInterface.addColumn('patients', 'nutritional_goals', {
-      type: Sequelize.TEXT,
-      allowNull: true
-    });
-
-    await queryInterface.addColumn('patients', 'exercise_habits', {
-      type: Sequelize.TEXT,
-      allowNull: true
-    });
-
-    await queryInterface.addColumn('patients', 'smoking_status', {
-      type: Sequelize.STRING(50),
-      allowNull: true
-    });
-
-    await queryInterface.addColumn('patients', 'alcohol_consumption', {
-      type: Sequelize.STRING(50),
-      allowNull: true
-    });
-
-    await queryInterface.addColumn('patients', 'notes', {
-      type: Sequelize.TEXT,
-      allowNull: true
-    });
+    for (const col of columnsToAdd) {
+      if (!hasColumn(col.name)) {
+        await queryInterface.addColumn('patients', col.name, {
+          type: col.type,
+          allowNull: true
+        });
+      }
+    }
   },
 
   async down (queryInterface, Sequelize) {
-    // Remove the added columns in reverse order
-    await queryInterface.removeColumn('patients', 'notes');
-    await queryInterface.removeColumn('patients', 'alcohol_consumption');
-    await queryInterface.removeColumn('patients', 'smoking_status');
-    await queryInterface.removeColumn('patients', 'exercise_habits');
-    await queryInterface.removeColumn('patients', 'nutritional_goals');
-    await queryInterface.removeColumn('patients', 'food_preferences');
-    await queryInterface.removeColumn('patients', 'blood_type');
-    await queryInterface.removeColumn('patients', 'weight_kg');
-    await queryInterface.removeColumn('patients', 'height_cm');
-    await queryInterface.removeColumn('patients', 'current_medications');
-    await queryInterface.removeColumn('patients', 'primary_care_physician');
-    await queryInterface.removeColumn('patients', 'insurance_policy_number');
-    await queryInterface.removeColumn('patients', 'insurance_provider');
-    await queryInterface.removeColumn('patients', 'medical_record_number');
+    const columns = [
+      'notes', 'alcohol_consumption', 'smoking_status', 'exercise_habits',
+      'nutritional_goals', 'food_preferences', 'blood_type', 'weight_kg',
+      'height_cm', 'current_medications', 'primary_care_physician',
+      'insurance_policy_number', 'insurance_provider', 'medical_record_number'
+    ];
+    for (const col of columns) {
+      await queryInterface.removeColumn('patients', col).catch(() => {});
+    }
   }
 };

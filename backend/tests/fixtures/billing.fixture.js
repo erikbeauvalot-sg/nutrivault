@@ -15,18 +15,14 @@ function getDate(daysOffset = 0) {
 }
 
 /**
- * Valid invoice creation data
+ * Valid invoice creation data for API calls
  * Note: patient_id must be set dynamically in tests
+ * Field names match API validation requirements
  */
 const validInvoice = {
-  invoice_number: 'INV-2024-001',
-  amount: 85.00,
-  tax_amount: 0,
-  total_amount: 85.00,
-  status: 'DRAFT',
-  invoice_date: getDate(0),
+  service_description: 'Initial consultation - 1 hour',
+  amount_total: 85.00,
   due_date: getDate(30),
-  description: 'Initial consultation - 1 hour',
   items: [
     {
       description: 'Initial consultation (60 min)',
@@ -38,17 +34,26 @@ const validInvoice = {
 };
 
 /**
+ * Valid invoice for direct DB creation
+ * Includes all required model fields
+ */
+const validInvoiceDB = {
+  invoice_number: 'INV-TEST-001',
+  invoice_date: getDate(0),
+  service_description: 'Initial consultation - 1 hour',
+  amount_total: 85.00,
+  amount_due: 85.00,
+  status: 'DRAFT',
+  due_date: getDate(30)
+};
+
+/**
  * Invoice with multiple items
  */
 const multiItemInvoice = {
-  invoice_number: 'INV-2024-002',
-  amount: 165.00,
-  tax_amount: 0,
-  total_amount: 165.00,
-  status: 'DRAFT',
-  invoice_date: getDate(0),
+  service_description: 'Consultation and follow-up package',
+  amount_total: 165.00,
   due_date: getDate(30),
-  description: 'Consultation and follow-up package',
   items: [
     {
       description: 'Initial consultation (60 min)',
@@ -69,15 +74,9 @@ const multiItemInvoice = {
  * Invoice with tax
  */
 const invoiceWithTax = {
-  invoice_number: 'INV-2024-003',
-  amount: 100.00,
-  tax_rate: 20,
-  tax_amount: 20.00,
-  total_amount: 120.00,
-  status: 'DRAFT',
-  invoice_date: getDate(0),
+  service_description: 'Consultation with VAT',
+  amount_total: 120.00,
   due_date: getDate(30),
-  description: 'Consultation with VAT',
   items: [
     {
       description: 'Consultation services',
@@ -89,46 +88,51 @@ const invoiceWithTax = {
 };
 
 /**
- * Invoice statuses
+ * Invoice statuses (for direct DB creation)
  */
 const invoiceStatuses = {
   draft: {
     invoice_number: 'INV-DRAFT-001',
-    amount: 85.00,
-    total_amount: 85.00,
+    service_description: 'Draft invoice',
+    amount_total: 85.00,
+    amount_due: 85.00,
     status: 'DRAFT',
     invoice_date: getDate(0),
     due_date: getDate(30)
   },
   sent: {
     invoice_number: 'INV-SENT-001',
-    amount: 85.00,
-    total_amount: 85.00,
+    service_description: 'Sent invoice',
+    amount_total: 85.00,
+    amount_due: 85.00,
     status: 'SENT',
     invoice_date: getDate(-7),
     due_date: getDate(23)
   },
   paid: {
     invoice_number: 'INV-PAID-001',
-    amount: 85.00,
-    total_amount: 85.00,
+    service_description: 'Paid invoice',
+    amount_total: 85.00,
+    amount_paid: 85.00,
+    amount_due: 0,
     status: 'PAID',
     invoice_date: getDate(-30),
-    due_date: getDate(0),
-    paid_date: getDate(-5)
+    due_date: getDate(0)
   },
   overdue: {
     invoice_number: 'INV-OVERDUE-001',
-    amount: 85.00,
-    total_amount: 85.00,
+    service_description: 'Overdue invoice',
+    amount_total: 85.00,
+    amount_due: 85.00,
     status: 'OVERDUE',
     invoice_date: getDate(-60),
     due_date: getDate(-30)
   },
   cancelled: {
     invoice_number: 'INV-CANCELLED-001',
-    amount: 85.00,
-    total_amount: 85.00,
+    service_description: 'Cancelled invoice',
+    amount_total: 85.00,
+    amount_due: 0,
     status: 'CANCELLED',
     invoice_date: getDate(-14),
     due_date: getDate(16)
@@ -170,45 +174,32 @@ const payments = {
 };
 
 /**
- * Invalid invoice data
+ * Invalid invoice data (for API validation tests)
  */
 const invalidInvoices = {
   missingAmount: {
-    invoice_number: 'INV-INVALID-001',
-    status: 'DRAFT',
-    invoice_date: getDate(0),
+    service_description: 'Missing amount invoice',
     due_date: getDate(30)
   },
   negativeAmount: {
-    invoice_number: 'INV-INVALID-002',
-    amount: -85.00,
-    total_amount: -85.00,
-    status: 'DRAFT',
-    invoice_date: getDate(0),
+    service_description: 'Negative amount invoice',
+    amount_total: -85.00,
     due_date: getDate(30)
   },
   invalidStatus: {
-    invoice_number: 'INV-INVALID-003',
-    amount: 85.00,
-    total_amount: 85.00,
+    service_description: 'Invalid status invoice',
+    amount_total: 85.00,
     status: 'invalid_status',
-    invoice_date: getDate(0),
     due_date: getDate(30)
   },
-  missingInvoiceNumber: {
-    amount: 85.00,
-    total_amount: 85.00,
-    status: 'DRAFT',
-    invoice_date: getDate(0),
+  missingDescription: {
+    amount_total: 85.00,
     due_date: getDate(30)
   },
-  dueDateBeforeIssue: {
-    invoice_number: 'INV-INVALID-004',
-    amount: 85.00,
-    total_amount: 85.00,
-    status: 'DRAFT',
-    invoice_date: getDate(0),
-    due_date: getDate(-30)
+  zeroAmount: {
+    service_description: 'Zero amount invoice',
+    amount_total: 0,
+    due_date: getDate(30)
   }
 };
 
@@ -217,57 +208,59 @@ const invalidInvoices = {
  */
 const invoiceUpdates = {
   updateAmount: {
-    amount: 100.00,
-    total_amount: 100.00
+    amount_total: 100.00
   },
   markAsSent: {
     status: 'SENT'
   },
   markAsPaid: {
-    status: 'PAID',
-    paid_date: getDate(0)
+    status: 'PAID'
   },
   cancel: {
     status: 'CANCELLED'
   },
   updateDescription: {
-    description: 'Updated invoice description'
+    service_description: 'Updated invoice description'
   }
 };
 
 /**
- * Multiple invoices for list testing
+ * Multiple invoices for list testing (for direct DB creation)
  */
 const invoicesList = [
   {
     invoice_number: 'INV-LIST-001',
-    amount: 85.00,
-    total_amount: 85.00,
+    service_description: 'List invoice 1',
+    amount_total: 85.00,
+    amount_due: 85.00,
     status: 'DRAFT',
     invoice_date: getDate(-30),
     due_date: getDate(0)
   },
   {
     invoice_number: 'INV-LIST-002',
-    amount: 120.00,
-    total_amount: 120.00,
+    service_description: 'List invoice 2',
+    amount_total: 120.00,
+    amount_due: 120.00,
     status: 'SENT',
     invoice_date: getDate(-20),
     due_date: getDate(10)
   },
   {
     invoice_number: 'INV-LIST-003',
-    amount: 65.00,
-    total_amount: 65.00,
+    service_description: 'List invoice 3',
+    amount_total: 65.00,
+    amount_paid: 65.00,
+    amount_due: 0,
     status: 'PAID',
     invoice_date: getDate(-45),
-    due_date: getDate(-15),
-    paid_date: getDate(-10)
+    due_date: getDate(-15)
   },
   {
     invoice_number: 'INV-LIST-004',
-    amount: 90.00,
-    total_amount: 90.00,
+    service_description: 'List invoice 4',
+    amount_total: 90.00,
+    amount_due: 90.00,
     status: 'OVERDUE',
     invoice_date: getDate(-60),
     due_date: getDate(-30)
@@ -275,10 +268,12 @@ const invoicesList = [
 ];
 
 /**
- * Search/filter parameters
+ * Search/filter parameters (for API query strings)
  */
 const searchParams = {
   byStatus: { status: 'DRAFT' },
+  byStatusSent: { status: 'SENT' },
+  byStatusPaid: { status: 'PAID' },
   byDateRange: {
     start_date: getDate(-60),
     end_date: getDate(0)
@@ -291,6 +286,7 @@ const searchParams = {
 module.exports = {
   getDate,
   validInvoice,
+  validInvoiceDB,
   multiItemInvoice,
   invoiceWithTax,
   invoiceStatuses,

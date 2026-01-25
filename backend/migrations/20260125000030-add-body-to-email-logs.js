@@ -3,71 +3,68 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Add body_html column to store email content
-    await queryInterface.addColumn('email_logs', 'body_html', {
-      type: Sequelize.TEXT,
-      allowNull: true,
-      comment: 'HTML body of the sent email'
-    });
+    const [cols] = await queryInterface.sequelize.query(`PRAGMA table_info(email_logs)`);
+    const hasColumn = (name) => cols.some(c => c.name === name);
 
-    // Add body_text column for plain text version
-    await queryInterface.addColumn('email_logs', 'body_text', {
-      type: Sequelize.TEXT,
-      allowNull: true,
-      comment: 'Plain text body of the sent email'
-    });
+    if (!hasColumn('body_html')) {
+      await queryInterface.addColumn('email_logs', 'body_html', {
+        type: Sequelize.TEXT,
+        allowNull: true,
+        comment: 'HTML body of the sent email'
+      });
+    }
 
-    // Add email_type column for categorization (followup, invoice, reminder, etc.)
-    await queryInterface.addColumn('email_logs', 'email_type', {
-      type: Sequelize.STRING(50),
-      allowNull: true,
-      defaultValue: 'other',
-      comment: 'Type of email: followup, invoice, reminder, welcome, etc.'
-    });
+    if (!hasColumn('body_text')) {
+      await queryInterface.addColumn('email_logs', 'body_text', {
+        type: Sequelize.TEXT,
+        allowNull: true,
+        comment: 'Plain text body of the sent email'
+      });
+    }
 
-    // Add related entity references
-    await queryInterface.addColumn('email_logs', 'visit_id', {
-      type: Sequelize.UUID,
-      allowNull: true,
-      references: {
-        model: 'visits',
-        key: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'SET NULL',
-      comment: 'Related visit if applicable'
-    });
+    if (!hasColumn('email_type')) {
+      await queryInterface.addColumn('email_logs', 'email_type', {
+        type: Sequelize.STRING(50),
+        allowNull: true,
+        defaultValue: 'other',
+        comment: 'Type of email: followup, invoice, reminder, welcome, etc.'
+      });
+    }
 
-    await queryInterface.addColumn('email_logs', 'billing_id', {
-      type: Sequelize.UUID,
-      allowNull: true,
-      references: {
-        model: 'billing',
-        key: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'SET NULL',
-      comment: 'Related billing/invoice if applicable'
-    });
+    if (!hasColumn('visit_id')) {
+      await queryInterface.addColumn('email_logs', 'visit_id', {
+        type: Sequelize.UUID,
+        allowNull: true,
+        references: { model: 'visits', key: 'id' },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL',
+        comment: 'Related visit if applicable'
+      });
+    }
 
-    // Add index for email_type
-    await queryInterface.addIndex('email_logs', ['email_type'], {
-      name: 'idx_email_logs_email_type'
-    });
+    if (!hasColumn('billing_id')) {
+      await queryInterface.addColumn('email_logs', 'billing_id', {
+        type: Sequelize.UUID,
+        allowNull: true,
+        references: { model: 'billing', key: 'id' },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL',
+        comment: 'Related billing/invoice if applicable'
+      });
+    }
 
-    // Add composite index for patient filtering
-    await queryInterface.addIndex('email_logs', ['patient_id', 'email_type', 'sent_at'], {
-      name: 'idx_email_logs_patient_type_date'
-    });
+    // Add indexes (ignore if exist)
+    try { await queryInterface.addIndex('email_logs', ['email_type'], { name: 'idx_email_logs_email_type' }); } catch (e) {}
+    try { await queryInterface.addIndex('email_logs', ['patient_id', 'email_type', 'sent_at'], { name: 'idx_email_logs_patient_type_date' }); } catch (e) {}
   },
 
   async down(queryInterface) {
-    await queryInterface.removeIndex('email_logs', 'idx_email_logs_patient_type_date');
-    await queryInterface.removeIndex('email_logs', 'idx_email_logs_email_type');
-    await queryInterface.removeColumn('email_logs', 'billing_id');
-    await queryInterface.removeColumn('email_logs', 'visit_id');
-    await queryInterface.removeColumn('email_logs', 'email_type');
-    await queryInterface.removeColumn('email_logs', 'body_text');
-    await queryInterface.removeColumn('email_logs', 'body_html');
+    await queryInterface.removeIndex('email_logs', 'idx_email_logs_patient_type_date').catch(() => {});
+    await queryInterface.removeIndex('email_logs', 'idx_email_logs_email_type').catch(() => {});
+    await queryInterface.removeColumn('email_logs', 'billing_id').catch(() => {});
+    await queryInterface.removeColumn('email_logs', 'visit_id').catch(() => {});
+    await queryInterface.removeColumn('email_logs', 'email_type').catch(() => {});
+    await queryInterface.removeColumn('email_logs', 'body_text').catch(() => {});
+    await queryInterface.removeColumn('email_logs', 'body_html').catch(() => {});
   }
 };

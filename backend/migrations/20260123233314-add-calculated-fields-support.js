@@ -1,49 +1,49 @@
 /**
  * Migration: Add calculated fields support
- *
- * Adds formula and dependencies columns to custom_field_definitions
- * to support calculated fields with formulas.
  */
 
 'use strict';
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // Add formula column for storing calculation formulas
-    await queryInterface.addColumn('custom_field_definitions', 'formula', {
-      type: Sequelize.TEXT,
-      allowNull: true,
-      comment: 'Formula for calculated fields (e.g., "{weight} / ({height} * {height})")'
-    });
+    const [cols] = await queryInterface.sequelize.query(`PRAGMA table_info(custom_field_definitions)`);
+    const hasColumn = (name) => cols.some(c => c.name === name);
 
-    // Add dependencies column to track which fields this calculated field depends on
-    await queryInterface.addColumn('custom_field_definitions', 'dependencies', {
-      type: Sequelize.JSON,
-      allowNull: true,
-      comment: 'Array of field names this calculated field depends on'
-    });
+    if (!hasColumn('formula')) {
+      await queryInterface.addColumn('custom_field_definitions', 'formula', {
+        type: Sequelize.TEXT,
+        allowNull: true
+      });
+    }
 
-    // Add decimal_places column for controlling precision of calculated results
-    await queryInterface.addColumn('custom_field_definitions', 'decimal_places', {
-      type: Sequelize.INTEGER,
-      allowNull: true,
-      defaultValue: 2,
-      comment: 'Number of decimal places for calculated field results (0-4)'
-    });
+    if (!hasColumn('dependencies')) {
+      await queryInterface.addColumn('custom_field_definitions', 'dependencies', {
+        type: Sequelize.JSON,
+        allowNull: true
+      });
+    }
 
-    // Add is_calculated column to easily identify calculated fields
-    await queryInterface.addColumn('custom_field_definitions', 'is_calculated', {
-      type: Sequelize.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-      comment: 'Whether this is a calculated field'
-    });
+    if (!hasColumn('decimal_places')) {
+      await queryInterface.addColumn('custom_field_definitions', 'decimal_places', {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        defaultValue: 2
+      });
+    }
+
+    if (!hasColumn('is_calculated')) {
+      await queryInterface.addColumn('custom_field_definitions', 'is_calculated', {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
+      });
+    }
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.removeColumn('custom_field_definitions', 'formula');
-    await queryInterface.removeColumn('custom_field_definitions', 'dependencies');
-    await queryInterface.removeColumn('custom_field_definitions', 'decimal_places');
-    await queryInterface.removeColumn('custom_field_definitions', 'is_calculated');
+    await queryInterface.removeColumn('custom_field_definitions', 'formula').catch(() => {});
+    await queryInterface.removeColumn('custom_field_definitions', 'dependencies').catch(() => {});
+    await queryInterface.removeColumn('custom_field_definitions', 'decimal_places').catch(() => {});
+    await queryInterface.removeColumn('custom_field_definitions', 'is_calculated').catch(() => {});
   }
 };

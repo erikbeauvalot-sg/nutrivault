@@ -3,29 +3,20 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Add color column to custom_field_categories
+    const [cols] = await queryInterface.sequelize.query(`PRAGMA table_info(custom_field_categories)`);
+    if (cols.some(c => c.name === 'color')) {
+      console.log('Column color already exists, skipping');
+      return;
+    }
+
     await queryInterface.addColumn('custom_field_categories', 'color', {
       type: Sequelize.STRING(7),
       allowNull: false,
-      defaultValue: '#3498db', // Default blue color
-      validate: {
-        is: /^#[0-9A-Fa-f]{6}$/ // Hex color format validation
-      }
+      defaultValue: '#3498db'
     });
 
-    // Set default colors for existing categories based on display_order
-    const defaultColors = [
-      '#3498db', // Blue
-      '#2ecc71', // Green
-      '#e74c3c', // Red
-      '#f39c12', // Orange
-      '#9b59b6', // Purple
-      '#1abc9c', // Turquoise
-      '#34495e', // Dark Gray
-      '#e67e22'  // Dark Orange
-    ];
+    const defaultColors = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6', '#1abc9c', '#34495e', '#e67e22'];
 
-    // Update existing categories with colors based on their display_order
     await queryInterface.sequelize.query(`
       UPDATE custom_field_categories
       SET color = CASE display_order
@@ -43,7 +34,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    // Remove color column
-    await queryInterface.removeColumn('custom_field_categories', 'color');
+    await queryInterface.removeColumn('custom_field_categories', 'color').catch(() => {});
   }
 };

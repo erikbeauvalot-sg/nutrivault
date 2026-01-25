@@ -7,51 +7,90 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Remove clinical columns from visits table
-    // Note: SQLite doesn't support DROP COLUMN directly, so we need to handle this carefully
-    const tableInfo = await queryInterface.describeTable('visits');
+    const dialect = queryInterface.sequelize.getDialect();
+
+    // Helper function to check if column exists (works for both PostgreSQL and SQLite)
+    const columnExists = async (tableName, columnName) => {
+      try {
+        if (dialect === 'postgres') {
+          const [results] = await queryInterface.sequelize.query(`
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = '${tableName}' AND column_name = '${columnName}'
+          `);
+          return results.length > 0;
+        } else {
+          // SQLite
+          const [results] = await queryInterface.sequelize.query(`PRAGMA table_info(${tableName})`);
+          return results.some(col => col.name === columnName);
+        }
+      } catch (error) {
+        console.log(`Error checking column ${columnName}: ${error.message}`);
+        return false;
+      }
+    };
 
     const columnsToRemove = ['chief_complaint', 'assessment', 'recommendations', 'notes'];
 
     for (const column of columnsToRemove) {
-      if (tableInfo[column]) {
+      const exists = await columnExists('visits', column);
+      if (exists) {
         try {
           await queryInterface.removeColumn('visits', column);
           console.log(`✅ Removed column: ${column}`);
         } catch (error) {
-          // SQLite may not support removeColumn - log and continue
           console.log(`⚠️ Could not remove column ${column}: ${error.message}`);
         }
+      } else {
+        console.log(`Column ${column} does not exist, skipping`);
       }
     }
   },
 
   async down(queryInterface, Sequelize) {
-    // Re-add clinical columns if rollback is needed
-    const tableInfo = await queryInterface.describeTable('visits');
+    const dialect = queryInterface.sequelize.getDialect();
 
-    if (!tableInfo.chief_complaint) {
+    // Helper function to check if column exists
+    const columnExists = async (tableName, columnName) => {
+      try {
+        if (dialect === 'postgres') {
+          const [results] = await queryInterface.sequelize.query(`
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = '${tableName}' AND column_name = '${columnName}'
+          `);
+          return results.length > 0;
+        } else {
+          const [results] = await queryInterface.sequelize.query(`PRAGMA table_info(${tableName})`);
+          return results.some(col => col.name === columnName);
+        }
+      } catch (error) {
+        return false;
+      }
+    };
+
+    if (!(await columnExists('visits', 'chief_complaint'))) {
       await queryInterface.addColumn('visits', 'chief_complaint', {
         type: Sequelize.TEXT,
         allowNull: true
       });
     }
 
-    if (!tableInfo.assessment) {
+    if (!(await columnExists('visits', 'assessment'))) {
       await queryInterface.addColumn('visits', 'assessment', {
         type: Sequelize.TEXT,
         allowNull: true
       });
     }
 
-    if (!tableInfo.recommendations) {
+    if (!(await columnExists('visits', 'recommendations'))) {
       await queryInterface.addColumn('visits', 'recommendations', {
         type: Sequelize.TEXT,
         allowNull: true
       });
     }
 
-    if (!tableInfo.notes) {
+    if (!(await columnExists('visits', 'notes'))) {
       await queryInterface.addColumn('visits', 'notes', {
         type: Sequelize.TEXT,
         allowNull: true

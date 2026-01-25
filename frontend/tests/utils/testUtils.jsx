@@ -18,10 +18,7 @@ export const mockAdminUser = {
   email: 'admin@test.com',
   first_name: 'Admin',
   last_name: 'User',
-  role: {
-    id: 'admin-role-id',
-    name: 'ADMIN'
-  },
+  role: 'ADMIN',
   permissions: [
     'patients.create', 'patients.read', 'patients.update', 'patients.delete',
     'visits.create', 'visits.read', 'visits.update', 'visits.delete',
@@ -38,10 +35,7 @@ export const mockDietitianUser = {
   email: 'dietitian@test.com',
   first_name: 'Dietitian',
   last_name: 'User',
-  role: {
-    id: 'dietitian-role-id',
-    name: 'DIETITIAN'
-  },
+  role: 'DIETITIAN',
   permissions: [
     'patients.create', 'patients.read', 'patients.update',
     'visits.create', 'visits.read', 'visits.update',
@@ -55,10 +49,7 @@ export const mockAssistantUser = {
   email: 'assistant@test.com',
   first_name: 'Assistant',
   last_name: 'User',
-  role: {
-    id: 'assistant-role-id',
-    name: 'ASSISTANT'
-  },
+  role: 'ASSISTANT',
   permissions: [
     'patients.read',
     'visits.read',
@@ -76,7 +67,8 @@ export const createMockAuthContext = (user = mockAdminUser, overrides = {}) => (
   login: vi.fn().mockResolvedValue(user),
   logout: vi.fn().mockResolvedValue(),
   hasPermission: (permission) => user?.permissions?.includes(permission) || false,
-  isAdmin: () => user?.role?.name === 'ADMIN',
+  hasRole: (role) => user?.role === role,
+  isAdmin: () => user?.role === 'ADMIN',
   ...overrides
 });
 

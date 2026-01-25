@@ -104,7 +104,10 @@ describe('PatientList', () => {
     it('should render inactive badge for inactive patients', () => {
       renderWithProviders(<PatientList {...defaultProps} />);
 
-      expect(screen.getByText(/inactive/i)).toBeInTheDocument();
+      // Find inactive badge specifically (not the filter option)
+      const badges = screen.getAllByText(/inactive/i);
+      const inactiveBadge = badges.find(el => el.classList.contains('badge'));
+      expect(inactiveBadge).toBeInTheDocument();
     });
 
     it('should show empty state when no patients', () => {
