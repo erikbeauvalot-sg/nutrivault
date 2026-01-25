@@ -1,5 +1,7 @@
 'use strict';
 
+const { v4: uuidv4 } = require('uuid');
+
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.createTable('roles', {
@@ -36,6 +38,45 @@ module.exports = {
     });
 
     await queryInterface.addIndex('roles', ['name']);
+
+    // Create default roles immediately (needed for permission associations)
+    const now = new Date();
+    await queryInterface.bulkInsert('roles', [
+      {
+        id: uuidv4(),
+        name: 'ADMIN',
+        description: 'Full system access - can manage users, settings, and all data',
+        is_active: true,
+        created_at: now,
+        updated_at: now
+      },
+      {
+        id: uuidv4(),
+        name: 'DIETITIAN',
+        description: 'Clinical access - can manage patients, visits, and billing',
+        is_active: true,
+        created_at: now,
+        updated_at: now
+      },
+      {
+        id: uuidv4(),
+        name: 'ASSISTANT',
+        description: 'Limited access - can view patients and manage appointments',
+        is_active: true,
+        created_at: now,
+        updated_at: now
+      },
+      {
+        id: uuidv4(),
+        name: 'VIEWER',
+        description: 'Read-only access - can view data but not modify',
+        is_active: true,
+        created_at: now,
+        updated_at: now
+      }
+    ]);
+
+    console.log('✅ Created 4 default roles: ADMIN, DIETITIAN, ASSISTANT, VIEWER');
   },
 
   down: async (queryInterface, Sequelize) => {
