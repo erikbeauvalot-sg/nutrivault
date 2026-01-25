@@ -156,7 +156,7 @@ deploy() {
 
     # Build and deploy
     log_info "Building and deploying containers..."
-    docker-compose -f "${DOCKER_COMPOSE_FILE}" up -d --build
+    docker-compose --env-file .env.production -f "${DOCKER_COMPOSE_FILE}" up -d --build
 
     # Wait for backend to be healthy
     log_info "Waiting for backend to be healthy..."
@@ -178,6 +178,10 @@ deploy() {
         log_warn "Consider rolling back with: $0 --rollback"
         return 1
     fi
+
+    log_info "Creation of admin user and seeding database..."
+    docker exec nutrivault-backend node /app/scripts/create-admin.js
+    docker exec -it nutrivault-backend npm run db:seed
 
     # Show deployment status
     log_info "=========================================="
