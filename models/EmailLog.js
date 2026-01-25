@@ -56,6 +56,11 @@ module.exports = (sequelize, DataTypes) => {
     sent_by: {
       type: DataTypes.UUID,
       allowNull: true
+    },
+    language_code: {
+      type: DataTypes.STRING(5),
+      allowNull: true,
+      comment: 'Language code used for this email (e.g., "en", "fr")'
     }
   }, {
     tableName: 'email_logs',

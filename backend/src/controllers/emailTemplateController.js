@@ -1,4 +1,5 @@
 const emailTemplateService = require('../services/emailTemplate.service');
+const emailTemplateTranslationService = require('../services/emailTemplateTranslation.service');
 const { getAvailableVariablesByCategory, CATEGORY_VARIABLES } = require('../services/templateRenderer.service');
 const { body, param, validationResult } = require('express-validator');
 
@@ -385,6 +386,225 @@ const getTemplateStats = async (req, res) => {
   }
 };
 
+// ==========================================
+// TRANSLATION ENDPOINTS - US-5.5.6
+// ==========================================
+
+/**
+ * GET /api/email-templates/:id/translations
+ * Get all translations for a template
+ */
+const getTranslations = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const translations = await emailTemplateTranslationService.getTranslations(id);
+    const availableLanguages = await emailTemplateTranslationService.getAvailableLanguages(id);
+
+    res.json({
+      success: true,
+      data: {
+        template_id: id,
+        translations,
+        available_languages: availableLanguages,
+        supported_languages: emailTemplateTranslationService.getSupportedLanguages()
+      }
+    });
+  } catch (error) {
+    console.error('Get translations error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to get translations'
+    });
+  }
+};
+
+/**
+ * GET /api/email-templates/:id/translations/:languageCode
+ * Get translation for a specific language
+ */
+const getTranslation = async (req, res) => {
+  try {
+    const { id, languageCode } = req.params;
+    const translation = await emailTemplateTranslationService.getTranslation(id, languageCode);
+
+    if (!translation) {
+      return res.status(404).json({
+        success: false,
+        error: `No translation found for language: ${languageCode}`
+      });
+    }
+
+    res.json({
+      success: true,
+      data: translation
+    });
+  } catch (error) {
+    console.error('Get translation error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to get translation'
+    });
+  }
+};
+
+/**
+ * POST /api/email-templates/:id/translations/:languageCode
+ * Create or update translation for a language
+ */
+const saveTranslation = async (req, res) => {
+  try {
+    const { id, languageCode } = req.params;
+    const { subject, body_html, body_text } = req.body;
+
+    // Validate required fields
+    if (!subject || !body_html) {
+      return res.status(400).json({
+        success: false,
+        error: 'Subject and body_html are required'
+      });
+    }
+
+    const translation = await emailTemplateTranslationService.setAllTranslations(id, languageCode, {
+      subject,
+      body_html,
+      body_text: body_text || ''
+    });
+
+    res.json({
+      success: true,
+      data: translation,
+      message: `Translation saved for language: ${languageCode}`
+    });
+  } catch (error) {
+    console.error('Save translation error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to save translation'
+    });
+  }
+};
+
+/**
+ * DELETE /api/email-templates/:id/translations/:languageCode
+ * Delete translation for a language
+ */
+const deleteTranslation = async (req, res) => {
+  try {
+    const { id, languageCode } = req.params;
+    const deleted = await emailTemplateTranslationService.deleteTranslations(id, languageCode);
+
+    if (deleted === 0) {
+      return res.status(404).json({
+        success: false,
+        error: `No translation found for language: ${languageCode}`
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Translation deleted for language: ${languageCode}`,
+      deleted_count: deleted
+    });
+  } catch (error) {
+    console.error('Delete translation error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to delete translation'
+    });
+  }
+};
+
+/**
+ * GET /api/email-templates/:id/base-content
+ * Get base template content for copying to translation
+ */
+const getBaseContent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const content = await emailTemplateTranslationService.getBaseTemplateContent(id);
+
+    res.json({
+      success: true,
+      data: content
+    });
+  } catch (error) {
+    console.error('Get base content error:', error);
+    const statusCode = error.message.includes('not found') ? 404 : 500;
+    res.status(statusCode).json({
+      success: false,
+      error: error.message || 'Failed to get base content'
+    });
+  }
+};
+
+/**
+ * GET /api/email-templates/supported-languages
+ * Get list of supported languages
+ */
+const getSupportedLanguages = async (req, res) => {
+  try {
+    const languages = emailTemplateTranslationService.getSupportedLanguages();
+
+    res.json({
+      success: true,
+      data: languages
+    });
+  } catch (error) {
+    console.error('Get supported languages error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to get supported languages'
+    });
+  }
+};
+
+/**
+ * POST /api/email-templates/:id/preview-translation
+ * Preview template in a specific language
+ */
+const previewTranslation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { languageCode } = req.query;
+    const sampleData = req.body || {};
+
+    const { renderTemplate, buildVariableContext } = require('../services/templateRenderer.service');
+
+    // Get template in requested language
+    const templateContent = await emailTemplateTranslationService.getTemplateInLanguage(id, languageCode);
+
+    // Build variable context from sample data
+    const variables = buildVariableContext(sampleData);
+
+    // Render template with a mock template object
+    const mockTemplate = {
+      subject: templateContent.subject,
+      body_html: templateContent.body_html,
+      body_text: templateContent.body_text
+    };
+
+    const rendered = renderTemplate(mockTemplate, variables);
+
+    res.json({
+      success: true,
+      data: {
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+        language_used: templateContent.language_used,
+        is_translation: templateContent.is_translation
+      }
+    });
+  } catch (error) {
+    console.error('Preview translation error:', error);
+    const statusCode = error.message.includes('not found') ? 404 : 500;
+    res.status(statusCode).json({
+      success: false,
+      error: error.message || 'Failed to preview translation'
+    });
+  }
+};
+
 module.exports = {
   validateCreateTemplate,
   validateUpdateTemplate,
@@ -397,5 +617,13 @@ module.exports = {
   toggleActive,
   previewTemplate,
   getAvailableVariables,
-  getTemplateStats
+  getTemplateStats,
+  // Translation endpoints
+  getTranslations,
+  getTranslation,
+  saveTranslation,
+  deleteTranslation,
+  getBaseContent,
+  getSupportedLanguages,
+  previewTranslation
 };

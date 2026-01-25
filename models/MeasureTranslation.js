@@ -1,11 +1,20 @@
 /**
  * MeasureTranslation Model
  *
- * Stores translations for measure definitions
- * Supports multi-language interface without modifying core measure_definitions table
+ * Stores translations for measure definitions and email templates
+ * Supports multi-language interface using a polymorphic pattern
  *
  * Sprint 4: US-5.4.2 - Calculated Measures (Translation Support)
+ * Sprint 5: US-5.5.6 - Email Template Multi-Language Support
  */
+
+// Valid field names per entity type
+const VALID_FIELDS_BY_ENTITY_TYPE = {
+  measure_definition: ['display_name', 'description', 'unit'],
+  email_template: ['subject', 'body_html', 'body_text']
+};
+
+const VALID_ENTITY_TYPES = Object.keys(VALID_FIELDS_BY_ENTITY_TYPE);
 
 module.exports = (sequelize, DataTypes) => {
   const MeasureTranslation = sequelize.define('MeasureTranslation', {
@@ -16,16 +25,16 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     entity_type: {
-      type: DataTypes.ENUM('measure_definition'),
+      type: DataTypes.STRING(50),
       allowNull: false,
       defaultValue: 'measure_definition',
       validate: {
         isIn: {
-          args: [['measure_definition']],
-          msg: 'Entity type must be "measure_definition"'
+          args: [VALID_ENTITY_TYPES],
+          msg: `Entity type must be one of: ${VALID_ENTITY_TYPES.join(', ')}`
         }
       },
-      comment: 'Type of entity being translated'
+      comment: 'Type of entity being translated (measure_definition, email_template)'
     },
     entity_id: {
       type: DataTypes.UUID,
@@ -33,7 +42,7 @@ module.exports = (sequelize, DataTypes) => {
       validate: {
         isUUID: 4
       },
-      comment: 'ID of the measure_definition being translated'
+      comment: 'ID of the entity being translated'
     },
     language_code: {
       type: DataTypes.STRING(5),
@@ -54,16 +63,9 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(50),
       allowNull: false,
       validate: {
-        len: [1, 50],
-        isValidFieldName(value) {
-          // Valid field names for measure definitions: display_name, description, unit
-          const validFields = ['display_name', 'description', 'unit'];
-          if (!validFields.includes(value)) {
-            throw new Error(`Field name must be one of: ${validFields.join(', ')}`);
-          }
-        }
+        len: [1, 50]
       },
-      comment: 'Name of the field being translated (display_name, description, unit)'
+      comment: 'Name of the field being translated'
     },
     translated_value: {
       type: DataTypes.TEXT,
@@ -106,6 +108,41 @@ module.exports = (sequelize, DataTypes) => {
       constraints: false,
       as: 'measureDefinition'
     });
+
+    // Polymorphic association with EmailTemplate
+    MeasureTranslation.belongsTo(models.EmailTemplate, {
+      foreignKey: 'entity_id',
+      constraints: false,
+      as: 'emailTemplate'
+    });
+  };
+
+  /**
+   * Get valid field names for a given entity type
+   * @param {string} entityType - The entity type
+   * @returns {string[]} Array of valid field names
+   */
+  MeasureTranslation.getValidFieldNames = function(entityType) {
+    return VALID_FIELDS_BY_ENTITY_TYPE[entityType] || [];
+  };
+
+  /**
+   * Check if a field name is valid for a given entity type
+   * @param {string} entityType - The entity type
+   * @param {string} fieldName - The field name to validate
+   * @returns {boolean} True if valid
+   */
+  MeasureTranslation.isValidFieldName = function(entityType, fieldName) {
+    const validFields = VALID_FIELDS_BY_ENTITY_TYPE[entityType];
+    return validFields ? validFields.includes(fieldName) : false;
+  };
+
+  /**
+   * Get all valid entity types
+   * @returns {string[]} Array of valid entity types
+   */
+  MeasureTranslation.getValidEntityTypes = function() {
+    return VALID_ENTITY_TYPES;
   };
 
   return MeasureTranslation;

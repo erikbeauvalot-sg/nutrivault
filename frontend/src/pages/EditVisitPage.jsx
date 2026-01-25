@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import visitService from '../services/visitService';
 import visitCustomFieldService from '../services/visitCustomFieldService';
+import userService from '../services/userService';
 import CustomFieldInput from '../components/CustomFieldInput';
 
 const EditVisitPage = () => {
@@ -54,13 +55,26 @@ const EditVisitPage = () => {
   const [customFieldCategories, setCustomFieldCategories] = useState([]);
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
+  const [dietitians, setDietitians] = useState([]);
 
   useEffect(() => {
     if (i18n.resolvedLanguage) {
       fetchVisitData();
       fetchCustomFields();
+      fetchDietitians();
     }
   }, [id, i18n.resolvedLanguage]);
+
+  const fetchDietitians = async () => {
+    try {
+      const response = await userService.getDietitians();
+      const data = response.data?.data || response.data || [];
+      setDietitians(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error fetching dietitians:', err);
+      setDietitians([]);
+    }
+  };
 
   const fetchVisitData = async () => {
     try {
@@ -492,19 +506,22 @@ const EditVisitPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Dietitian</Form.Label>
-                            <Form.Control
-                              type="text"
-                              value={visit?.dietitian
-                                ? `${visit.dietitian.first_name || ''} ${visit.dietitian.last_name || ''}`.trim() || visit.dietitian.username
-                                : ''
-                              }
-                              disabled
-                              readOnly
-                            />
-                            <Form.Text className="text-muted">
-                              Dietitian cannot be changed after visit creation
-                            </Form.Text>
+                            <Form.Label>{t('visits.dietitian')} *</Form.Label>
+                            <Form.Select
+                              name="dietitian_id"
+                              value={formData.dietitian_id}
+                              onChange={handleInputChange}
+                              required
+                            >
+                              <option value="">{t('visits.selectDietitian')}</option>
+                              {dietitians.map(d => (
+                                <option key={d.id} value={d.id}>
+                                  {d.first_name && d.last_name
+                                    ? `${d.first_name} ${d.last_name}`
+                                    : d.username}
+                                </option>
+                              ))}
+                            </Form.Select>
                           </Form.Group>
 
                           <Form.Group className="mb-3">

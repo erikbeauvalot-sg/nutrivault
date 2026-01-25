@@ -142,4 +142,104 @@ router.post(
   emailTemplateController.previewTemplate
 );
 
+// ===========================================
+// Translation Routes - US-5.5.6
+// ===========================================
+
+/**
+ * GET /api/email-templates/supported-languages
+ * Get list of supported languages
+ * Permission: users.read
+ */
+router.get(
+  '/supported-languages',
+  authenticate,
+  requirePermission('users.read'),
+  emailTemplateController.getSupportedLanguages
+);
+
+/**
+ * GET /api/email-templates/:id/translations
+ * Get all translations for a template
+ * Permission: users.read
+ */
+router.get(
+  '/:id/translations',
+  authenticate,
+  requirePermission('users.read'),
+  emailTemplateController.getTranslations
+);
+
+/**
+ * GET /api/email-templates/:id/translations/:languageCode
+ * Get translation for a specific language
+ * Permission: users.read
+ */
+router.get(
+  '/:id/translations/:languageCode',
+  authenticate,
+  requirePermission('users.read'),
+  emailTemplateController.getTranslation
+);
+
+/**
+ * POST /api/email-templates/:id/translations/:languageCode
+ * Create or update translation for a language
+ * Role: ADMIN only
+ */
+router.post(
+  '/:id/translations/:languageCode',
+  authenticate,
+  requireRole('ADMIN'),
+  emailTemplateController.saveTranslation
+);
+
+/**
+ * PUT /api/email-templates/:id/translations/:languageCode
+ * Update translation for a language (alias for POST)
+ * Role: ADMIN only
+ */
+router.put(
+  '/:id/translations/:languageCode',
+  authenticate,
+  requireRole('ADMIN'),
+  emailTemplateController.saveTranslation
+);
+
+/**
+ * DELETE /api/email-templates/:id/translations/:languageCode
+ * Delete translation for a language
+ * Role: ADMIN only
+ */
+router.delete(
+  '/:id/translations/:languageCode',
+  authenticate,
+  requireRole('ADMIN'),
+  emailTemplateController.deleteTranslation
+);
+
+/**
+ * GET /api/email-templates/:id/base-content
+ * Get base template content for copying to translation
+ * Permission: users.read
+ */
+router.get(
+  '/:id/base-content',
+  authenticate,
+  requirePermission('users.read'),
+  emailTemplateController.getBaseContent
+);
+
+/**
+ * POST /api/email-templates/:id/preview-translation
+ * Preview template in a specific language
+ * Permission: users.read
+ */
+router.post(
+  '/:id/preview-translation',
+  authenticate,
+  requirePermission('users.read'),
+  emailTemplateController.previewTranslation
+);
+
 module.exports = router;

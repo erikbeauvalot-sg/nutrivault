@@ -7,6 +7,7 @@ const nodemailer = require('nodemailer');
 const { getTemplateBySlug } = require('./emailTemplate.service');
 const { renderTemplate, buildVariableContext } = require('./templateRenderer.service');
 const { generateInvoicePDF } = require('./invoicePDF.service');
+const emailTemplateTranslationService = require('./emailTemplateTranslation.service');
 const db = require('../../../models');
 const EmailLog = db.EmailLog;
 
@@ -363,14 +364,17 @@ L'équipe NutriVault
 
 /**
  * Send email using a template
+ * Supports multi-language: automatically selects patient's preferred language
+ *
  * @param {Object} options - Email options
  * @param {string} options.templateSlug - Template slug to use
  * @param {string} options.to - Recipient email address
  * @param {Object} options.variables - Raw data objects (patient, invoice, etc.)
- * @param {Object} options.patient - Patient object (for logging)
+ * @param {Object} options.patient - Patient object (for logging and language preference)
  * @param {Object} options.user - User sending the email (for logging)
  * @param {string} options.from - Sender email (optional)
  * @param {Array} options.attachments - Email attachments (optional)
+ * @param {string} options.languageCode - Override language code (optional)
  * @returns {Promise<Object>} Email send result with log entry
  */
 async function sendEmailFromTemplate({
@@ -380,7 +384,8 @@ async function sendEmailFromTemplate({
   patient = null,
   user = null,
   from = null,
-  attachments = null
+  attachments = null,
+  languageCode = null
 }) {
   try {
     // Get template
@@ -390,11 +395,48 @@ async function sendEmailFromTemplate({
       throw new Error(`Template '${templateSlug}' is not active`);
     }
 
+    // Determine language: explicit override > patient preference > default
+    const preferredLanguage = languageCode || patient?.language_preference || null;
+
+    // Get template content in the appropriate language
+    let templateContent;
+    let languageUsed = null;
+
+    if (preferredLanguage) {
+      try {
+        templateContent = await emailTemplateTranslationService.getTemplateInLanguage(
+          template.id,
+          preferredLanguage
+        );
+        languageUsed = templateContent.language_used;
+      } catch (translationError) {
+        console.warn(`⚠️ Translation lookup failed, using base template:`, translationError.message);
+        templateContent = {
+          subject: template.subject,
+          body_html: template.body_html,
+          body_text: template.body_text
+        };
+      }
+    } else {
+      templateContent = {
+        subject: template.subject,
+        body_html: template.body_html,
+        body_text: template.body_text
+      };
+    }
+
     // Build variable context from raw data objects
     const variableContext = buildVariableContext(variables);
 
+    // Create a mock template object for rendering
+    const templateToRender = {
+      subject: templateContent.subject,
+      body_html: templateContent.body_html,
+      body_text: templateContent.body_text
+    };
+
     // Render template
-    const { subject, html, text } = renderTemplate(template, variableContext);
+    const { subject, html, text } = renderTemplate(templateToRender, variableContext);
 
     // Create email log entry (before sending)
     const emailLog = await EmailLog.create({
@@ -405,7 +447,8 @@ async function sendEmailFromTemplate({
       subject,
       variables_used: variableContext,
       status: 'queued',
-      sent_by: user?.id || null
+      sent_by: user?.id || null,
+      language_code: languageUsed
     });
 
     try {
@@ -429,7 +472,8 @@ async function sendEmailFromTemplate({
         ...result,
         logId: emailLog.id,
         templateSlug,
-        subject
+        subject,
+        languageUsed
       };
     } catch (error) {
       // Update log entry on failure

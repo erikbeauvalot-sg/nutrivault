@@ -116,6 +116,88 @@ export const getTemplateStats = async () => {
   return response;
 };
 
+// ==========================================
+// Translation Functions - US-5.5.6
+// ==========================================
+
+/**
+ * Get all translations for a template
+ * @param {string} templateId - Template UUID
+ * @returns {Promise<object>} Translations object keyed by language code
+ */
+export const getTranslations = async (templateId) => {
+  const response = await api.get(`/api/email-templates/${templateId}/translations`);
+  return response;
+};
+
+/**
+ * Get translation for a specific language
+ * @param {string} templateId - Template UUID
+ * @param {string} languageCode - Language code (e.g., 'fr')
+ * @returns {Promise<object>} Translation object
+ */
+export const getTranslation = async (templateId, languageCode) => {
+  const response = await api.get(`/api/email-templates/${templateId}/translations/${languageCode}`);
+  return response;
+};
+
+/**
+ * Save translation for a language
+ * @param {string} templateId - Template UUID
+ * @param {string} languageCode - Language code
+ * @param {object} translationData - Translation fields (subject, body_html, body_text)
+ * @returns {Promise<object>} Saved translation
+ */
+export const saveTranslation = async (templateId, languageCode, translationData) => {
+  const response = await api.post(`/api/email-templates/${templateId}/translations/${languageCode}`, translationData);
+  return response;
+};
+
+/**
+ * Delete translation for a language
+ * @param {string} templateId - Template UUID
+ * @param {string} languageCode - Language code
+ * @returns {Promise<void>}
+ */
+export const deleteTranslation = async (templateId, languageCode) => {
+  const response = await api.delete(`/api/email-templates/${templateId}/translations/${languageCode}`);
+  return response;
+};
+
+/**
+ * Get base template content (for copying to translation)
+ * @param {string} templateId - Template UUID
+ * @returns {Promise<object>} Base template content
+ */
+export const getBaseContent = async (templateId) => {
+  const response = await api.get(`/api/email-templates/${templateId}/base-content`);
+  return response;
+};
+
+/**
+ * Get supported languages list
+ * @returns {Promise<Array>} Supported languages
+ */
+export const getSupportedLanguages = async () => {
+  const response = await api.get('/api/email-templates/supported-languages');
+  return response;
+};
+
+/**
+ * Preview template in a specific language
+ * @param {string} templateId - Template UUID
+ * @param {string} languageCode - Language code
+ * @param {object} sampleData - Sample data for variables
+ * @returns {Promise<object>} Rendered template
+ */
+export const previewTranslation = async (templateId, languageCode, sampleData = {}) => {
+  const response = await api.post(
+    `/api/email-templates/${templateId}/preview-translation?languageCode=${languageCode}`,
+    sampleData
+  );
+  return response;
+};
+
 export default {
   getAllTemplates,
   getTemplateById,
@@ -126,5 +208,13 @@ export default {
   toggleActive,
   previewTemplate,
   getAvailableVariables,
-  getTemplateStats
+  getTemplateStats,
+  // Translation functions
+  getTranslations,
+  getTranslation,
+  saveTranslation,
+  deleteTranslation,
+  getBaseContent,
+  getSupportedLanguages,
+  previewTranslation
 };

@@ -39,6 +39,7 @@ const MeasureDetailPage = lazy(() => import('./pages/MeasureDetailPage'));
 const EmailTemplatesPage = lazy(() => import('./pages/EmailTemplatesPage'));
 const BillingTemplatesPage = lazy(() => import('./pages/BillingTemplatesPage'));
 const InvoiceCustomizationPage = lazy(() => import('./pages/InvoiceCustomizationPage'));
+const AIConfigPage = lazy(() => import('./pages/AIConfigPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -299,6 +300,15 @@ function App() {
         element={
           <ProtectedRoute permission="billing.update">
             <InvoiceCustomizationPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/ai-config"
+        element={
+          <ProtectedRoute>
+            <AIConfigPage />
           </ProtectedRoute>
         }
       />

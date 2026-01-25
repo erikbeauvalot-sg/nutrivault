@@ -16,6 +16,7 @@ import visitCustomFieldService from '../services/visitCustomFieldService';
 import CustomFieldDisplay from '../components/CustomFieldDisplay';
 import LogMeasureModal from '../components/LogMeasureModal';
 import SendReminderButton from '../components/SendReminderButton';
+import GenerateFollowupModal from '../components/GenerateFollowupModal';
 import { getMeasuresByVisit, formatMeasureValue, getAllMeasureTranslations } from '../services/measureService';
 
 const VisitDetailPage = () => {
@@ -39,6 +40,9 @@ const VisitDetailPage = () => {
   const [measureTranslations, setMeasureTranslations] = useState({});
   const [loadingMeasures, setLoadingMeasures] = useState(false);
   const [showLogMeasureModal, setShowLogMeasureModal] = useState(false);
+
+  // Follow-up modal state
+  const [showFollowupModal, setShowFollowupModal] = useState(false);
 
   useEffect(() => {
     if (id && i18n.resolvedLanguage) {
@@ -275,6 +279,16 @@ const VisitDetailPage = () => {
               visit={visit}
               onReminderSent={fetchVisitDetails}
             />
+            {/* AI Follow-up button - only for completed visits with clinical notes */}
+            {visit.status === 'COMPLETED' && visit.patient?.email && (
+              <Button
+                variant="outline-info"
+                onClick={() => setShowFollowupModal(true)}
+                title={t('followup.generateFollowupTooltip')}
+              >
+                🤖 {t('followup.generateFollowup')}
+              </Button>
+            )}
             {canFinishVisit && (
               <Button
                 variant="success"
@@ -783,6 +797,19 @@ const VisitDetailPage = () => {
             onSuccess={() => {
               fetchVisitMeasures();
               setShowLogMeasureModal(false);
+            }}
+          />
+        )}
+
+        {/* Generate Follow-up Modal */}
+        {visit && (
+          <GenerateFollowupModal
+            show={showFollowupModal}
+            onHide={() => setShowFollowupModal(false)}
+            visit={visit}
+            onSent={() => {
+              setShowFollowupModal(false);
+              // Optionally show success notification
             }}
           />
         )}

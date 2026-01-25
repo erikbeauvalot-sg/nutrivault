@@ -128,6 +128,14 @@ app.use('/api/billing-templates', billingTemplatesRoutes);
 const invoiceCustomizationsRoutes = require('./routes/invoiceCustomizations');
 app.use('/api/invoice-customizations', invoiceCustomizationsRoutes);
 
+// AI Follow-up routes (protected - RBAC enforced in routes file)
+const followupsRoutes = require('./routes/followups');
+app.use('/api/followups', followupsRoutes);
+
+// AI Configuration routes (protected - Admin only)
+const aiConfigRoutes = require('./routes/aiConfig');
+app.use('/api/ai-config', aiConfigRoutes);
+
 // Serve uploaded files (logos, signatures)
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 

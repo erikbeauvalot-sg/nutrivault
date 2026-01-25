@@ -26,6 +26,7 @@ import Layout from '../components/layout/Layout';
 import emailTemplateService from '../services/emailTemplateService';
 import EmailTemplateModal from '../components/EmailTemplateModal';
 import EmailPreviewModal from '../components/EmailPreviewModal';
+import EmailTemplateTranslationModal from '../components/EmailTemplateTranslationModal';
 import {
   FaPlus,
   FaEdit,
@@ -36,7 +37,8 @@ import {
   FaToggleOff,
   FaSearch,
   FaFilter,
-  FaEnvelope
+  FaEnvelope,
+  FaGlobe
 } from 'react-icons/fa';
 
 const EmailTemplatesPage = () => {
@@ -55,6 +57,7 @@ const EmailTemplatesPage = () => {
   // Modal state
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showTranslationModal, setShowTranslationModal] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   // Category options
@@ -122,6 +125,11 @@ const EmailTemplatesPage = () => {
   const handlePreviewTemplate = (template) => {
     setSelectedTemplate(template);
     setShowPreviewModal(true);
+  };
+
+  const handleTranslations = (template) => {
+    setSelectedTemplate(template);
+    setShowTranslationModal(true);
   };
 
   const handleDuplicateTemplate = async (template) => {
@@ -364,6 +372,13 @@ const EmailTemplatesPage = () => {
                         <FaCopy />
                       </Button>
                       <Button
+                        variant="outline-success"
+                        onClick={() => handleTranslations(template)}
+                        title="Translations"
+                      >
+                        <FaGlobe />
+                      </Button>
+                      <Button
                         variant={template.is_active ? 'outline-warning' : 'outline-success'}
                         onClick={() => handleToggleActive(template)}
                         title={template.is_active ? 'Deactivate' : 'Activate'}
@@ -400,6 +415,15 @@ const EmailTemplatesPage = () => {
             show={showPreviewModal}
             onHide={handleModalClose}
             template={selectedTemplate}
+          />
+        )}
+
+        {showTranslationModal && selectedTemplate && (
+          <EmailTemplateTranslationModal
+            show={showTranslationModal}
+            onHide={() => setShowTranslationModal(false)}
+            template={selectedTemplate}
+            onSaved={fetchTemplates}
           />
         )}
       </Container>
