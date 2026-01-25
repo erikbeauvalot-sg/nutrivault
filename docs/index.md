@@ -29,6 +29,10 @@
 - [API Contracts](./api-contracts-backend.md) _(To be generated)_
 - [Data Models](./data-models.md) _(To be generated)_
 
+### Documentation Utilisateur
+
+- [Guide Utilisateur (FR)](./GUIDE_UTILISATEUR.md) - Documentation complète en français
+
 ### Existing Documentation
 
 - [Feature Plan](../plan/feature-nutrivault-complete-system-1.md)
