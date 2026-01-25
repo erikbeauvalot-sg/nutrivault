@@ -15,6 +15,17 @@ const { v4: uuidv4 } = require('uuid');
 
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Check if billing templates already exist
+    const existingTemplates = await queryInterface.sequelize.query(
+      "SELECT COUNT(*) as count FROM billing_templates",
+      { type: Sequelize.QueryTypes.SELECT }
+    );
+
+    if (existingTemplates[0].count > 0) {
+      console.log('ℹ️  Billing templates already exist, skipping seed');
+      return;
+    }
+
     const now = new Date();
 
     // Template 1: Consultation Initiale (DEFAULT)

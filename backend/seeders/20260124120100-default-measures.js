@@ -11,6 +11,17 @@ const { v4: uuidv4 } = require('uuid');
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // Check if measures already exist
+    const existingMeasures = await queryInterface.sequelize.query(
+      "SELECT COUNT(*) as count FROM measure_definitions WHERE is_system = true",
+      { type: Sequelize.QueryTypes.SELECT }
+    );
+
+    if (existingMeasures[0].count > 0) {
+      console.log('ℹ️  Default measures already exist, skipping seed');
+      return;
+    }
+
     const now = new Date();
 
     const defaultMeasures = [

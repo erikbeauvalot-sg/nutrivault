@@ -11,6 +11,17 @@ const { v4: uuidv4 } = require('uuid');
 
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Check if measures permissions already exist
+    const existingPermissions = await queryInterface.sequelize.query(
+      "SELECT COUNT(*) as count FROM permissions WHERE resource = 'measures'",
+      { type: Sequelize.QueryTypes.SELECT }
+    );
+
+    if (existingPermissions[0].count > 0) {
+      console.log('ℹ️  Measures permissions already exist, skipping seed');
+      return;
+    }
+
     const now = new Date();
 
     // Get all roles

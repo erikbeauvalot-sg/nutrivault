@@ -4,7 +4,18 @@ const { v4: uuidv4 } = require('uuid');
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  async up(queryInterface) {
+  async up(queryInterface, Sequelize) {
+    // Check if AI prompts already exist
+    const existingPrompts = await queryInterface.sequelize.query(
+      "SELECT COUNT(*) as count FROM ai_prompts",
+      { type: Sequelize.QueryTypes.SELECT }
+    );
+
+    if (existingPrompts[0].count > 0) {
+      console.log('ℹ️  AI prompts already exist, skipping seed');
+      return;
+    }
+
     const now = new Date();
 
     const defaultPrompts = [

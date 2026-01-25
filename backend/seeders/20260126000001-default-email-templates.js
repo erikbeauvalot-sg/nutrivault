@@ -15,6 +15,17 @@ const { v4: uuidv4 } = require('uuid');
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // Check if email templates already exist
+    const existingTemplates = await queryInterface.sequelize.query(
+      "SELECT COUNT(*) as count FROM email_templates",
+      { type: Sequelize.QueryTypes.SELECT }
+    );
+
+    if (existingTemplates[0].count > 0) {
+      console.log('ℹ️  Email templates already exist, skipping seed');
+      return;
+    }
+
     const now = new Date();
 
     const defaultTemplates = [
