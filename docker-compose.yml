@@ -46,6 +46,10 @@ services:
       - EMAIL_USER=${EMAIL_USER}
       - EMAIL_PASSWORD=${EMAIL_PASSWORD}
       - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-NutriVault}
+      # AI Provider API Keys
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
       # Database initialization flags
       - SEED_DB=${SEED_DB:-false}
     volumes:
