@@ -5,7 +5,7 @@
 set -e
 
 # Configuration - can be overridden by environment variables
-DOCKER_REGISTRY="${DOCKER_REGISTRY:-ghcr.io}"
+DOCKER_REGISTRY="${DOCKER_REGISTRY:-nutrivault}"
 DOCKER_REPO="${DOCKER_REPO:-erikbeauvalot-sg/nutrivault}"
 VERSION="${VERSION:-}"
 ENVIRONMENT="${ENVIRONMENT:-production}"
@@ -282,7 +282,7 @@ show_usage() {
     echo "Environment Variables:"
     echo "  VERSION              Release version (auto-detected if not set)"
     echo "  ENVIRONMENT          Target environment (production, staging, development)"
-    echo "  DOCKER_REGISTRY      Container registry (default: ghcr.io)"
+    echo "  DOCKER_REGISTRY      Container registry (default: nutrivault)"
     echo "  DOCKER_REPO          Repository name (default: erikbeauvalot-sg/nutrivault)"
     echo "  DOCKER_USERNAME      Registry username"
     echo "  DOCKER_PASSWORD      Registry password"

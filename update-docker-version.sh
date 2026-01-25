@@ -65,8 +65,8 @@ build_images() {
     log_info "Building backend image..."
     docker build \
         --target production \
-        --tag "$DOCKER_REPO-backend:$version" \
-        --tag "$DOCKER_REPO-backend:latest" \
+        --tag "$DOCKER_REGISTRY/$DOCKER_REPO-backend:$version" \
+        --tag "$DOCKER_REGISTRY/$DOCKER_REPO-backend:latest" \
         --build-arg VERSION="$version" \
         --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
         --build-arg GIT_COMMIT="$(git rev-parse HEAD)" \
@@ -77,8 +77,8 @@ build_images() {
     log_info "Building frontend image..."
     docker build \
         --target production \
-        --tag "$DOCKER_REPO-frontend:$version" \
-        --tag "$DOCKER_REPO-frontend:latest" \
+        --tag "$DOCKER_REGISTRY/$DOCKER_REPO-frontend:$version" \
+        --tag "$DOCKER_REGISTRY/$DOCKER_REPO-frontend:latest" \
         --build-arg VERSION="$version" \
         --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
         --build-arg GIT_COMMIT="$(git rev-parse HEAD)" \
@@ -95,13 +95,13 @@ push_images() {
 
     # Push backend images
     log_info "Pushing backend images..."
-    docker push "$DOCKER_REPO-backend:$version"
-    docker push "$DOCKER_REPO-backend:latest"
+    docker push "$DOCKER_REGISTRY/$DOCKER_REPO-backend:$version"
+    docker push "$DOCKER_REGISTRY/$DOCKER_REPO-backend:latest"
 
     # Push frontend images
     log_info "Pushing frontend images..."
-    docker push "$DOCKER_REPO-frontend:$version"
-    docker push "$DOCKER_REPO-frontend:latest"
+    docker push "$DOCKER_REGISTRY/$DOCKER_REPO-frontend:$version"
+    docker push "$DOCKER_REGISTRY/$DOCKER_REPO-frontend:latest"
 
     log_success "Images pushed successfully"
 }
@@ -114,16 +114,11 @@ update_compose_file() {
     # Create backup
     cp "$COMPOSE_FILE" "${COMPOSE_FILE}.backup"
 
-    # Update backend image
-    sed -i.bak "s|build:|image: $DOCKER_REPO-backend:$version|" "$COMPOSE_FILE"
+    # Update backend image - replace the image line with versioned image
+    sed -i.bak "s|image: \${DOCKER_REGISTRY}/\${DOCKER_REPO}-backend:\${VERSION:-latest}|image: $DOCKER_REGISTRY/$DOCKER_REPO-backend:$version|" "$COMPOSE_FILE"
 
-    # Update frontend image
-    sed -i.bak "s|build:|image: $DOCKER_REPO-frontend:$version|" "$COMPOSE_FILE"
-
-    # Remove build contexts since we're using pre-built images
-    sed -i.bak '/context:/d' "$COMPOSE_FILE"
-    sed -i.bak '/dockerfile:/d' "$COMPOSE_FILE"
-    sed -i.bak '/target:/d' "$COMPOSE_FILE"
+    # Update frontend image - replace the image line with versioned image
+    sed -i.bak "s|image: \${DOCKER_REGISTRY}/\${DOCKER_REPO}-frontend:\${VERSION:-latest}|image: $DOCKER_REGISTRY/$DOCKER_REPO-frontend:$version|" "$COMPOSE_FILE"
 
     log_success "docker-compose.yml updated"
 }

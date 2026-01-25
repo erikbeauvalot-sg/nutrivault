@@ -147,6 +147,9 @@ VERSION=5.0.0-alpha docker-compose up
 
 # With custom registry
 VERSION=5.0.0-alpha DOCKER_REGISTRY=ghcr.io DOCKER_REPO=user/repo docker-compose up
+
+# With local registry
+VERSION=5.0.0-alpha DOCKER_REGISTRY=localhost:5000 docker-compose up
 ```
 
 ### Configuration
@@ -192,6 +195,27 @@ See `env.example` for all available environment variables. Key variables:
 - `GIT_COMMIT`: Git commit hash (set by deployment scripts)
 
 **Important**: All Docker builds use the project root (`.`) as the build context. This allows Dockerfiles to access shared files like `models/`, `migrations/`, `config/`, and other directories that are outside the individual service directories.
+
+## Naming Conventions
+
+All scripts follow consistent naming conventions for Docker images:
+
+### Image Naming Format
+```
+{DOCKER_REGISTRY}/{DOCKER_REPO}-{service}:{version}
+```
+
+### Examples
+- Backend: `nutrivault/erikbeauvalot-sg/nutrivault-backend:5.0.0-alpha`
+- Frontend: `nutrivault/erikbeauvalot-sg/nutrivault-frontend:5.0.0-alpha`
+- Latest tags: `nutrivault/erikbeauvalot-sg/nutrivault-backend:latest`
+
+### Environment Variables
+- `DOCKER_REGISTRY`: Container registry (default: `nutrivault`)
+- `DOCKER_REPO`: Repository name (default: `erikbeauvalot-sg/nutrivault`)
+- `VERSION`: Application version for image tagging
+
+This ensures all scripts (`update-docker-version.sh`, `ci-cd-deploy.sh`, and `docker-compose.yml`) use identical image names.
 
 ## Workflow Examples
 
