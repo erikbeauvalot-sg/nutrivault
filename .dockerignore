@@ -23,7 +23,7 @@
 **/.idea
 
 # Frontend (not needed for backend build)
-frontend
+# frontend
 
 # Git
 .git
