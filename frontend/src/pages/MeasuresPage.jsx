@@ -462,6 +462,11 @@ const MeasuresPage = () => {
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className="action-buttons">
                           <ActionButton
+                            action="view"
+                            onClick={() => navigate(`/settings/measures/${measure.id}/view`)}
+                            title={t('common.view', 'View')}
+                          />
+                          <ActionButton
                             action="edit"
                             onClick={() => handleEditMeasure(measure)}
                             title={t('common.edit', 'Edit')}
@@ -471,11 +476,17 @@ const MeasuresPage = () => {
                             onClick={() => handleTranslateMeasure(measure)}
                             title={t('measures.actions.translationsTooltip')}
                           />
-                          {!measure.is_system && (
+                          {!measure.is_system ? (
                             <ActionButton
                               action="delete"
                               onClick={() => handleDeleteMeasure(measure.id)}
                               title={t('common.delete', 'Delete')}
+                            />
+                          ) : (
+                            <ActionButton
+                              action="delete"
+                              disabled={true}
+                              title={t('measures.systemMeasureTooltip', 'System measures cannot be deleted')}
                             />
                           )}
                         </div>
