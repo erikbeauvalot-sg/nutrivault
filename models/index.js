@@ -43,6 +43,7 @@ db.BillingTemplate = require('./BillingTemplate')(sequelize, DataTypes);
 db.BillingTemplateItem = require('./BillingTemplateItem')(sequelize, DataTypes);
 db.InvoiceCustomization = require('./InvoiceCustomization')(sequelize, DataTypes);
 db.AIPrompt = require('./AIPrompt')(sequelize, DataTypes);
+db.MeasureAnnotation = require('./MeasureAnnotation')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -546,6 +547,36 @@ db.AIPrompt.belongsTo(db.User, {
 db.User.hasMany(db.AIPrompt, {
   foreignKey: 'updated_by',
   as: 'updated_ai_prompts'
+});
+
+// MeasureAnnotation - Patient relationship
+db.MeasureAnnotation.belongsTo(db.Patient, {
+  foreignKey: 'patient_id',
+  as: 'patient'
+});
+db.Patient.hasMany(db.MeasureAnnotation, {
+  foreignKey: 'patient_id',
+  as: 'annotations'
+});
+
+// MeasureAnnotation - MeasureDefinition relationship
+db.MeasureAnnotation.belongsTo(db.MeasureDefinition, {
+  foreignKey: 'measure_definition_id',
+  as: 'measureDefinition'
+});
+db.MeasureDefinition.hasMany(db.MeasureAnnotation, {
+  foreignKey: 'measure_definition_id',
+  as: 'annotations'
+});
+
+// MeasureAnnotation - User (creator) relationship
+db.MeasureAnnotation.belongsTo(db.User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+db.User.hasMany(db.MeasureAnnotation, {
+  foreignKey: 'created_by',
+  as: 'created_annotations'
 });
 
 module.exports = db;

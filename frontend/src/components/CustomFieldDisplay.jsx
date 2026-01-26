@@ -74,7 +74,22 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
         }
 
       case 'select':
-        return <Badge bg="primary">{value}</Badge>;
+        // Handle value that might be stored as object {value, label} or just string
+        // Also look up the label from select_options if available
+        let displayLabel = value;
+        if (typeof value === 'object' && value !== null) {
+          displayLabel = value.label || value.value || JSON.stringify(value);
+        } else if (select_options && Array.isArray(select_options)) {
+          // Try to find matching label from options
+          const matchingOption = select_options.find(opt => {
+            if (typeof opt === 'string') return opt === value;
+            return opt.value === value;
+          });
+          if (matchingOption) {
+            displayLabel = typeof matchingOption === 'string' ? matchingOption : matchingOption.label;
+          }
+        }
+        return <Badge bg="primary">{displayLabel}</Badge>;
 
       case 'number':
         return <strong>{value}</strong>;

@@ -154,6 +154,14 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
         );
 
       case 'select':
+        // Handle select_options that can be either strings or {value, label} objects
+        const normalizedOptions = select_options?.map(opt => {
+          if (typeof opt === 'string') {
+            return { value: opt, label: opt };
+          }
+          return opt;
+        }) || [];
+
         return (
           <Form.Select
             id={field_name}
@@ -163,9 +171,9 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
             isInvalid={!!error}
           >
             <option value="">-- Select {field_label} --</option>
-            {select_options && select_options.map((option, index) => (
-              <option key={index} value={option}>
-                {option}
+            {normalizedOptions.map((option, index) => (
+              <option key={index} value={option.value}>
+                {option.label}
               </option>
             ))}
           </Form.Select>
