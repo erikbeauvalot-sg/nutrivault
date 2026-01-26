@@ -600,31 +600,31 @@ const PatientDetailPage = () => {
 
             <ResponsiveTabs activeKey={activeTab} onSelect={setActiveTab} id="patient-detail-tabs">
               {/* Basic Info Tab */}
-              <Tab eventKey="basic-info" title="📋 Basic Information">
+              <Tab eventKey="basic-info" title={`📋 ${t('patients.basicInformation', 'Basic Information')}`}>
                 {/* Essential Patient Info */}
                 <Card className="mb-3">
                   <Card.Header className="bg-primary text-white">
-                    <h6 className="mb-0">Patient Basic Information</h6>
+                    <h6 className="mb-0">{t('patients.basicInformationTitle', 'Patient Basic Information')}</h6>
                   </Card.Header>
                   <Card.Body>
                     <Row>
                       <Col xs={12} md={6}>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>First Name:</strong></Col>
+                          <Col sm={5}><strong>{t('patients.firstName', 'First Name')}:</strong></Col>
                           <Col sm={7}>{patient.first_name}</Col>
                         </Row>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Last Name:</strong></Col>
+                          <Col sm={5}><strong>{t('patients.lastName', 'Last Name')}:</strong></Col>
                           <Col sm={7}>{patient.last_name}</Col>
                         </Row>
                       </Col>
                       <Col xs={12} md={6}>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Email:</strong></Col>
+                          <Col sm={5}><strong>{t('patients.email', 'Email')}:</strong></Col>
                           <Col sm={7}>{patient.email || '-'}</Col>
                         </Row>
                         <Row className="mb-2">
-                          <Col sm={5}><strong>Phone:</strong></Col>
+                          <Col sm={5}><strong>{t('patients.phone', 'Phone')}:</strong></Col>
                           <Col sm={7}>{patient.phone || '-'}</Col>
                         </Row>
                       </Col>
@@ -632,14 +632,14 @@ const PatientDetailPage = () => {
                     <hr />
                     <Row>
                       <Col>
-                        <strong>Status:</strong>{' '}
+                        <strong>{t('patients.status', 'Status')}:</strong>{' '}
                         <Badge bg={patient.is_active ? 'success' : 'secondary'}>
-                          {patient.is_active ? 'Active' : 'Inactive'}
+                          {patient.is_active ? t('patients.active', 'Active') : t('patients.inactive', 'Inactive')}
                         </Badge>
                       </Col>
                       {patient.assigned_dietitian && (
                         <Col>
-                          <strong>Assigned Dietitian:</strong> {patient.assigned_dietitian.first_name} {patient.assigned_dietitian.last_name}
+                          <strong>{t('patients.assignedDietitian', 'Assigned Dietitian')}:</strong> {patient.assigned_dietitian.first_name} {patient.assigned_dietitian.last_name}
                         </Col>
                       )}
                     </Row>

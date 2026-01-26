@@ -128,6 +128,8 @@
     "measures": "Mesures",
     "measuresTab": "Mesures du Patient",
     "measuresDescription": "Consulter et suivre les mesures de santé du patient",
+    "basicInformation": "Informations de base",
+    "basicInformationTitle": "Informations de base du patient",
     "measurementsTab": "Mesures",
     "measurementTrends": "Tendances des mesures",
     "measurementTrendsDescription": "Suivre les changements dans les mesures des patients au fil du temps",
