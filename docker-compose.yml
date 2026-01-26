@@ -46,6 +46,8 @@ services:
       - EMAIL_USER=${EMAIL_USER}
       - EMAIL_PASSWORD=${EMAIL_PASSWORD}
       - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-NutriVault}
+      # Frontend URL for email links (unsubscribe, etc.)
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
       # AI Provider API Keys
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
