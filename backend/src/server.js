@@ -154,7 +154,8 @@ const analyticsRoutes = require('./routes/analytics');
 app.use('/api/analytics', analyticsRoutes);
 
 // Serve uploaded files (logos, signatures)
-app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+// Use process.cwd() for production compatibility (consistent with upload services)
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Basic error handler
 app.use((err, req, res, next) => {
