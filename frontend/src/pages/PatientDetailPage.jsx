@@ -5,7 +5,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Tab, Tabs, Button, Badge, Alert, Spinner, Dropdown, Modal, Form, InputGroup } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Badge, Alert, Spinner, Dropdown, Modal, Form, InputGroup } from 'react-bootstrap';
+import ResponsiveTabs, { Tab } from '../components/ResponsiveTabs';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
@@ -597,7 +598,7 @@ const PatientDetailPage = () => {
               </Col>
             </Row>
 
-            <Tabs activeKey={activeTab} onSelect={setActiveTab} className="mb-3">
+            <ResponsiveTabs activeKey={activeTab} onSelect={setActiveTab} id="patient-detail-tabs">
               {/* Basic Info Tab */}
               <Tab eventKey="basic-info" title="📋 Basic Information">
                 {/* Essential Patient Info */}
@@ -1162,7 +1163,7 @@ const PatientDetailPage = () => {
                   </Card.Body>
                 </Card>
               </Tab>
-            </Tabs>
+            </ResponsiveTabs>
           </Card.Body>
         </Card>
 
