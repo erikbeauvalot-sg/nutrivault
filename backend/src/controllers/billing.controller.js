@@ -30,6 +30,7 @@ exports.getAllInvoices = async (req, res, next) => {
     const user = req.user;
     const filters = {
       patient_id: req.query.patient_id,
+      visit_id: req.query.visit_id,
       status: req.query.status,
       search: req.query.search,
       start_date: req.query.start_date,

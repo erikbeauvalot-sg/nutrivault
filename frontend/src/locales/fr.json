@@ -473,7 +473,11 @@
     "cancelReasonOther": "Autre raison",
     "cancelling": "Annulation en cours...",
     "confirmCancel": "Confirmer l'annulation",
-    "cancelError": "Échec de l'annulation de la visite"
+    "cancelError": "Échec de l'annulation de la visite",
+    "invoicesTab": "Factures",
+    "invoicesForVisit": "Factures de cette visite",
+    "noInvoicesForVisit": "Aucune facture pour cette visite",
+    "noInvoicesHelp": "Utilisez \"Terminer & Facturer\" pour générer une facture pour cette visite."
   },
   "dashboard": {
     "title": "Tableau de bord",

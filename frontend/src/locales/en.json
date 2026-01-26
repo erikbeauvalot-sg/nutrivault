@@ -466,7 +466,11 @@
     "cancelReasonOther": "Other reason",
     "cancelling": "Cancelling...",
     "confirmCancel": "Confirm Cancellation",
-    "cancelError": "Failed to cancel visit"
+    "cancelError": "Failed to cancel visit",
+    "invoicesTab": "Invoices",
+    "invoicesForVisit": "Invoices for this visit",
+    "noInvoicesForVisit": "No invoices for this visit",
+    "noInvoicesHelp": "Use \"Finish & Invoice\" to generate an invoice for this visit."
   },
   "dashboard": {
     "title": "Dashboard",

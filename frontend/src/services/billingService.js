@@ -16,6 +16,16 @@ export const getInvoices = async (filters = {}) => {
 };
 
 /**
+ * Get invoices for a specific visit
+ * @param {string} visitId - Visit UUID
+ * @returns {Promise<object>} Invoices array
+ */
+export const getInvoicesByVisit = async (visitId) => {
+  const response = await api.get('/api/billing', { params: { visit_id: visitId } });
+  return response;
+};
+
+/**
  * Get single invoice by ID
  * @param {string} id - Invoice UUID
  * @returns {Promise<object>} Invoice object

@@ -57,6 +57,10 @@ async function getInvoices(user, filters = {}, requestMetadata = {}) {
       whereClause.patient_id = filters.patient_id;
     }
 
+    if (filters.visit_id) {
+      whereClause.visit_id = filters.visit_id;
+    }
+
     if (filters.status) {
       whereClause.status = filters.status;
     }

@@ -18,6 +18,7 @@ import LogMeasureModal from '../components/LogMeasureModal';
 import SendReminderButton from '../components/SendReminderButton';
 import GenerateFollowupModal from '../components/GenerateFollowupModal';
 import { getMeasuresByVisit, formatMeasureValue, getAllMeasureTranslations } from '../services/measureService';
+import { getInvoicesByVisit, downloadInvoicePDF } from '../services/billingService';
 import VisitEmailHistory from '../components/VisitEmailHistory';
 
 const VisitDetailPage = () => {
@@ -55,6 +56,11 @@ const VisitDetailPage = () => {
   // Follow-up modal state
   const [showFollowupModal, setShowFollowupModal] = useState(false);
 
+  // Invoices state
+  const [invoices, setInvoices] = useState([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(null);
+
   // Email history refresh key - increment to force refresh
   const [emailRefreshKey, setEmailRefreshKey] = useState(0);
   const refreshEmailHistory = () => setEmailRefreshKey(prev => prev + 1);
@@ -64,6 +70,7 @@ const VisitDetailPage = () => {
       fetchVisitDetails();
       fetchCustomFields();
       fetchVisitMeasures();
+      fetchVisitInvoices();
     }
   }, [id, i18n.resolvedLanguage]);
 
@@ -158,6 +165,67 @@ const VisitDetailPage = () => {
     }
   };
 
+  const fetchVisitInvoices = async () => {
+    try {
+      setLoadingInvoices(true);
+      const response = await getInvoicesByVisit(id);
+      setInvoices(response.data?.data || []);
+    } catch (err) {
+      console.error('Error fetching visit invoices:', err);
+    } finally {
+      setLoadingInvoices(false);
+    }
+  };
+
+  const handleDownloadPdf = async (invoiceId) => {
+    try {
+      setDownloadingPdf(invoiceId);
+      const response = await downloadInvoicePDF(invoiceId);
+
+      // Create blob URL and trigger download
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+
+      // Get filename from Content-Disposition header or use default
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `invoice-${invoiceId}.pdf`;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (match) filename = match[1];
+      }
+
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading PDF:', err);
+    } finally {
+      setDownloadingPdf(null);
+    }
+  };
+
+  const getInvoiceStatusBadge = (status) => {
+    const variants = {
+      DRAFT: 'secondary',
+      SENT: 'info',
+      PAID: 'success',
+      OVERDUE: 'danger',
+      CANCELLED: 'dark'
+    };
+    return <Badge bg={variants[status] || 'secondary'}>{t(`billing.status.${status}`, status)}</Badge>;
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat(i18n.language === 'fr' ? 'fr-FR' : 'en-US', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(amount || 0);
+  };
+
   const handleBack = () => {
     navigate('/visits');
   };
@@ -181,8 +249,9 @@ const VisitDetailPage = () => {
         invoice: result.invoice
       });
 
-      // Refresh visit details and email history
+      // Refresh visit details, email history, and invoices
       await fetchVisitDetails();
+      await fetchVisitInvoices();
       refreshEmailHistory();
 
       // Close modal
@@ -588,6 +657,86 @@ const VisitDetailPage = () => {
                           </tr>
                         );
                       })}
+                    </tbody>
+                  </Table>
+                )}
+              </Tab>
+
+              {/* Invoices Tab */}
+              <Tab eventKey="invoices" title={`💰 ${t('visits.invoicesTab', 'Invoices')} (${invoices.length})`}>
+                <Row className="mb-3">
+                  <Col>
+                    <h5>{t('visits.invoicesForVisit', 'Invoices for this visit')}</h5>
+                  </Col>
+                </Row>
+
+                {loadingInvoices ? (
+                  <div className="text-center py-4">
+                    <Spinner animation="border" size="sm" />
+                    <p className="mt-2 text-muted">{t('common.loading')}</p>
+                  </div>
+                ) : invoices.length === 0 ? (
+                  <Alert variant="info">
+                    <strong>{t('visits.noInvoicesForVisit', 'No invoices for this visit')}</strong>
+                    <p className="mb-0 mt-2">
+                      {t('visits.noInvoicesHelp', 'Use "Finish & Invoice" to generate an invoice for this visit.')}
+                    </p>
+                  </Alert>
+                ) : (
+                  <Table striped bordered hover responsive>
+                    <thead className="table-dark">
+                      <tr>
+                        <th>{t('billing.invoiceNumber', 'Invoice #')}</th>
+                        <th>{t('billing.date', 'Date')}</th>
+                        <th>{t('billing.status', 'Status')}</th>
+                        <th>{t('billing.totalAmount', 'Total')}</th>
+                        <th>{t('billing.amountPaid', 'Paid')}</th>
+                        <th>{t('billing.amountDue', 'Due')}</th>
+                        <th>{t('common.actions', 'Actions')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invoices.map(invoice => (
+                        <tr key={invoice.id}>
+                          <td>
+                            <Link to={`/billing/${invoice.id}`} className="text-decoration-none">
+                              <strong>{invoice.invoice_number}</strong>
+                            </Link>
+                          </td>
+                          <td>{formatDate(invoice.invoice_date)}</td>
+                          <td>{getInvoiceStatusBadge(invoice.status)}</td>
+                          <td>{formatCurrency(invoice.total_amount)}</td>
+                          <td className="text-success">{formatCurrency(invoice.amount_paid)}</td>
+                          <td className={invoice.amount_due > 0 ? 'text-danger' : ''}>
+                            {formatCurrency(invoice.amount_due)}
+                          </td>
+                          <td>
+                            <div className="d-flex gap-2">
+                              <Button
+                                variant="outline-primary"
+                                size="sm"
+                                onClick={() => handleDownloadPdf(invoice.id)}
+                                disabled={downloadingPdf === invoice.id}
+                                title={t('billing.downloadPDF', 'Download PDF')}
+                              >
+                                {downloadingPdf === invoice.id ? (
+                                  <Spinner animation="border" size="sm" />
+                                ) : (
+                                  '📄 PDF'
+                                )}
+                              </Button>
+                              <Button
+                                variant="outline-secondary"
+                                size="sm"
+                                onClick={() => navigate(`/billing/${invoice.id}`)}
+                                title={t('common.view', 'View')}
+                              >
+                                👁️ {t('common.view', 'View')}
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </Table>
                 )}
