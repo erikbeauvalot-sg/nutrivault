@@ -122,7 +122,12 @@ CustomFieldDisplay.propTypes = {
     field_label: PropTypes.string.isRequired,
     field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean', 'calculated']).isRequired,
     validation_rules: PropTypes.object,
-    select_options: PropTypes.arrayOf(PropTypes.string),
+    select_options: PropTypes.arrayOf(
+      PropTypes.oneOfType([
+        PropTypes.string,
+        PropTypes.shape({ value: PropTypes.string, label: PropTypes.string })
+      ])
+    ),
     decimal_places: PropTypes.number
   }).isRequired,
   value: PropTypes.any,
