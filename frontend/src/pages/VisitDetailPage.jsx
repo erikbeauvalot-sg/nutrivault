@@ -411,7 +411,7 @@ const VisitDetailPage = () => {
               </span>
             </div>
           </Col>
-          <Col xs="auto" className="d-flex gap-2 align-items-start flex-nowrap" style={{ marginTop: '4.5rem' }}>
+          <Col xs={12} md="auto" className="d-flex gap-2 align-items-start flex-wrap mt-3 mt-md-0" style={{ marginTop: '0' }}>
             {/* 1) Envoyer un mail */}
             <SendReminderButton
               visit={visit}
@@ -423,14 +423,14 @@ const VisitDetailPage = () => {
                 variant="outline-info"
                 onClick={() => setShowFollowupModal(true)}
                 title={t('followup.generateFollowupTooltip')}
-                style={{ whiteSpace: 'nowrap', border: '1px solid' }}
+                style={{ border: '1px solid' }}
               >
                 🤖 {t('followup.generateFollowup')}
               </Button>
             )}
             {/* 2) Modifier */}
             {canEditVisit && (
-              <Button variant="outline-primary" onClick={handleEdit} style={{ whiteSpace: 'nowrap', border: '1px solid' }}>
+              <Button variant="outline-primary" onClick={handleEdit} style={{ border: '1px solid' }}>
                 ✏️ {t('visits.editVisit')}
               </Button>
             )}
@@ -441,7 +441,7 @@ const VisitDetailPage = () => {
                   variant="outline-success"
                   onClick={() => setShowFinishModal(true)}
                   disabled={finishingVisit}
-                  style={{ whiteSpace: 'nowrap', border: '1px solid' }}
+                  style={{ border: '1px solid' }}
                 >
                   ✅ {t('visits.finishAndInvoice')}
                 </Button>
@@ -449,7 +449,7 @@ const VisitDetailPage = () => {
                   variant="outline-danger"
                   onClick={() => setShowCancelModal(true)}
                   disabled={cancellingVisit}
-                  style={{ whiteSpace: 'nowrap', border: '1px solid' }}
+                  style={{ border: '1px solid' }}
                 >
                   ❌ {t('visits.cancelVisit')}
                 </Button>
@@ -504,7 +504,7 @@ const VisitDetailPage = () => {
               {/* Overview Tab */}
               <Tab eventKey="overview" title={`📋 ${t('visits.overviewTab')}`}>
                 <Row>
-                  <Col md={6}>
+                  <Col xs={12} md={6}>
                     <Card className="mb-3">
                       <Card.Header className="bg-primary text-white">
                         <h6 className="mb-0">👤 {t('visits.patientDietitian')}</h6>
@@ -552,7 +552,7 @@ const VisitDetailPage = () => {
                     </Card>
                   </Col>
 
-                  <Col md={6}>
+                  <Col xs={12} md={6}>
                     <Card className="mb-3">
                       <Card.Header className="bg-info text-white">
                         <h6 className="mb-0">📅 {t('visits.visitInfo')}</h6>
@@ -711,7 +711,7 @@ const VisitDetailPage = () => {
                             {formatCurrency(invoice.amount_due)}
                           </td>
                           <td>
-                            <div className="d-flex gap-2">
+                            <div className="d-flex gap-2 flex-wrap">
                               <Button
                                 variant="outline-primary"
                                 size="sm"
@@ -790,7 +790,7 @@ const VisitDetailPage = () => {
                     ) : (
                       <Row>
                         {category.fields.map(field => (
-                          <Col key={field.definition_id} md={6}>
+                          <Col key={field.definition_id} xs={12} md={6}>
                             <CustomFieldDisplay
                               fieldDefinition={field}
                               value={fieldValues[field.definition_id]}
@@ -806,7 +806,7 @@ const VisitDetailPage = () => {
               {/* Administrative Tab */}
               <Tab eventKey="admin" title={`⚙️ ${t('visits.administrativeTab')}`}>
                 <Row>
-                  <Col md={6}>
+                  <Col xs={12} md={6}>
                     <Card className="mb-3">
                       <Card.Header className="bg-warning">
                         <h6 className="mb-0">{t('visits.timestamps')}</h6>
@@ -823,7 +823,7 @@ const VisitDetailPage = () => {
                       </Card.Body>
                     </Card>
                   </Col>
-                  <Col md={6}>
+                  <Col xs={12} md={6}>
                     <Card className="mb-3">
                       <Card.Header className="bg-warning">
                         <h6 className="mb-0">{t('visits.visitId')}</h6>
