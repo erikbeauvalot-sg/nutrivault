@@ -318,6 +318,11 @@ const CustomFieldsPage = () => {
                           <td onClick={(e) => e.stopPropagation()}>
                             <div className="action-buttons">
                               <ActionButton
+                                action="view"
+                                onClick={() => handleEditCategory(category)}
+                                title={t('common.view', 'View')}
+                              />
+                              <ActionButton
                                 action="edit"
                                 onClick={() => handleEditCategory(category)}
                                 title={t('common.edit', 'Edit')}
@@ -523,6 +528,11 @@ const CustomFieldsPage = () => {
                           </td>
                           <td onClick={(e) => e.stopPropagation()}>
                             <div className="action-buttons">
+                              <ActionButton
+                                action="view"
+                                onClick={() => handleEditDefinition(definition)}
+                                title={t('common.view', 'View')}
+                              />
                               <ActionButton
                                 action="edit"
                                 onClick={() => handleEditDefinition(definition)}
