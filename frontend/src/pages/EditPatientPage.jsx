@@ -5,7 +5,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Container, Row, Col, Card, Tab, Tabs, Button, Form, Alert, Spinner, InputGroup } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Form, Alert, Spinner, InputGroup } from 'react-bootstrap';
+import ResponsiveTabs, { Tab } from '../components/ResponsiveTabs';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
@@ -407,7 +408,7 @@ const EditPatientPage = () => {
                 </Col>
               </Row>
 
-              <Tabs activeKey={activeTab} onSelect={setActiveTab} className="mb-3">
+              <ResponsiveTabs activeKey={activeTab} onSelect={setActiveTab} id="edit-patient-tabs">
                 {/* Basic Info Tab */}
                 <Tab eventKey="basic-info" title={`📋 ${t('patients.basicInformation', 'Informations de base')}`}>
                   <Row>
@@ -659,7 +660,7 @@ const EditPatientPage = () => {
                     refreshTrigger={measuresRefreshTrigger}
                   />
                 </Tab>
-              </Tabs>
+              </ResponsiveTabs>
 
               {/* Action Buttons */}
               <div className="d-flex justify-content-between align-items-center mt-4 pt-3 border-top flex-wrap gap-2">

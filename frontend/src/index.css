@@ -613,54 +613,10 @@ html {
 
 /* ============================================
    RESPONSIVE TABS
-   Make tabs scrollable on mobile devices
+   Tablet - slightly smaller tabs
+   (Mobile is handled by ResponsiveTabs component)
    ============================================ */
 
-/* Scrollable tabs container on mobile */
-@media (max-width: 767.98px) {
-  .nav.nav-tabs {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
-    padding-bottom: 2px; /* Prevent border cutoff */
-    margin-bottom: 1rem;
-    border-bottom: 1px solid #dee2e6;
-  }
-
-  .nav.nav-tabs::-webkit-scrollbar {
-    display: none; /* Chrome/Safari */
-  }
-
-  .nav.nav-tabs .nav-item {
-    flex: 0 0 auto !important;
-  }
-
-  .nav.nav-tabs .nav-link {
-    white-space: nowrap !important;
-    padding: 0.5rem 0.75rem !important;
-    font-size: 0.85rem !important;
-    border-radius: 0.375rem 0.375rem 0 0 !important;
-  }
-
-  /* Hide color dots on very small screens */
-  .nav.nav-tabs .nav-link span[style*="border-radius: 50%"] {
-    display: none !important;
-  }
-}
-
-/* Small mobile - even more compact tabs */
-@media (max-width: 480px) {
-  .nav.nav-tabs .nav-link {
-    padding: 0.4rem 0.5rem !important;
-    font-size: 0.8rem !important;
-  }
-}
-
-/* Tablet - slightly smaller tabs */
 @media (min-width: 768px) and (max-width: 991.98px) {
   .nav.nav-tabs .nav-link {
     padding: 0.5rem 0.75rem;

@@ -5,7 +5,8 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Container, Row, Col, Card, Tab, Tabs, Button, Form, Alert, Spinner, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Form, Alert, Spinner, Badge } from 'react-bootstrap';
+import ResponsiveTabs, { Tab } from '../components/ResponsiveTabs';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
@@ -672,7 +673,7 @@ const EditVisitPage = () => {
         <Form onSubmit={handleSubmit}>
           <Card>
             <Card.Body>
-              <Tabs activeKey={activeTab} onSelect={setActiveTab} className="mb-3">
+              <ResponsiveTabs activeKey={activeTab} onSelect={setActiveTab} id="edit-visit-tabs">
                 {/* Visit Information Tab */}
                 <Tab eventKey="visit" title={`📅 ${t('visits.visitInformationTab')}`}>
                   <Row>
@@ -986,7 +987,7 @@ const EditVisitPage = () => {
                     ))}
                   </Tab>
                 )}
-              </Tabs>
+              </ResponsiveTabs>
 
               {/* Action Buttons */}
               <div className="d-flex justify-content-between align-items-center mt-4 pt-3 border-top flex-wrap gap-2">
