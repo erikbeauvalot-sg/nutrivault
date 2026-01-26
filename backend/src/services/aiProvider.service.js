@@ -6,6 +6,7 @@
  * - Anthropic Claude
  * - OpenAI (ChatGPT)
  * - Mistral AI
+ * - Ollama (Local)
  */
 
 const Anthropic = require('@anthropic-ai/sdk');
@@ -113,6 +114,52 @@ const AI_PROVIDERS = {
       }
     ],
     envKey: 'MISTRAL_API_KEY'
+  },
+  ollama: {
+    name: 'Ollama (Local)',
+    models: [
+      {
+        id: 'llama3.2',
+        name: 'Llama 3.2',
+        description: 'Fast and lightweight (2GB)',
+        inputPrice: 0.00,
+        outputPrice: 0.00,
+        recommended: true
+      },
+      {
+        id: 'llama3.1:8b',
+        name: 'Llama 3.1 8B',
+        description: 'Good balance of speed and quality (5GB)',
+        inputPrice: 0.00,
+        outputPrice: 0.00,
+        recommended: false
+      },
+      {
+        id: 'mistral',
+        name: 'Mistral 7B',
+        description: 'Excellent for French language (4GB)',
+        inputPrice: 0.00,
+        outputPrice: 0.00,
+        recommended: false
+      },
+      {
+        id: 'gemma2',
+        name: 'Gemma 2',
+        description: 'Google lightweight model (5GB)',
+        inputPrice: 0.00,
+        outputPrice: 0.00,
+        recommended: false
+      },
+      {
+        id: 'qwen2.5',
+        name: 'Qwen 2.5',
+        description: 'Alibaba multilingual model (4GB)',
+        inputPrice: 0.00,
+        outputPrice: 0.00,
+        recommended: false
+      }
+    ],
+    envKey: 'OLLAMA_BASE_URL'
   }
 };
 
@@ -284,6 +331,8 @@ async function generateContent(systemPrompt, userPrompt, options = {}) {
       return generateWithOpenAI(systemPrompt, userPrompt, model, options);
     case 'mistral':
       return generateWithMistral(systemPrompt, userPrompt, model, options);
+    case 'ollama':
+      return generateWithOllama(systemPrompt, userPrompt, model, options);
     default:
       throw new Error(`Unsupported provider: ${provider}`);
   }
@@ -365,13 +414,68 @@ async function generateWithMistral(systemPrompt, userPrompt, model, options = {}
 }
 
 /**
+ * Generate with Ollama (Local)
+ */
+async function generateWithOllama(systemPrompt, userPrompt, model, options = {}) {
+  const baseUrl = process.env.OLLAMA_BASE_URL;
+  if (!baseUrl) {
+    throw new Error('Ollama base URL not configured. Set OLLAMA_BASE_URL environment variable.');
+  }
+
+  // Use custom model from env if not specified or if using default
+  const ollamaModel = process.env.OLLAMA_MODEL || model || 'llama3.2';
+
+  const url = `${baseUrl}/api/chat`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: ollamaModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        stream: false,
+        options: {
+          num_predict: options.maxTokens || 2000
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Ollama API error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    const content = data.message?.content;
+
+    if (!content) {
+      throw new Error('No content in Ollama response');
+    }
+
+    return content;
+  } catch (error) {
+    if (error.code === 'ECONNREFUSED') {
+      throw new Error(`Cannot connect to Ollama at ${baseUrl}. Make sure Ollama is running.`);
+    }
+    throw error;
+  }
+}
+
+/**
  * Check if any AI provider is available
  */
 function isAnyProviderAvailable() {
   return !!(
     process.env.ANTHROPIC_API_KEY ||
     process.env.OPENAI_API_KEY ||
-    process.env.MISTRAL_API_KEY
+    process.env.MISTRAL_API_KEY ||
+    process.env.OLLAMA_BASE_URL
   );
 }
 
