@@ -1,6 +1,6 @@
 {
   "name": "nutrivault-frontend",
-  "version": "5.0.4-alpha",
+  "version": "5.0.8-alpha",
   "description": "NutriVault Frontend - POC",
   "type": "module",
   "scripts": {
