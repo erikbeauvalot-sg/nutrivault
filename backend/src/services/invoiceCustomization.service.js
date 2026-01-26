@@ -8,6 +8,9 @@ const { InvoiceCustomization, User } = db;
 const fs = require('fs').promises;
 const path = require('path');
 
+// Base upload directory - use process.cwd() for production compatibility
+const UPLOAD_BASE = path.join(process.cwd(), 'uploads', 'invoice-customizations');
+
 /**
  * Get customization for a user (create default if doesn't exist)
  */
@@ -96,12 +99,12 @@ const uploadLogo = async (userId, file) => {
     const customization = await getUserCustomization(userId);
 
     // Create upload directory if it doesn't exist
-    const uploadDir = path.join(__dirname, '../../../uploads/invoice-customizations', userId);
+    const uploadDir = path.join(UPLOAD_BASE, userId);
     await fs.mkdir(uploadDir, { recursive: true });
 
     // Delete old logo if exists
     if (customization.logo_file_path) {
-      const oldPath = path.join(__dirname, '../../..', customization.logo_file_path);
+      const oldPath = path.join(process.cwd(), customization.logo_file_path);
       try {
         await fs.unlink(oldPath);
       } catch (err) {
@@ -137,7 +140,7 @@ const deleteLogo = async (userId) => {
 
     if (customization.logo_file_path) {
       // Delete file
-      const filepath = path.join(__dirname, '../../..', customization.logo_file_path);
+      const filepath = path.join(process.cwd(), customization.logo_file_path);
       try {
         await fs.unlink(filepath);
       } catch (err) {
@@ -165,12 +168,12 @@ const uploadSignature = async (userId, file) => {
     const customization = await getUserCustomization(userId);
 
     // Create upload directory if it doesn't exist
-    const uploadDir = path.join(__dirname, '../../../uploads/invoice-customizations', userId);
+    const uploadDir = path.join(UPLOAD_BASE, userId);
     await fs.mkdir(uploadDir, { recursive: true });
 
     // Delete old signature if exists
     if (customization.signature_file_path) {
-      const oldPath = path.join(__dirname, '../../..', customization.signature_file_path);
+      const oldPath = path.join(process.cwd(), customization.signature_file_path);
       try {
         await fs.unlink(oldPath);
       } catch (err) {
@@ -206,7 +209,7 @@ const deleteSignature = async (userId) => {
 
     if (customization.signature_file_path) {
       // Delete file
-      const filepath = path.join(__dirname, '../../..', customization.signature_file_path);
+      const filepath = path.join(process.cwd(), customization.signature_file_path);
       try {
         await fs.unlink(filepath);
       } catch (err) {
