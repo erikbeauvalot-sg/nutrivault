@@ -243,45 +243,36 @@ const DocumentListComponent = ({
     <>
       <Card>
       <Card.Header>
-        <Row className="align-items-center">
-          <Col>
+        <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+          <div>
             <h5 className="mb-0">{t('documents.title', 'Documents')}</h5>
             {pagination && (
               <small className="text-muted">
-                {t('documents.showingResults', 'Showing {{count}} of {{total}} documents', {
-                  count: documents.length,
-                  total: pagination.total
-                })}
+                {documents.length} / {pagination.total}
               </small>
             )}
-          </Col>
+          </div>
           {showUploadButton && (
-            <Col xs="auto">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={onUploadClick}
-              >
-                📎 {t('documents.upload', 'Upload')}
-              </Button>
-            </Col>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={onUploadClick}
+            >
+              📎 <span className="d-none d-sm-inline">{t('documents.upload', 'Upload')}</span>
+            </Button>
           )}
-        </Row>
+        </div>
 
         {/* Filters */}
-        <Row className="mt-3">
-          <Col md={6}>
-            <InputGroup>
-              <InputGroup.Text>🔍</InputGroup.Text>
-              <Form.Control
-                type="text"
-                placeholder={t('documents.searchPlaceholder', 'Search by filename or description...')}
-                value={filters.search}
-                onChange={(e) => handleFilterChange('search', e.target.value)}
-              />
-            </InputGroup>
-          </Col>
-        </Row>
+        <InputGroup>
+          <InputGroup.Text>🔍</InputGroup.Text>
+          <Form.Control
+            type="text"
+            placeholder={t('documents.searchPlaceholder', 'Search by filename or description...')}
+            value={filters.search}
+            onChange={(e) => handleFilterChange('search', e.target.value)}
+          />
+        </InputGroup>
       </Card.Header>
 
       <Card.Body className="p-0">
@@ -310,47 +301,104 @@ const DocumentListComponent = ({
             )}
           </div>
         ) : (
-          <Table responsive hover className="mb-0">
-            <thead className="table-light">
-              <tr>
-                <th>{t('documents.file', 'File')}</th>
-                <th>{t('documents.type', 'Type')}</th>
-                <th>{t('documents.size', 'Size')}</th>
-                <th>{t('documents.uploadedBy', 'Uploaded By')}</th>
-                <th>{t('documents.uploadedAt', 'Uploaded')}</th>
-                <th>{t('common.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Desktop: Table view */}
+            <div className="d-none d-md-block">
+              <Table responsive hover className="mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th>{t('documents.file', 'File')}</th>
+                    <th>{t('documents.size', 'Size')}</th>
+                    <th className="d-none d-lg-table-cell">{t('documents.uploadedBy', 'Uploaded By')}</th>
+                    <th>{t('documents.uploadedAt', 'Uploaded')}</th>
+                    <th>{t('common.actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {documents.map((document) => (
+                    <tr key={document.id}>
+                      <td>
+                        <div className="d-flex align-items-center">
+                          <div className="me-2">{getFileTypeIcon(document.mime_type)}</div>
+                          <div>
+                            <div className="fw-bold">{document.file_name}</div>
+                            {document.description && (
+                              <small className="text-muted">{document.description}</small>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td>{formatFileSize(document.file_size)}</td>
+                      <td className="d-none d-lg-table-cell">
+                        {document.uploader?.first_name} {document.uploader?.last_name}
+                      </td>
+                      <td>{formatDate(document.created_at)}</td>
+                      <td>
+                        <div className="d-flex gap-1 flex-wrap">
+                          {documentService.canPreviewFile(document.mime_type) && (
+                            <Button
+                              variant="outline-info"
+                              size="sm"
+                              onClick={() => handlePreview(document)}
+                            >
+                              👁️
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={() => handleDownload(document)}
+                            disabled={downloading === document.id}
+                          >
+                            {downloading === document.id ? '⏳' : '⬇️'}
+                          </Button>
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            onClick={() => handleDeleteClick(document)}
+                          >
+                            🗑️
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+
+            {/* Mobile: Card view */}
+            <div className="d-md-none">
               {documents.map((document) => (
-                <tr key={document.id}>
-                  <td>
-                    <div className="d-flex align-items-center">
-                      <div className="me-2">{getFileTypeIcon(document.mime_type)}</div>
-                      <div>
-                        <div className="fw-bold">{document.file_name}</div>
-                        {document.description && (
-                          <small className="text-muted">{document.description}</small>
-                        )}
-                      </div>
+                <div key={document.id} className="border-bottom p-3">
+                  {/* Line 1: Icon + Type badge + Size */}
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <div className="d-flex align-items-center gap-2">
+                      <span>{getFileTypeIcon(document.mime_type)}</span>
+                      {getResourceTypeBadge(document.resource_type)}
                     </div>
-                  </td>
-                  <td>{getResourceTypeBadge(document.resource_type)}</td>
-                  <td>{formatFileSize(document.file_size)}</td>
-                  <td>
-                    {document.uploader?.first_name} {document.uploader?.last_name}
-                    {document.uploader?.username && (
-                      <small className="text-muted d-block">@{document.uploader.username}</small>
+                    <small className="text-muted">{formatFileSize(document.file_size)}</small>
+                  </div>
+                  {/* Line 2: File name */}
+                  <div className="fw-bold mb-1">{document.file_name}</div>
+                  {/* Line 3: Description (optional) */}
+                  {document.description && (
+                    <div className="text-muted small mb-2">{document.description}</div>
+                  )}
+                  {/* Line 4: Date */}
+                  <div className="text-muted small mb-2">
+                    {formatDate(document.created_at)}
+                    {document.uploader && (
+                      <span> • {document.uploader.first_name} {document.uploader.last_name}</span>
                     )}
-                  </td>
-                  <td>{formatDate(document.created_at)}</td>
-                  <td>
+                  </div>
+                  {/* Line 5: Actions */}
+                  <div className="d-flex gap-2 flex-wrap">
                     {documentService.canPreviewFile(document.mime_type) && (
                       <Button
                         variant="outline-info"
                         size="sm"
                         onClick={() => handlePreview(document)}
-                        className="me-1"
                       >
                         👁️ {t('documents.preview', 'Preview')}
                       </Button>
@@ -360,7 +408,6 @@ const DocumentListComponent = ({
                       size="sm"
                       onClick={() => handleDownload(document)}
                       disabled={downloading === document.id}
-                      className="me-1"
                     >
                       {downloading === document.id ? '⏳' : '⬇️'} {t('documents.download', 'Download')}
                     </Button>
@@ -369,13 +416,13 @@ const DocumentListComponent = ({
                       size="sm"
                       onClick={() => handleDeleteClick(document)}
                     >
-                      🗑️ {t('documents.delete', 'Delete')}
+                      🗑️
                     </Button>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </Table>
+            </div>
+          </>
         )}
       </Card.Body>
 
@@ -388,6 +435,7 @@ const DocumentListComponent = ({
       onHide={handleClosePreview}
       size="lg"
       centered
+      fullscreen="md-down"
     >
       <Modal.Header closeButton>
         <Modal.Title>
@@ -455,6 +503,7 @@ const DocumentListComponent = ({
       show={showDeleteModal}
       onHide={handleDeleteCancel}
       centered
+      fullscreen="sm-down"
     >
       <Modal.Header closeButton className="bg-danger text-white">
         <Modal.Title>⚠️ {t('documents.confirmDelete', 'Confirm Delete')}</Modal.Title>
