@@ -221,7 +221,7 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
           </div>
 
           <Row className="g-3">
-            <Col md={4}>
+            <Col xs={12} md={4}>
               <Form.Group>
                 <Form.Label>{t('measures.measureType', 'Measure Type')}</Form.Label>
                 <Form.Select
@@ -237,7 +237,7 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
                 </Form.Select>
               </Form.Group>
             </Col>
-            <Col md={4}>
+            <Col xs={6} md={4}>
               <Form.Group>
                 <Form.Label>{t('common.startDate', 'Start Date')}</Form.Label>
                 <Form.Control
@@ -247,7 +247,7 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
                 />
               </Form.Group>
             </Col>
-            <Col md={4}>
+            <Col xs={6} md={4}>
               <Form.Group>
                 <Form.Label>{t('common.endDate', 'End Date')}</Form.Label>
                 <Form.Control
@@ -269,106 +269,182 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
       {/* Measures Table */}
       <Card>
         <Card.Body>
-          <div className="table-responsive">
-            <Table striped bordered hover>
-              <thead className="table-dark">
-                <tr>
-                  <th>{t('measures.dateTime', 'Date/Time')}</th>
-                  <th>{t('measures.measure', 'Measure')}</th>
-                  <th>{t('measures.value', 'Value')}</th>
-                  <th>{t('visits.visit', 'Visit')}</th>
-                  <th>{t('measures.recordedBy', 'Recorded By')}</th>
-                  <th>{t('common.actions', 'Actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentMeasures.length === 0 ? (
+          {/* Desktop Table View */}
+          <div className="measures-table-desktop d-none d-md-block">
+            <div className="table-responsive">
+              <Table striped bordered hover>
+                <thead className="table-dark">
                   <tr>
-                    <td colSpan={6} className="text-center py-4">
-                      <div className="text-muted">
-                        {measures.length === 0 ? (
-                          <div>
-                            <strong>{t('measures.noMeasures', 'No measures found')}</strong>
-                            <br />
-                            <small>
-                              {selectedMeasureType || (startDate && endDate)
-                                ? t('measures.tryAdjustingFilters', 'Try adjusting your filters')
-                                : t('measures.noMeasuresRecorded', 'No measures have been recorded yet')}
-                            </small>
-                          </div>
-                        ) : null}
-                      </div>
-                    </td>
+                    <th>{t('measures.dateTime', 'Date/Time')}</th>
+                    <th>{t('measures.measure', 'Measure')}</th>
+                    <th>{t('measures.value', 'Value')}</th>
+                    <th>{t('visits.visit', 'Visit')}</th>
+                    <th>{t('measures.recordedBy', 'Recorded By')}</th>
+                    <th>{t('common.actions', 'Actions')}</th>
                   </tr>
-                ) : (
-                  currentMeasures.map(measure => (
-                    <tr key={measure.id}>
-                      <td>{formatDateTime(measure.measured_at, i18n.language)}</td>
-                      <td>
-                        <div>
-                          <strong>{measure.measureDefinition?.display_name || '-'}</strong>
-                          {measure.measureDefinition?.category && (
-                            <div className="mt-1">
-                              <Badge bg={getCategoryBadgeVariant(measure.measureDefinition.category)}>
-                                {getCategoryDisplayName(measure.measureDefinition.category, t)}
-                              </Badge>
+                </thead>
+                <tbody>
+                  {currentMeasures.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-4">
+                        <div className="text-muted">
+                          {measures.length === 0 ? (
+                            <div>
+                              <strong>{t('measures.noMeasures', 'No measures found')}</strong>
+                              <br />
+                              <small>
+                                {selectedMeasureType || (startDate && endDate)
+                                  ? t('measures.tryAdjustingFilters', 'Try adjusting your filters')
+                                  : t('measures.noMeasuresRecorded', 'No measures have been recorded yet')}
+                              </small>
                             </div>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="d-flex align-items-center gap-2">
-                          <strong>
-                            {formatMeasureValue(measure, measure.measureDefinition)}
-                          </strong>
-                          {measure.measureDefinition?.measure_type === 'calculated' && (
-                            <Badge
-                              bg="info"
-                              className="small"
-                              title={t('measures.autoCalculated', 'Auto-calculated value')}
-                            >
-                              🧮 {t('measures.calculated', 'Calculated')}
-                            </Badge>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        {measure.visit_id ? (
-                          <a href={`/visits/${measure.visit_id}`}>
-                            {t('visits.viewVisit', 'View Visit')}
-                          </a>
-                        ) : (
-                          '-'
-                        )}
-                      </td>
-                      <td>{measure.recorder?.username || '-'}</td>
-                      <td>
-                        <div className="d-flex gap-1">
-                          {measure.measureDefinition?.measure_type !== 'calculated' && (
-                            <Button
-                              variant="outline-primary"
-                              size="sm"
-                              onClick={() => handleEdit(measure)}
-                              title={t('common.edit', 'Edit')}
-                            >
-                              ✏️
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline-danger"
-                            size="sm"
-                            onClick={() => handleDelete(measure.id)}
-                            title={t('common.delete', 'Delete')}
-                          >
-                            🗑️
-                          </Button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
+                  ) : (
+                    currentMeasures.map(measure => (
+                      <tr key={measure.id}>
+                        <td>{formatDateTime(measure.measured_at, i18n.language)}</td>
+                        <td>
+                          <div>
+                            <strong>{measure.measureDefinition?.display_name || '-'}</strong>
+                            {measure.measureDefinition?.category && (
+                              <div className="mt-1">
+                                <Badge bg={getCategoryBadgeVariant(measure.measureDefinition.category)}>
+                                  {getCategoryDisplayName(measure.measureDefinition.category, t)}
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="d-flex align-items-center gap-2">
+                            <strong>
+                              {formatMeasureValue(measure, measure.measureDefinition)}
+                            </strong>
+                            {measure.measureDefinition?.measure_type === 'calculated' && (
+                              <Badge
+                                bg="info"
+                                className="small"
+                                title={t('measures.autoCalculated', 'Auto-calculated value')}
+                              >
+                                🧮 {t('measures.calculated', 'Calculated')}
+                              </Badge>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          {measure.visit_id ? (
+                            <a href={`/visits/${measure.visit_id}`}>
+                              {t('visits.viewVisit', 'View Visit')}
+                            </a>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td>{measure.recorder?.username || '-'}</td>
+                        <td>
+                          <div className="d-flex gap-1">
+                            {measure.measureDefinition?.measure_type !== 'calculated' && (
+                              <Button
+                                variant="outline-primary"
+                                size="sm"
+                                onClick={() => handleEdit(measure)}
+                                title={t('common.edit', 'Edit')}
+                              >
+                                ✏️
+                              </Button>
+                            )}
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => handleDelete(measure.id)}
+                              title={t('common.delete', 'Delete')}
+                            >
+                              🗑️
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </Table>
+            </div>
+          </div>
+
+          {/* Mobile Cards View */}
+          <div className="measures-cards-mobile d-md-none">
+            {currentMeasures.length === 0 ? (
+              <div className="text-center py-4 text-muted">
+                <strong>{t('measures.noMeasures', 'No measures found')}</strong>
+                <br />
+                <small>
+                  {selectedMeasureType || (startDate && endDate)
+                    ? t('measures.tryAdjustingFilters', 'Try adjusting your filters')
+                    : t('measures.noMeasuresRecorded', 'No measures have been recorded yet')}
+                </small>
+              </div>
+            ) : (
+              currentMeasures.map(measure => (
+                <div key={measure.id} className="measure-card-mobile border rounded p-3 mb-2">
+                  <div className="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <strong className="d-block">{measure.measureDefinition?.display_name || '-'}</strong>
+                      <small className="text-muted">{formatDateTime(measure.measured_at, i18n.language)}</small>
+                    </div>
+                    {measure.measureDefinition?.category && (
+                      <Badge bg={getCategoryBadgeVariant(measure.measureDefinition.category)}>
+                        {getCategoryDisplayName(measure.measureDefinition.category, t)}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="mb-2">
+                    <span className="fs-5 fw-bold text-primary">
+                      {formatMeasureValue(measure, measure.measureDefinition)}
+                    </span>
+                    {measure.measureDefinition?.measure_type === 'calculated' && (
+                      <Badge bg="info" className="ms-2 small">
+                        🧮 {t('measures.calculated', 'Calculated')}
+                      </Badge>
+                    )}
+                  </div>
+                  {(measure.visit_id || measure.recorder?.username) && (
+                    <div className="small text-muted mb-2">
+                      {measure.visit_id && (
+                        <a href={`/visits/${measure.visit_id}`} className="me-3">
+                          {t('visits.viewVisit', 'View Visit')}
+                        </a>
+                      )}
+                      {measure.recorder?.username && (
+                        <span>📝 {measure.recorder.username}</span>
+                      )}
+                    </div>
+                  )}
+                  <div className="d-flex gap-2 pt-2 border-top">
+                    {measure.measureDefinition?.measure_type !== 'calculated' && (
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        className="flex-fill"
+                        onClick={() => handleEdit(measure)}
+                      >
+                        ✏️ {t('common.edit', 'Edit')}
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      className="flex-fill"
+                      onClick={() => handleDelete(measure.id)}
+                    >
+                      🗑️ {t('common.delete', 'Delete')}
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           {/* Results Count */}
