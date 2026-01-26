@@ -17,6 +17,7 @@ import CustomFieldDisplay from '../components/CustomFieldDisplay';
 import MeasureHistory from '../components/MeasureHistory';
 import MeasureComparison from '../components/MeasureComparison';
 import EmailHistory from '../components/EmailHistory';
+import PatientHealthScore from '../components/PatientHealthScore';
 import customFieldService from '../services/customFieldService';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import { getBMICategory, calculateBMI } from '../utils/bmiUtils';
@@ -549,6 +550,13 @@ const PatientDetailPage = () => {
             </div>
           </div>
         </div>
+
+        {/* Health Score */}
+        <Row className="mb-3">
+          <Col md={6} lg={4}>
+            <PatientHealthScore patientId={id} />
+          </Col>
+        </Row>
 
         {/* Patient Details Tabs */}
         <Card>

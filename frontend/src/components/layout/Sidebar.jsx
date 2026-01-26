@@ -21,7 +21,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { path: '/visits', icon: '📋', label: t('navigation.visits') },
     { path: '/billing', icon: '💰', label: t('navigation.billing') },
     { path: '/documents', icon: '📄', label: t('documents.title'), disabled: false },
-    // { path: '/reports', icon: '📈', label: t('navigation.reports') }, // TODO: Redesign reports
+    { path: '/analytics', icon: '📈', label: t('analytics.title', 'Analytics') },
     { path: '/users', icon: '👤', label: t('navigation.users') },
     ...(user?.role === 'ADMIN' ? [
       { path: '/settings/custom-fields', icon: '🔧', label: t('navigation.customFields') },
