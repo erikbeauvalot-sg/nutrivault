@@ -348,10 +348,10 @@ const EditPatientPage = () => {
             <Button variant="outline-secondary" onClick={handleBack} className="mb-3">
               ← {t('patients.viewPatient')}
             </Button>
-            <h1 className="mb-0">
-              Modifier le patient: {patient?.first_name} {patient?.last_name}
+            <h1 className="mb-0 h3 h2-md">
+              {t('patients.editPatient', 'Modifier le patient')}: {patient?.first_name} {patient?.last_name}
             </h1>
-            <p className="text-muted">Mettre à jour les informations du patient</p>
+            <p className="text-muted">{t('patients.updateInfo', 'Mettre à jour les informations du patient')}</p>
           </Col>
         </Row>
 
@@ -373,12 +373,12 @@ const EditPatientPage = () => {
             <Card.Body>
               {/* Search Bar for Custom Fields */}
               <Row className="mb-3">
-                <Col md={6}>
+                <Col xs={12} md={6}>
                   <InputGroup>
                     <InputGroup.Text>🔍</InputGroup.Text>
                     <Form.Control
                       type="text"
-                      placeholder="Rechercher..."
+                      placeholder={t('common.search', 'Rechercher...')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -386,7 +386,7 @@ const EditPatientPage = () => {
                       <Button
                         variant="outline-secondary"
                         onClick={() => setSearchQuery('')}
-                        title="Effacer la recherche"
+                        title={t('common.clearSearch', 'Effacer la recherche')}
                       >
                         ✕
                       </Button>
@@ -396,11 +396,11 @@ const EditPatientPage = () => {
                     <Form.Text className="text-muted">
                       {searchResults.hasResults ? (
                         <>
-                          {searchResults.matchingFields.length} champ{searchResults.matchingFields.length !== 1 ? 's' : ''} trouvé
-                          {searchResults.matchingCategory && ' - basculé vers l\'onglet correspondant'}
+                          {searchResults.matchingFields.length} {t('common.fieldsFound', 'champ(s) trouvé(s)')}
+                          {searchResults.matchingCategory && ` - ${t('common.switchedToTab', 'basculé vers l\'onglet correspondant')}`}
                         </>
                       ) : (
-                        'Aucun champ ne correspond à votre recherche'
+                        t('common.noFieldsMatch', 'Aucun champ ne correspond à votre recherche')
                       )}
                     </Form.Text>
                   )}
@@ -409,16 +409,16 @@ const EditPatientPage = () => {
 
               <Tabs activeKey={activeTab} onSelect={setActiveTab} className="mb-3">
                 {/* Basic Info Tab */}
-                <Tab eventKey="basic-info" title="📋 Informations de base">
+                <Tab eventKey="basic-info" title={`📋 ${t('patients.basicInformation', 'Informations de base')}`}>
                   <Row>
-                    <Col md={6}>
+                    <Col xs={12} md={6}>
                       <Card className="mb-3">
                         <Card.Header className="bg-primary text-white">
-                          <h6 className="mb-0">Informations essentielles</h6>
+                          <h6 className="mb-0">{t('patients.personalInfo', 'Informations personnelles')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">
-                            <Form.Label>Prénom *</Form.Label>
+                            <Form.Label>{t('patients.firstName', 'Prénom')} *</Form.Label>
                             <Form.Control
                               type="text"
                               name="first_name"
@@ -429,7 +429,7 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Nom *</Form.Label>
+                            <Form.Label>{t('patients.lastName', 'Nom')} *</Form.Label>
                             <Form.Control
                               type="text"
                               name="last_name"
@@ -440,7 +440,7 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Email</Form.Label>
+                            <Form.Label>{t('patients.email', 'Email')}</Form.Label>
                             <Form.Control
                               type="email"
                               name="email"
@@ -450,7 +450,7 @@ const EditPatientPage = () => {
                           </Form.Group>
 
                           <Form.Group className="mb-3">
-                            <Form.Label>Téléphone</Form.Label>
+                            <Form.Label>{t('patients.phone', 'Téléphone')}</Form.Label>
                             <Form.Control
                               type="tel"
                               name="phone"
@@ -462,20 +462,20 @@ const EditPatientPage = () => {
                       </Card>
                     </Col>
 
-                    <Col md={6}>
+                    <Col xs={12} md={6}>
                       <Card className="mb-3">
                         <Card.Header className="bg-info text-white">
-                          <h6 className="mb-0">Administration</h6>
+                          <h6 className="mb-0">{t('patients.administrativeTab', 'Administration')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">
-                            <Form.Label>Diététicien assigné</Form.Label>
+                            <Form.Label>{t('patients.assignedDietitian', 'Diététicien assigné')}</Form.Label>
                             <Form.Select
                               name="assigned_dietitian_id"
                               value={formData.assigned_dietitian_id}
                               onChange={handleInputChange}
                             >
-                              <option value="">Sélectionner un diététicien (optionnel)</option>
+                              <option value="">{t('patients.selectDietitianOptional', 'Sélectionner un diététicien (optionnel)')}</option>
                               {dietitians.map(dietitian => (
                                 <option key={dietitian.id} value={dietitian.id}>
                                   {dietitian.first_name} {dietitian.last_name}
@@ -484,7 +484,7 @@ const EditPatientPage = () => {
                               ))}
                             </Form.Select>
                             <Form.Text className="text-muted">
-                              Laisser vide pour assigner plus tard
+                              {t('patients.assignLaterHelp', 'Laisser vide pour assigner plus tard')}
                             </Form.Text>
                           </Form.Group>
 
@@ -492,12 +492,12 @@ const EditPatientPage = () => {
                             <Form.Check
                               type="checkbox"
                               name="is_active"
-                              label="Patient actif"
+                              label={t('patients.activePatient', 'Patient actif')}
                               checked={formData.is_active}
                               onChange={handleInputChange}
                             />
                             <Form.Text className="text-muted">
-                              Les patients inactifs n'apparaissent pas dans les listes par défaut
+                              {t('patients.inactivePatientsNote', 'Les patients inactifs n\'apparaissent pas dans les listes par défaut')}
                             </Form.Text>
                           </Form.Group>
                         </Card.Body>
@@ -541,7 +541,7 @@ const EditPatientPage = () => {
                               <Card.Body>
                                 <Row>
                                   {basicInfoFields.map((field) => (
-                                    <Col md={6} key={field.definition_id}>
+                                    <Col xs={12} md={6} key={field.definition_id}>
                                       <Form.Group className="mb-3">
                                         <CustomFieldInput
                                           fieldDefinition={field}
@@ -625,7 +625,7 @@ const EditPatientPage = () => {
                         ) : (
                           <Row>
                             {category.fields.filter(f => !f.is_calculated).map((field) => (
-                              <Col md={6} key={field.definition_id}>
+                              <Col xs={12} md={6} key={field.definition_id}>
                                 <Form.Group className="mb-3">
                                   <CustomFieldInput
                                     fieldDefinition={field}
@@ -650,8 +650,8 @@ const EditPatientPage = () => {
                 )}
 
                 {/* Measures Tab */}
-                <Tab eventKey="measures" title="📏 Measures">
-                  <h5 className="mb-3">Patient Measures</h5>
+                <Tab eventKey="measures" title={`📏 ${t('measures.healthMeasures', 'Measures')}`}>
+                  <h5 className="mb-3">{t('measures.patientMeasures', 'Patient Measures')}</h5>
 
                   {/* Measures Table */}
                   <PatientMeasuresTable
@@ -662,11 +662,11 @@ const EditPatientPage = () => {
               </Tabs>
 
               {/* Action Buttons */}
-              <div className="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+              <div className="d-flex justify-content-between align-items-center mt-4 pt-3 border-top flex-wrap gap-2">
                 <Button variant="outline-secondary" onClick={handleBack} disabled={saving}>
                   {t('common.cancel', 'Annuler')}
                 </Button>
-                <div className="d-flex gap-2">
+                <div className="d-flex gap-2 flex-wrap">
                   <Button
                     variant="outline-primary"
                     type="submit"

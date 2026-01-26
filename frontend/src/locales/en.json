@@ -45,7 +45,11 @@
     "duplicate": "Duplicate",
     "translations": "Translations",
     "unknown": "Unknown",
-    "actionCannotBeUndone": "This action cannot be undone."
+    "actionCannotBeUndone": "This action cannot be undone.",
+    "clearSearch": "Clear search",
+    "fieldsFound": "field(s) found",
+    "switchedToTab": "switched to matching tab",
+    "noFieldsMatch": "No fields match your search"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -1238,6 +1242,7 @@
       "calculated": "Calculated"
     },
     "healthMeasures": "Health Measures",
+    "patientMeasures": "Patient Measures",
     "createVisitMeasuresInfo": "You can optionally record health measurements for this visit. Leave empty if not needed.",
     "editVisitMeasuresInfo": "Record or update health measurements for this visit.",
     "alreadyRecorded": "Already recorded",

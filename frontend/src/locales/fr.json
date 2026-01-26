@@ -51,7 +51,11 @@
     "duplicate": "Dupliquer",
     "translations": "Traductions",
     "unknown": "Inconnu",
-    "actionCannotBeUndone": "Cette action ne peut pas être annulée."
+    "actionCannotBeUndone": "Cette action ne peut pas être annulée.",
+    "clearSearch": "Effacer la recherche",
+    "fieldsFound": "champ(s) trouvé(s)",
+    "switchedToTab": "basculé vers l'onglet correspondant",
+    "noFieldsMatch": "Aucun champ ne correspond à votre recherche"
   },
   "navigation": {
     "dashboard": "Tableau de bord",
@@ -1256,6 +1260,7 @@
       "delete": "Supprimer"
     },
     "healthMeasures": "Mesures de Santé",
+    "patientMeasures": "Mesures du Patient",
     "createVisitMeasuresInfo": "Vous pouvez optionnellement enregistrer des mesures de santé pour cette visite. Laissez vide si non nécessaire.",
     "editVisitMeasuresInfo": "Enregistrez ou mettez à jour les mesures de santé pour cette visite.",
     "alreadyRecorded": "Déjà enregistré",
