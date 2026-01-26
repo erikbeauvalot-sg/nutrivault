@@ -55,7 +55,8 @@
     "clearSearch": "Effacer la recherche",
     "fieldsFound": "champ(s) trouvé(s)",
     "switchedToTab": "basculé vers l'onglet correspondant",
-    "noFieldsMatch": "Aucun champ ne correspond à votre recherche"
+    "noFieldsMatch": "Aucun champ ne correspond à votre recherche",
+    "add": "Ajouter"
   },
   "navigation": {
     "dashboard": "Tableau de bord",
@@ -1080,6 +1081,9 @@
     "validationRules": "Règles de Validation",
     "selectOptions": "Options de la Liste",
     "addOption": "Ajouter une Option",
+    "optionValue": "Valeur de l'option",
+    "enterOptionValue": "Entrer la valeur de l'option...",
+    "updateField": "Mettre à jour le champ",
     "fieldTypes": {
       "text": "Texte",
       "textarea": "Zone de Texte",

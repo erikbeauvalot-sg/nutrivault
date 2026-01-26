@@ -67,6 +67,10 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
   const [templates, setTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState('');
 
+  // State for adding dropdown options
+  const [showAddOptionModal, setShowAddOptionModal] = useState(false);
+  const [newOptionValue, setNewOptionValue] = useState('');
+
   const isEditing = !!definition;
 
   const {
@@ -254,10 +258,21 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
   };
 
   const handleAddOption = () => {
-    const newOption = prompt('Enter option value:');
-    if (newOption && newOption.trim()) {
-      setSelectOptions([...selectOptions, newOption.trim()]);
+    setNewOptionValue('');
+    setShowAddOptionModal(true);
+  };
+
+  const handleConfirmAddOption = () => {
+    if (newOptionValue && newOptionValue.trim()) {
+      setSelectOptions([...selectOptions, newOptionValue.trim()]);
     }
+    setShowAddOptionModal(false);
+    setNewOptionValue('');
+  };
+
+  const handleCancelAddOption = () => {
+    setShowAddOptionModal(false);
+    setNewOptionValue('');
   };
 
   const handleRemoveOption = (index) => {
@@ -732,17 +747,59 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
 
         <Modal.Footer>
           <Button variant="secondary" onClick={handleClose} disabled={loading}>
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button variant="primary" type="submit" disabled={loading || success}>
             {loading ? (
               <Spinner animation="border" size="sm" />
             ) : (
-              isEditing ? 'Update Field' : 'Create Field'
+              isEditing ? t('customFields.updateField', 'Update Field') : t('customFields.createField', 'Create Field')
             )}
           </Button>
         </Modal.Footer>
       </Form>
+
+      {/* Modal for adding dropdown options */}
+      <Modal
+        show={showAddOptionModal}
+        onHide={handleCancelAddOption}
+        centered
+        size="sm"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>{t('customFields.addOption', 'Add Option')}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group>
+            <Form.Label>{t('customFields.optionValue', 'Option Value')}</Form.Label>
+            <Form.Control
+              type="text"
+              value={newOptionValue}
+              onChange={(e) => setNewOptionValue(e.target.value)}
+              placeholder={t('customFields.enterOptionValue', 'Enter option value...')}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleConfirmAddOption();
+                }
+              }}
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCancelAddOption}>
+            {t('common.cancel', 'Cancel')}
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleConfirmAddOption}
+            disabled={!newOptionValue.trim()}
+          >
+            {t('common.add', 'Add')}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Modal>
   );
 };
