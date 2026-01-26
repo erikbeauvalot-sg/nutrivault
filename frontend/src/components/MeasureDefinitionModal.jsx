@@ -77,6 +77,7 @@ const measureSchema = yup.object().shape({
     .typeError('Alert threshold maximum must be a number')
     .nullable(),
   enable_alerts: yup.boolean(),
+  trend_preference: yup.string().oneOf(['increase', 'decrease', 'neutral']).default('increase'),
   formula: yup.string()
     .when('measure_type', {
       is: 'calculated',
@@ -139,6 +140,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
       alert_threshold_min: null,
       alert_threshold_max: null,
       enable_alerts: false,
+      trend_preference: 'increase',
       is_active: true,
       formula: ''
     }
@@ -190,6 +192,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
           alert_threshold_min: definition.alert_threshold_min ?? null,
           alert_threshold_max: definition.alert_threshold_max ?? null,
           enable_alerts: definition.enable_alerts ?? false,
+          trend_preference: definition.trend_preference || 'increase',
           is_active: definition.is_active !== undefined ? definition.is_active : true,
           formula: definition.formula || ''
         });
@@ -210,6 +213,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
           alert_threshold_min: null,
           alert_threshold_max: null,
           enable_alerts: false,
+          trend_preference: 'increase',
           is_active: true,
           formula: ''
         });
@@ -246,6 +250,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
           payload.alert_threshold_min = data.alert_threshold_min !== null && data.alert_threshold_min !== '' ? parseFloat(data.alert_threshold_min) : null;
           payload.alert_threshold_max = data.alert_threshold_max !== null && data.alert_threshold_max !== '' ? parseFloat(data.alert_threshold_max) : null;
           payload.enable_alerts = data.enable_alerts ?? false;
+          payload.trend_preference = data.trend_preference || 'increase';
         }
       } else {
         // For non-system measures or new measures, include all fields
@@ -273,6 +278,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
           payload.alert_threshold_min = data.alert_threshold_min !== null && data.alert_threshold_min !== '' ? parseFloat(data.alert_threshold_min) : null;
           payload.alert_threshold_max = data.alert_threshold_max !== null && data.alert_threshold_max !== '' ? parseFloat(data.alert_threshold_max) : null;
           payload.enable_alerts = data.enable_alerts ?? false;
+          payload.trend_preference = data.trend_preference || 'increase';
         }
 
         // Add formula for calculated type
@@ -508,6 +514,24 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
                         </Form.Group>
                       </Col>
                     </Row>
+
+                    <hr className="my-3" />
+
+                    {/* Trend Preference Section */}
+                    <div className="mb-3">
+                      <h6>{t('measures.modal.trendPreference', 'Trend Preference')}</h6>
+                      <Form.Text className="text-muted d-block mb-2">
+                        {t('measures.modal.trendPreferenceHelp', 'Determines how the trend indicator is displayed in charts (green for positive, red for negative).')}
+                      </Form.Text>
+                      <Form.Select
+                        {...register('trend_preference')}
+                        className="mb-2"
+                      >
+                        <option value="increase">{t('measures.modal.trendIncrease', 'Increase is positive')} (↗️ {t('measures.modal.trendIncreaseExample', 'e.g., muscle mass')})</option>
+                        <option value="decrease">{t('measures.modal.trendDecrease', 'Decrease is positive')} (↘️ {t('measures.modal.trendDecreaseExample', 'e.g., weight, body fat')})</option>
+                        <option value="neutral">{t('measures.modal.trendNeutral', 'Neutral')} ({t('measures.modal.trendNeutralExample', 'no preference')})</option>
+                      </Form.Select>
+                    </div>
 
                     <hr className="my-3" />
 

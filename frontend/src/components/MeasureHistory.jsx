@@ -450,7 +450,51 @@ const MeasureHistory = ({ patientId }) => {
   };
 
   // Get trend indicator with translation
-  const trendIndicator = trendData?.trend ? formatTrendIndicator(trendData.trend) : null;
+  const rawTrendIndicator = trendData?.trend ? formatTrendIndicator(trendData.trend) : null;
+
+  // Adjust trend indicator based on trend_preference
+  const getTrendIndicator = () => {
+    if (!rawTrendIndicator) return null;
+
+    const direction = trendData?.trend?.direction || 'stable';
+    const trendPreference = selectedDefinition?.trend_preference || 'increase';
+
+    // Determine if this is a "good" trend based on preference
+    let adjustedColor = rawTrendIndicator.color;
+    let isPositive = null; // null = neutral
+
+    if (direction === 'increasing') {
+      if (trendPreference === 'increase') {
+        adjustedColor = 'green';
+        isPositive = true;
+      } else if (trendPreference === 'decrease') {
+        adjustedColor = 'red';
+        isPositive = false;
+      } else {
+        adjustedColor = 'blue';
+      }
+    } else if (direction === 'decreasing') {
+      if (trendPreference === 'decrease') {
+        adjustedColor = 'green';
+        isPositive = true;
+      } else if (trendPreference === 'increase') {
+        adjustedColor = 'red';
+        isPositive = false;
+      } else {
+        adjustedColor = 'blue';
+      }
+    } else {
+      adjustedColor = 'blue';
+    }
+
+    return {
+      ...rawTrendIndicator,
+      color: adjustedColor,
+      isPositive
+    };
+  };
+
+  const trendIndicator = getTrendIndicator();
 
   // Translate trend text
   const getTranslatedTrendText = () => {

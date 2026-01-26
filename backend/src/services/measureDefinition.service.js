@@ -243,7 +243,7 @@ async function updateDefinition(id, data, user, requestMetadata = {}) {
         'min_value', 'max_value',
         'normal_range_min', 'normal_range_max',
         'alert_threshold_min', 'alert_threshold_max',
-        'enable_alerts'
+        'enable_alerts', 'trend_preference'
       ];
       const attemptedFields = Object.keys(data);
       const disallowedFields = attemptedFields.filter(f => !allowedFields.includes(f));
