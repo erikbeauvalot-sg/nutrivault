@@ -132,7 +132,7 @@ function MeasureTranslationModal({ show, onHide, measure, onSuccess }) {
   if (!measure) return null;
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg" centered scrollable>
+    <Modal show={show} onHide={handleClose} size="lg" fullscreen="md-down" centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
           {t('measures.translations', 'Translations')} - {measure.display_name}

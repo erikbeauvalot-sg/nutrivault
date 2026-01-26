@@ -241,7 +241,7 @@ const BillingTemplateModal = ({ show, onHide, onSave, mode, template }) => {
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" backdrop="static" scrollable>
+    <Modal show={show} onHide={onHide} size="lg" fullscreen="md-down" backdrop="static" scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
           {mode === 'edit' ? 'Edit Billing Template' : 'Create Billing Template'}

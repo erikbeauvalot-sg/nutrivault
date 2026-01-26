@@ -154,7 +154,7 @@ const EditInvoiceModal = ({ show, onHide, onSubmit, invoice }) => {
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="xl" scrollable>
+    <Modal show={show} onHide={handleClose} size="xl" fullscreen="md-down" scrollable>
       <Modal.Header closeButton>
         <Modal.Title>{t('billing.editInvoice', 'Edit Invoice')}</Modal.Title>
       </Modal.Header>

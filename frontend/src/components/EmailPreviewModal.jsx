@@ -160,7 +160,7 @@ const EmailPreviewModal = ({ show, onHide, template }) => {
   }
 
   return (
-    <Modal show={show} onHide={onHide} size="xl" scrollable>
+    <Modal show={show} onHide={onHide} size="xl" fullscreen="md-down" scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
           Preview: {template.name}

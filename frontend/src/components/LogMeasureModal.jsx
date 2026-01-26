@@ -334,7 +334,7 @@ const LogMeasureModal = ({ show, onHide, patientId, visitId, measure, onSuccess 
   };
 
   return (
-    <Modal show={show} onHide={handleClose} centered scrollable size="lg">
+    <Modal show={show} onHide={handleClose} centered scrollable size="lg" fullscreen="md-down">
       <Modal.Header closeButton>
         <Modal.Title>
           {isEditMode ? (

@@ -94,7 +94,7 @@ const RecordPaymentModal = ({ show, onHide, onSubmit, invoice }) => {
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg" scrollable>
+    <Modal show={show} onHide={handleClose} size="lg" fullscreen="md-down" scrollable>
       <Modal.Header closeButton>
         <Modal.Title>{t('billing.recordPayment', 'Record Payment')}</Modal.Title>
       </Modal.Header>

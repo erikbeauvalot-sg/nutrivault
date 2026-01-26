@@ -130,7 +130,7 @@ const RoleModal = ({ show, onHide, mode, role, onSave }) => {
     <Modal
       show={show}
       onHide={onHide}
-      size="xl"
+      size="xl" fullscreen="md-down"
       backdrop="static"
       keyboard={false}
     >

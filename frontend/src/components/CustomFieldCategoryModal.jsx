@@ -164,7 +164,7 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
   };
 
   return (
-    <Modal show={show} onHide={handleClose} size="xl" scrollable>
+    <Modal show={show} onHide={handleClose} size="xl" fullscreen="md-down" scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
           {isEditing ? '✏️ Edit Category' : '➕ Create Category'}

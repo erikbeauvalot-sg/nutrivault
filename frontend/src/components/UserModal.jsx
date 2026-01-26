@@ -173,7 +173,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="xl" scrollable>
+    <Modal show={show} onHide={onHide} size="xl" fullscreen="md-down" scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
           {isCreateMode ? `👤 ${t('users.createUser')}` : `👤 ${t('users.editUser')}`}
