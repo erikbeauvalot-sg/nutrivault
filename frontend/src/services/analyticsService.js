@@ -12,7 +12,7 @@ import api from './api';
  * @param {string} params.endDate - End date filter (optional)
  */
 export const getHealthTrends = async (params = {}) => {
-  const response = await api.get('/analytics/health-trends', { params });
+  const response = await api.get('/api/analytics/health-trends', { params });
   return response.data;
 };
 
@@ -23,7 +23,7 @@ export const getHealthTrends = async (params = {}) => {
  * @param {string} params.endDate - End date filter (optional)
  */
 export const getFinancialMetrics = async (params = {}) => {
-  const response = await api.get('/analytics/financial-metrics', { params });
+  const response = await api.get('/api/analytics/financial-metrics', { params });
   return response.data;
 };
 
@@ -34,7 +34,7 @@ export const getFinancialMetrics = async (params = {}) => {
  * @param {string} params.endDate - End date filter (optional)
  */
 export const getCommunicationEffectiveness = async (params = {}) => {
-  const response = await api.get('/analytics/communication-effectiveness', { params });
+  const response = await api.get('/api/analytics/communication-effectiveness', { params });
   return response.data;
 };
 
@@ -43,7 +43,7 @@ export const getCommunicationEffectiveness = async (params = {}) => {
  * @param {string} patientId - Patient UUID
  */
 export const getPatientHealthScore = async (patientId) => {
-  const response = await api.get(`/analytics/patient-health-score/${patientId}`);
+  const response = await api.get(`/api/analytics/patient-health-score/${patientId}`);
   return response.data;
 };
 
