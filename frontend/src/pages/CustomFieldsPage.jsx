@@ -2,10 +2,12 @@
  * CustomFieldsPage Component
  * Admin-only custom fields management page
  * Manages categories and field definitions
+ * Follows MeasuresPage pattern with 2 tabs
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { Container, Row, Col, Card, Tab, Tabs, Table, Button, Badge, Alert, Spinner, Form, InputGroup } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Button, Badge, Alert, Spinner, Form, InputGroup } from 'react-bootstrap';
+import ResponsiveTabs, { Tab } from '../components/ResponsiveTabs';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -24,10 +26,14 @@ const CustomFieldsPage = () => {
   const getStoredFilters = () => {
     try {
       const stored = localStorage.getItem('customFieldsPage_filters');
-      return stored ? JSON.parse(stored) : { searchQuery: '', selectedCategories: [] };
+      return stored ? JSON.parse(stored) : {
+        searchQuery: '',
+        selectedCategories: [],
+        activeTab: 'categories'
+      };
     } catch (err) {
       console.error('Error reading filters from localStorage:', err);
-      return { searchQuery: '', selectedCategories: [] };
+      return { searchQuery: '', selectedCategories: [], activeTab: 'categories' };
     }
   };
 
@@ -36,7 +42,7 @@ const CustomFieldsPage = () => {
   const [definitions, setDefinitions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('categories');
+  const [activeTab, setActiveTab] = useState(() => getStoredFilters().activeTab);
   const [searchQuery, setSearchQuery] = useState(() => getStoredFilters().searchQuery);
   const [selectedCategories, setSelectedCategories] = useState(() => getStoredFilters().selectedCategories);
 
@@ -64,13 +70,14 @@ const CustomFieldsPage = () => {
     try {
       const filters = {
         searchQuery,
-        selectedCategories
+        selectedCategories,
+        activeTab
       };
       localStorage.setItem('customFieldsPage_filters', JSON.stringify(filters));
     } catch (err) {
       console.error('Error saving filters to localStorage:', err);
     }
-  }, [searchQuery, selectedCategories]);
+  }, [searchQuery, selectedCategories, activeTab]);
 
   const fetchData = async () => {
     try {
@@ -85,7 +92,7 @@ const CustomFieldsPage = () => {
       setError(null);
     } catch (err) {
       console.error('Error fetching custom fields data:', err);
-      setError(err.response?.data?.error || 'Failed to load custom fields');
+      setError(err.response?.data?.error || t('customFields.failedToLoad', 'Failed to load custom fields'));
     } finally {
       setLoading(false);
     }
@@ -103,14 +110,19 @@ const CustomFieldsPage = () => {
   };
 
   const handleDeleteCategory = async (categoryId) => {
-    if (!window.confirm('Are you sure you want to delete this category?')) return;
+    if (!window.confirm(t('customFields.confirmDeleteCategory', 'Are you sure you want to delete this category?'))) return;
 
     try {
-      await customFieldService.deleteCategory(categoryId);
-      fetchData();
+      const result = await customFieldService.deleteCategory(categoryId);
+      if (result.success !== false) {
+        await fetchData();
+      } else {
+        alert(result.error || t('customFields.deleteError', 'Failed to delete category'));
+      }
     } catch (err) {
       console.error('Error deleting category:', err);
-      alert(err.response?.data?.error || 'Failed to delete category');
+      const errorMessage = err.response?.data?.error || err.message || t('customFields.deleteError', 'Failed to delete category');
+      alert(errorMessage);
     }
   };
 
@@ -126,17 +138,23 @@ const CustomFieldsPage = () => {
   };
 
   const handleDeleteDefinition = async (definitionId) => {
-    if (!window.confirm('Are you sure you want to delete this field definition?')) return;
+    if (!window.confirm(t('customFields.confirmDeleteField', 'Are you sure you want to delete this field definition?'))) return;
 
     try {
-      await customFieldService.deleteDefinition(definitionId);
-      fetchData();
+      const result = await customFieldService.deleteDefinition(definitionId);
+      if (result.success !== false) {
+        await fetchData();
+      } else {
+        alert(result.error || t('customFields.deleteFieldError', 'Failed to delete field definition'));
+      }
     } catch (err) {
       console.error('Error deleting definition:', err);
-      alert(err.response?.data?.error || 'Failed to delete field definition');
+      const errorMessage = err.response?.data?.error || err.message || t('customFields.deleteFieldError', 'Failed to delete field definition');
+      alert(errorMessage);
     }
   };
 
+  // Get field type icon
   const getFieldTypeIcon = (type) => {
     const icons = {
       text: '📝',
@@ -144,9 +162,24 @@ const CustomFieldsPage = () => {
       number: '🔢',
       date: '📅',
       select: '📋',
-      boolean: '☑️'
+      boolean: '☑️',
+      calculated: '🧮'
     };
     return icons[type] || '❓';
+  };
+
+  // Get field type badge variant
+  const getFieldTypeBadgeVariant = (type) => {
+    const variants = {
+      text: 'primary',
+      textarea: 'info',
+      number: 'success',
+      date: 'warning',
+      select: 'secondary',
+      boolean: 'dark',
+      calculated: 'danger'
+    };
+    return variants[type] || 'secondary';
   };
 
   // Category filter handlers
@@ -190,7 +223,7 @@ const CustomFieldsPage = () => {
       });
     }
 
-    // Filter by selected categories (AND logic)
+    // Filter by selected categories
     if (selectedCategories.length > 0) {
       filtered = filtered.filter(def => {
         return selectedCategories.includes(def.category_id);
@@ -199,6 +232,19 @@ const CustomFieldsPage = () => {
 
     return filtered;
   }, [definitions, searchQuery, selectedCategories]);
+
+  // Filter categories based on search query
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery.trim()) return categories;
+
+    const query = searchQuery.toLowerCase();
+    return categories.filter(cat => {
+      return (
+        cat.name?.toLowerCase().includes(query) ||
+        cat.description?.toLowerCase().includes(query)
+      );
+    });
+  }, [categories, searchQuery]);
 
   // Highlight matching text
   const highlightText = (text, query) => {
@@ -221,7 +267,7 @@ const CustomFieldsPage = () => {
       <Layout>
         <Container className="mt-4 text-center">
           <Spinner animation="border" />
-          <p>Loading custom fields...</p>
+          <p>{t('customFields.loading', 'Loading custom fields...')}</p>
         </Container>
       </Layout>
     );
@@ -232,8 +278,8 @@ const CustomFieldsPage = () => {
       <Container className="mt-4">
         <Row className="mb-4">
           <Col>
-            <h1>🔧 Custom Fields Management</h1>
-            <p className="text-muted">Define custom fields for patient profiles</p>
+            <h1>🔧 {t('customFields.title', 'Custom Fields Management')}</h1>
+            <p className="text-muted">{t('customFields.subtitle', 'Define custom fields for patient profiles and visits')}</p>
           </Col>
         </Row>
 
@@ -243,24 +289,67 @@ const CustomFieldsPage = () => {
           </Alert>
         )}
 
-        <Tabs
+        <ResponsiveTabs
           activeKey={activeTab}
           onSelect={(k) => setActiveTab(k)}
           className="mb-3"
         >
           {/* Categories Tab */}
-          <Tab eventKey="categories" title={`📁 Categories (${categories.length})`}>
+          <Tab eventKey="categories" title={`📁 ${t('customFields.categories', 'Categories')} (${categories.length})`}>
             <Card>
               <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <h5 className="mb-0">Field Categories</h5>
+                <h5 className="mb-0">{t('customFields.categoriesTitle', 'Field Categories')}</h5>
                 <Button variant="primary" size="sm" onClick={handleCreateCategory}>
-                  ➕ New Category
+                  ➕ {t('customFields.newCategory', 'New Category')}
                 </Button>
               </Card.Header>
               <Card.Body>
+                {/* Search Bar */}
+                <Row className="mb-3">
+                  <Col xs={12} md={6}>
+                    <Form.Label>{t('common.search', 'Search')}</Form.Label>
+                    <InputGroup>
+                      <InputGroup.Text>🔍</InputGroup.Text>
+                      <Form.Control
+                        type="text"
+                        placeholder={t('customFields.searchCategoriesPlaceholder', 'Search by name or description...')}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                      {searchQuery && (
+                        <Button
+                          variant="outline-secondary"
+                          onClick={() => setSearchQuery('')}
+                          title={t('common.clear', 'Clear')}
+                        >
+                          ✕
+                        </Button>
+                      )}
+                    </InputGroup>
+                  </Col>
+                </Row>
+
+                {/* Results Counter */}
+                {searchQuery && (
+                  <Row className="mb-2">
+                    <Col>
+                      <Form.Text className="text-muted">
+                        {t('customFields.showingResults', 'Showing {{filtered}} of {{total}} categories', {
+                          filtered: filteredCategories.length,
+                          total: categories.length
+                        })}
+                      </Form.Text>
+                    </Col>
+                  </Row>
+                )}
+
                 {categories.length === 0 ? (
                   <Alert variant="info">
-                    No categories yet. Create one to get started!
+                    {t('customFields.noCategories', 'No categories yet. Create one to get started!')}
+                  </Alert>
+                ) : filteredCategories.length === 0 ? (
+                  <Alert variant="warning">
+                    {t('customFields.noCategoriesFound', 'No categories found matching your search.')}
                   </Alert>
                 ) : (
                   <Table striped bordered hover responsive>
@@ -271,71 +360,85 @@ const CustomFieldsPage = () => {
                         <th>{t('customFields.displayOrder', 'Order')}</th>
                         <th>{t('customFields.appliesTo', 'Applies to')}</th>
                         <th>{t('customFields.status', 'Status')}</th>
-                        <th>{t('customFields.fields', 'Fields')}</th>
+                        <th>{t('customFields.fieldsCount', 'Fields')}</th>
                         <th>{t('customFields.actions', 'Actions')}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {categories.map((category) => {
+                      {filteredCategories.map((category) => {
                         const entityTypes = category.entity_types || ['patient'];
                         const hasPatient = entityTypes.includes('patient');
                         const hasVisit = entityTypes.includes('visit');
+                        const fieldCount = category.field_definitions?.length || 0;
 
                         return (
-                        <tr
-                          key={category.id}
-                          onClick={() => handleEditCategory(category)}
-                          className="clickable-row"
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <td><strong>{category.name}</strong></td>
-                          <td>{category.description || <span className="text-muted">-</span>}</td>
-                          <td>{category.display_order}</td>
-                          <td>
-                            {hasPatient && (
-                              <Badge bg="primary" className="me-1">
-                                👤 Patient
+                          <tr
+                            key={category.id}
+                            onClick={() => handleEditCategory(category)}
+                            className="clickable-row"
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <td>
+                              <strong>{highlightText(category.name, searchQuery)}</strong>
+                            </td>
+                            <td>
+                              {category.description ? (
+                                highlightText(category.description, searchQuery)
+                              ) : (
+                                <span className="text-muted">-</span>
+                              )}
+                            </td>
+                            <td>
+                              <Badge bg="light" text="dark">{category.display_order}</Badge>
+                            </td>
+                            <td>
+                              {hasPatient && (
+                                <Badge bg="primary" className="me-1">
+                                  👤 Patient
+                                </Badge>
+                              )}
+                              {hasVisit && (
+                                <Badge bg="info">
+                                  📅 Visit
+                                </Badge>
+                              )}
+                            </td>
+                            <td>
+                              {category.is_active ? (
+                                <Badge bg="success">{t('common.active', 'Active')}</Badge>
+                              ) : (
+                                <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>
+                              )}
+                            </td>
+                            <td>
+                              <Badge bg="secondary">
+                                {fieldCount} {t('customFields.fields', 'fields')}
                               </Badge>
-                            )}
-                            {hasVisit && (
-                              <Badge bg="info">
-                                📅 Visit
-                              </Badge>
-                            )}
-                          </td>
-                          <td>
-                            {category.is_active ? (
-                              <Badge bg="success">{t('common.active', 'Active')}</Badge>
-                            ) : (
-                              <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>
-                            )}
-                          </td>
-                          <td>
-                            <Badge bg="secondary">
-                              {category.field_definitions?.length || 0} {t('customFields.fields', 'fields')}
-                            </Badge>
-                          </td>
-                          <td onClick={(e) => e.stopPropagation()}>
-                            <div className="action-buttons">
-                              <ActionButton
-                                action="view"
-                                onClick={() => handleEditCategory(category)}
-                                title={t('common.view', 'View')}
-                              />
-                              <ActionButton
-                                action="edit"
-                                onClick={() => handleEditCategory(category)}
-                                title={t('common.edit', 'Edit')}
-                              />
-                              <ActionButton
-                                action="delete"
-                                onClick={() => handleDeleteCategory(category.id)}
-                                title={t('common.delete', 'Delete')}
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                      );
+                            </td>
+                            <td onClick={(e) => e.stopPropagation()}>
+                              <div className="action-buttons">
+                                <ActionButton
+                                  action="edit"
+                                  onClick={() => handleEditCategory(category)}
+                                  title={t('common.edit', 'Edit')}
+                                />
+                                {fieldCount === 0 ? (
+                                  <ActionButton
+                                    action="delete"
+                                    onClick={() => handleDeleteCategory(category.id)}
+                                    title={t('common.delete', 'Delete')}
+                                  />
+                                ) : (
+                                  <ActionButton
+                                    action="delete"
+                                    disabled={true}
+                                    title={t('customFields.cannotDeleteCategoryWithFields', 'Cannot delete category with fields')}
+                                  />
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
                       })}
                     </tbody>
                   </Table>
@@ -344,25 +447,25 @@ const CustomFieldsPage = () => {
             </Card>
           </Tab>
 
-          {/* Definitions Tab */}
-          <Tab eventKey="definitions" title={`📝 Field Definitions (${definitions.length})`}>
+          {/* Field Definitions Tab */}
+          <Tab eventKey="definitions" title={`📝 ${t('customFields.fieldDefinitions', 'Field Definitions')} (${definitions.length})`}>
             <Card>
               <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <h5 className="mb-0">Field Definitions</h5>
+                <h5 className="mb-0">{t('customFields.fieldDefinitionsTitle', 'Field Definitions')}</h5>
                 <Button variant="primary" size="sm" onClick={handleCreateDefinition}>
-                  ➕ New Field
+                  ➕ {t('customFields.newField', 'New Field')}
                 </Button>
               </Card.Header>
               <Card.Body>
                 {/* Search Bar and Category Filter */}
                 <Row className="mb-3">
-                  <Col md={6}>
-                    <Form.Label>Search</Form.Label>
+                  <Col xs={12} md={6} className="mb-3 mb-md-0">
+                    <Form.Label>{t('common.search', 'Search')}</Form.Label>
                     <InputGroup>
                       <InputGroup.Text>🔍</InputGroup.Text>
                       <Form.Control
                         type="text"
-                        placeholder="Search fields by name, label, help text, or category..."
+                        placeholder={t('customFields.searchFieldsPlaceholder', 'Search by name, label, or help text...')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                       />
@@ -370,26 +473,26 @@ const CustomFieldsPage = () => {
                         <Button
                           variant="outline-secondary"
                           onClick={() => setSearchQuery('')}
-                          title="Clear search"
+                          title={t('common.clear', 'Clear')}
                         >
                           ✕
                         </Button>
                       )}
                     </InputGroup>
                   </Col>
-                  <Col md={6}>
-                    <Form.Label>Filter by Category</Form.Label>
-                    <div className="d-flex gap-2">
+                  <Col xs={12} md={6}>
+                    <Form.Label>{t('customFields.filterByCategory', 'Filter by Category')}</Form.Label>
+                    <div className="d-flex gap-2 flex-wrap">
                       <Form.Select
                         value=""
                         onChange={(e) => {
                           if (e.target.value) {
                             handleToggleCategory(e.target.value);
-                            e.target.value = ''; // Reset select
+                            e.target.value = '';
                           }
                         }}
                       >
-                        <option value="">Select category to add...</option>
+                        <option value="">{t('customFields.selectCategory', 'Select category to add...')}</option>
                         {categories
                           .filter(cat => !selectedCategories.includes(cat.id))
                           .map(cat => (
@@ -403,18 +506,18 @@ const CustomFieldsPage = () => {
                         size="sm"
                         onClick={handleSelectAllCategories}
                         disabled={selectedCategories.length === categories.length}
-                        title="Select all categories"
+                        title={t('customFields.selectAll', 'Select all')}
                       >
-                        All
+                        {t('common.all', 'All')}
                       </Button>
                       <Button
                         variant="outline-secondary"
                         size="sm"
                         onClick={handleDeselectAllCategories}
                         disabled={selectedCategories.length === 0}
-                        title="Deselect all categories"
+                        title={t('customFields.deselectAll', 'Deselect all')}
                       >
-                        None
+                        {t('common.none', 'None')}
                       </Button>
                     </div>
                   </Col>
@@ -425,7 +528,7 @@ const CustomFieldsPage = () => {
                   <Row className="mb-3">
                     <Col>
                       <div className="d-flex flex-wrap gap-2 align-items-center">
-                        <small className="text-muted">Filtering by:</small>
+                        <small className="text-muted">{t('customFields.filteringBy', 'Filtering by:')}</small>
                         {selectedCategories.map(catId => {
                           const category = categories.find(c => c.id === catId);
                           return category ? (
@@ -439,15 +542,6 @@ const CustomFieldsPage = () => {
                               }}
                               onClick={() => handleToggleCategory(catId)}
                             >
-                              <span style={{
-                                display: 'inline-block',
-                                width: '8px',
-                                height: '8px',
-                                backgroundColor: category.color || '#3498db',
-                                borderRadius: '50%',
-                                marginRight: '6px',
-                                border: '1px solid rgba(255,255,255,0.5)'
-                              }} />
                               {category.name} ✕
                             </Badge>
                           ) : null;
@@ -462,14 +556,17 @@ const CustomFieldsPage = () => {
                   <Row className="mb-2">
                     <Col className="d-flex justify-content-between align-items-center">
                       <Form.Text className="text-muted">
-                        Showing {filteredDefinitions.length} of {definitions.length} field{filteredDefinitions.length !== 1 ? 's' : ''}
+                        {t('customFields.showingFieldsResults', 'Showing {{filtered}} of {{total}} fields', {
+                          filtered: filteredDefinitions.length,
+                          total: definitions.length
+                        })}
                       </Form.Text>
                       <Button
                         variant="outline-secondary"
                         size="sm"
                         onClick={handleClearAllFilters}
                       >
-                        🔄 Clear All Filters
+                        🔄 {t('customFields.clearAllFilters', 'Clear All Filters')}
                       </Button>
                     </Col>
                   </Row>
@@ -477,11 +574,11 @@ const CustomFieldsPage = () => {
 
                 {definitions.length === 0 ? (
                   <Alert variant="info">
-                    No field definitions yet. Create one to get started!
+                    {t('customFields.noFields', 'No field definitions yet. Create one to get started!')}
                   </Alert>
                 ) : filteredDefinitions.length === 0 ? (
                   <Alert variant="warning">
-                    No fields found matching "{searchQuery}". Try a different search term.
+                    {t('customFields.noFieldsFound', 'No fields found matching your filters.')}
                   </Alert>
                 ) : (
                   <Table striped bordered hover responsive>
@@ -504,19 +601,31 @@ const CustomFieldsPage = () => {
                           className="clickable-row"
                           style={{ cursor: 'pointer' }}
                         >
-                          <td><code>{highlightText(definition.field_name, searchQuery)}</code></td>
-                          <td><strong>{highlightText(definition.field_label, searchQuery)}</strong></td>
                           <td>
-                            <span>{getFieldTypeIcon(definition.field_type)} {definition.field_type}</span>
+                            <code>{highlightText(definition.field_name, searchQuery)}</code>
                           </td>
                           <td>
-                            {definition.category?.name ? highlightText(definition.category.name, searchQuery) : <span className="text-muted">{t('common.unknown', 'Unknown')}</span>}
+                            <strong>{highlightText(definition.field_label, searchQuery)}</strong>
+                          </td>
+                          <td>
+                            <Badge bg={getFieldTypeBadgeVariant(definition.field_type)}>
+                              {getFieldTypeIcon(definition.field_type)} {definition.field_type}
+                            </Badge>
+                          </td>
+                          <td>
+                            {definition.category?.name ? (
+                              <Badge bg="light" text="dark">
+                                {highlightText(definition.category.name, searchQuery)}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted">{t('common.unknown', 'Unknown')}</span>
+                            )}
                           </td>
                           <td>
                             {definition.is_required ? (
-                              <Badge bg="warning">{t('customFields.required', 'Required')}</Badge>
+                              <Badge bg="warning" text="dark">{t('common.yes', 'Yes')}</Badge>
                             ) : (
-                              <Badge bg="secondary">{t('common.optional', 'Optional')}</Badge>
+                              <Badge bg="secondary">{t('common.no', 'No')}</Badge>
                             )}
                           </td>
                           <td>
@@ -528,11 +637,6 @@ const CustomFieldsPage = () => {
                           </td>
                           <td onClick={(e) => e.stopPropagation()}>
                             <div className="action-buttons">
-                              <ActionButton
-                                action="view"
-                                onClick={() => handleEditDefinition(definition)}
-                                title={t('common.view', 'View')}
-                              />
                               <ActionButton
                                 action="edit"
                                 onClick={() => handleEditDefinition(definition)}
@@ -553,22 +657,36 @@ const CustomFieldsPage = () => {
               </Card.Body>
             </Card>
           </Tab>
-        </Tabs>
+        </ResponsiveTabs>
 
         {/* Modals */}
         <CustomFieldCategoryModal
           show={showCategoryModal}
-          onHide={() => setShowCategoryModal(false)}
+          onHide={() => {
+            setShowCategoryModal(false);
+            setSelectedCategory(null);
+          }}
           category={selectedCategory}
-          onSuccess={fetchData}
+          onSuccess={() => {
+            fetchData();
+            setShowCategoryModal(false);
+            setSelectedCategory(null);
+          }}
         />
 
         <CustomFieldDefinitionModal
           show={showDefinitionModal}
-          onHide={() => setShowDefinitionModal(false)}
+          onHide={() => {
+            setShowDefinitionModal(false);
+            setSelectedDefinition(null);
+          }}
           definition={selectedDefinition}
           categories={categories}
-          onSuccess={fetchData}
+          onSuccess={() => {
+            fetchData();
+            setShowDefinitionModal(false);
+            setSelectedDefinition(null);
+          }}
         />
       </Container>
     </Layout>
