@@ -8,8 +8,17 @@ const { InvoiceCustomization, User } = db;
 const fs = require('fs').promises;
 const path = require('path');
 
-// Base upload directory - use process.cwd() for production compatibility
-const UPLOAD_BASE = path.join(process.cwd(), 'uploads', 'invoice-customizations');
+// Base upload directory - use environment variable or default to /app/uploads in production
+const getUploadBase = () => {
+  // In Docker, use fixed /app path
+  if (process.env.NODE_ENV === 'production') {
+    return '/app/uploads/invoice-customizations';
+  }
+  // In development, use process.cwd()
+  return path.join(process.cwd(), 'uploads', 'invoice-customizations');
+};
+
+const UPLOAD_BASE = getUploadBase();
 
 /**
  * Get customization for a user (create default if doesn't exist)
@@ -104,7 +113,8 @@ const uploadLogo = async (userId, file) => {
 
     // Delete old logo if exists
     if (customization.logo_file_path) {
-      const oldPath = path.join(process.cwd(), customization.logo_file_path);
+      const basePath = process.env.NODE_ENV === 'production' ? '/app' : process.cwd();
+      const oldPath = path.join(basePath, customization.logo_file_path);
       try {
         await fs.unlink(oldPath);
       } catch (err) {
@@ -140,7 +150,8 @@ const deleteLogo = async (userId) => {
 
     if (customization.logo_file_path) {
       // Delete file
-      const filepath = path.join(process.cwd(), customization.logo_file_path);
+      const basePath = process.env.NODE_ENV === 'production' ? '/app' : process.cwd();
+      const filepath = path.join(basePath, customization.logo_file_path);
       try {
         await fs.unlink(filepath);
       } catch (err) {
@@ -173,7 +184,8 @@ const uploadSignature = async (userId, file) => {
 
     // Delete old signature if exists
     if (customization.signature_file_path) {
-      const oldPath = path.join(process.cwd(), customization.signature_file_path);
+      const basePath = process.env.NODE_ENV === 'production' ? '/app' : process.cwd();
+      const oldPath = path.join(basePath, customization.signature_file_path);
       try {
         await fs.unlink(oldPath);
       } catch (err) {
@@ -209,7 +221,8 @@ const deleteSignature = async (userId) => {
 
     if (customization.signature_file_path) {
       // Delete file
-      const filepath = path.join(process.cwd(), customization.signature_file_path);
+      const basePath = process.env.NODE_ENV === 'production' ? '/app' : process.cwd();
+      const filepath = path.join(basePath, customization.signature_file_path);
       try {
         await fs.unlink(filepath);
       } catch (err) {

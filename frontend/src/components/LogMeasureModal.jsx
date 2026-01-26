@@ -7,15 +7,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Modal, Button, Form, Alert, Spinner, Badge } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { getMeasureDefinitions, logPatientMeasure, updatePatientMeasure, getMeasureValue } from '../services/measureService';
+import { getMeasureDefinitions, logPatientMeasure, updatePatientMeasure, getMeasureValue, getAllMeasureTranslations } from '../services/measureService';
+import { fetchMeasureTranslations, applyMeasureTranslations } from '../utils/measureTranslations';
 
 const LogMeasureModal = ({ show, onHide, patientId, visitId, measure, onSuccess }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [loadingDefinitions, setLoadingDefinitions] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [definitions, setDefinitions] = useState([]);
+  const [measureTranslations, setMeasureTranslations] = useState({});
   const [selectedDefinition, setSelectedDefinition] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -29,17 +31,53 @@ const LogMeasureModal = ({ show, onHide, patientId, visitId, measure, onSuccess 
     try {
       setLoadingDefinitions(true);
       const data = await getMeasureDefinitions({ is_active: true });
-      setDefinitions(data);
+
+      // Fetch translations for all measure definitions
+      if (data && data.length > 0) {
+        const measureIds = data.map(d => d.id);
+        const translations = await fetchMeasureTranslations(measureIds, getAllMeasureTranslations);
+        setMeasureTranslations(translations);
+
+        // Apply translations based on current language
+        const currentLanguage = i18n.resolvedLanguage || i18n.language || 'en';
+        const translatedDefinitions = data.map(def =>
+          applyMeasureTranslations(def, translations[def.id]?.[currentLanguage] || {})
+        );
+        setDefinitions(translatedDefinitions);
+      } else {
+        setDefinitions(data);
+      }
     } catch (err) {
       console.error('Error loading measure definitions:', err);
       setError(t('measures.failedToLoadDefinitions', 'Failed to load measure definitions'));
     } finally {
       setLoadingDefinitions(false);
     }
-  }, [t]);
+  }, [t, i18n]);
 
   // Determine if we're in edit mode
   const isEditMode = Boolean(measure);
+
+  // Re-apply translations when language changes
+  useEffect(() => {
+    if (Object.keys(measureTranslations).length > 0 && definitions.length > 0) {
+      const currentLanguage = i18n.resolvedLanguage || i18n.language || 'en';
+      const translatedDefinitions = definitions.map(def => {
+        // Get the original (untranslated) definition data
+        const originalDef = { ...def };
+        return applyMeasureTranslations(originalDef, measureTranslations[def.id]?.[currentLanguage] || {});
+      });
+      setDefinitions(translatedDefinitions);
+
+      // Update selected definition if one is selected
+      if (selectedDefinition) {
+        const updatedSelected = translatedDefinitions.find(d => d.id === selectedDefinition.id);
+        if (updatedSelected) {
+          setSelectedDefinition(updatedSelected);
+        }
+      }
+    }
+  }, [i18n.resolvedLanguage, i18n.language]);
 
   // Load measure definitions on mount and populate form if editing
   useEffect(() => {

@@ -154,8 +154,9 @@ const analyticsRoutes = require('./routes/analytics');
 app.use('/api/analytics', analyticsRoutes);
 
 // Serve uploaded files (logos, signatures)
-// Use process.cwd() for production compatibility (consistent with upload services)
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Use /app in production (Docker), process.cwd() in development
+const uploadsBasePath = process.env.NODE_ENV === 'production' ? '/app/uploads' : path.join(process.cwd(), 'uploads');
+app.use('/uploads', express.static(uploadsBasePath));
 
 // Basic error handler
 app.use((err, req, res, next) => {

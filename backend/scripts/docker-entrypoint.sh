@@ -8,8 +8,15 @@
 echo "🚀 Starting NutriVault Backend..."
 
 # Wait for database file to be accessible (if using shared volume)
-echo "📁 Checking database directory..."
+echo "📁 Checking data directories..."
 mkdir -p /app/data
+mkdir -p /app/uploads/invoice-customizations
+mkdir -p /app/uploads/documents
+mkdir -p /app/temp_uploads
+
+# Debug: Show current working directory
+echo "   Working directory: $(pwd)"
+echo "   Upload directories: $(ls -la /app/uploads 2>/dev/null || echo 'not found')"
 
 # Check if database exists
 if [ ! -f "/app/data/nutrivault.db" ]; then
