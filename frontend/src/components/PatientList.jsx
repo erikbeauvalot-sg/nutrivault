@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Table, Button, Badge, Form, InputGroup, Pagination, Card, Dropdown } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
+import ActionButton from './ActionButton';
 import './PatientList.css';
 
 function PatientList({ 
@@ -163,34 +164,28 @@ function PatientList({
                     </div>
                   )}
 
-                  <div className="d-flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                  <div className="action-buttons mt-3" onClick={(e) => e.stopPropagation()}>
                     {onScheduleVisit && (
-                      <Button
-                        variant="outline-success"
-                        size="sm"
+                      <ActionButton
+                        action="schedule"
                         onClick={() => onScheduleVisit(patient)}
-                        className="flex-fill"
-                      >
-                        📅 {t('visits.scheduleVisit')}
-                      </Button>
+                        title={t('visits.scheduleVisit')}
+                      />
                     )}
-                    <Dropdown>
-                      <Dropdown.Toggle variant="outline-secondary" size="sm">
-                        ⋮
-                      </Dropdown.Toggle>
-                      <Dropdown.Menu>
-                        {onEdit && (
-                          <Dropdown.Item onClick={() => onEdit(patient)}>
-                            ✏️ {t('common.edit')}
-                          </Dropdown.Item>
-                        )}
-                        {onDelete && (
-                          <Dropdown.Item onClick={() => onDelete(patient.id)} className="text-danger">
-                            🗑️ {t('common.delete')}
-                          </Dropdown.Item>
-                        )}
-                      </Dropdown.Menu>
-                    </Dropdown>
+                    {onEdit && (
+                      <ActionButton
+                        action="edit"
+                        onClick={() => onEdit(patient)}
+                        title={t('common.edit')}
+                      />
+                    )}
+                    {onDelete && (
+                      <ActionButton
+                        action="delete"
+                        onClick={() => onDelete(patient.id)}
+                        title={t('common.delete')}
+                      />
+                    )}
                   </div>
                 </Card.Body>
               </Card>
@@ -277,36 +272,27 @@ function PatientList({
                       </Badge>
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
-                      <div className="d-flex gap-1">
+                      <div className="action-buttons">
                         {onScheduleVisit && (
-                          <Button
-                            variant="outline-success"
-                            size="sm"
+                          <ActionButton
+                            action="schedule"
                             onClick={() => onScheduleVisit(patient)}
                             title={t('visits.scheduleVisit')}
-                          >
-                            📅
-                          </Button>
+                          />
                         )}
                         {onEdit && (
-                          <Button
-                            variant="outline-primary"
-                            size="sm"
+                          <ActionButton
+                            action="edit"
                             onClick={() => onEdit(patient)}
                             title={t('common.edit')}
-                          >
-                            ✏️
-                          </Button>
+                          />
                         )}
                         {onDelete && (
-                          <Button
-                            variant="outline-danger"
-                            size="sm"
+                          <ActionButton
+                            action="delete"
                             onClick={() => onDelete(patient.id)}
                             title={t('common.delete')}
-                          >
-                            🗑️
-                          </Button>
+                          />
                         )}
                       </div>
                     </td>

@@ -24,6 +24,7 @@ const CreateVisitPage = lazy(() => import('./pages/CreateVisitPage'));
 const EditVisitPage = lazy(() => import('./pages/EditVisitPage'));
 const VisitDetailPage = lazy(() => import('./pages/VisitDetailPage'));
 const UsersPage = lazy(() => import('./pages/UsersPage'));
+const UserDetailPage = lazy(() => import('./pages/UserDetailPage'));
 const BillingPage = lazy(() => import('./pages/BillingPage'));
 const CreateInvoicePage = lazy(() => import('./pages/CreateInvoicePage'));
 const EditInvoicePage = lazy(() => import('./pages/EditInvoicePage'));
@@ -166,6 +167,15 @@ function App() {
         element={
           <ProtectedRoute>
             <UsersPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/users/:id"
+        element={
+          <ProtectedRoute>
+            <UserDetailPage />
           </ProtectedRoute>
         }
       />

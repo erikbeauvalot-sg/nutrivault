@@ -11,9 +11,10 @@ class AuthService {
    * Authenticate user with username and password
    * @param {string} username - Username
    * @param {string} password - Plain text password
+   * @param {boolean} rememberMe - If true, extend token validity to 24h
    * @returns {Object} User object with tokens
    */
-  async login(username, password) {
+  async login(username, password, rememberMe = false) {
     try {
       console.log('🔐 LOGIN ATTEMPT:', { username, passwordLength: password?.length });
       console.log('📁 DATABASE:', db.sequelize.config.storage || db.sequelize.config.database);
@@ -108,7 +109,7 @@ class AuthService {
       await user.update({ last_login: new Date() });
 
       // Generate token pair
-      const tokens = generateTokenPair(user);
+      const tokens = generateTokenPair(user, rememberMe);
 
       // Store refresh token in database (hashed)
       const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, 10);

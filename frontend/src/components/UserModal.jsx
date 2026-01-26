@@ -59,6 +59,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
 
   const isCreateMode = mode === 'create';
   const isEditMode = mode === 'edit';
+  const isViewMode = mode === 'view';
 
   const {
     register,
@@ -83,7 +84,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
 
   useEffect(() => {
     if (show) {
-      if (user && isEditMode) {
+      if (user && (isEditMode || isViewMode)) {
         reset({
           email: user.email,
           role_id: user.role_id,
@@ -108,7 +109,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
         });
       }
     }
-  }, [show, user, reset, isEditMode]);
+  }, [show, user, reset, isEditMode, isViewMode]);
 
   useEffect(() => {
     if (isCreateMode && password) {
@@ -176,7 +177,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
     <Modal show={show} onHide={onHide} size="xl" fullscreen="md-down" scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
-          {isCreateMode ? `👤 ${t('users.createUser')}` : `👤 ${t('users.editUser')}`}
+          {isCreateMode ? `👤 ${t('users.createUser')}` : isViewMode ? `👤 ${t('users.viewUser', 'View User')}` : `👤 ${t('users.editUser')}`}
         </Modal.Title>
       </Modal.Header>
 
@@ -204,7 +205,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
               </Col>
             )}
 
-            {isEditMode && user && (
+            {(isEditMode || isViewMode) && user && (
               <Col md={12}>
                 <Form.Group className="mb-3">
                   <Form.Label>{t('users.username')}</Form.Label>
@@ -214,20 +215,21 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
                     disabled
                     readOnly
                   />
-                  <Form.Text className="text-muted">{t('users.usernameCannotBeChanged')}</Form.Text>
+                  {!isViewMode && <Form.Text className="text-muted">{t('users.usernameCannotBeChanged')}</Form.Text>}
                 </Form.Group>
               </Col>
             )}
 
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>{t('users.email')} *</Form.Label>
+                <Form.Label>{t('users.email')} {!isViewMode && '*'}</Form.Label>
                 <Form.Control
                   type="email"
                   {...register('email')}
-                  isInvalid={!!errors.email || (email && emailAvailable === false)}
-                  isValid={email && emailAvailable === true && !errors.email}
+                  isInvalid={!isViewMode && (!!errors.email || (email && emailAvailable === false))}
+                  isValid={!isViewMode && email && emailAvailable === true && !errors.email}
                   placeholder="user@example.com"
+                  disabled={isViewMode}
                 />
                 {errors.email && (
                   <Form.Control.Feedback type="invalid">{errors.email.message}</Form.Control.Feedback>
@@ -256,10 +258,11 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
 
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>{t('users.role')} *</Form.Label>
+                <Form.Label>{t('users.role')} {!isViewMode && '*'}</Form.Label>
                 <Form.Select
                   {...register('role_id')}
-                  isInvalid={!!errors.role_id}
+                  isInvalid={!isViewMode && !!errors.role_id}
+                  disabled={isViewMode}
                 >
                   <option value="">{t('users.selectRole')}</option>
                   {roles.map(role => (
@@ -268,10 +271,10 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
                     </option>
                   ))}
                 </Form.Select>
-                <Form.Control.Feedback type="invalid">{errors.role_id?.message}</Form.Control.Feedback>
+                {!isViewMode && <Form.Control.Feedback type="invalid">{errors.role_id?.message}</Form.Control.Feedback>}
                 {watch('role_id') && (
                   <div className="mt-2">
-                    Selected: {getRoleBadge(watch('role_id'))}
+                    {isViewMode ? '' : 'Selected: '}{getRoleBadge(watch('role_id'))}
                   </div>
                 )}
               </Form.Group>
@@ -331,27 +334,29 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
           <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>{t('users.firstName')} *</Form.Label>
+                <Form.Label>{t('users.firstName')} {!isViewMode && '*'}</Form.Label>
                 <Form.Control
                   type="text"
                   {...register('first_name')}
-                  isInvalid={!!errors.first_name}
+                  isInvalid={!isViewMode && !!errors.first_name}
                   placeholder="John"
+                  disabled={isViewMode}
                 />
-                <Form.Control.Feedback type="invalid">{errors.first_name?.message}</Form.Control.Feedback>
+                {!isViewMode && <Form.Control.Feedback type="invalid">{errors.first_name?.message}</Form.Control.Feedback>}
               </Form.Group>
             </Col>
 
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>{t('users.lastName')} *</Form.Label>
+                <Form.Label>{t('users.lastName')} {!isViewMode && '*'}</Form.Label>
                 <Form.Control
                   type="text"
                   {...register('last_name')}
-                  isInvalid={!!errors.last_name}
+                  isInvalid={!isViewMode && !!errors.last_name}
                   placeholder="Doe"
+                  disabled={isViewMode}
                 />
-                <Form.Control.Feedback type="invalid">{errors.last_name?.message}</Form.Control.Feedback>
+                {!isViewMode && <Form.Control.Feedback type="invalid">{errors.last_name?.message}</Form.Control.Feedback>}
               </Form.Group>
             </Col>
 
@@ -361,32 +366,36 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
                 <Form.Control
                   type="tel"
                   {...register('phone')}
-                  isInvalid={!!errors.phone}
+                  isInvalid={!isViewMode && !!errors.phone}
                   placeholder="+1-555-123-4567"
+                  disabled={isViewMode}
                 />
-                <Form.Control.Feedback type="invalid">{errors.phone?.message}</Form.Control.Feedback>
+                {!isViewMode && <Form.Control.Feedback type="invalid">{errors.phone?.message}</Form.Control.Feedback>}
               </Form.Group>
             </Col>
 
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>{t('users.languagePreference')} *</Form.Label>
+                <Form.Label>{t('users.languagePreference')} {!isViewMode && '*'}</Form.Label>
                 <Form.Select
                   {...register('language_preference')}
-                  isInvalid={!!errors.language_preference}
+                  isInvalid={!isViewMode && !!errors.language_preference}
                   defaultValue="fr"
+                  disabled={isViewMode}
                 >
                   <option value="fr">🇫🇷 French</option>
                   <option value="en">🇬🇧 English</option>
                 </Form.Select>
-                <Form.Control.Feedback type="invalid">{errors.language_preference?.message}</Form.Control.Feedback>
-                <Form.Text className="text-muted">
-                  Preferred language for the user interface
-                </Form.Text>
+                {!isViewMode && <Form.Control.Feedback type="invalid">{errors.language_preference?.message}</Form.Control.Feedback>}
+                {!isViewMode && (
+                  <Form.Text className="text-muted">
+                    Preferred language for the user interface
+                  </Form.Text>
+                )}
               </Form.Group>
             </Col>
 
-            {isEditMode && (
+            {(isEditMode || isViewMode) && (
               <Col md={6}>
                 <Form.Group className="mb-3">
                   <Form.Label>{t('users.accountStatus')}</Form.Label>
@@ -395,16 +404,19 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
                     id="is_active"
                     label="Active"
                     {...register('is_active')}
+                    disabled={isViewMode}
                   />
-                  <Form.Text className="text-muted">
-                    Inactive users cannot log in
-                  </Form.Text>
+                  {!isViewMode && (
+                    <Form.Text className="text-muted">
+                      Inactive users cannot log in
+                    </Form.Text>
+                  )}
                 </Form.Group>
               </Col>
             )}
           </Row>
 
-          {isEditMode && user && (
+          {(isEditMode || isViewMode) && user && (
             <>
               <h5 className="mb-3 mt-3">{t('users.activity')}</h5>
               <Row>
@@ -439,15 +451,17 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
 
         <Modal.Footer>
           <Button variant="secondary" onClick={onHide} disabled={loading}>
-            {t('common.cancel')}
+            {isViewMode ? t('common.close') : t('common.cancel')}
           </Button>
-          <Button
-            variant="primary"
-            type="submit"
-            disabled={loading || checkingEmail || (email && emailAvailable === false)}
-          >
-            {loading ? <Spinner animation="border" size="sm" /> : (isCreateMode ? t('users.createUser') : t('users.editUser'))}
-          </Button>
+          {!isViewMode && (
+            <Button
+              variant="primary"
+              type="submit"
+              disabled={loading || checkingEmail || (email && emailAvailable === false)}
+            >
+              {loading ? <Spinner animation="border" size="sm" /> : (isCreateMode ? t('users.createUser') : t('users.editUser'))}
+            </Button>
+          )}
         </Modal.Footer>
       </Form>
     </Modal>

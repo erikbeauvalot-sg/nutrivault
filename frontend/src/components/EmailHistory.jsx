@@ -6,9 +6,10 @@
 import { useState, useEffect } from 'react';
 import { Card, Table, Badge, Button, Form, Row, Col, Spinner, Alert, Modal } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { FaEnvelope, FaEye, FaFilter, FaSync, FaCheckCircle, FaTimesCircle, FaClock } from 'react-icons/fa';
+import { FaEnvelope, FaFilter, FaSync, FaCheckCircle, FaTimesCircle, FaClock } from 'react-icons/fa';
 import DOMPurify from 'dompurify';
 import emailLogService from '../services/emailLogService';
+import ActionButton from './ActionButton';
 
 // Email type configurations
 const EMAIL_TYPES = {
@@ -335,14 +336,11 @@ const EmailHistory = ({ patientId }) => {
                             : '-'}
                         </td>
                         <td>
-                          <Button
-                            variant="outline-primary"
-                            size="sm"
+                          <ActionButton
+                            action="preview"
                             onClick={() => handleViewEmail(email)}
                             title={t('emailHistory.view', 'Voir')}
-                          >
-                            <FaEye />
-                          </Button>
+                          />
                         </td>
                       </tr>
                     );
@@ -373,14 +371,11 @@ const EmailHistory = ({ patientId }) => {
                     </div>
                     {/* Line 3: Action */}
                     <div className="d-flex justify-content-end">
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
+                      <ActionButton
+                        action="preview"
                         onClick={() => handleViewEmail(email)}
-                      >
-                        <FaEye className="me-1" />
-                        {t('emailHistory.view', 'Voir')}
-                      </Button>
+                        title={t('emailHistory.view', 'Voir')}
+                      />
                     </div>
                   </div>
                 );

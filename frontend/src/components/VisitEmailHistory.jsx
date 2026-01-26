@@ -7,9 +7,10 @@
 import { useState, useEffect } from 'react';
 import { Card, Table, Badge, Button, Spinner, Alert, Modal, Row, Col } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { FaEnvelope, FaEye, FaCheckCircle, FaTimesCircle, FaClock } from 'react-icons/fa';
+import { FaEnvelope, FaCheckCircle, FaTimesCircle, FaClock } from 'react-icons/fa';
 import DOMPurify from 'dompurify';
 import api from '../services/api';
+import ActionButton from './ActionButton';
 
 // Email type configurations
 const EMAIL_TYPES = {
@@ -151,17 +152,14 @@ const VisitEmailHistory = ({ visitId, refreshKey = 0 }) => {
                       </td>
                       <td>{getStatusBadge(email.status)}</td>
                       <td>
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
+                        <ActionButton
+                          action="preview"
                           onClick={() => {
                             setSelectedEmail(email);
                             setShowPreview(true);
                           }}
                           title={t('emailHistory.view', 'Voir')}
-                        >
-                          <FaEye />
-                        </Button>
+                        />
                       </td>
                     </tr>
                   );

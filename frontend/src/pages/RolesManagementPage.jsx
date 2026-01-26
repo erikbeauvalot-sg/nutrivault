@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import roleService from '../services/roleService';
 import RoleModal from '../components/RoleModal';
+import ActionButton from '../components/ActionButton';
 
 const RolesManagementPage = () => {
   const { t } = useTranslation();
@@ -215,22 +216,17 @@ const RolesManagementPage = () => {
                         </div>
                       </div>
 
-                      <div className="d-flex gap-2 mt-3">
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
+                      <div className="action-buttons mt-3">
+                        <ActionButton
+                          action="edit"
                           onClick={() => handleEditClick(role.id)}
-                          className="flex-fill"
-                        >
-                          ✏️ {t('roles.edit', 'Edit')}
-                        </Button>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
+                          title={t('common.edit', 'Edit')}
+                        />
+                        <ActionButton
+                          action="delete"
                           onClick={() => handleDelete(role.id)}
-                        >
-                          🗑️
-                        </Button>
+                          title={t('common.delete', 'Delete')}
+                        />
                       </div>
                     </Card.Body>
                   </Card>
@@ -250,7 +246,12 @@ const RolesManagementPage = () => {
                 </thead>
                 <tbody>
                   {filteredRoles.map(role => (
-                    <tr key={role.id}>
+                    <tr
+                      key={role.id}
+                      onClick={() => handleEditClick(role.id)}
+                      className="clickable-row"
+                      style={{ cursor: 'pointer' }}
+                    >
                       <td>
                         {getRoleBadge(role.name)}
                       </td>
@@ -263,24 +264,19 @@ const RolesManagementPage = () => {
                       <td className="text-center">
                         <Badge bg="secondary">{role.users?.length || 0}</Badge>
                       </td>
-                      <td className="text-end">
-                        <Dropdown align="end">
-                          <Dropdown.Toggle variant="outline-secondary" size="sm">
-                            ⋮
-                          </Dropdown.Toggle>
-                          <Dropdown.Menu>
-                            <Dropdown.Item onClick={() => handleEditClick(role.id)}>
-                              ✏️ {t('roles.edit', 'Edit Role')}
-                            </Dropdown.Item>
-                            <Dropdown.Divider />
-                            <Dropdown.Item
-                              onClick={() => handleDelete(role.id)}
-                              className="text-danger"
-                            >
-                              🗑️ {t('roles.delete', 'Delete Role')}
-                            </Dropdown.Item>
-                          </Dropdown.Menu>
-                        </Dropdown>
+                      <td className="text-end" onClick={(e) => e.stopPropagation()}>
+                        <div className="action-buttons justify-content-end">
+                          <ActionButton
+                            action="edit"
+                            onClick={() => handleEditClick(role.id)}
+                            title={t('common.edit', 'Edit')}
+                          />
+                          <ActionButton
+                            action="delete"
+                            onClick={() => handleDelete(role.id)}
+                            title={t('common.delete', 'Delete')}
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))}

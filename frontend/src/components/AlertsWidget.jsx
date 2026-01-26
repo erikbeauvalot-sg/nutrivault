@@ -8,6 +8,7 @@ import { Card, Badge, ListGroup, Spinner, Alert, Button, Collapse } from 'react-
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import alertsService from '../services/alertsService';
+import ActionButton from './ActionButton';
 
 const AlertsWidget = () => {
   const { t } = useTranslation();
@@ -170,13 +171,11 @@ const AlertsWidget = () => {
                           {alert.message} • {alert.amount_due.toFixed(2)} €
                         </div>
                       </div>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
+                      <ActionButton
+                        action="view"
                         onClick={() => handleAlertAction(alert)}
-                      >
-                        {t('alerts.viewInvoice', 'View')}
-                      </Button>
+                        title={t('alerts.viewInvoice', 'View Invoice')}
+                      />
                     </ListGroup.Item>
                   ))}
                   {alerts.overdue_invoices.length > 5 && (
@@ -219,13 +218,11 @@ const AlertsWidget = () => {
                           {t('alerts.overdueBy', 'Overdue by')} {alert.overdue_text}
                         </div>
                       </div>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
+                      <ActionButton
+                        action="edit"
                         onClick={() => handleAlertAction(alert)}
-                      >
-                        {t('alerts.updateVisit', 'Update')}
-                      </Button>
+                        title={t('alerts.updateVisit', 'Update Visit')}
+                      />
                     </ListGroup.Item>
                   ))}
                   {alerts.overdue_visits.length > 5 && (
@@ -269,13 +266,11 @@ const AlertsWidget = () => {
                         </div>
                         <div className="text-muted small">{alert.message}</div>
                       </div>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
+                      <ActionButton
+                        action="add"
                         onClick={() => handleAlertAction(alert)}
-                      >
-                        {t('alerts.addCustomFields', 'Add Data')}
-                      </Button>
+                        title={t('alerts.addCustomFields', 'Add Data')}
+                      />
                     </ListGroup.Item>
                   ))}
                   {alerts.visits_without_notes.length > 5 && (
@@ -315,13 +310,11 @@ const AlertsWidget = () => {
                         </div>
                         <div className="text-muted small">{alert.message}</div>
                       </div>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
+                      <ActionButton
+                        action="schedule"
                         onClick={() => handleAlertAction(alert)}
-                      >
-                        {t('alerts.scheduleVisit', 'Schedule')}
-                      </Button>
+                        title={t('alerts.scheduleVisit', 'Schedule Visit')}
+                      />
                     </ListGroup.Item>
                   ))}
                   {alerts.patients_followup.length > 5 && (

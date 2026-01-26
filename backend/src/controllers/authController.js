@@ -32,9 +32,9 @@ class AuthController {
         });
       }
 
-      const { username, password } = req.body;
+      const { username, password, rememberMe } = req.body;
 
-      const result = await authService.login(username, password);
+      const result = await authService.login(username, password, rememberMe === true);
 
       res.status(200).json({
         success: true,

@@ -29,17 +29,12 @@ import EmailPreviewModal from '../components/EmailPreviewModal';
 import EmailTemplateTranslationModal from '../components/EmailTemplateTranslationModal';
 import {
   FaPlus,
-  FaEdit,
-  FaTrash,
-  FaCopy,
-  FaEye,
   FaToggleOn,
   FaToggleOff,
   FaSearch,
-  FaFilter,
-  FaEnvelope,
-  FaGlobe
+  FaEnvelope
 } from 'react-icons/fa';
+import ActionButton from '../components/ActionButton';
 
 const EmailTemplatesPage = () => {
   const { t } = useTranslation();
@@ -349,51 +344,39 @@ const EmailTemplatesPage = () => {
                     </div>
                   </Card.Body>
                   <Card.Footer>
-                    <ButtonGroup size="sm" className="w-100">
-                      <Button
-                        variant="outline-primary"
+                    <div className="action-buttons justify-content-center">
+                      <ActionButton
+                        action="preview"
                         onClick={() => handlePreviewTemplate(template)}
-                        title="Preview"
-                      >
-                        <FaEye />
-                      </Button>
-                      <Button
-                        variant="outline-secondary"
+                        title={t('common.preview', 'Preview')}
+                      />
+                      <ActionButton
+                        action="edit"
                         onClick={() => handleEditTemplate(template)}
-                        title="Edit"
-                      >
-                        <FaEdit />
-                      </Button>
-                      <Button
-                        variant="outline-info"
+                        title={t('common.edit', 'Edit')}
+                      />
+                      <ActionButton
+                        action="duplicate"
                         onClick={() => handleDuplicateTemplate(template)}
-                        title="Duplicate"
-                      >
-                        <FaCopy />
-                      </Button>
-                      <Button
-                        variant="outline-success"
+                        title={t('common.duplicate', 'Duplicate')}
+                      />
+                      <ActionButton
+                        action="translate"
                         onClick={() => handleTranslations(template)}
-                        title="Translations"
-                      >
-                        <FaGlobe />
-                      </Button>
-                      <Button
-                        variant={template.is_active ? 'outline-warning' : 'outline-success'}
+                        title={t('common.translations', 'Translations')}
+                      />
+                      <ActionButton
+                        action={template.is_active ? 'disable' : 'enable'}
                         onClick={() => handleToggleActive(template)}
-                        title={template.is_active ? 'Deactivate' : 'Activate'}
-                      >
-                        {template.is_active ? <FaToggleOff /> : <FaToggleOn />}
-                      </Button>
-                      <Button
-                        variant="outline-danger"
+                        title={template.is_active ? t('common.deactivate', 'Deactivate') : t('common.activate', 'Activate')}
+                      />
+                      <ActionButton
+                        action="delete"
                         onClick={() => handleDeleteTemplate(template)}
                         disabled={template.is_system}
-                        title={template.is_system ? 'System templates cannot be deleted' : 'Delete'}
-                      >
-                        <FaTrash />
-                      </Button>
-                    </ButtonGroup>
+                        title={template.is_system ? t('emailTemplates.cannotDeleteSystem', 'System templates cannot be deleted') : t('common.delete', 'Delete')}
+                      />
+                    </div>
                   </Card.Footer>
                 </Card>
               </Col>

@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 const JWT_ACCESS_EXPIRATION = process.env.JWT_ACCESS_EXPIRATION || '30m';
+const JWT_ACCESS_EXPIRATION_REMEMBER = process.env.JWT_ACCESS_EXPIRATION_REMEMBER || '24h';
 const JWT_REFRESH_EXPIRATION = process.env.JWT_REFRESH_EXPIRATION || '30d';
 const JWT_ISSUER = process.env.JWT_ISSUER || 'nutrivault';
 
@@ -21,18 +22,21 @@ function validateEnvironment() {
  * Sign an access token with user information
  * @param {string} userId - User's UUID
  * @param {Object} userData - Additional user data (role_id, username, etc.)
+ * @param {boolean} rememberMe - If true, use extended expiration (24h)
  * @returns {string} Signed JWT access token
  */
-function signAccessToken(userId, userData = {}) {
+function signAccessToken(userId, userData = {}, rememberMe = false) {
   const payload = {
     sub: userId,
     type: 'access',
     ...userData
   };
 
+  const expiration = rememberMe ? JWT_ACCESS_EXPIRATION_REMEMBER : JWT_ACCESS_EXPIRATION;
+
   return jwt.sign(payload, JWT_SECRET, {
     algorithm: 'HS256',
-    expiresIn: JWT_ACCESS_EXPIRATION,
+    expiresIn: expiration,
     issuer: JWT_ISSUER,
     audience: JWT_ISSUER
   });
@@ -118,23 +122,26 @@ function verifyRefreshToken(token) {
 /**
  * Generate a complete token pair (access + refresh)
  * @param {Object} user - User object with id, role_id, username
+ * @param {boolean} rememberMe - If true, use extended expiration (24h)
  * @returns {Object} Object containing accessToken and refreshToken
  */
-function generateTokenPair(user) {
+function generateTokenPair(user, rememberMe = false) {
   // Validate environment variables on first use
   validateEnvironment();
 
   const accessToken = signAccessToken(user.id, {
     role_id: user.role_id,
     username: user.username
-  });
+  }, rememberMe);
 
   const refreshToken = signRefreshToken(user.id);
+
+  const expiration = rememberMe ? JWT_ACCESS_EXPIRATION_REMEMBER : JWT_ACCESS_EXPIRATION;
 
   return {
     accessToken,
     refreshToken,
-    expiresIn: getExpirationSeconds(JWT_ACCESS_EXPIRATION)
+    expiresIn: getExpirationSeconds(expiration)
   };
 }
 

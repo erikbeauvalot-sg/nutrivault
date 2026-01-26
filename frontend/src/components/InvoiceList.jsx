@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import * as billingService from '../services/billingService';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
+import ActionButton from './ActionButton';
 import './InvoiceList.css';
 
 function InvoiceList({
@@ -378,34 +379,28 @@ function InvoiceList({
                     <span>⏰ {t('billing.due', 'Due')}: {formatDate(invoice.due_date)}</span>
                   </div>
 
-                  <div className="d-flex gap-2" onClick={(e) => e.stopPropagation()}>
+                  <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
                     {canUpdate && invoice.amount_due > 0 && (
-                      <Button
-                        variant="outline-success"
-                        size="sm"
+                      <ActionButton
+                        action="payment"
                         onClick={() => onRecordPayment(invoice)}
-                        className="flex-fill"
-                      >
-                        💰 {t('billing.recordPayment', 'Pay')}
-                      </Button>
+                        title={t('billing.recordPayment', 'Record Payment')}
+                      />
                     )}
-                    <Dropdown>
-                      <Dropdown.Toggle variant="outline-secondary" size="sm">
-                        ⋮
-                      </Dropdown.Toggle>
-                      <Dropdown.Menu>
-                        {canUpdate && (
-                          <Dropdown.Item onClick={() => onEdit(invoice)}>
-                            ✏️ {t('common.edit', 'Edit')}
-                          </Dropdown.Item>
-                        )}
-                        {canDelete && (
-                          <Dropdown.Item onClick={() => onDelete(invoice.id)} className="text-danger">
-                            🗑️ {t('common.delete', 'Delete')}
-                          </Dropdown.Item>
-                        )}
-                      </Dropdown.Menu>
-                    </Dropdown>
+                    {canUpdate && (
+                      <ActionButton
+                        action="edit"
+                        onClick={() => onEdit(invoice)}
+                        title={t('common.edit', 'Edit')}
+                      />
+                    )}
+                    {canDelete && (
+                      <ActionButton
+                        action="delete"
+                        onClick={() => onDelete(invoice.id)}
+                        title={t('common.delete', 'Delete')}
+                      />
+                    )}
                   </div>
                 </Card.Body>
               </Card>
@@ -495,40 +490,31 @@ function InvoiceList({
                       </Badge>
                     </td>
                     <td onClick={(e) => e.stopPropagation()}>
-                      <div className="d-flex gap-1">
+                      <div className="action-buttons">
                         {canUpdate && (
                           <>
-                            <Button
-                              variant="outline-secondary"
-                              size="sm"
+                            <ActionButton
+                              action="edit"
                               onClick={() => onEdit(invoice)}
                               title={t('common.edit', 'Edit')}
-                            >
-                              ✏️
-                            </Button>
+                            />
 
                             {invoice.amount_due > 0 && (
-                              <Button
-                                variant="outline-success"
-                                size="sm"
+                              <ActionButton
+                                action="payment"
                                 onClick={() => onRecordPayment(invoice)}
                                 title={t('billing.recordPayment', 'Record Payment')}
-                              >
-                                💰
-                              </Button>
+                              />
                             )}
                           </>
                         )}
 
                         {canDelete && (
-                          <Button
-                            variant="outline-danger"
-                            size="sm"
+                          <ActionButton
+                            action="delete"
                             onClick={() => onDelete(invoice.id)}
                             title={t('common.delete', 'Delete')}
-                          >
-                            🗑️
-                          </Button>
+                          />
                         )}
                       </div>
                     </td>

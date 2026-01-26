@@ -6,6 +6,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { getHealthTrends, getFinancialMetrics, getCommunicationEffectiveness } from '../services/analyticsService';
+import Layout from '../components/layout/Layout';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 const RISK_COLORS = {
@@ -625,12 +626,13 @@ function AnalyticsDashboardPage() {
   };
 
   return (
-    <Container fluid className="py-4">
-      <Row className="mb-4">
-        <Col>
-          <h1>{t('analytics.title', 'Analytics Dashboard')}</h1>
-        </Col>
-      </Row>
+    <Layout>
+      <Container fluid className="py-4">
+        <Row className="mb-4">
+          <Col>
+            <h1>{t('analytics.title', 'Analytics Dashboard')}</h1>
+          </Col>
+        </Row>
 
       {/* Date Range Filter */}
       <Row className="mb-4">
@@ -693,7 +695,8 @@ function AnalyticsDashboardPage() {
           </Tab.Pane>
         </Tab.Content>
       </Tab.Container>
-    </Container>
+      </Container>
+    </Layout>
   );
 }
 

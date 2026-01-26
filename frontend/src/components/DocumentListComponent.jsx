@@ -8,6 +8,7 @@ import { Card, Table, Button, Badge, Alert, Spinner, Form, Row, Col, InputGroup,
 import { useTranslation } from 'react-i18next';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import * as documentService from '../services/documentService';
+import ActionButton from './ActionButton';
 
 const DocumentListComponent = ({
   resourceType,
@@ -334,31 +335,25 @@ const DocumentListComponent = ({
                       </td>
                       <td>{formatDate(document.created_at)}</td>
                       <td>
-                        <div className="d-flex gap-1 flex-wrap">
+                        <div className="action-buttons">
                           {documentService.canPreviewFile(document.mime_type) && (
-                            <Button
-                              variant="outline-info"
-                              size="sm"
+                            <ActionButton
+                              action="preview"
                               onClick={() => handlePreview(document)}
-                            >
-                              👁️
-                            </Button>
+                              title={t('documents.preview', 'Preview')}
+                            />
                           )}
-                          <Button
-                            variant="outline-primary"
-                            size="sm"
+                          <ActionButton
+                            action="download"
                             onClick={() => handleDownload(document)}
-                            disabled={downloading === document.id}
-                          >
-                            {downloading === document.id ? '⏳' : '⬇️'}
-                          </Button>
-                          <Button
-                            variant="outline-danger"
-                            size="sm"
+                            title={t('documents.download', 'Download')}
+                            loading={downloading === document.id}
+                          />
+                          <ActionButton
+                            action="delete"
                             onClick={() => handleDeleteClick(document)}
-                          >
-                            🗑️
-                          </Button>
+                            title={t('common.delete', 'Delete')}
+                          />
                         </div>
                       </td>
                     </tr>
@@ -393,31 +388,25 @@ const DocumentListComponent = ({
                     )}
                   </div>
                   {/* Line 5: Actions */}
-                  <div className="d-flex gap-2 flex-wrap">
+                  <div className="action-buttons">
                     {documentService.canPreviewFile(document.mime_type) && (
-                      <Button
-                        variant="outline-info"
-                        size="sm"
+                      <ActionButton
+                        action="preview"
                         onClick={() => handlePreview(document)}
-                      >
-                        👁️ {t('documents.preview', 'Preview')}
-                      </Button>
+                        title={t('documents.preview', 'Preview')}
+                      />
                     )}
-                    <Button
-                      variant="outline-primary"
-                      size="sm"
+                    <ActionButton
+                      action="download"
                       onClick={() => handleDownload(document)}
-                      disabled={downloading === document.id}
-                    >
-                      {downloading === document.id ? '⏳' : '⬇️'} {t('documents.download', 'Download')}
-                    </Button>
-                    <Button
-                      variant="outline-danger"
-                      size="sm"
+                      title={t('documents.download', 'Download')}
+                      loading={downloading === document.id}
+                    />
+                    <ActionButton
+                      action="delete"
                       onClick={() => handleDeleteClick(document)}
-                    >
-                      🗑️
-                    </Button>
+                      title={t('common.delete', 'Delete')}
+                    />
                   </div>
                 </div>
               ))}

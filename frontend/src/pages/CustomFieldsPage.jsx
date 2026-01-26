@@ -13,6 +13,7 @@ import Layout from '../components/layout/Layout';
 import customFieldService from '../services/customFieldService';
 import CustomFieldCategoryModal from '../components/CustomFieldCategoryModal';
 import CustomFieldDefinitionModal from '../components/CustomFieldDefinitionModal';
+import ActionButton from '../components/ActionButton';
 
 const CustomFieldsPage = () => {
   const { t } = useTranslation();
@@ -265,13 +266,13 @@ const CustomFieldsPage = () => {
                   <Table striped bordered hover responsive>
                     <thead>
                       <tr>
-                        <th>Name</th>
-                        <th>Description</th>
-                        <th>Order</th>
-                        <th>Applies to</th>
-                        <th>Status</th>
-                        <th>Fields</th>
-                        <th>Actions</th>
+                        <th>{t('customFields.categoryName', 'Name')}</th>
+                        <th>{t('customFields.categoryDescription', 'Description')}</th>
+                        <th>{t('customFields.displayOrder', 'Order')}</th>
+                        <th>{t('customFields.appliesTo', 'Applies to')}</th>
+                        <th>{t('customFields.status', 'Status')}</th>
+                        <th>{t('customFields.fields', 'Fields')}</th>
+                        <th>{t('customFields.actions', 'Actions')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -281,7 +282,12 @@ const CustomFieldsPage = () => {
                         const hasVisit = entityTypes.includes('visit');
 
                         return (
-                        <tr key={category.id}>
+                        <tr
+                          key={category.id}
+                          onClick={() => handleEditCategory(category)}
+                          className="clickable-row"
+                          style={{ cursor: 'pointer' }}
+                        >
                           <td><strong>{category.name}</strong></td>
                           <td>{category.description || <span className="text-muted">-</span>}</td>
                           <td>{category.display_order}</td>
@@ -299,32 +305,29 @@ const CustomFieldsPage = () => {
                           </td>
                           <td>
                             {category.is_active ? (
-                              <Badge bg="success">Active</Badge>
+                              <Badge bg="success">{t('common.active', 'Active')}</Badge>
                             ) : (
-                              <Badge bg="secondary">Inactive</Badge>
+                              <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>
                             )}
                           </td>
                           <td>
                             <Badge bg="secondary">
-                              {category.field_definitions?.length || 0} fields
+                              {category.field_definitions?.length || 0} {t('customFields.fields', 'fields')}
                             </Badge>
                           </td>
-                          <td>
-                            <Button
-                              variant="outline-primary"
-                              size="sm"
-                              className="me-2"
-                              onClick={() => handleEditCategory(category)}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              variant="outline-danger"
-                              size="sm"
-                              onClick={() => handleDeleteCategory(category.id)}
-                            >
-                              Delete
-                            </Button>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <div className="action-buttons">
+                              <ActionButton
+                                action="edit"
+                                onClick={() => handleEditCategory(category)}
+                                title={t('common.edit', 'Edit')}
+                              />
+                              <ActionButton
+                                action="delete"
+                                onClick={() => handleDeleteCategory(category.id)}
+                                title={t('common.delete', 'Delete')}
+                              />
+                            </div>
                           </td>
                         </tr>
                       );
@@ -479,56 +482,58 @@ const CustomFieldsPage = () => {
                   <Table striped bordered hover responsive>
                     <thead>
                       <tr>
-                        <th>Field Name</th>
-                        <th>Label</th>
-                        <th>Type</th>
-                        <th>Category</th>
-                        <th>Required</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th>{t('customFields.fieldName', 'Field Name')}</th>
+                        <th>{t('customFields.fieldLabel', 'Label')}</th>
+                        <th>{t('customFields.fieldType', 'Type')}</th>
+                        <th>{t('customFields.category', 'Category')}</th>
+                        <th>{t('customFields.required', 'Required')}</th>
+                        <th>{t('customFields.status', 'Status')}</th>
+                        <th>{t('customFields.actions', 'Actions')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredDefinitions.map((definition) => (
-                        <tr key={definition.id}>
+                        <tr
+                          key={definition.id}
+                          onClick={() => handleEditDefinition(definition)}
+                          className="clickable-row"
+                          style={{ cursor: 'pointer' }}
+                        >
                           <td><code>{highlightText(definition.field_name, searchQuery)}</code></td>
                           <td><strong>{highlightText(definition.field_label, searchQuery)}</strong></td>
                           <td>
                             <span>{getFieldTypeIcon(definition.field_type)} {definition.field_type}</span>
                           </td>
                           <td>
-                            {definition.category?.name ? highlightText(definition.category.name, searchQuery) : <span className="text-muted">Unknown</span>}
+                            {definition.category?.name ? highlightText(definition.category.name, searchQuery) : <span className="text-muted">{t('common.unknown', 'Unknown')}</span>}
                           </td>
                           <td>
                             {definition.is_required ? (
-                              <Badge bg="warning">Required</Badge>
+                              <Badge bg="warning">{t('customFields.required', 'Required')}</Badge>
                             ) : (
-                              <Badge bg="secondary">Optional</Badge>
+                              <Badge bg="secondary">{t('common.optional', 'Optional')}</Badge>
                             )}
                           </td>
                           <td>
                             {definition.is_active ? (
-                              <Badge bg="success">Active</Badge>
+                              <Badge bg="success">{t('common.active', 'Active')}</Badge>
                             ) : (
-                              <Badge bg="secondary">Inactive</Badge>
+                              <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>
                             )}
                           </td>
-                          <td>
-                            <Button
-                              variant="outline-primary"
-                              size="sm"
-                              className="me-2"
-                              onClick={() => handleEditDefinition(definition)}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              variant="outline-danger"
-                              size="sm"
-                              onClick={() => handleDeleteDefinition(definition.id)}
-                            >
-                              Delete
-                            </Button>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <div className="action-buttons">
+                              <ActionButton
+                                action="edit"
+                                onClick={() => handleEditDefinition(definition)}
+                                title={t('common.edit', 'Edit')}
+                              />
+                              <ActionButton
+                                action="delete"
+                                onClick={() => handleDeleteDefinition(definition.id)}
+                                title={t('common.delete', 'Delete')}
+                              />
+                            </div>
                           </td>
                         </tr>
                       ))}

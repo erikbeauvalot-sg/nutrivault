@@ -12,6 +12,7 @@ import Layout from '../components/layout/Layout';
 import userService from '../services/userService';
 import UserModal from '../components/UserModal';
 import ChangePasswordModal from '../components/ChangePasswordModal';
+import ActionButton from '../components/ActionButton';
 import './UsersPage.css';
 
 const UsersPage = () => {
@@ -138,6 +139,10 @@ const UsersPage = () => {
     setSelectedUser(null);
     setUserModalMode('create');
     setShowUserModal(true);
+  };
+
+  const handleViewClick = (userId) => {
+    navigate(`/users/${userId}`);
   };
 
   const handleEditClick = async (userId) => {
@@ -314,43 +319,41 @@ const UsersPage = () => {
                         )}
                       </div>
 
-                      <div className="d-flex gap-2 mt-3">
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
+                      <div className="action-buttons mt-3">
+                        <ActionButton
+                          action="edit"
                           onClick={() => handleEditClick(usr.id)}
-                          className="flex-fill"
-                        >
-                          ✏️ {t('users.viewEdit')}
-                        </Button>
-                        <Dropdown>
-                          <Dropdown.Toggle variant="outline-secondary" size="sm">
-                            ⋮
-                          </Dropdown.Toggle>
-                          <Dropdown.Menu>
-                            <Dropdown.Item
-                              onClick={() => handleToggleStatus(usr.id)}
-                              disabled={usr.id === user.id}
-                            >
-                              {usr.is_active ? '⏸️ ' + t('users.deactivate') : '▶️ ' + t('users.activate')}
-                            </Dropdown.Item>
-                            <Dropdown.Item onClick={() => handlePasswordClick(usr)}>
-                              🔑 {t('users.resetPassword')}
-                            </Dropdown.Item>
-                            <Dropdown.Divider />
-                            <Dropdown.Item
-                              onClick={() => handleDelete(usr.id)}
-                              disabled={usr.id === user.id || usr.is_active}
-                              className="text-danger"
-                            >
-                              {usr.is_active ? (
-                                <>🔒 {t('users.delete')} ({t('users.deactivateFirst')})</>
-                              ) : (
-                                <>🗑️ {t('users.delete')}</>
-                              )}
-                            </Dropdown.Item>
-                          </Dropdown.Menu>
-                        </Dropdown>
+                          title={t('common.edit', 'Edit')}
+                        />
+                        <ActionButton
+                          action={usr.is_active ? 'disable' : 'enable'}
+                          onClick={() => handleToggleStatus(usr.id)}
+                          disabled={usr.id === user.id}
+                          title={
+                            usr.id === user.id
+                              ? t('users.cannotToggleOwnStatus')
+                              : usr.is_active
+                              ? t('users.deactivate')
+                              : t('users.activate')
+                          }
+                        />
+                        <ActionButton
+                          action="reset-password"
+                          onClick={() => handlePasswordClick(usr)}
+                          title={t('users.resetPassword')}
+                        />
+                        <ActionButton
+                          action="delete"
+                          onClick={() => handleDelete(usr.id)}
+                          disabled={usr.id === user.id || usr.is_active}
+                          title={
+                            usr.id === user.id
+                              ? t('users.cannotDeleteOwnAccount')
+                              : usr.is_active
+                              ? t('users.mustDeactivateBeforeDelete')
+                              : t('users.deleteUser')
+                          }
+                        />
                       </div>
                     </Card.Body>
                   </Card>
@@ -374,7 +377,12 @@ const UsersPage = () => {
                     </thead>
                     <tbody>
                       {users.map(usr => (
-                        <tr key={usr.id}>
+                        <tr
+                          key={usr.id}
+                          onClick={() => handleViewClick(usr.id)}
+                          className="clickable-row"
+                          style={{ cursor: 'pointer' }}
+                        >
                           <td>
                             <strong>{usr.username}</strong>
                             {usr.id === user.id && <Badge bg="info" className="ms-2">You</Badge>}
@@ -389,34 +397,32 @@ const UsersPage = () => {
                               <div><Badge bg="warning" className="mt-1">⚠️ {usr.failed_login_attempts} failed attempts</Badge></div>
                             )}
                           </td>
-                          <td>
-                            <div className="d-flex flex-wrap gap-1">
-                              <Button
-                                variant="outline-primary"
-                                size="sm"
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <div className="action-buttons">
+                              <ActionButton
+                                action="edit"
                                 onClick={() => handleEditClick(usr.id)}
-                              >
-                                {t('users.viewEdit')}
-                              </Button>
-                              <Button
-                                variant={usr.is_active ? 'outline-warning' : 'outline-success'}
-                                size="sm"
+                                title={t('common.edit', 'Edit')}
+                              />
+                              <ActionButton
+                                action={usr.is_active ? 'disable' : 'enable'}
                                 onClick={() => handleToggleStatus(usr.id)}
                                 disabled={usr.id === user.id}
-                                title={usr.id === user.id ? t('users.cannotToggleOwnStatus') : ''}
-                              >
-                                {usr.is_active ? t('users.deactivate') : t('users.activate')}
-                              </Button>
-                              <Button
-                                variant="outline-info"
-                                size="sm"
+                                title={
+                                  usr.id === user.id
+                                    ? t('users.cannotToggleOwnStatus')
+                                    : usr.is_active
+                                    ? t('users.deactivate')
+                                    : t('users.activate')
+                                }
+                              />
+                              <ActionButton
+                                action="reset-password"
                                 onClick={() => handlePasswordClick(usr)}
-                              >
-                                {t('users.resetPassword')}
-                              </Button>
-                              <Button
-                                variant="outline-danger"
-                                size="sm"
+                                title={t('users.resetPassword')}
+                              />
+                              <ActionButton
+                                action="delete"
                                 onClick={() => handleDelete(usr.id)}
                                 disabled={usr.id === user.id || usr.is_active}
                                 title={
@@ -426,9 +432,7 @@ const UsersPage = () => {
                                     ? t('users.mustDeactivateBeforeDelete')
                                     : t('users.deleteUser')
                                 }
-                              >
-                                {usr.is_active ? `🔒 ${t('users.delete')}` : t('users.delete')}
-                              </Button>
+                              />
                             </div>
                           </td>
                         </tr>

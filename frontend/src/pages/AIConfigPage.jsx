@@ -27,6 +27,7 @@ import Layout from '../components/layout/Layout';
 import aiConfigService from '../services/aiConfigService';
 import aiPromptService from '../services/aiPromptService';
 import AIPromptEditor from '../components/AIPromptEditor';
+import ActionButton from '../components/ActionButton';
 import {
   FaRobot,
   FaCheck,
@@ -35,10 +36,7 @@ import {
   FaPlay,
   FaInfoCircle,
   FaDollarSign,
-  FaEdit,
   FaPlus,
-  FaTrash,
-  FaCopy,
   FaStar,
   FaFileAlt
 } from 'react-icons/fa';
@@ -292,6 +290,225 @@ const AIConfigPage = () => {
           </Alert>
         )}
 
+        {/* Current Configuration - Moved to top */}
+        {currentConfig && (
+          <Row className="mb-4">
+            <Col>
+              <Card className="border-primary">
+                <Card.Header className="bg-primary text-white">
+                  <h5 className="mb-0">{t('aiConfig.currentConfiguration')}</h5>
+                </Card.Header>
+                <Card.Body>
+                  <Row>
+                    <Col md={4}>
+                      <strong>{t('aiConfig.provider')}:</strong>
+                      <p className="mb-0">{currentConfig.providerName}</p>
+                    </Col>
+                    <Col md={4}>
+                      <strong>{t('aiConfig.model')}:</strong>
+                      <p className="mb-0">{currentConfig.modelName}</p>
+                    </Col>
+                    <Col md={4}>
+                      <strong>{t('aiConfig.status')}:</strong>
+                      <p className="mb-0">
+                        {currentConfig.isConfigured ? (
+                          <Badge bg="success">
+                            <FaCheck className="me-1" />
+                            {t('aiConfig.ready')}
+                          </Badge>
+                        ) : (
+                          <Badge bg="warning">
+                            {t('aiConfig.notReady')}
+                          </Badge>
+                        )}
+                      </p>
+                    </Col>
+                  </Row>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+        )}
+
+        {/* AI Prompts Section */}
+        <Row className="mb-4">
+          <Col>
+            <Card>
+              <Card.Header className="d-flex justify-content-between align-items-center">
+                <h5 className="mb-0">
+                  <FaFileAlt className="me-2" />
+                  {t('aiPrompt.title')}
+                </h5>
+                <Button variant="primary" size="sm" onClick={handleNewPrompt}>
+                  <FaPlus className="me-1" />
+                  <span className="d-none d-sm-inline">{t('aiPrompt.create')}</span>
+                </Button>
+              </Card.Header>
+              <Card.Body>
+                {promptsLoading ? (
+                  <div className="text-center py-4">
+                    <Spinner animation="border" size="sm" />
+                  </div>
+                ) : prompts.length === 0 ? (
+                  <Alert variant="info">
+                    {t('aiPrompt.noPrompts')}
+                  </Alert>
+                ) : (
+                  <>
+                    {/* Desktop Table */}
+                    <div className="d-none d-md-block">
+                      <Table striped bordered hover responsive>
+                        <thead className="table-dark">
+                          <tr>
+                            <th>{t('aiPrompt.usage')}</th>
+                            <th>{t('aiPrompt.name')}</th>
+                            <th>{t('aiPrompt.language')}</th>
+                            <th>{t('aiPrompt.version')}</th>
+                            <th>{t('aiPrompt.status')}</th>
+                            <th style={{ width: '150px' }}>{t('common.actions')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {prompts.map(prompt => (
+                            <tr key={prompt.id}>
+                              <td>
+                                <Badge bg="info">
+                                  {t(`aiPrompt.usage${prompt.usage.charAt(0).toUpperCase() + prompt.usage.slice(1)}`)}
+                                </Badge>
+                              </td>
+                              <td>
+                                {prompt.name}
+                                {prompt.is_default && (
+                                  <Badge bg="warning" className="ms-2">
+                                    <FaStar className="me-1" />
+                                    {t('aiPrompt.default')}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td>
+                                {prompt.language_code === 'fr' && '🇫🇷'}
+                                {prompt.language_code === 'en' && '🇬🇧'}
+                                {prompt.language_code === 'es' && '🇪🇸'}
+                                {prompt.language_code === 'nl' && '🇳🇱'}
+                                {prompt.language_code === 'de' && '🇩🇪'}
+                                {' '}{prompt.language_code.toUpperCase()}
+                              </td>
+                              <td>v{prompt.version}</td>
+                              <td>
+                                {prompt.is_active ? (
+                                  <Badge bg="success">{t('aiPrompt.active')}</Badge>
+                                ) : (
+                                  <Badge bg="secondary">{t('aiPrompt.inactive')}</Badge>
+                                )}
+                              </td>
+                              <td>
+                                <div className="action-buttons">
+                                  <ActionButton
+                                    action="edit"
+                                    onClick={() => handleEditPrompt(prompt)}
+                                    title={t('common.edit')}
+                                  />
+                                  <ActionButton
+                                    action="duplicate"
+                                    onClick={() => handleDuplicatePrompt(prompt.id)}
+                                    title={t('aiPrompt.duplicate')}
+                                  />
+                                  {!prompt.is_default && (
+                                    <ActionButton
+                                      action="setDefault"
+                                      onClick={() => handleSetDefault(prompt.id)}
+                                      title={t('aiPrompt.setDefault')}
+                                    />
+                                  )}
+                                  <ActionButton
+                                    action="delete"
+                                    onClick={() => handleDeletePrompt(prompt.id)}
+                                    title={t('common.delete')}
+                                  />
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </Table>
+                    </div>
+
+                    {/* Mobile Cards */}
+                    <div className="d-md-none">
+                      {prompts.map(prompt => (
+                        <Card key={prompt.id} className="mb-3">
+                          <Card.Body>
+                            <div className="d-flex justify-content-between align-items-start mb-2">
+                              <div>
+                                <h6 className="mb-1">
+                                  {prompt.name}
+                                  {prompt.is_default && (
+                                    <Badge bg="warning" className="ms-2">
+                                      <FaStar className="me-1" />
+                                      {t('aiPrompt.default')}
+                                    </Badge>
+                                  )}
+                                </h6>
+                                <Badge bg="info" className="me-1">
+                                  {t(`aiPrompt.usage${prompt.usage.charAt(0).toUpperCase() + prompt.usage.slice(1)}`)}
+                                </Badge>
+                                {prompt.is_active ? (
+                                  <Badge bg="success">{t('aiPrompt.active')}</Badge>
+                                ) : (
+                                  <Badge bg="secondary">{t('aiPrompt.inactive')}</Badge>
+                                )}
+                              </div>
+                              <div className="action-buttons">
+                                <ActionButton
+                                  action="edit"
+                                  onClick={() => handleEditPrompt(prompt)}
+                                  title={t('common.edit')}
+                                />
+                                <ActionButton
+                                  action="delete"
+                                  onClick={() => handleDeletePrompt(prompt.id)}
+                                  title={t('common.delete')}
+                                />
+                              </div>
+                            </div>
+                            <div className="d-flex justify-content-between align-items-center">
+                              <small className="text-muted">
+                                {prompt.language_code === 'fr' && '🇫🇷'}
+                                {prompt.language_code === 'en' && '🇬🇧'}
+                                {prompt.language_code === 'es' && '🇪🇸'}
+                                {prompt.language_code === 'nl' && '🇳🇱'}
+                                {prompt.language_code === 'de' && '🇩🇪'}
+                                {' '}{prompt.language_code.toUpperCase()} • v{prompt.version}
+                              </small>
+                              <div className="action-buttons">
+                                <ActionButton
+                                  action="duplicate"
+                                  onClick={() => handleDuplicatePrompt(prompt.id)}
+                                  title={t('aiPrompt.duplicate')}
+                                />
+                                {!prompt.is_default && (
+                                  <ActionButton
+                                    action="setDefault"
+                                    onClick={() => handleSetDefault(prompt.id)}
+                                    title={t('aiPrompt.setDefault')}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          </Card.Body>
+                        </Card>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <small className="text-muted">
+                  {t('aiPrompt.helpText')}
+                </small>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+
         <Row>
           {/* Provider Selection */}
           <Col xs={12} lg={6} className="mb-4">
@@ -393,7 +610,9 @@ const AIConfigPage = () => {
                                   </Tooltip>
                                 }
                               >
-                                <FaInfoCircle className="ms-2 text-muted" style={{ cursor: 'help' }} />
+                                <span className="ms-2 text-muted" style={{ cursor: 'help' }}>
+                                  <FaInfoCircle />
+                                </span>
                               </OverlayTrigger>
                             </div>
                           </Card.Body>
@@ -460,245 +679,136 @@ const AIConfigPage = () => {
                 </h5>
               </Card.Header>
               <Card.Body>
-                <Table striped bordered hover responsive>
-                  <thead className="table-dark">
-                    <tr>
-                      <th>{t('aiConfig.provider')}</th>
-                      <th>{t('aiConfig.model')}</th>
-                      <th>{t('aiConfig.description')}</th>
-                      <th>{t('aiConfig.inputPrice')}</th>
-                      <th>{t('aiConfig.outputPrice')}</th>
-                      <th>{t('aiConfig.status')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {providers.flatMap(provider =>
-                      provider.models.map(model => (
-                        <tr
-                          key={`${provider.id}-${model.id}`}
-                          className={currentConfig?.provider === provider.id && currentConfig?.model === model.id ? 'table-primary' : ''}
-                        >
-                          <td>
-                            <strong>{provider.name}</strong>
-                            {!provider.configured && (
-                              <Badge bg="secondary" className="ms-2">{t('aiConfig.notConfigured')}</Badge>
-                            )}
-                          </td>
-                          <td>
-                            {model.name}
-                            {model.recommended && (
-                              <Badge bg="success" className="ms-2">{t('aiConfig.recommended')}</Badge>
-                            )}
-                          </td>
-                          <td><small>{model.description}</small></td>
-                          <td>
-                            {model.inputPrice === 0 ? (
-                              <Badge bg="success">{t('aiConfig.free')}</Badge>
-                            ) : (
-                              `$${model.inputPrice}`
-                            )}
-                          </td>
-                          <td>
-                            {model.outputPrice === 0 ? (
-                              <Badge bg="success">{t('aiConfig.free')}</Badge>
-                            ) : (
-                              `$${model.outputPrice}`
-                            )}
-                          </td>
-                          <td>
-                            {currentConfig?.provider === provider.id && currentConfig?.model === model.id ? (
-                              <Badge bg="primary">
-                                <FaCheck className="me-1" />
-                                {t('aiConfig.active')}
-                              </Badge>
-                            ) : provider.configured ? (
-                              <Badge bg="light" text="dark">{t('aiConfig.available')}</Badge>
-                            ) : (
-                              <Badge bg="secondary">{t('aiConfig.unavailable')}</Badge>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </Table>
-                <small className="text-muted">
-                  {t('aiConfig.pricingNote')}
-                </small>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-
-        {/* Current Configuration */}
-        {currentConfig && (
-          <Row className="mt-4">
-            <Col>
-              <Card className="border-primary">
-                <Card.Header className="bg-primary text-white">
-                  <h5 className="mb-0">{t('aiConfig.currentConfiguration')}</h5>
-                </Card.Header>
-                <Card.Body>
-                  <Row>
-                    <Col md={4}>
-                      <strong>{t('aiConfig.provider')}:</strong>
-                      <p>{currentConfig.providerName}</p>
-                    </Col>
-                    <Col md={4}>
-                      <strong>{t('aiConfig.model')}:</strong>
-                      <p>{currentConfig.modelName}</p>
-                    </Col>
-                    <Col md={4}>
-                      <strong>{t('aiConfig.status')}:</strong>
-                      <p>
-                        {currentConfig.isConfigured ? (
-                          <Badge bg="success">
-                            <FaCheck className="me-1" />
-                            {t('aiConfig.ready')}
-                          </Badge>
-                        ) : (
-                          <Badge bg="warning">
-                            {t('aiConfig.notReady')}
-                          </Badge>
-                        )}
-                      </p>
-                    </Col>
-                  </Row>
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
-        )}
-
-        {/* AI Prompts Section */}
-        <Row className="mt-4">
-          <Col>
-            <Card>
-              <Card.Header className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0">
-                  <FaFileAlt className="me-2" />
-                  {t('aiPrompt.title')}
-                </h5>
-                <Button variant="primary" size="sm" onClick={handleNewPrompt}>
-                  <FaPlus className="me-1" />
-                  {t('aiPrompt.create')}
-                </Button>
-              </Card.Header>
-              <Card.Body>
-                {promptsLoading ? (
-                  <div className="text-center py-4">
-                    <Spinner animation="border" size="sm" />
-                  </div>
-                ) : prompts.length === 0 ? (
-                  <Alert variant="info">
-                    {t('aiPrompt.noPrompts')}
-                  </Alert>
-                ) : (
+                {/* Desktop Table */}
+                <div className="d-none d-lg-block">
                   <Table striped bordered hover responsive>
                     <thead className="table-dark">
                       <tr>
-                        <th>{t('aiPrompt.usage')}</th>
-                        <th>{t('aiPrompt.name')}</th>
-                        <th>{t('aiPrompt.language')}</th>
-                        <th>{t('aiPrompt.version')}</th>
-                        <th>{t('aiPrompt.status')}</th>
-                        <th style={{ width: '180px' }}>{t('common.actions')}</th>
+                        <th>{t('aiConfig.provider')}</th>
+                        <th>{t('aiConfig.model')}</th>
+                        <th>{t('aiConfig.description')}</th>
+                        <th>{t('aiConfig.inputPrice')}</th>
+                        <th>{t('aiConfig.outputPrice')}</th>
+                        <th>{t('aiConfig.status')}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {prompts.map(prompt => (
-                        <tr key={prompt.id}>
-                          <td>
-                            <Badge bg="info">
-                              {t(`aiPrompt.usage${prompt.usage.charAt(0).toUpperCase() + prompt.usage.slice(1)}`)}
-                            </Badge>
-                          </td>
-                          <td>
-                            {prompt.name}
-                            {prompt.is_default && (
-                              <Badge bg="warning" className="ms-2">
-                                <FaStar className="me-1" />
-                                {t('aiPrompt.default')}
-                              </Badge>
-                            )}
-                          </td>
-                          <td>
-                            {prompt.language_code === 'fr' && '🇫🇷'}
-                            {prompt.language_code === 'en' && '🇬🇧'}
-                            {prompt.language_code === 'es' && '🇪🇸'}
-                            {prompt.language_code === 'nl' && '🇳🇱'}
-                            {prompt.language_code === 'de' && '🇩🇪'}
-                            {' '}{prompt.language_code.toUpperCase()}
-                          </td>
-                          <td>v{prompt.version}</td>
-                          <td>
-                            {prompt.is_active ? (
-                              <Badge bg="success">{t('aiPrompt.active')}</Badge>
-                            ) : (
-                              <Badge bg="secondary">{t('aiPrompt.inactive')}</Badge>
-                            )}
-                          </td>
-                          <td>
-                            <div className="d-flex gap-1">
-                              <OverlayTrigger
-                                placement="top"
-                                overlay={<Tooltip>{t('common.edit')}</Tooltip>}
-                              >
-                                <Button
-                                  variant="outline-primary"
-                                  size="sm"
-                                  onClick={() => handleEditPrompt(prompt)}
-                                >
-                                  <FaEdit />
-                                </Button>
-                              </OverlayTrigger>
-                              <OverlayTrigger
-                                placement="top"
-                                overlay={<Tooltip>{t('aiPrompt.duplicate')}</Tooltip>}
-                              >
-                                <Button
-                                  variant="outline-secondary"
-                                  size="sm"
-                                  onClick={() => handleDuplicatePrompt(prompt.id)}
-                                >
-                                  <FaCopy />
-                                </Button>
-                              </OverlayTrigger>
-                              {!prompt.is_default && (
-                                <OverlayTrigger
-                                  placement="top"
-                                  overlay={<Tooltip>{t('aiPrompt.setDefault')}</Tooltip>}
-                                >
-                                  <Button
-                                    variant="outline-warning"
-                                    size="sm"
-                                    onClick={() => handleSetDefault(prompt.id)}
-                                  >
-                                    <FaStar />
-                                  </Button>
-                                </OverlayTrigger>
+                      {providers.flatMap(provider =>
+                        provider.models.map(model => (
+                          <tr
+                            key={`${provider.id}-${model.id}`}
+                            className={currentConfig?.provider === provider.id && currentConfig?.model === model.id ? 'table-primary' : ''}
+                          >
+                            <td>
+                              <strong>{provider.name}</strong>
+                              {!provider.configured && (
+                                <Badge bg="secondary" className="ms-2">{t('aiConfig.notConfigured')}</Badge>
                               )}
-                              <OverlayTrigger
-                                placement="top"
-                                overlay={<Tooltip>{t('common.delete')}</Tooltip>}
-                              >
-                                <Button
-                                  variant="outline-danger"
-                                  size="sm"
-                                  onClick={() => handleDeletePrompt(prompt.id)}
-                                >
-                                  <FaTrash />
-                                </Button>
-                              </OverlayTrigger>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td>
+                              {model.name}
+                              {model.recommended && (
+                                <Badge bg="success" className="ms-2">{t('aiConfig.recommended')}</Badge>
+                              )}
+                            </td>
+                            <td><small>{model.description}</small></td>
+                            <td>
+                              {model.inputPrice === 0 ? (
+                                <Badge bg="success">{t('aiConfig.free')}</Badge>
+                              ) : (
+                                `$${model.inputPrice}`
+                              )}
+                            </td>
+                            <td>
+                              {model.outputPrice === 0 ? (
+                                <Badge bg="success">{t('aiConfig.free')}</Badge>
+                              ) : (
+                                `$${model.outputPrice}`
+                              )}
+                            </td>
+                            <td>
+                              {currentConfig?.provider === provider.id && currentConfig?.model === model.id ? (
+                                <Badge bg="primary">
+                                  <FaCheck className="me-1" />
+                                  {t('aiConfig.active')}
+                                </Badge>
+                              ) : provider.configured ? (
+                                <Badge bg="light" text="dark">{t('aiConfig.available')}</Badge>
+                              ) : (
+                                <Badge bg="secondary">{t('aiConfig.unavailable')}</Badge>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </Table>
-                )}
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="d-lg-none">
+                  {providers.flatMap(provider =>
+                    provider.models.map(model => {
+                      const isActive = currentConfig?.provider === provider.id && currentConfig?.model === model.id;
+                      return (
+                        <Card
+                          key={`mobile-${provider.id}-${model.id}`}
+                          className={`mb-3 ${isActive ? 'border-primary border-2' : ''}`}
+                        >
+                          <Card.Body>
+                            <div className="d-flex justify-content-between align-items-start mb-2">
+                              <div>
+                                <h6 className="mb-1">
+                                  {model.name}
+                                  {model.recommended && (
+                                    <Badge bg="success" className="ms-2">{t('aiConfig.recommended')}</Badge>
+                                  )}
+                                </h6>
+                                <small className="text-muted">{provider.name}</small>
+                                {!provider.configured && (
+                                  <Badge bg="secondary" className="ms-1">{t('aiConfig.notConfigured')}</Badge>
+                                )}
+                              </div>
+                              <div>
+                                {isActive ? (
+                                  <Badge bg="primary">
+                                    <FaCheck className="me-1" />
+                                    {t('aiConfig.active')}
+                                  </Badge>
+                                ) : provider.configured ? (
+                                  <Badge bg="light" text="dark">{t('aiConfig.available')}</Badge>
+                                ) : (
+                                  <Badge bg="secondary">{t('aiConfig.unavailable')}</Badge>
+                                )}
+                              </div>
+                            </div>
+                            <p className="text-muted small mb-2">{model.description}</p>
+                            <div className="d-flex gap-3">
+                              <div>
+                                <small className="text-muted">{t('aiConfig.inputPrice')}:</small>{' '}
+                                {model.inputPrice === 0 ? (
+                                  <Badge bg="success">{t('aiConfig.free')}</Badge>
+                                ) : (
+                                  <strong>${model.inputPrice}</strong>
+                                )}
+                              </div>
+                              <div>
+                                <small className="text-muted">{t('aiConfig.outputPrice')}:</small>{' '}
+                                {model.outputPrice === 0 ? (
+                                  <Badge bg="success">{t('aiConfig.free')}</Badge>
+                                ) : (
+                                  <strong>${model.outputPrice}</strong>
+                                )}
+                              </div>
+                            </div>
+                          </Card.Body>
+                        </Card>
+                      );
+                    })
+                  )}
+                </div>
                 <small className="text-muted">
-                  {t('aiPrompt.helpText')}
+                  {t('aiConfig.pricingNote')}
                 </small>
               </Card.Body>
             </Card>

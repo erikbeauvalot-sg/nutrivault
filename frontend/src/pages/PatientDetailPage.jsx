@@ -19,6 +19,7 @@ import MeasureHistory from '../components/MeasureHistory';
 import MeasureComparison from '../components/MeasureComparison';
 import EmailHistory from '../components/EmailHistory';
 import PatientHealthScore from '../components/PatientHealthScore';
+import ActionButton from '../components/ActionButton';
 import customFieldService from '../services/customFieldService';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import { getBMICategory, calculateBMI } from '../utils/bmiUtils';
@@ -799,26 +800,20 @@ const PatientDetailPage = () => {
                                     </Badge>
                                   </td>
                                   <td onClick={(e) => e.stopPropagation()}>
-                                    <div className="d-flex gap-1 flex-wrap">
+                                    <div className="action-buttons">
                                       {canEditVisits && (
-                                        <Button
-                                          variant="outline-secondary"
-                                          size="sm"
+                                        <ActionButton
+                                          action="edit"
                                           onClick={() => handleEditVisit(visit.id)}
                                           title={t('visits.editVisit', 'Edit Visit')}
-                                        >
-                                          ✏️
-                                        </Button>
+                                        />
                                       )}
                                       {canDeleteVisits && (
-                                        <Button
-                                          variant="outline-danger"
-                                          size="sm"
+                                        <ActionButton
+                                          action="delete"
                                           onClick={() => handleDeleteVisit(visit.id)}
                                           title={t('visits.deleteVisit', 'Delete Visit')}
-                                        >
-                                          🗑️
-                                        </Button>
+                                        />
                                       )}
                                     </div>
                                   </td>
@@ -861,33 +856,22 @@ const PatientDetailPage = () => {
                               </div>
 
                               <div
-                                className="visit-card-actions d-flex gap-2 flex-wrap"
+                                className="visit-card-actions action-buttons"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <Button
-                                  variant="primary"
-                                  size="sm"
-                                  onClick={() => handleViewVisit(visit.id)}
-                                >
-                                  {t('common.view', 'View')}
-                                </Button>
                                 {canEditVisits && (
-                                  <Button
-                                    variant="outline-secondary"
-                                    size="sm"
+                                  <ActionButton
+                                    action="edit"
                                     onClick={() => handleEditVisit(visit.id)}
-                                  >
-                                    {t('common.edit', 'Edit')}
-                                  </Button>
+                                    title={t('common.edit', 'Edit')}
+                                  />
                                 )}
                                 {canDeleteVisits && (
-                                  <Button
-                                    variant="outline-danger"
-                                    size="sm"
+                                  <ActionButton
+                                    action="delete"
                                     onClick={() => handleDeleteVisit(visit.id)}
-                                  >
-                                    {t('common.delete', 'Delete')}
-                                  </Button>
+                                    title={t('common.delete', 'Delete')}
+                                  />
                                 )}
                               </div>
                             </div>

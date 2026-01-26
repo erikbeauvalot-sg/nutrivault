@@ -13,6 +13,7 @@ import Layout from '../components/layout/Layout';
 import MeasureDefinitionModal from '../components/MeasureDefinitionModal';
 import MeasureTranslationModal from '../components/MeasureTranslationModal';
 import * as measureService from '../services/measureService';
+import ActionButton from '../components/ActionButton';
 import i18n from '../i18n';
 
 const MeasuresPage = () => {
@@ -412,7 +413,12 @@ const MeasuresPage = () => {
                 </thead>
                 <tbody>
                   {filteredMeasures.map((measure) => (
-                    <tr key={measure.id}>
+                    <tr
+                      key={measure.id}
+                      onClick={() => navigate(`/settings/measures/${measure.id}/view`)}
+                      className="clickable-row"
+                      style={{ cursor: 'pointer' }}
+                    >
                       <td>
                         <code>{highlightText(measure.name, searchQuery)}</code>
                       </td>
@@ -443,38 +449,23 @@ const MeasuresPage = () => {
                           <Badge bg="secondary">{t('measures.status.inactive')}</Badge>
                         )}
                       </td>
-                      <td>
-                        <div className="d-flex gap-1 flex-wrap">
-                          <Button
-                            variant="outline-info"
-                            size="sm"
-                            onClick={() => navigate(`/settings/measures/${measure.id}/view`)}
-                            title={t('measures.actions.viewTooltip')}
-                          >
-                            🔍 {t('measures.actions.view')}
-                          </Button>
-                          <Button
-                            variant="outline-primary"
-                            size="sm"
+                      <td onClick={(e) => e.stopPropagation()}>
+                        <div className="action-buttons">
+                          <ActionButton
+                            action="edit"
                             onClick={() => handleEditMeasure(measure)}
-                          >
-                            {t('measures.actions.edit')}
-                          </Button>
-                          <Button
-                            variant="outline-secondary"
-                            size="sm"
+                            title={t('common.edit', 'Edit')}
+                          />
+                          <ActionButton
+                            action="translate"
                             onClick={() => handleTranslateMeasure(measure)}
                             title={t('measures.actions.translationsTooltip')}
-                          >
-                            🌐 {t('measures.actions.translations')}
-                          </Button>
-                          <Button
-                            variant="outline-danger"
-                            size="sm"
+                          />
+                          <ActionButton
+                            action="delete"
                             onClick={() => handleDeleteMeasure(measure.id)}
-                          >
-                            {t('measures.actions.delete')}
-                          </Button>
+                            title={t('common.delete', 'Delete')}
+                          />
                         </div>
                       </td>
                     </tr>

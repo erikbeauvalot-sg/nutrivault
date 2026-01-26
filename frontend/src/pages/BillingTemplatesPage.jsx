@@ -19,18 +19,15 @@ import {
 } from 'react-bootstrap';
 import {
   FaPlus,
-  FaEdit,
-  FaTrash,
-  FaCopy,
   FaStar,
   FaRegStar,
-  FaEllipsisV,
   FaSearch,
   FaSync
 } from 'react-icons/fa';
 import Layout from '../components/layout/Layout';
 import billingTemplateService from '../services/billingTemplateService';
 import BillingTemplateModal from '../components/BillingTemplateModal';
+import ActionButton from '../components/ActionButton';
 
 const BillingTemplatesPage = () => {
   const [templates, setTemplates] = useState([]);
@@ -278,7 +275,12 @@ const BillingTemplatesPage = () => {
                 </thead>
                 <tbody>
                   {filteredTemplates.map((template) => (
-                    <tr key={template.id}>
+                    <tr
+                      key={template.id}
+                      onClick={() => handleEdit(template)}
+                      className="clickable-row"
+                      style={{ cursor: 'pointer' }}
+                    >
                       <td className="text-center">
                         {template.is_default ? (
                           <FaStar className="text-warning" title="Default template" />
@@ -307,46 +309,32 @@ const BillingTemplatesPage = () => {
                           <Badge bg="secondary">Inactive</Badge>
                         )}
                       </td>
-                      <td className="text-end">
-                        <Dropdown align="end">
-                          <Dropdown.Toggle
-                            variant="outline-secondary"
-                            size="sm"
-                            id={`dropdown-${template.id}`}
-                          >
-                            <FaEllipsisV />
-                          </Dropdown.Toggle>
-
-                          <Dropdown.Menu>
-                            <Dropdown.Item onClick={() => handleEdit(template)}>
-                              <FaEdit className="me-2" />
-                              Edit
-                            </Dropdown.Item>
-
-                            <Dropdown.Item onClick={() => handleClone(template)}>
-                              <FaCopy className="me-2" />
-                              Clone
-                            </Dropdown.Item>
-
-                            {!template.is_default && (
-                              <Dropdown.Item onClick={() => handleSetDefault(template)}>
-                                <FaStar className="me-2" />
-                                Set as Default
-                              </Dropdown.Item>
-                            )}
-
-                            <Dropdown.Divider />
-
-                            <Dropdown.Item
-                              onClick={() => handleDelete(template)}
-                              className="text-danger"
-                              disabled={template.is_default}
-                            >
-                              <FaTrash className="me-2" />
-                              Delete
-                            </Dropdown.Item>
-                          </Dropdown.Menu>
-                        </Dropdown>
+                      <td className="text-end" onClick={(e) => e.stopPropagation()}>
+                        <div className="action-buttons justify-content-end">
+                          <ActionButton
+                            action="edit"
+                            onClick={() => handleEdit(template)}
+                            title="Edit"
+                          />
+                          <ActionButton
+                            action="clone"
+                            onClick={() => handleClone(template)}
+                            title="Clone"
+                          />
+                          {!template.is_default && (
+                            <ActionButton
+                              action="setDefault"
+                              onClick={() => handleSetDefault(template)}
+                              title="Set as Default"
+                            />
+                          )}
+                          <ActionButton
+                            action="delete"
+                            onClick={() => handleDelete(template)}
+                            disabled={template.is_default}
+                            title={template.is_default ? 'Cannot delete default template' : 'Delete'}
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -12,6 +12,7 @@ import Layout from '../components/layout/Layout';
 import visitService from '../services/visitService';
 import { getPatients } from '../services/patientService';
 import ExportModal from '../components/ExportModal';
+import ActionButton from '../components/ActionButton';
 import './VisitsPage.css';
 
 const VisitsPage = () => {
@@ -311,25 +312,17 @@ const VisitsPage = () => {
                         </div>
 
                         {canEdit(visit) && (
-                          <div className="d-flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              variant="outline-primary"
-                              size="sm"
+                          <div className="action-buttons mt-3" onClick={(e) => e.stopPropagation()}>
+                            <ActionButton
+                              action="edit"
                               onClick={() => handleEditClick(visit.id)}
-                              className="flex-fill"
-                            >
-                              ✏️ {t('common.edit', 'Edit')}
-                            </Button>
-                            <Dropdown>
-                              <Dropdown.Toggle variant="outline-secondary" size="sm">
-                                ⋮
-                              </Dropdown.Toggle>
-                              <Dropdown.Menu>
-                                <Dropdown.Item onClick={() => handleDelete(visit.id)} className="text-danger">
-                                  🗑️ {t('common.delete', 'Delete')}
-                                </Dropdown.Item>
-                              </Dropdown.Menu>
-                            </Dropdown>
+                              title={t('common.edit', 'Edit')}
+                            />
+                            <ActionButton
+                              action="delete"
+                              onClick={() => handleDelete(visit.id)}
+                              title={t('common.delete', 'Delete')}
+                            />
                           </div>
                         )}
                       </Card.Body>
@@ -384,25 +377,19 @@ const VisitsPage = () => {
                             <td>{getStatusBadge(visit.status)}</td>
                             <td>{visit.duration_minutes ? `${visit.duration_minutes} min` : '-'}</td>
                             <td onClick={(e) => e.stopPropagation()}>
-                              <div className="d-flex gap-1 flex-wrap">
+                              <div className="action-buttons">
                                 {canEdit(visit) && (
                                   <>
-                                    <Button
-                                      variant="outline-primary"
-                                      size="sm"
+                                    <ActionButton
+                                      action="edit"
                                       onClick={() => handleEditClick(visit.id)}
                                       title={t('common.edit', 'Edit')}
-                                    >
-                                      ✏️
-                                    </Button>
-                                    <Button
-                                      variant="outline-danger"
-                                      size="sm"
+                                    />
+                                    <ActionButton
+                                      action="delete"
                                       onClick={() => handleDelete(visit.id)}
                                       title={t('common.delete', 'Delete')}
-                                    >
-                                      🗑️
-                                    </Button>
+                                    />
                                   </>
                                 )}
                               </div>
@@ -420,7 +407,7 @@ const VisitsPage = () => {
                 <div className="visits-pagination mt-3">
                   <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div className="text-muted small">
-                      Showing page {filters.page} of {pagination.totalPages} ({pagination.total} total visits)
+                      {t('visits.showingPage', { page: filters.page, totalPages: pagination.totalPages, total: pagination.total })}
                     </div>
                     <div>
                       <Button
@@ -430,7 +417,7 @@ const VisitsPage = () => {
                         disabled={filters.page === 1}
                         onClick={() => handleFilterChange('page', filters.page - 1)}
                       >
-                        Previous
+                        {t('common.previous', 'Previous')}
                       </Button>
                       <Button
                         variant="outline-primary"
@@ -438,7 +425,7 @@ const VisitsPage = () => {
                         disabled={filters.page >= pagination.totalPages}
                         onClick={() => handleFilterChange('page', filters.page + 1)}
                       >
-                        Next
+                        {t('common.next', 'Next')}
                       </Button>
                     </div>
                   </div>
@@ -504,27 +491,21 @@ const VisitsPage = () => {
                                 </Col>
                                 <Col xs={12} md={4} className="text-md-end mt-3 mt-md-0">
                                   <div
-                                    className="timeline-actions d-flex gap-1 justify-content-start justify-content-md-end flex-wrap"
+                                    className="timeline-actions action-buttons justify-content-start justify-content-md-end"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     {canEdit(visit) && (
                                       <>
-                                        <Button
-                                          variant="outline-primary"
-                                          size="sm"
+                                        <ActionButton
+                                          action="edit"
                                           onClick={() => handleEditClick(visit.id)}
                                           title={t('common.edit', 'Edit')}
-                                        >
-                                          ✏️
-                                        </Button>
-                                        <Button
-                                          variant="outline-danger"
-                                          size="sm"
+                                        />
+                                        <ActionButton
+                                          action="delete"
                                           onClick={() => handleDelete(visit.id)}
                                           title={t('common.delete', 'Delete')}
-                                        >
-                                          🗑️
-                                        </Button>
+                                        />
                                       </>
                                     )}
                                   </div>

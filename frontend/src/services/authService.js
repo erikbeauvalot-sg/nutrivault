@@ -18,6 +18,7 @@ export const login = async (username, password, rememberMe = false) => {
     const response = await api.post('/api/auth/login', {
       username,
       password,
+      rememberMe,
     });
 
     // Backend returns data nested in response.data.data

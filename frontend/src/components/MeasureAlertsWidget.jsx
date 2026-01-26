@@ -9,6 +9,7 @@ import { Card, Badge, ListGroup, Spinner, Alert, Button, Collapse } from 'react-
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import measureAlertsService from '../services/measureAlertsService';
+import ActionButton from './ActionButton';
 
 const MeasureAlertsWidget = () => {
   const { t } = useTranslation();
@@ -241,21 +242,17 @@ const MeasureAlertsWidget = () => {
                           {new Date(alert.created_at).toLocaleString()}
                         </div>
                       </div>
-                      <div className="d-flex flex-column gap-1">
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
+                      <div className="action-buttons flex-column">
+                        <ActionButton
+                          action="view"
                           onClick={() => handleViewPatient(alert.patient_id)}
-                        >
-                          {t('measureAlerts.viewPatient', 'View Patient')}
-                        </Button>
-                        <Button
-                          variant="outline-success"
-                          size="sm"
+                          title={t('measureAlerts.viewPatient', 'View Patient')}
+                        />
+                        <ActionButton
+                          action="acknowledge"
                           onClick={() => handleAcknowledge(alert.id)}
-                        >
-                          {t('measureAlerts.acknowledge', 'Acknowledge')}
-                        </Button>
+                          title={t('measureAlerts.acknowledge', 'Acknowledge')}
+                        />
                       </div>
                     </ListGroup.Item>
                   ))}
@@ -314,21 +311,17 @@ const MeasureAlertsWidget = () => {
                           {new Date(alert.created_at).toLocaleString()}
                         </div>
                       </div>
-                      <div className="d-flex flex-column gap-1">
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
+                      <div className="action-buttons flex-column">
+                        <ActionButton
+                          action="view"
                           onClick={() => handleViewPatient(alert.patient_id)}
-                        >
-                          {t('measureAlerts.viewPatient', 'View Patient')}
-                        </Button>
-                        <Button
-                          variant="outline-success"
-                          size="sm"
+                          title={t('measureAlerts.viewPatient', 'View Patient')}
+                        />
+                        <ActionButton
+                          action="acknowledge"
                           onClick={() => handleAcknowledge(alert.id)}
-                        >
-                          {t('measureAlerts.acknowledge', 'Acknowledge')}
-                        </Button>
+                          title={t('measureAlerts.acknowledge', 'Acknowledge')}
+                        />
                       </div>
                     </ListGroup.Item>
                   ))}
