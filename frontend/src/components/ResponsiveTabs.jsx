@@ -5,7 +5,7 @@
  * (no tab selection needed - everything visible at once).
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Children } from 'react';
 import { Tabs, Tab, Card } from 'react-bootstrap';
 import PropTypes from 'prop-types';
 
@@ -38,6 +38,21 @@ const extractColorFromTitle = (title) => {
   return null;
 };
 
+/**
+ * Recursively flatten children array (handles .map() results)
+ */
+const flattenChildren = (children) => {
+  const result = [];
+  Children.forEach(children, child => {
+    if (Array.isArray(child)) {
+      result.push(...flattenChildren(child));
+    } else if (child) {
+      result.push(child);
+    }
+  });
+  return result;
+};
+
 const ResponsiveTabs = ({
   activeKey,
   onSelect,
@@ -57,14 +72,13 @@ const ResponsiveTabs = ({
     return () => window.removeEventListener('resize', handleResize);
   }, [mobileBreakpoint]);
 
-  // Extract tab information from children
+  // Extract tab information from children (flatten nested arrays from .map())
   const tabs = [];
   const tabContents = {};
 
-  // Handle both array and single child
-  const childArray = Array.isArray(children) ? children : [children];
+  const flatChildren = flattenChildren(children);
 
-  childArray.forEach(child => {
+  flatChildren.forEach(child => {
     if (child && child.props) {
       const { eventKey, title, children: tabContent, disabled } = child.props;
       if (eventKey) {
