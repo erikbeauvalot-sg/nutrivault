@@ -120,6 +120,47 @@ describe('Billing API', () => {
       expect(res.body.success).toBe(true);
     });
 
+    it('should filter by visit_id', async () => {
+      // Create an invoice linked to the test visit
+      const db = testDb.getDb();
+      await db.Billing.create({
+        ...billingFixtures.validInvoiceDB,
+        patient_id: testPatient.id,
+        visit_id: testVisit.id
+      });
+
+      const res = await request(app)
+        .get(`/api/billing?visit_id=${testVisit.id}`)
+        .set('Authorization', adminAuth.authHeader);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.length).toBeGreaterThan(0);
+      // All returned invoices should be linked to the test visit
+      res.body.data.forEach(invoice => {
+        expect(invoice.visit_id).toBe(testVisit.id);
+      });
+    });
+
+    it('should return empty array when filtering by visit_id with no invoices', async () => {
+      // Create a new visit without any invoices
+      const db = testDb.getDb();
+      const newVisit = await db.Visit.create({
+        ...visitFixtures.validVisit,
+        patient_id: testPatient.id,
+        dietitian_id: dietitianAuth.user.id,
+        visit_date: new Date('2026-02-01T10:00:00Z')
+      });
+
+      const res = await request(app)
+        .get(`/api/billing?visit_id=${newVisit.id}`)
+        .set('Authorization', adminAuth.authHeader);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveLength(0);
+    });
+
     it('should support pagination', async () => {
       const res = await request(app)
         .get('/api/billing?page=1&limit=2')
