@@ -9,6 +9,35 @@ import { useState, useEffect } from 'react';
 import { Tabs, Tab, Card } from 'react-bootstrap';
 import PropTypes from 'prop-types';
 
+/**
+ * Try to extract color from the title element
+ * Looks for a span with backgroundColor style
+ */
+const extractColorFromTitle = (title) => {
+  if (!title || typeof title === 'string') return null;
+
+  // Check if title is a React element with props
+  if (title?.props?.children) {
+    const children = Array.isArray(title.props.children)
+      ? title.props.children
+      : [title.props.children];
+
+    // Look for a span with backgroundColor in style
+    for (const child of children) {
+      if (child?.props?.style?.backgroundColor) {
+        return child.props.style.backgroundColor;
+      }
+    }
+  }
+
+  // Check direct style on title
+  if (title?.props?.style?.backgroundColor) {
+    return title.props.style.backgroundColor;
+  }
+
+  return null;
+};
+
 const ResponsiveTabs = ({
   activeKey,
   onSelect,
@@ -39,7 +68,8 @@ const ResponsiveTabs = ({
     if (child && child.props) {
       const { eventKey, title, children: tabContent, disabled } = child.props;
       if (eventKey) {
-        tabs.push({ eventKey, title, disabled });
+        const color = extractColorFromTitle(title);
+        tabs.push({ eventKey, title, disabled, color });
         tabContents[eventKey] = tabContent;
       }
     }
@@ -49,25 +79,28 @@ const ResponsiveTabs = ({
   if (isMobile) {
     return (
       <div className={`responsive-tabs-mobile ${className}`}>
-        {tabs.map((tab, index) => (
-          <Card key={tab.eventKey} className={index < tabs.length - 1 ? 'mb-3' : ''}>
-            <Card.Header
-              className="fw-bold"
-              style={{
-                backgroundColor: '#0d6efd',
-                color: '#fff',
-                fontSize: '1rem'
-              }}
-            >
-              {typeof tab.title === 'string'
-                ? tab.title
-                : tab.title?.props?.children || tab.eventKey}
-            </Card.Header>
-            <Card.Body>
-              {tabContents[tab.eventKey]}
-            </Card.Body>
-          </Card>
-        ))}
+        {tabs.map((tab, index) => {
+          const headerColor = tab.color || '#0d6efd';
+          return (
+            <Card key={tab.eventKey} className={index < tabs.length - 1 ? 'mb-3' : ''}>
+              <Card.Header
+                className="fw-bold"
+                style={{
+                  backgroundColor: headerColor,
+                  color: '#fff',
+                  fontSize: '1rem'
+                }}
+              >
+                {typeof tab.title === 'string'
+                  ? tab.title
+                  : tab.title?.props?.children || tab.eventKey}
+              </Card.Header>
+              <Card.Body>
+                {tabContents[tab.eventKey]}
+              </Card.Body>
+            </Card>
+          );
+        })}
       </div>
     );
   }
