@@ -1,12 +1,12 @@
 /**
  * ResponsiveTabs Component
  *
- * Displays tabs on desktop and a dropdown select on mobile
+ * Displays horizontal tabs on desktop and vertical stacked tabs on mobile
  * for better user experience on small screens.
  */
 
 import { useState, useEffect } from 'react';
-import { Tabs, Tab, Form } from 'react-bootstrap';
+import { Tabs, Tab, Nav } from 'react-bootstrap';
 import PropTypes from 'prop-types';
 
 const ResponsiveTabs = ({
@@ -45,28 +45,35 @@ const ResponsiveTabs = ({
     }
   });
 
-  // Mobile: Dropdown select + content
+  // Mobile: Vertical stacked tabs
   if (isMobile) {
     return (
       <div className={`responsive-tabs-mobile ${className}`}>
-        <Form.Select
-          value={activeKey}
-          onChange={(e) => onSelect(e.target.value)}
-          className="mb-3 responsive-tabs-select"
-          aria-label="Select tab"
+        <Nav
+          variant="pills"
+          className="flex-column mb-3"
+          activeKey={activeKey}
+          onSelect={onSelect}
         >
           {tabs.map(tab => (
-            <option
-              key={tab.eventKey}
-              value={tab.eventKey}
-              disabled={tab.disabled}
-            >
-              {typeof tab.title === 'string'
-                ? tab.title
-                : tab.title?.props?.children || tab.eventKey}
-            </option>
+            <Nav.Item key={tab.eventKey}>
+              <Nav.Link
+                eventKey={tab.eventKey}
+                disabled={tab.disabled}
+                className="text-start py-2 px-3 mb-1 border"
+                style={{
+                  backgroundColor: activeKey === tab.eventKey ? '#0d6efd' : '#f8f9fa',
+                  color: activeKey === tab.eventKey ? '#fff' : '#212529',
+                  borderRadius: '0.375rem'
+                }}
+              >
+                {typeof tab.title === 'string'
+                  ? tab.title
+                  : tab.title?.props?.children || tab.eventKey}
+              </Nav.Link>
+            </Nav.Item>
           ))}
-        </Form.Select>
+        </Nav>
 
         <div className="responsive-tabs-content">
           {tabContents[activeKey]}
@@ -75,7 +82,7 @@ const ResponsiveTabs = ({
     );
   }
 
-  // Desktop: Regular tabs
+  // Desktop: Regular horizontal tabs
   return (
     <Tabs
       activeKey={activeKey}
