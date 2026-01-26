@@ -145,31 +145,32 @@ const BillingPage = () => {
   return (
     <Layout>
       <Container fluid>
-        <Row className="mb-4">
-          <Col>
+        <Row className="mb-4 align-items-center">
+          <Col xs={12} md>
             <h1>{t('billing.title', 'Billing Management')}</h1>
-            <p className="text-muted">
+            <p className="text-muted mb-0">
               {t('billing.subtitle', 'Manage invoices and track payments')}
             </p>
           </Col>
-          <Col xs="auto">
-            <Button
-              variant="outline-secondary"
-              onClick={() => setShowExportModal(true)}
-              className="me-2"
-            >
-              <i className="bi bi-download me-2"></i>
-              {t('common.export', 'Export')}
-            </Button>
-            {hasPermission('billing.create') && (
+          <Col xs={12} md="auto" className="mt-3 mt-md-0">
+            <div className="d-flex gap-2 flex-wrap">
               <Button
-                variant="primary"
-                onClick={() => navigate('/billing/create')}
+                variant="outline-secondary"
+                onClick={() => setShowExportModal(true)}
               >
-                <i className="fas fa-plus me-2"></i>
-                {t('billing.createInvoice', 'Create Invoice')}
+                <i className="bi bi-download me-2"></i>
+                {t('common.export', 'Export')}
               </Button>
-            )}
+              {hasPermission('billing.create') && (
+                <Button
+                  variant="primary"
+                  onClick={() => navigate('/billing/create')}
+                >
+                  <i className="fas fa-plus me-2"></i>
+                  {t('billing.createInvoice', 'Create Invoice')}
+                </Button>
+              )}
+            </div>
           </Col>
         </Row>
 
@@ -211,32 +212,32 @@ const BillingPage = () => {
                 </div>
                 <div className="card-body">
                   <Row>
-                    <Col md={6}>
+                    <Col xs={12} md={6} className="mb-3 mb-md-0">
                       <h5>{t('billing.patient', 'Patient')}</h5>
                       <p>{currentInvoice.patient?.first_name} {currentInvoice.patient?.last_name}</p>
-                      
+
                       <h5>{t('billing.amount', 'Amount')}</h5>
                       <p className="h4">{currentInvoice.amount?.toFixed(2)} €</p>
-                      
+
                       <h5>{t('billing.dueDate', 'Due Date')}</h5>
                       <p>{new Date(currentInvoice.due_date).toLocaleDateString()}</p>
                     </Col>
-                    <Col md={6}>
+                    <Col xs={12} md={6}>
                       <h5>{t('billing.created', 'Created')}</h5>
                       <p>{new Date(currentInvoice.created_at).toLocaleDateString()}</p>
-                      
+
                       <h5>{t('billing.description', 'Description')}</h5>
                       <p>{currentInvoice.description || t('billing.noDescription', 'No description')}</p>
                     </Col>
                   </Row>
                 </div>
-                <div className="card-footer">
+                <div className="card-footer d-flex gap-2 flex-wrap">
                   <Button variant="primary" onClick={() => handleEditInvoice(currentInvoice)}>
                     <i className="fas fa-edit me-2"></i>
                     {t('billing.editInvoice', 'Edit Invoice')}
                   </Button>
                   {currentInvoice.status !== 'PAID' && (
-                    <Button variant="success" className="ms-2" onClick={() => handleRecordPaymentClick(currentInvoice)}>
+                    <Button variant="success" onClick={() => handleRecordPaymentClick(currentInvoice)}>
                       <i className="fas fa-dollar-sign me-2"></i>
                       {t('billing.recordPayment', 'Record Payment')}
                     </Button>
