@@ -449,13 +449,29 @@ const MeasureHistory = ({ patientId }) => {
     return areas;
   };
 
-  // Get trend indicator
+  // Get trend indicator with translation
   const trendIndicator = trendData?.trend ? formatTrendIndicator(trendData.trend) : null;
 
-  // Get formatted statistics
-  const formattedStats = trendData?.statistics
+  // Translate trend text
+  const getTranslatedTrendText = () => {
+    if (!trendIndicator) return '';
+    const direction = trendData?.trend?.direction || 'stable';
+    const translatedDirection = t(`measures.trend.${direction}`, trendIndicator.text);
+    const sign = trendIndicator.sign || '';
+    const percentage = trendIndicator.percentage || '0';
+    return `${trendIndicator.emoji} ${sign}${percentage}% ${translatedDirection}`;
+  };
+
+  // Get formatted statistics with translations
+  const rawStats = trendData?.statistics
     ? formatStatisticsSummary(trendData.statistics, selectedDefinition?.unit || '')
     : null;
+
+  // Translate stat labels
+  const formattedStats = rawStats?.map(stat => ({
+    ...stat,
+    label: t(`measures.stats.${stat.key}`, stat.label)
+  }));
 
   // Calculate Y-axis domain with 20% padding
   const getYAxisDomain = () => {
@@ -601,7 +617,7 @@ const MeasureHistory = ({ patientId }) => {
           <Alert variant={trendIndicator.color === 'green' ? 'success' : trendIndicator.color === 'red' ? 'danger' : 'info'} className="mb-3 py-2">
             <div className={`d-flex ${isMobile ? 'flex-column' : 'align-items-center justify-content-between'}`}>
               <div>
-                <strong style={{ fontSize: isMobile ? '0.95em' : '1.1em' }}>{trendIndicator.formattedText}</strong>
+                <strong style={{ fontSize: isMobile ? '0.95em' : '1.1em' }}>{getTranslatedTrendText()}</strong>
                 {trendData.trend.velocity !== 0 && (
                   <span style={{ marginLeft: isMobile ? '0' : '15px', fontSize: isMobile ? '0.8em' : '0.9em', display: isMobile ? 'block' : 'inline' }}>
                     {t('measures.velocity', 'Velocity')}: {trendData.trend.velocity > 0 ? '+' : ''}{trendData.trend.velocity.toFixed(2)} {selectedDefinition?.unit}/{t('measures.day', 'day')}

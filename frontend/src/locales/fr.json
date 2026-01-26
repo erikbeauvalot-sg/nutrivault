@@ -1311,7 +1311,20 @@
     "criticalLow": "Critique Bas",
     "criticalHigh": "Critique Haut",
     "warning": "Attention",
-    "normal": "Normal"
+    "normal": "Normal",
+    "stats": {
+      "mean": "Moyenne",
+      "median": "Médiane",
+      "stdDev": "Écart-type",
+      "range": "Plage",
+      "outliers": "Valeurs aberrantes"
+    },
+    "trend": {
+      "increasing": "En hausse",
+      "decreasing": "En baisse",
+      "stable": "Stable",
+      "noTrendData": "Pas de données de tendance"
+    }
   },
   "annotations": {
     "addAnnotation": "Ajouter une Annotation",

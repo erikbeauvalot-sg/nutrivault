@@ -1254,7 +1254,20 @@
     "criticalLow": "Critical Low",
     "criticalHigh": "Critical High",
     "warning": "Warning",
-    "normal": "Normal"
+    "normal": "Normal",
+    "stats": {
+      "mean": "Mean",
+      "median": "Median",
+      "stdDev": "Std Dev",
+      "range": "Range",
+      "outliers": "Outliers"
+    },
+    "trend": {
+      "increasing": "Increasing",
+      "decreasing": "Decreasing",
+      "stable": "Stable",
+      "noTrendData": "No trend data"
+    }
   },
   "permissions": {
     "patients": "Patients",
