@@ -40,6 +40,7 @@ const EmailTemplatesPage = lazy(() => import('./pages/EmailTemplatesPage'));
 const BillingTemplatesPage = lazy(() => import('./pages/BillingTemplatesPage'));
 const InvoiceCustomizationPage = lazy(() => import('./pages/InvoiceCustomizationPage'));
 const AIConfigPage = lazy(() => import('./pages/AIConfigPage'));
+const AnalyticsDashboardPage = lazy(() => import('./pages/AnalyticsDashboardPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -309,6 +310,15 @@ function App() {
         element={
           <ProtectedRoute>
             <AIConfigPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/analytics"
+        element={
+          <ProtectedRoute permission="patients.read">
+            <AnalyticsDashboardPage />
           </ProtectedRoute>
         }
       />

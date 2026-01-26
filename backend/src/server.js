@@ -149,6 +149,10 @@ app.use('/api/ai-prompts', aiPromptsRoutes);
 const emailLogsRoutes = require('./routes/emailLogs');
 app.use('/api/email-logs', emailLogsRoutes);
 
+// Analytics routes (protected)
+const analyticsRoutes = require('./routes/analytics');
+app.use('/api/analytics', analyticsRoutes);
+
 // Serve uploaded files (logos, signatures)
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
