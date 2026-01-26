@@ -1135,7 +1135,7 @@ const PatientDetailPage = () => {
               </Tab>
 
               {/* Measures Tab */}
-              <Tab eventKey="measures" title="📊 Measures">
+              <Tab eventKey="measures" title={`📊 ${t('patients.measures', 'Measures')}`}>
                 <Card>
                   <Card.Header>
                     <h5 className="mb-0">{t('patients.measuresTab', 'Patient Measures')}</h5>
@@ -1149,7 +1149,7 @@ const PatientDetailPage = () => {
                 </Card>
               </Tab>
 
-              {/* Compare Measures Tab */}
+              {/* Compare Measures Tab - Temporarily disabled, to be improved later
               <Tab eventKey="compare-measures" title="📈 Compare Measures">
                 <Card>
                   <Card.Header>
@@ -1163,6 +1163,7 @@ const PatientDetailPage = () => {
                   </Card.Body>
                 </Card>
               </Tab>
+              */}
             </ResponsiveTabs>
           </Card.Body>
         </Card>
