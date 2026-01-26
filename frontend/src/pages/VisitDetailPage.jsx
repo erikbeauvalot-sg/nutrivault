@@ -217,7 +217,7 @@ const VisitDetailPage = () => {
       OVERDUE: 'danger',
       CANCELLED: 'dark'
     };
-    return <Badge bg={variants[status] || 'secondary'}>{t(`billing.status.${status}`, status)}</Badge>;
+    return <Badge bg={variants[status] || 'secondary'}>{t(`billing.status.${status.toLowerCase()}`, status)}</Badge>;
   };
 
   const formatCurrency = (amount) => {
@@ -689,7 +689,7 @@ const VisitDetailPage = () => {
                       <tr>
                         <th>{t('billing.invoiceNumber', 'Invoice #')}</th>
                         <th>{t('billing.date', 'Date')}</th>
-                        <th>{t('billing.status', 'Status')}</th>
+                        <th>{t('billing.statusLabel', 'Status')}</th>
                         <th>{t('billing.totalAmount', 'Total')}</th>
                         <th>{t('billing.amountPaid', 'Paid')}</th>
                         <th>{t('billing.amountDue', 'Due')}</th>

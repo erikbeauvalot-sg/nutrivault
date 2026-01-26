@@ -578,6 +578,7 @@
     "descriptionPlaceholder": "Saisir la description de la facture",
     "amount": "Montant",
     "dueDate": "Date d'échéance",
+    "due": "Échéance",
     "created": "Créé",
     "notes": "Notes",
     "creating": "Création en cours...",

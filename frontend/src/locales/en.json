@@ -563,6 +563,7 @@
     "descriptionPlaceholder": "Enter invoice description",
     "amount": "Amount",
     "dueDate": "Due Date",
+    "due": "Due",
     "created": "Created",
     "notes": "Notes",
     "creating": "Creating...",

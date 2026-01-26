@@ -544,12 +544,12 @@ const EditVisitPage = () => {
                               value={formData.visit_type}
                               onChange={handleInputChange}
                             >
-                              <option value="">Select type</option>
-                              <option value="Initial Consultation">Initial Consultation</option>
-                              <option value="Follow-up">Follow-up</option>
-                              <option value="Final Assessment">Final Assessment</option>
-                              <option value="Nutrition Counseling">Nutrition Counseling</option>
-                              <option value="Other">Other</option>
+                              <option value="">{t('visits.selectType')}</option>
+                              <option value="Initial Consultation">{t('visits.initialConsultation')}</option>
+                              <option value="Follow-up">{t('visits.followUp')}</option>
+                              <option value="Final Assessment">{t('visits.finalAssessment')}</option>
+                              <option value="Nutrition Counseling">{t('visits.nutritionCounseling')}</option>
+                              <option value="Other">{t('visits.other', 'Other')}</option>
                             </Form.Select>
                           </Form.Group>
 

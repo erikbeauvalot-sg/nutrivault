@@ -618,7 +618,7 @@ const CreateVisitPage = () => {
                               <option value="Follow-up">{t('visits.followUp')}</option>
                               <option value="Final Assessment">{t('visits.finalAssessment')}</option>
                               <option value="Nutrition Counseling">{t('visits.nutritionCounseling')}</option>
-                              <option value="Other">Other</option>
+                              <option value="Other">{t('visits.other', 'Other')}</option>
                             </Form.Select>
                           </Form.Group>
 
@@ -815,7 +815,7 @@ const CreateVisitPage = () => {
               {/* Action Buttons */}
               <div className="d-flex justify-content-between align-items-center mt-4 pt-3 border-top flex-wrap gap-2">
                 <Button variant="outline-secondary" onClick={handleBack} disabled={loading}>
-                  Cancel
+                  {t('common.cancel', 'Cancel')}
                 </Button>
                 <Button variant="primary" type="submit" disabled={loading}>
                   {loading ? t('visits.creatingVisit') : t('visits.createVisit')}
