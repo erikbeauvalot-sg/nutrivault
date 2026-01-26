@@ -23,7 +23,7 @@ router.use(authenticate);
  */
 router.get(
   '/health-trends',
-  requirePermission('patients', 'read'),
+  requirePermission('patients.read'),
   analyticsController.getHealthTrends
 );
 
@@ -35,7 +35,7 @@ router.get(
  */
 router.get(
   '/financial-metrics',
-  requirePermission('billing', 'read'),
+  requirePermission('billing.read'),
   analyticsController.getFinancialMetrics
 );
 
@@ -47,7 +47,7 @@ router.get(
  */
 router.get(
   '/communication-effectiveness',
-  requirePermission('patients', 'read'),
+  requirePermission('patients.read'),
   analyticsController.getCommunicationEffectiveness
 );
 
@@ -59,7 +59,7 @@ router.get(
  */
 router.get(
   '/patient-health-score/:patientId',
-  requirePermission('patients', 'read'),
+  requirePermission('patients.read'),
   analyticsController.getPatientHealthScore
 );
 
