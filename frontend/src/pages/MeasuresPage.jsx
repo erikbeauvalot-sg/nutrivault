@@ -110,11 +110,16 @@ const MeasuresPage = () => {
     if (!window.confirm(t('measures.confirmDelete'))) return;
 
     try {
-      await measureService.deleteMeasureDefinition(measureId);
-      fetchMeasures();
+      const result = await measureService.deleteMeasureDefinition(measureId);
+      if (result.success) {
+        await fetchMeasures();
+      } else {
+        alert(result.error || t('measures.deleteError'));
+      }
     } catch (err) {
       console.error('Error deleting measure:', err);
-      alert(err.response?.data?.error || t('measures.deleteError'));
+      const errorMessage = err.response?.data?.error || err.message || t('measures.deleteError');
+      alert(errorMessage);
     }
   };
 
@@ -421,6 +426,11 @@ const MeasuresPage = () => {
                     >
                       <td>
                         <code>{highlightText(measure.name, searchQuery)}</code>
+                        {measure.is_system && (
+                          <Badge bg="info" className="ms-2" title={t('measures.systemMeasureTooltip', 'System measures cannot be deleted')}>
+                            {t('measures.system', 'System')}
+                          </Badge>
+                        )}
                       </td>
                       <td>
                         <strong>{highlightText(getTranslatedDisplayName(measure), searchQuery)}</strong>
@@ -461,11 +471,13 @@ const MeasuresPage = () => {
                             onClick={() => handleTranslateMeasure(measure)}
                             title={t('measures.actions.translationsTooltip')}
                           />
-                          <ActionButton
-                            action="delete"
-                            onClick={() => handleDeleteMeasure(measure.id)}
-                            title={t('common.delete', 'Delete')}
-                          />
+                          {!measure.is_system && (
+                            <ActionButton
+                              action="delete"
+                              onClick={() => handleDeleteMeasure(measure.id)}
+                              title={t('common.delete', 'Delete')}
+                            />
+                          )}
                         </div>
                       </td>
                     </tr>

@@ -1183,6 +1183,8 @@
     "loading": "Chargement des mesures...",
     "confirmDelete": "Êtes-vous sûr de vouloir supprimer cette définition de mesure ?",
     "deleteError": "Échec de la suppression de la définition de mesure",
+    "system": "Système",
+    "systemMeasureTooltip": "Les mesures système ne peuvent pas être supprimées",
     "measureDefinitions": "Définitions de Mesures",
     "createMeasure": "Créer une Mesure",
     "editMeasure": "Modifier la Mesure",
