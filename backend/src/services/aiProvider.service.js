@@ -119,7 +119,7 @@ const AI_PROVIDERS = {
     name: 'Ollama (Local)',
     models: [
       {
-        id: 'llama3.2',
+        id: 'llama3.2:latest',
         name: 'Llama 3.2',
         description: 'Fast and lightweight (2GB)',
         inputPrice: 0.00,
@@ -127,33 +127,9 @@ const AI_PROVIDERS = {
         recommended: true
       },
       {
-        id: 'llama3.1:8b',
-        name: 'Llama 3.1 8B',
-        description: 'Good balance of speed and quality (5GB)',
-        inputPrice: 0.00,
-        outputPrice: 0.00,
-        recommended: false
-      },
-      {
-        id: 'mistral',
+        id: 'mistral:7b',
         name: 'Mistral 7B',
         description: 'Excellent for French language (4GB)',
-        inputPrice: 0.00,
-        outputPrice: 0.00,
-        recommended: false
-      },
-      {
-        id: 'gemma2',
-        name: 'Gemma 2',
-        description: 'Google lightweight model (5GB)',
-        inputPrice: 0.00,
-        outputPrice: 0.00,
-        recommended: false
-      },
-      {
-        id: 'qwen2.5',
-        name: 'Qwen 2.5',
-        description: 'Alibaba multilingual model (4GB)',
         inputPrice: 0.00,
         outputPrice: 0.00,
         recommended: false
