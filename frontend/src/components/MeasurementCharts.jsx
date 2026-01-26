@@ -117,6 +117,52 @@ const MeasurementCharts = ({ visits }) => {
 
   const hasData = (field) => measurementData.some(d => d[field] !== null);
 
+  // Calculate Y-axis domain with 20% padding for a given field
+  const getYAxisDomain = (field) => {
+    const values = measurementData
+      .map(d => d[field])
+      .filter(v => v !== null && v !== undefined);
+
+    if (values.length === 0) return ['auto', 'auto'];
+
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    const range = maxValue - minValue;
+    const padding = range * 0.2; // 20% padding
+
+    // If range is 0 (all same values), use 10% of the value as padding
+    const actualPadding = range === 0 ? Math.abs(minValue) * 0.1 || 1 : padding;
+
+    return [
+      Math.floor((minValue - actualPadding) * 100) / 100,
+      Math.ceil((maxValue + actualPadding) * 100) / 100
+    ];
+  };
+
+  // Calculate combined domain for blood pressure (both systolic and diastolic)
+  const getBPDomain = () => {
+    const systolicValues = measurementData
+      .map(d => d.bp_systolic)
+      .filter(v => v !== null && v !== undefined);
+    const diastolicValues = measurementData
+      .map(d => d.bp_diastolic)
+      .filter(v => v !== null && v !== undefined);
+
+    const allValues = [...systolicValues, ...diastolicValues];
+    if (allValues.length === 0) return ['auto', 'auto'];
+
+    const minValue = Math.min(...allValues);
+    const maxValue = Math.max(...allValues);
+    const range = maxValue - minValue;
+    const padding = range * 0.2;
+    const actualPadding = range === 0 ? Math.abs(minValue) * 0.1 || 10 : padding;
+
+    return [
+      Math.floor((minValue - actualPadding) * 100) / 100,
+      Math.ceil((maxValue + actualPadding) * 100) / 100
+    ];
+  };
+
   // Common chart props for responsive behavior
   const chartHeight = isMobile ? 200 : 250;
   const xAxisProps = {
@@ -135,10 +181,11 @@ const MeasurementCharts = ({ visits }) => {
       return value;
     }
   };
-  const yAxisProps = {
+  const getYAxisProps = (field) => ({
     tick: { fontSize: isMobile ? 10 : 12 },
-    width: isMobile ? 35 : 60
-  };
+    width: isMobile ? 35 : 60,
+    domain: field === 'bp' ? getBPDomain() : getYAxisDomain(field)
+  });
   const chartMargin = isMobile ? { left: -20, right: 5 } : undefined;
 
   return (
@@ -156,7 +203,7 @@ const MeasurementCharts = ({ visits }) => {
                   <LineChart data={measurementData} margin={chartMargin}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis {...xAxisProps} />
-                    <YAxis {...yAxisProps} />
+                    <YAxis {...getYAxisProps('weight_kg')} />
                     <Tooltip content={<CustomTooltip />} />
                     {!isMobile && <Legend />}
                     <Line
@@ -194,7 +241,7 @@ const MeasurementCharts = ({ visits }) => {
                   <LineChart data={measurementData} margin={chartMargin}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis {...xAxisProps} />
-                    <YAxis {...yAxisProps} />
+                    <YAxis {...getYAxisProps('bmi')} />
                     <Tooltip content={<CustomTooltip />} />
                     {!isMobile && <Legend />}
                     <Line
@@ -225,7 +272,7 @@ const MeasurementCharts = ({ visits }) => {
                   <LineChart data={measurementData} margin={chartMargin}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis {...xAxisProps} />
-                    <YAxis {...yAxisProps} />
+                    <YAxis {...getYAxisProps('bp')} />
                     <Tooltip content={<CustomTooltip />} />
                     {!isMobile && <Legend />}
                     {hasData('bp_systolic') && (
@@ -269,7 +316,7 @@ const MeasurementCharts = ({ visits }) => {
                   <LineChart data={measurementData} margin={chartMargin}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis {...xAxisProps} />
-                    <YAxis {...yAxisProps} />
+                    <YAxis {...getYAxisProps('waist_cm')} />
                     <Tooltip content={<CustomTooltip />} />
                     {!isMobile && <Legend />}
                     <Line
@@ -300,7 +347,7 @@ const MeasurementCharts = ({ visits }) => {
                   <LineChart data={measurementData} margin={chartMargin}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis {...xAxisProps} />
-                    <YAxis {...yAxisProps} />
+                    <YAxis {...getYAxisProps('body_fat')} />
                     <Tooltip content={<CustomTooltip />} />
                     {!isMobile && <Legend />}
                     <Line
@@ -331,7 +378,7 @@ const MeasurementCharts = ({ visits }) => {
                   <LineChart data={measurementData} margin={chartMargin}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis {...xAxisProps} />
-                    <YAxis {...yAxisProps} />
+                    <YAxis {...getYAxisProps('muscle_mass')} />
                     <Tooltip content={<CustomTooltip />} />
                     {!isMobile && <Legend />}
                     <Line

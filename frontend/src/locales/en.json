@@ -1236,7 +1236,25 @@
       "textNote": "Text measures can store free-form text values.",
       "booleanNote": "Boolean measures store Yes/No values.",
       "activeHelp": "Inactive measures will not be available for logging"
-    }
+    },
+    "chart": {
+      "ma7": "MA 7d",
+      "ma7Long": "Moving Average 7 days",
+      "ma30": "MA 30d",
+      "ma30Long": "Moving Average 30 days",
+      "ma90": "MA 90d",
+      "ma90Long": "Moving Average 90 days",
+      "trendLine": "Trend",
+      "trendLineLong": "Trend Line"
+    },
+    "statisticalSummary": "Statistical Summary",
+    "displayOptions": "Display Options",
+    "velocity": "Velocity",
+    "day": "day",
+    "criticalLow": "Critical Low",
+    "criticalHigh": "Critical High",
+    "warning": "Warning",
+    "normal": "Normal"
   },
   "permissions": {
     "patients": "Patients",

@@ -1293,7 +1293,25 @@
       "textNote": "Les mesures texte peuvent stocker des valeurs texte libres.",
       "booleanNote": "Les mesures booléennes stockent des valeurs Oui/Non.",
       "activeHelp": "Les mesures inactives ne seront pas disponibles pour l'enregistrement"
-    }
+    },
+    "chart": {
+      "ma7": "MM 7j",
+      "ma7Long": "Moyenne Mobile 7 jours",
+      "ma30": "MM 30j",
+      "ma30Long": "Moyenne Mobile 30 jours",
+      "ma90": "MM 90j",
+      "ma90Long": "Moyenne Mobile 90 jours",
+      "trendLine": "Tendance",
+      "trendLineLong": "Ligne de Tendance"
+    },
+    "statisticalSummary": "Résumé Statistique",
+    "displayOptions": "Options d'affichage",
+    "velocity": "Vélocité",
+    "day": "jour",
+    "criticalLow": "Critique Bas",
+    "criticalHigh": "Critique Haut",
+    "warning": "Attention",
+    "normal": "Normal"
   },
   "annotations": {
     "addAnnotation": "Ajouter une Annotation",

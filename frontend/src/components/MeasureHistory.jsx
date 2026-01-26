@@ -457,6 +457,32 @@ const MeasureHistory = ({ patientId }) => {
     ? formatStatisticsSummary(trendData.statistics, selectedDefinition?.unit || '')
     : null;
 
+  // Calculate Y-axis domain with 20% padding
+  const getYAxisDomain = () => {
+    if (chartData.length === 0) return ['auto', 'auto'];
+
+    const values = chartData
+      .map(d => d.value)
+      .filter(v => v !== null && v !== undefined);
+
+    if (values.length === 0) return ['auto', 'auto'];
+
+    const minValue = Math.min(...values);
+    const maxValue = Math.max(...values);
+    const range = maxValue - minValue;
+    const padding = range * 0.2; // 20% padding
+
+    // If range is 0 (all same values), use 10% of the value as padding
+    const actualPadding = range === 0 ? Math.abs(minValue) * 0.1 || 1 : padding;
+
+    return [
+      Math.floor((minValue - actualPadding) * 100) / 100,
+      Math.ceil((maxValue + actualPadding) * 100) / 100
+    ];
+  };
+
+  const yAxisDomain = getYAxisDomain();
+
   if (loading && !selectedMeasureId) {
     return (
       <Card>
@@ -602,7 +628,7 @@ const MeasureHistory = ({ patientId }) => {
                     <Form.Check
                       type="checkbox"
                       id="showMA7"
-                      label={<small style={{ color: getMAColor(7) }}>MA7</small>}
+                      label={<small style={{ color: getMAColor(7) }}>{t('measures.chart.ma7', 'MM 7j')}</small>}
                       checked={showMA7}
                       onChange={(e) => setShowMA7(e.target.checked)}
                       disabled={!trendData.movingAverages.ma7 || trendData.movingAverages.ma7.length === 0}
@@ -610,7 +636,7 @@ const MeasureHistory = ({ patientId }) => {
                     <Form.Check
                       type="checkbox"
                       id="showMA30"
-                      label={<small style={{ color: getMAColor(30) }}>MA30</small>}
+                      label={<small style={{ color: getMAColor(30) }}>{t('measures.chart.ma30', 'MM 30j')}</small>}
                       checked={showMA30}
                       onChange={(e) => setShowMA30(e.target.checked)}
                       disabled={!trendData.movingAverages.ma30 || trendData.movingAverages.ma30.length === 0}
@@ -618,7 +644,7 @@ const MeasureHistory = ({ patientId }) => {
                     <Form.Check
                       type="checkbox"
                       id="showMA90"
-                      label={<small style={{ color: getMAColor(90) }}>MA90</small>}
+                      label={<small style={{ color: getMAColor(90) }}>{t('measures.chart.ma90', 'MM 90j')}</small>}
                       checked={showMA90}
                       onChange={(e) => setShowMA90(e.target.checked)}
                       disabled={!trendData.movingAverages.ma90 || trendData.movingAverages.ma90.length === 0}
@@ -626,7 +652,7 @@ const MeasureHistory = ({ patientId }) => {
                     <Form.Check
                       type="checkbox"
                       id="showTrendLine"
-                      label={<small style={{ color: '#ef4444' }}>Trend</small>}
+                      label={<small style={{ color: '#ef4444' }}>{t('measures.chart.trendLine', 'Tendance')}</small>}
                       checked={showTrendLine}
                       onChange={(e) => setShowTrendLine(e.target.checked)}
                       disabled={!trendData.trendLine}
@@ -639,7 +665,7 @@ const MeasureHistory = ({ patientId }) => {
                   <Form.Check
                     type="checkbox"
                     id="showMA7"
-                    label={<span style={{ color: getMAColor(7) }}>MA 7-day</span>}
+                    label={<span style={{ color: getMAColor(7) }}>{t('measures.chart.ma7Long', 'Moyenne Mobile 7 jours')}</span>}
                     checked={showMA7}
                     onChange={(e) => setShowMA7(e.target.checked)}
                     disabled={!trendData.movingAverages.ma7 || trendData.movingAverages.ma7.length === 0}
@@ -647,7 +673,7 @@ const MeasureHistory = ({ patientId }) => {
                   <Form.Check
                     type="checkbox"
                     id="showMA30"
-                    label={<span style={{ color: getMAColor(30) }}>MA 30-day</span>}
+                    label={<span style={{ color: getMAColor(30) }}>{t('measures.chart.ma30Long', 'Moyenne Mobile 30 jours')}</span>}
                     checked={showMA30}
                     onChange={(e) => setShowMA30(e.target.checked)}
                     disabled={!trendData.movingAverages.ma30 || trendData.movingAverages.ma30.length === 0}
@@ -655,7 +681,7 @@ const MeasureHistory = ({ patientId }) => {
                   <Form.Check
                     type="checkbox"
                     id="showMA90"
-                    label={<span style={{ color: getMAColor(90) }}>MA 90-day</span>}
+                    label={<span style={{ color: getMAColor(90) }}>{t('measures.chart.ma90Long', 'Moyenne Mobile 90 jours')}</span>}
                     checked={showMA90}
                     onChange={(e) => setShowMA90(e.target.checked)}
                     disabled={!trendData.movingAverages.ma90 || trendData.movingAverages.ma90.length === 0}
@@ -663,7 +689,7 @@ const MeasureHistory = ({ patientId }) => {
                   <Form.Check
                     type="checkbox"
                     id="showTrendLine"
-                    label={<span style={{ color: '#ef4444' }}>Trend Line</span>}
+                    label={<span style={{ color: '#ef4444' }}>{t('measures.chart.trendLineLong', 'Ligne de Tendance')}</span>}
                     checked={showTrendLine}
                     onChange={(e) => setShowTrendLine(e.target.checked)}
                     disabled={!trendData.trendLine}
@@ -733,10 +759,7 @@ const MeasureHistory = ({ patientId }) => {
                   }}
                   tick={{ fontSize: isMobile ? 10 : 12 }}
                   width={isMobile ? 40 : 60}
-                  domain={[
-                    selectedDefinition?.min_value ? parseFloat(selectedDefinition.min_value) : 'auto',
-                    selectedDefinition?.max_value ? parseFloat(selectedDefinition.max_value) : 'auto'
-                  ]}
+                  domain={yAxisDomain}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 {!isMobile && <Legend />}
@@ -756,7 +779,7 @@ const MeasureHistory = ({ patientId }) => {
                     stroke={getMAColor(7)}
                     fill="none"
                     strokeDasharray="5 5"
-                    name="MA 7-day"
+                    name={t('measures.chart.ma7Long', 'Moyenne Mobile 7 jours')}
                     strokeWidth={isMobile ? 1 : 2}
                   />
                 )}
@@ -767,7 +790,7 @@ const MeasureHistory = ({ patientId }) => {
                     stroke={getMAColor(30)}
                     fill="none"
                     strokeDasharray="5 5"
-                    name="MA 30-day"
+                    name={t('measures.chart.ma30Long', 'Moyenne Mobile 30 jours')}
                     strokeWidth={isMobile ? 1 : 2}
                   />
                 )}
@@ -778,7 +801,7 @@ const MeasureHistory = ({ patientId }) => {
                     stroke={getMAColor(90)}
                     fill="none"
                     strokeDasharray="5 5"
-                    name="MA 90-day"
+                    name={t('measures.chart.ma90Long', 'Moyenne Mobile 90 jours')}
                     strokeWidth={isMobile ? 1 : 2}
                   />
                 )}
@@ -789,7 +812,7 @@ const MeasureHistory = ({ patientId }) => {
                     stroke="#ef4444"
                     fill="none"
                     strokeDasharray="3 3"
-                    name="Trend Line"
+                    name={t('measures.chart.trendLineLong', 'Ligne de Tendance')}
                     strokeWidth={isMobile ? 1 : 2}
                   />
                 )}
@@ -822,10 +845,7 @@ const MeasureHistory = ({ patientId }) => {
                   }}
                   tick={{ fontSize: isMobile ? 10 : 12 }}
                   width={isMobile ? 40 : 60}
-                  domain={[
-                    selectedDefinition?.min_value ? parseFloat(selectedDefinition.min_value) : 'auto',
-                    selectedDefinition?.max_value ? parseFloat(selectedDefinition.max_value) : 'auto'
-                  ]}
+                  domain={yAxisDomain}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 {!isMobile && <Legend />}
@@ -863,7 +883,7 @@ const MeasureHistory = ({ patientId }) => {
                     strokeWidth={isMobile ? 1 : 2}
                     strokeDasharray="5 5"
                     dot={false}
-                    name="MA 7-day"
+                    name={t('measures.chart.ma7Long', 'Moyenne Mobile 7 jours')}
                   />
                 )}
                 {/* Moving Average 30 */}
@@ -875,7 +895,7 @@ const MeasureHistory = ({ patientId }) => {
                     strokeWidth={isMobile ? 1 : 2}
                     strokeDasharray="5 5"
                     dot={false}
-                    name="MA 30-day"
+                    name={t('measures.chart.ma30Long', 'Moyenne Mobile 30 jours')}
                   />
                 )}
                 {/* Moving Average 90 */}
@@ -887,7 +907,7 @@ const MeasureHistory = ({ patientId }) => {
                     strokeWidth={isMobile ? 1 : 2}
                     strokeDasharray="5 5"
                     dot={false}
-                    name="MA 90-day"
+                    name={t('measures.chart.ma90Long', 'Moyenne Mobile 90 jours')}
                   />
                 )}
                 {/* Trend Line */}
@@ -899,7 +919,7 @@ const MeasureHistory = ({ patientId }) => {
                     strokeWidth={isMobile ? 1 : 2}
                     strokeDasharray="3 3"
                     dot={false}
-                    name="Trend Line"
+                    name={t('measures.chart.trendLineLong', 'Ligne de Tendance')}
                   />
                 )}
                 {/* Annotation Markers (Phase 3) */}
