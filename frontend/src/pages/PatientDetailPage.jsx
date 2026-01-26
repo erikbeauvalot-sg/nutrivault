@@ -492,7 +492,7 @@ const PatientDetailPage = () => {
               </div>
             </div>
 
-            <div className="patient-detail-actions d-flex gap-2">
+            <div className="patient-detail-actions d-flex gap-2 flex-wrap">
               <Button
                 variant="success"
                 onClick={handleAddVisit}
@@ -553,7 +553,7 @@ const PatientDetailPage = () => {
 
         {/* Health Score */}
         <Row className="mb-3">
-          <Col md={6} lg={4}>
+          <Col xs={12} md={6} lg={4}>
             <PatientHealthScore patientId={id} />
           </Col>
         </Row>
@@ -563,7 +563,7 @@ const PatientDetailPage = () => {
           <Card.Body>
             {/* Search Bar for Custom Fields */}
             <Row className="mb-3">
-              <Col md={6}>
+              <Col xs={12} md={6}>
                 <InputGroup>
                   <InputGroup.Text>🔍</InputGroup.Text>
                   <Form.Control
@@ -607,7 +607,7 @@ const PatientDetailPage = () => {
                   </Card.Header>
                   <Card.Body>
                     <Row>
-                      <Col md={6}>
+                      <Col xs={12} md={6}>
                         <Row className="mb-2">
                           <Col sm={5}><strong>First Name:</strong></Col>
                           <Col sm={7}>{patient.first_name}</Col>
@@ -617,7 +617,7 @@ const PatientDetailPage = () => {
                           <Col sm={7}>{patient.last_name}</Col>
                         </Row>
                       </Col>
-                      <Col md={6}>
+                      <Col xs={12} md={6}>
                         <Row className="mb-2">
                           <Col sm={5}><strong>Email:</strong></Col>
                           <Col sm={7}>{patient.email || '-'}</Col>
@@ -679,7 +679,7 @@ const PatientDetailPage = () => {
                         <Card.Body>
                           <Row>
                             {basicInfoFields.map((field) => (
-                              <Col md={6} key={field.definition_id}>
+                              <Col xs={12} md={6} key={field.definition_id}>
                                 <CustomFieldDisplay
                                   fieldDefinition={field}
                                   value={fieldValues[field.definition_id]}
@@ -743,7 +743,7 @@ const PatientDetailPage = () => {
                     ) : (
                       <Row>
                         {category.fields.map(field => (
-                          <Col key={field.definition_id} md={6}>
+                          <Col key={field.definition_id} xs={12} md={6}>
                             <CustomFieldDisplay
                               fieldDefinition={field}
                               value={fieldValues[field.definition_id]}
@@ -798,7 +798,7 @@ const PatientDetailPage = () => {
                                     </Badge>
                                   </td>
                                   <td onClick={(e) => e.stopPropagation()}>
-                                    <div className="d-flex gap-1">
+                                    <div className="d-flex gap-1 flex-wrap">
                                       {canEditVisits && (
                                         <Button
                                           variant="outline-secondary"
@@ -860,7 +860,7 @@ const PatientDetailPage = () => {
                               </div>
 
                               <div
-                                className="visit-card-actions"
+                                className="visit-card-actions d-flex gap-2 flex-wrap"
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <Button
@@ -1025,7 +1025,7 @@ const PatientDetailPage = () => {
                     </Card.Header>
                     <Card.Body>
                       <Row>
-                        <Col md={6}>
+                        <Col xs={12} md={6}>
                           <Row>
                             <Col sm={5}><strong>{t('patients.assignedDietitian', 'Diététicien assigné')}:</strong></Col>
                             <Col sm={7}>
@@ -1043,7 +1043,7 @@ const PatientDetailPage = () => {
                             <Col sm={7}>{formatDateTime(patient.updated_at)}</Col>
                           </Row>
                         </Col>
-                        <Col md={6}>
+                        <Col xs={12} md={6} className="mt-3 mt-md-0">
                           <Row>
                             <Col sm={4}><strong>{t('patients.notes', 'Notes')}:</strong></Col>
                             <Col sm={8}>
