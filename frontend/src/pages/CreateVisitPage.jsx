@@ -514,7 +514,7 @@ const CreateVisitPage = () => {
                 {/* Visit Information Tab */}
                 <Tab eventKey="visit" title={`📅 ${t('visits.visitInformationTab')}`}>
                   <Row>
-                    <Col md={6}>
+                    <Col xs={12} md={6}>
                       <Card className="mb-3">
                         <Card.Header className="bg-primary text-white">
                           <h6 className="mb-0">{t('visits.basicDetails')}</h6>
@@ -561,45 +561,48 @@ const CreateVisitPage = () => {
 
                           <Form.Group className="mb-3">
                             <Form.Label>{t('visits.visitDateTime')} *</Form.Label>
-                            <div className="d-flex gap-2 align-items-center">
+                            <div className="d-flex gap-2 align-items-center flex-wrap">
                               <Form.Control
                                 type="date"
                                 value={extractDateTimeParts(formData.visit_date).date}
                                 onChange={(e) => handleDateTimeChange('visit_date', 'date', e.target.value)}
                                 required
-                                style={{ flex: 2 }}
+                                className="flex-grow-1"
+                                style={{ minWidth: '140px' }}
                               />
-                              <Form.Select
-                                value={extractDateTimeParts(formData.visit_date).hour}
-                                onChange={(e) => handleDateTimeChange('visit_date', 'hour', e.target.value)}
-                                required
-                                style={{ flex: 1 }}
-                              >
-                                {Array.from({ length: 24 }, (_, i) => (
-                                  <option key={i} value={String(i).padStart(2, '0')}>
-                                    {String(i).padStart(2, '0')}h
-                                  </option>
-                                ))}
-                              </Form.Select>
-                              <Form.Select
-                                value={extractDateTimeParts(formData.visit_date).minute}
-                                onChange={(e) => handleDateTimeChange('visit_date', 'minute', e.target.value)}
-                                required
-                                style={{ flex: 1 }}
-                              >
-                                <option value="00">00</option>
-                                <option value="15">15</option>
-                                <option value="30">30</option>
-                                <option value="45">45</option>
-                              </Form.Select>
-                              <Button
-                                variant="outline-secondary"
-                                size="sm"
-                                onClick={setToNow}
-                                title={t('visits.setToNow', 'Set to current time (Paris)')}
-                              >
-                                🕐
-                              </Button>
+                              <div className="d-flex gap-2 align-items-center">
+                                <Form.Select
+                                  value={extractDateTimeParts(formData.visit_date).hour}
+                                  onChange={(e) => handleDateTimeChange('visit_date', 'hour', e.target.value)}
+                                  required
+                                  style={{ width: '75px' }}
+                                >
+                                  {Array.from({ length: 24 }, (_, i) => (
+                                    <option key={i} value={String(i).padStart(2, '0')}>
+                                      {String(i).padStart(2, '0')}h
+                                    </option>
+                                  ))}
+                                </Form.Select>
+                                <Form.Select
+                                  value={extractDateTimeParts(formData.visit_date).minute}
+                                  onChange={(e) => handleDateTimeChange('visit_date', 'minute', e.target.value)}
+                                  required
+                                  style={{ width: '65px' }}
+                                >
+                                  <option value="00">00</option>
+                                  <option value="15">15</option>
+                                  <option value="30">30</option>
+                                  <option value="45">45</option>
+                                </Form.Select>
+                                <Button
+                                  variant="outline-secondary"
+                                  size="sm"
+                                  onClick={setToNow}
+                                  title={t('visits.setToNow', 'Set to current time (Paris)')}
+                                >
+                                  🕐
+                                </Button>
+                              </div>
                             </div>
                           </Form.Group>
 
@@ -635,7 +638,7 @@ const CreateVisitPage = () => {
                       </Card>
                     </Col>
 
-                    <Col md={6}>
+                    <Col xs={12} md={6}>
                       <Card className="mb-3">
                         <Card.Header className="bg-info text-white">
                           <h6 className="mb-0">{t('visits.options')}</h6>
@@ -656,36 +659,39 @@ const CreateVisitPage = () => {
 
                           <Form.Group className="mb-3">
                             <Form.Label>{t('visits.nextVisitDate')}</Form.Label>
-                            <div className="d-flex gap-2">
+                            <div className="d-flex gap-2 flex-wrap">
                               <Form.Control
                                 type="date"
                                 value={extractDateTimeParts(formData.next_visit_date).date}
                                 onChange={(e) => handleDateTimeChange('next_visit_date', 'date', e.target.value)}
-                                style={{ flex: 2 }}
+                                className="flex-grow-1"
+                                style={{ minWidth: '140px' }}
                               />
-                              <Form.Select
-                                value={extractDateTimeParts(formData.next_visit_date).hour}
-                                onChange={(e) => handleDateTimeChange('next_visit_date', 'hour', e.target.value)}
-                                style={{ flex: 1 }}
-                                disabled={!extractDateTimeParts(formData.next_visit_date).date}
-                              >
-                                {Array.from({ length: 24 }, (_, i) => (
-                                  <option key={i} value={String(i).padStart(2, '0')}>
-                                    {String(i).padStart(2, '0')}h
-                                  </option>
-                                ))}
-                              </Form.Select>
-                              <Form.Select
-                                value={extractDateTimeParts(formData.next_visit_date).minute}
-                                onChange={(e) => handleDateTimeChange('next_visit_date', 'minute', e.target.value)}
-                                style={{ flex: 1 }}
-                                disabled={!extractDateTimeParts(formData.next_visit_date).date}
-                              >
-                                <option value="00">00</option>
-                                <option value="15">15</option>
-                                <option value="30">30</option>
-                                <option value="45">45</option>
-                              </Form.Select>
+                              <div className="d-flex gap-2">
+                                <Form.Select
+                                  value={extractDateTimeParts(formData.next_visit_date).hour}
+                                  onChange={(e) => handleDateTimeChange('next_visit_date', 'hour', e.target.value)}
+                                  style={{ width: '75px' }}
+                                  disabled={!extractDateTimeParts(formData.next_visit_date).date}
+                                >
+                                  {Array.from({ length: 24 }, (_, i) => (
+                                    <option key={i} value={String(i).padStart(2, '0')}>
+                                      {String(i).padStart(2, '0')}h
+                                    </option>
+                                  ))}
+                                </Form.Select>
+                                <Form.Select
+                                  value={extractDateTimeParts(formData.next_visit_date).minute}
+                                  onChange={(e) => handleDateTimeChange('next_visit_date', 'minute', e.target.value)}
+                                  style={{ width: '65px' }}
+                                  disabled={!extractDateTimeParts(formData.next_visit_date).date}
+                                >
+                                  <option value="00">00</option>
+                                  <option value="15">15</option>
+                                  <option value="30">30</option>
+                                  <option value="45">45</option>
+                                </Form.Select>
+                              </div>
                             </div>
                             <Form.Text className="text-muted">
                               {t('visits.scheduleFollowUp')}
@@ -721,7 +727,7 @@ const CreateVisitPage = () => {
                     {category.fields && category.fields.length > 0 ? (
                       <Row>
                         {category.fields.map(field => (
-                          <Col key={field.definition_id} md={6}>
+                          <Col key={field.definition_id} xs={12} md={6}>
                             <CustomFieldInput
                               fieldDefinition={field}
                               value={fieldValues[field.definition_id]}
@@ -751,7 +757,7 @@ const CreateVisitPage = () => {
                         <Card.Body>
                           <Row>
                             {groupedMeasures[category].map(definition => (
-                              <Col key={definition.id} md={6} lg={4}>
+                              <Col key={definition.id} xs={12} sm={6} lg={4}>
                                 <Form.Group className="mb-3">
                                   <Form.Label>
                                     {getTranslatedMeasureName(definition)}
@@ -807,7 +813,7 @@ const CreateVisitPage = () => {
               </Tabs>
 
               {/* Action Buttons */}
-              <div className="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+              <div className="d-flex justify-content-between align-items-center mt-4 pt-3 border-top flex-wrap gap-2">
                 <Button variant="outline-secondary" onClick={handleBack} disabled={loading}>
                   Cancel
                 </Button>
