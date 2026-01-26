@@ -20,9 +20,10 @@
 
 /* Actions container for consistent spacing */
 .action-buttons {
-  display: flex;
+  display: inline-flex;
   gap: 0.25rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 /* Clickable row styles for tables */
