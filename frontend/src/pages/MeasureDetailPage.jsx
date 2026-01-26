@@ -2,26 +2,45 @@
  * MeasureDetailPage Component
  * DEV ONLY - Raw data dump for a measure definition
  * Shows all recorded patient measures in table format
+ * Admin can edit/delete individual measures
  */
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Card, Table, Alert, Spinner, Badge, Button, Form } from 'react-bootstrap';
+import { Container, Card, Table, Alert, Spinner, Badge, Button, Form, Modal } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
+import { FaEdit, FaTrash } from 'react-icons/fa';
 import Layout from '../components/layout/Layout';
 import api from '../services/api';
 import { formatDateTime } from '../utils/dateUtils';
+import { updatePatientMeasure, deletePatientMeasure } from '../services/measureService';
+import { useAuth } from '../contexts/AuthContext';
 
 const MeasureDetailPage = () => {
   const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [measureDefinition, setMeasureDefinition] = useState(null);
   const [measures, setMeasures] = useState([]);
   const [displayLimit, setDisplayLimit] = useState(20);
+
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingMeasure, setEditingMeasure] = useState(null);
+  const [editValue, setEditValue] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingMeasure, setDeletingMeasure] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const isAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
     fetchData();
@@ -67,6 +86,85 @@ const MeasureDetailPage = () => {
     return '—';
   };
 
+  const getRawMeasureValue = (measure) => {
+    if (measure.numeric_value !== null && measure.numeric_value !== undefined) {
+      return measure.numeric_value;
+    }
+    if (measure.text_value !== null && measure.text_value !== undefined) {
+      return measure.text_value;
+    }
+    if (measure.boolean_value !== null && measure.boolean_value !== undefined) {
+      return measure.boolean_value;
+    }
+    return '';
+  };
+
+  // Edit handlers
+  const handleEditClick = (measure) => {
+    setEditingMeasure(measure);
+    setEditValue(getRawMeasureValue(measure));
+    setEditNotes(measure.notes || '');
+    setShowEditModal(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!editingMeasure || !measureDefinition) return;
+
+    setSaving(true);
+    try {
+      const payload = { notes: editNotes };
+
+      // Set the appropriate value field based on measure type
+      switch (measureDefinition.measure_type) {
+        case 'numeric':
+        case 'calculated':
+          payload.numeric_value = parseFloat(editValue);
+          break;
+        case 'text':
+          payload.text_value = editValue;
+          break;
+        case 'boolean':
+          payload.boolean_value = editValue === 'true' || editValue === true;
+          break;
+        default:
+          payload.numeric_value = parseFloat(editValue);
+      }
+
+      await updatePatientMeasure(editingMeasure.id, payload);
+      setShowEditModal(false);
+      setEditingMeasure(null);
+      fetchData(); // Refresh data
+    } catch (err) {
+      console.error('Error updating measure:', err);
+      setError(err.response?.data?.error || 'Failed to update measure');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Delete handlers
+  const handleDeleteClick = (measure) => {
+    setDeletingMeasure(measure);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingMeasure) return;
+
+    setDeleting(true);
+    try {
+      await deletePatientMeasure(deletingMeasure.id);
+      setShowDeleteModal(false);
+      setDeletingMeasure(null);
+      fetchData(); // Refresh data
+    } catch (err) {
+      console.error('Error deleting measure:', err);
+      setError(err.response?.data?.error || 'Failed to delete measure');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -80,7 +178,7 @@ const MeasureDetailPage = () => {
     );
   }
 
-  if (error) {
+  if (error && !measures.length) {
     return (
       <Layout>
         <Container fluid className="py-4">
@@ -99,6 +197,13 @@ const MeasureDetailPage = () => {
   return (
     <Layout>
       <Container fluid className="py-4">
+        {/* Error alert */}
+        {error && (
+          <Alert variant="danger" dismissible onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+
         {/* Header */}
         <div className="mb-4">
           <Button
@@ -112,7 +217,7 @@ const MeasureDetailPage = () => {
           <div className="d-flex justify-content-between align-items-start">
             <div>
               <h1 className="mb-1">
-                🔍 {measureDefinition?.display_name || 'Measure Detail'}
+                {measureDefinition?.display_name || 'Measure Detail'}
               </h1>
               <p className="text-muted mb-0">
                 Raw data dump - Development only
@@ -128,7 +233,7 @@ const MeasureDetailPage = () => {
         {measureDefinition && (
           <Card className="mb-4">
             <Card.Header className="bg-primary text-white">
-              <h5 className="mb-0">📊 Measure Definition</h5>
+              <h5 className="mb-0">Measure Definition</h5>
             </Card.Header>
             <Card.Body>
               <div className="row">
@@ -157,7 +262,7 @@ const MeasureDetailPage = () => {
         {/* Raw Data Table */}
         <Card>
           <Card.Header className="bg-dark text-white d-flex justify-content-between align-items-center">
-            <h5 className="mb-0">💾 Raw Database Dump</h5>
+            <h5 className="mb-0">Raw Database Dump</h5>
             <div className="d-flex align-items-center gap-3">
               <Form.Group className="mb-0 d-flex align-items-center gap-2">
                 <Form.Label className="mb-0 text-white">Show:</Form.Label>
@@ -187,6 +292,7 @@ const MeasureDetailPage = () => {
                 <Table striped bordered hover size="sm" className="mb-0">
                   <thead className="table-secondary">
                     <tr>
+                      {isAdmin && <th style={{ width: '80px' }}>Actions</th>}
                       <th>ID</th>
                       <th>Patient ID</th>
                       <th>Patient Name</th>
@@ -206,6 +312,28 @@ const MeasureDetailPage = () => {
                   <tbody>
                     {(displayLimit === 'all' ? measures : measures.slice(0, displayLimit)).map(measure => (
                       <tr key={measure.id}>
+                        {isAdmin && (
+                          <td>
+                            <div className="d-flex gap-1">
+                              <Button
+                                variant="outline-primary"
+                                size="sm"
+                                title={t('actions.edit', 'Edit')}
+                                onClick={() => handleEditClick(measure)}
+                              >
+                                <FaEdit />
+                              </Button>
+                              <Button
+                                variant="outline-danger"
+                                size="sm"
+                                title={t('actions.delete', 'Delete')}
+                                onClick={() => handleDeleteClick(measure)}
+                              >
+                                <FaTrash />
+                              </Button>
+                            </div>
+                          </td>
+                        )}
                         <td><code style={{ fontSize: '0.8rem' }}>{measure.id}</code></td>
                         <td><code style={{ fontSize: '0.8rem' }}>{measure.patient_id}</code></td>
                         <td>
@@ -250,7 +378,7 @@ const MeasureDetailPage = () => {
         {/* Raw JSON Dump (Optional - for debugging) */}
         <Card className="mt-3">
           <Card.Header className="bg-secondary text-white">
-            <h6 className="mb-0">🔧 Raw JSON (First 3 records)</h6>
+            <h6 className="mb-0">Raw JSON (First 3 records)</h6>
           </Card.Header>
           <Card.Body>
             <pre style={{
@@ -265,6 +393,100 @@ const MeasureDetailPage = () => {
             </pre>
           </Card.Body>
         </Card>
+
+        {/* Edit Modal */}
+        <Modal show={showEditModal} onHide={() => setShowEditModal(false)}>
+          <Modal.Header closeButton>
+            <Modal.Title>{t('measures.editMeasure', 'Edit Measure')}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {editingMeasure && measureDefinition && (
+              <>
+                <Form.Group className="mb-3">
+                  <Form.Label>
+                    {t('measures.value', 'Value')}
+                    {measureDefinition.unit && ` (${measureDefinition.unit})`}
+                  </Form.Label>
+                  {measureDefinition.measure_type === 'boolean' ? (
+                    <Form.Select
+                      value={editValue === true || editValue === 'true' ? 'true' : 'false'}
+                      onChange={(e) => setEditValue(e.target.value)}
+                    >
+                      <option value="true">{t('common.yes', 'Yes')}</option>
+                      <option value="false">{t('common.no', 'No')}</option>
+                    </Form.Select>
+                  ) : measureDefinition.measure_type === 'text' ? (
+                    <Form.Control
+                      as="textarea"
+                      rows={3}
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                    />
+                  ) : (
+                    <Form.Control
+                      type="number"
+                      step="any"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                    />
+                  )}
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>{t('measures.notes', 'Notes')}</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={2}
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                    placeholder={t('measures.notesPlaceholder', 'Optional notes...')}
+                  />
+                </Form.Group>
+                <div className="text-muted small">
+                  <strong>Patient:</strong> {editingMeasure.patient ? `${editingMeasure.patient.first_name} ${editingMeasure.patient.last_name}` : editingMeasure.patient_id}<br />
+                  <strong>Measured At:</strong> {formatDateTime(editingMeasure.measured_at)}
+                </div>
+              </>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+              {t('common.cancel', 'Cancel')}
+            </Button>
+            <Button variant="primary" onClick={handleEditSave} disabled={saving}>
+              {saving ? <Spinner animation="border" size="sm" /> : t('common.save', 'Save')}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
+          <Modal.Header closeButton>
+            <Modal.Title>{t('measures.deleteMeasure', 'Delete Measure')}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {deletingMeasure && (
+              <>
+                <p>{t('measures.confirmDelete', 'Are you sure you want to delete this measure?')}</p>
+                <div className="bg-light p-3 rounded">
+                  <strong>{t('measures.value', 'Value')}:</strong> {getMeasureValue(deletingMeasure)}<br />
+                  <strong>Patient:</strong> {deletingMeasure.patient ? `${deletingMeasure.patient.first_name} ${deletingMeasure.patient.last_name}` : deletingMeasure.patient_id}<br />
+                  <strong>Measured At:</strong> {formatDateTime(deletingMeasure.measured_at)}
+                </div>
+                <Alert variant="warning" className="mt-3 mb-0">
+                  {t('common.actionCannotBeUndone', 'This action cannot be undone.')}
+                </Alert>
+              </>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
+              {t('common.cancel', 'Cancel')}
+            </Button>
+            <Button variant="danger" onClick={handleDeleteConfirm} disabled={deleting}>
+              {deleting ? <Spinner animation="border" size="sm" /> : t('common.delete', 'Delete')}
+            </Button>
+          </Modal.Footer>
+        </Modal>
       </Container>
     </Layout>
   );

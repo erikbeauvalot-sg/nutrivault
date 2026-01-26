@@ -393,7 +393,7 @@ async function updateVisit(user, visitId, updateData, requestMetadata = {}) {
     // Clinical fields (chief_complaint, assessment, recommendations, notes) removed
     // Now managed via custom fields
     const allowedFields = [
-      'dietitian_id', 'visit_date', 'visit_type', 'status', 'duration_minutes', 'next_visit_date'
+      'dietitian_id', 'visit_date', 'visit_type', 'status', 'duration_minutes', 'next_visit_date', 'visit_summary'
     ];
 
     allowedFields.forEach(field => {

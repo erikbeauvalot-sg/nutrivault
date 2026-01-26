@@ -8,6 +8,7 @@
 
 const db = require('../../../models');
 const VisitCustomFieldValue = db.VisitCustomFieldValue;
+const PatientCustomFieldValue = db.PatientCustomFieldValue;
 const CustomFieldDefinition = db.CustomFieldDefinition;
 const CustomFieldCategory = db.CustomFieldCategory;
 const Visit = db.Visit;
@@ -16,6 +17,16 @@ const auditService = require('./audit.service');
 const translationService = require('./customFieldTranslation.service');
 const formulaEngine = require('./formulaEngine.service');
 const { Op } = db.Sequelize;
+
+/**
+ * Check if a category's data should be stored at patient level (shared)
+ * Categories with entity_types including 'patient' store data at patient level
+ * Categories with ONLY 'visit' store data at visit level
+ */
+function isPatientLevelCategory(category) {
+  const entityTypes = category.entity_types || ['patient'];
+  return entityTypes.includes('patient');
+}
 
 /**
  * Check if user has access to visit
@@ -67,6 +78,13 @@ async function getVisitCustomFields(user, visitId, language = 'fr', requestMetad
       throw new Error('Access denied to this visit');
     }
 
+    // Get the visit to access patient_id for shared fields
+    const visit = await Visit.findByPk(visitId);
+    if (!visit) {
+      throw new Error('Visit not found');
+    }
+    const patientId = visit.patient_id;
+
     // Get all active categories and definitions where entity_types includes 'visit'
     const categories = await CustomFieldCategory.findAll({
       where: {
@@ -90,9 +108,24 @@ async function getVisitCustomFields(user, visitId, language = 'fr', requestMetad
       return entityTypes.includes('visit');
     });
 
-    // Get visit's custom field values
-    const visitValues = await VisitCustomFieldValue.findAll({
-      where: { visit_id: visitId },
+    // Separate categories into patient-level (shared) and visit-level (specific)
+    const patientLevelCategories = visitCategories.filter(c => isPatientLevelCategory(c));
+    const visitLevelCategories = visitCategories.filter(c => !isPatientLevelCategory(c));
+
+    // Get definition IDs for each level
+    const patientLevelDefIds = patientLevelCategories.flatMap(c =>
+      (c.field_definitions || []).map(d => d.id)
+    );
+    const visitLevelDefIds = visitLevelCategories.flatMap(c =>
+      (c.field_definitions || []).map(d => d.id)
+    );
+
+    // Get patient-level values (shared data from patient_custom_field_values)
+    const patientValues = patientLevelDefIds.length > 0 ? await PatientCustomFieldValue.findAll({
+      where: {
+        patient_id: patientId,
+        field_definition_id: { [Op.in]: patientLevelDefIds }
+      },
       include: [
         {
           model: CustomFieldDefinition,
@@ -101,10 +134,29 @@ async function getVisitCustomFields(user, visitId, language = 'fr', requestMetad
           required: true
         }
       ]
-    });
+    }) : [];
 
-    // Map values to definitions
+    // Get visit-level values (visit-specific data from visit_custom_field_values)
+    const visitValues = visitLevelDefIds.length > 0 ? await VisitCustomFieldValue.findAll({
+      where: {
+        visit_id: visitId,
+        field_definition_id: { [Op.in]: visitLevelDefIds }
+      },
+      include: [
+        {
+          model: CustomFieldDefinition,
+          as: 'field_definition',
+          where: { is_active: true },
+          required: true
+        }
+      ]
+    }) : [];
+
+    // Map values to definitions (combining both sources)
     const valuesMap = {};
+    patientValues.forEach(value => {
+      valuesMap[value.field_definition_id] = value;
+    });
     visitValues.forEach(value => {
       valuesMap[value.field_definition_id] = value;
     });
@@ -330,10 +382,23 @@ async function setVisitCustomField(user, visitId, definitionId, value, requestMe
       throw new Error('Access denied to this visit');
     }
 
-    // Get field definition
-    const definition = await CustomFieldDefinition.findByPk(definitionId);
+    // Get field definition with its category
+    const definition = await CustomFieldDefinition.findByPk(definitionId, {
+      include: [{
+        model: CustomFieldCategory,
+        as: 'category'
+      }]
+    });
     if (!definition || !definition.is_active) {
       throw new Error('Field definition not found or inactive');
+    }
+
+    // Get visit to access patient_id
+    const visit = await Visit.findByPk(visitId, {
+      include: [{ model: Patient, as: 'patient' }]
+    });
+    if (!visit) {
+      throw new Error('Visit not found');
     }
 
     // Validate value
@@ -342,23 +407,51 @@ async function setVisitCustomField(user, visitId, definitionId, value, requestMe
       throw new Error(validation.error);
     }
 
-    // Find or create visit custom field value
-    let fieldValue = await VisitCustomFieldValue.findOne({
-      where: {
-        visit_id: visitId,
-        field_definition_id: definitionId
-      }
-    });
+    // Determine if this is a patient-level (shared) or visit-level field
+    const isPatientLevel = definition.category && isPatientLevelCategory(definition.category);
 
-    const isNew = !fieldValue;
-    const beforeData = fieldValue ? fieldValue.toJSON() : null;
+    let fieldValue;
+    let isNew;
+    let beforeData;
 
-    if (isNew) {
-      fieldValue = await VisitCustomFieldValue.create({
-        visit_id: visitId,
-        field_definition_id: definitionId,
-        updated_by: user.id
+    if (isPatientLevel) {
+      // Store at patient level (shared between patient view and visit view)
+      fieldValue = await PatientCustomFieldValue.findOne({
+        where: {
+          patient_id: visit.patient_id,
+          field_definition_id: definitionId
+        }
       });
+
+      isNew = !fieldValue;
+      beforeData = fieldValue ? fieldValue.toJSON() : null;
+
+      if (isNew) {
+        fieldValue = await PatientCustomFieldValue.create({
+          patient_id: visit.patient_id,
+          field_definition_id: definitionId,
+          updated_by: user.id
+        });
+      }
+    } else {
+      // Store at visit level (visit-specific)
+      fieldValue = await VisitCustomFieldValue.findOne({
+        where: {
+          visit_id: visitId,
+          field_definition_id: definitionId
+        }
+      });
+
+      isNew = !fieldValue;
+      beforeData = fieldValue ? fieldValue.toJSON() : null;
+
+      if (isNew) {
+        fieldValue = await VisitCustomFieldValue.create({
+          visit_id: visitId,
+          field_definition_id: definitionId,
+          updated_by: user.id
+        });
+      }
     }
 
     // Set the value based on field type
@@ -366,29 +459,31 @@ async function setVisitCustomField(user, visitId, definitionId, value, requestMe
     fieldValue.updated_by = user.id;
     await fieldValue.save();
 
-    // Get visit info for audit log
-    const visit = await Visit.findByPk(visitId, {
-      include: [{ model: Patient, as: 'patient' }]
-    });
-
     // Audit log
     await auditService.log({
       user_id: user.id,
       username: user.username,
       action: isNew ? 'CREATE' : 'UPDATE',
-      resource_type: 'visit_custom_field_value',
+      resource_type: isPatientLevel ? 'patient_custom_field_value' : 'visit_custom_field_value',
       resource_id: fieldValue.id,
       changes: {
         before: beforeData,
         after: fieldValue.toJSON()
       },
-      details: visit ? `Visit for patient: ${visit.patient?.first_name} ${visit.patient?.last_name}, Field: ${definition.field_label}` : undefined,
+      details: visit ? `Visit for patient: ${visit.patient?.first_name} ${visit.patient?.last_name}, Field: ${definition.field_label}${isPatientLevel ? ' (shared)' : ''}` : undefined,
       ...requestMetadata
     });
 
     // Auto-recalculate dependent calculated fields (only if this is not a calculated field)
     if (!definition.is_calculated) {
-      await recalculateDependentFields(visitId, definition.field_name, user);
+      if (isPatientLevel) {
+        // Recalculate at patient level
+        const patientCustomFieldService = require('./patientCustomField.service');
+        // Just log - the patient service will handle recalculation
+        console.log(`[VISIT-CF] Updated shared field ${definition.field_name} for patient ${visit.patient_id}`);
+      } else {
+        await recalculateDependentFields(visitId, definition.field_name, user);
+      }
     }
 
     return fieldValue;
@@ -415,14 +510,28 @@ async function bulkUpdateVisitFields(user, visitId, fields, requestMetadata = {}
       throw new Error('Access denied to this visit');
     }
 
+    // Get visit to access patient_id
+    const visit = await Visit.findByPk(visitId, {
+      include: [{ model: Patient, as: 'patient' }]
+    });
+    if (!visit) {
+      throw new Error('Visit not found');
+    }
+
     const transaction = await db.sequelize.transaction();
 
     try {
       const results = [];
 
       for (const field of fields) {
-        // Get field definition
-        const definition = await CustomFieldDefinition.findByPk(field.definition_id, { transaction });
+        // Get field definition with its category
+        const definition = await CustomFieldDefinition.findByPk(field.definition_id, {
+          include: [{
+            model: CustomFieldCategory,
+            as: 'category'
+          }],
+          transaction
+        });
         if (!definition || !definition.is_active) {
           throw new Error(`Field definition ${field.definition_id} not found or inactive`);
         }
@@ -433,23 +542,50 @@ async function bulkUpdateVisitFields(user, visitId, fields, requestMetadata = {}
           throw new Error(`${definition.field_label}: ${validation.error}`);
         }
 
-        // Find or create visit custom field value
-        let fieldValue = await VisitCustomFieldValue.findOne({
-          where: {
-            visit_id: visitId,
-            field_definition_id: field.definition_id
-          },
-          transaction
-        });
+        // Determine if this is a patient-level (shared) or visit-level field
+        const isPatientLevel = definition.category && isPatientLevelCategory(definition.category);
 
-        const isNew = !fieldValue;
+        let fieldValue;
+        let isNew;
 
-        if (isNew) {
-          fieldValue = await VisitCustomFieldValue.create({
-            visit_id: visitId,
-            field_definition_id: field.definition_id,
-            updated_by: user.id
-          }, { transaction });
+        if (isPatientLevel) {
+          // Store at patient level (shared)
+          fieldValue = await PatientCustomFieldValue.findOne({
+            where: {
+              patient_id: visit.patient_id,
+              field_definition_id: field.definition_id
+            },
+            transaction
+          });
+
+          isNew = !fieldValue;
+
+          if (isNew) {
+            fieldValue = await PatientCustomFieldValue.create({
+              patient_id: visit.patient_id,
+              field_definition_id: field.definition_id,
+              updated_by: user.id
+            }, { transaction });
+          }
+        } else {
+          // Store at visit level (visit-specific)
+          fieldValue = await VisitCustomFieldValue.findOne({
+            where: {
+              visit_id: visitId,
+              field_definition_id: field.definition_id
+            },
+            transaction
+          });
+
+          isNew = !fieldValue;
+
+          if (isNew) {
+            fieldValue = await VisitCustomFieldValue.create({
+              visit_id: visitId,
+              field_definition_id: field.definition_id,
+              updated_by: user.id
+            }, { transaction });
+          }
         }
 
         // Set the value based on field type
@@ -460,16 +596,12 @@ async function bulkUpdateVisitFields(user, visitId, fields, requestMetadata = {}
         results.push({
           definition_id: field.definition_id,
           value_id: fieldValue.id,
-          status: isNew ? 'created' : 'updated'
+          status: isNew ? 'created' : 'updated',
+          level: isPatientLevel ? 'patient' : 'visit'
         });
       }
 
       await transaction.commit();
-
-      // Get visit info for audit log
-      const visit = await Visit.findByPk(visitId, {
-        include: [{ model: Patient, as: 'patient' }]
-      });
 
       // Audit log
       await auditService.log({

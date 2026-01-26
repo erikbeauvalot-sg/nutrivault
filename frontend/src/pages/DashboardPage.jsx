@@ -289,7 +289,7 @@ const DashboardPage = () => {
                           <ListGroup.Item
                             key={visit.id}
                             action
-                            onClick={() => navigate(`/visits/${visit.id}`)}
+                            onClick={() => navigate(`/visits/${visit.id}/edit`)}
                             className="d-flex justify-content-between align-items-start"
                           >
                             <div className="flex-grow-1">

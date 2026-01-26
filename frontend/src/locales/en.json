@@ -44,7 +44,8 @@
     "preview": "Preview",
     "duplicate": "Duplicate",
     "translations": "Translations",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "actionCannotBeUndone": "This action cannot be undone."
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -226,6 +227,7 @@
     "patientNotFound": "Patient Not Found",
     "patientNotFoundMessage": "The requested patient could not be found.",
     "backToPatients": "Back to Patients",
+    "saveAndExit": "Save and Exit",
     "createNewPatient": "Create New Patient",
     "enterPatientInfo": "Enter patient information in the tabs below",
     "personalInformationTab": "Personal Information",
@@ -479,7 +481,17 @@
     "invoicesTab": "Invoices",
     "invoicesForVisit": "Invoices for this visit",
     "noInvoicesForVisit": "No invoices for this visit",
-    "noInvoicesHelp": "Use \"Finish & Invoice\" to generate an invoice for this visit."
+    "noInvoicesHelp": "Use \"Finish & Invoice\" to generate an invoice for this visit.",
+    "finishVisit": "Finish Visit",
+    "confirmFinishVisit": "Are you sure you want to finish this visit? This will mark it as completed and generate a summary.",
+    "failedToFinishVisit": "Failed to finish visit",
+    "visitSummaryTitle": "Visit Summary",
+    "completedAt": "Completed at",
+    "completedBy": "Completed by",
+    "customFieldChanges": "Custom Field Changes",
+    "measureChanges": "Measure Changes",
+    "removed": "removed",
+    "noChangesRecorded": "No changes recorded during this visit"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1159,6 +1171,7 @@
     "selectMeasure": "Select Measure",
     "measuredAt": "Measured At",
     "notes": "Notes",
+    "notesPlaceholder": "Optional notes...",
     "dateTime": "Date/Time",
     "measure": "Measure",
     "recordedBy": "Recorded By",

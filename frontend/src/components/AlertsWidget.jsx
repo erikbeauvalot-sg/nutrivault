@@ -8,7 +8,6 @@ import { Card, Badge, ListGroup, Spinner, Alert, Button, Collapse } from 'react-
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import alertsService from '../services/alertsService';
-import ActionButton from './ActionButton';
 
 const AlertsWidget = () => {
   const { t } = useTranslation();
@@ -160,7 +159,13 @@ const AlertsWidget = () => {
               <div>
                 <ListGroup variant="flush">
                   {alerts.overdue_invoices.slice(0, 5).map((alert, index) => (
-                    <ListGroup.Item key={index} className="d-flex justify-content-between align-items-start">
+                    <ListGroup.Item
+                      key={index}
+                      action
+                      onClick={() => handleAlertAction(alert)}
+                      className="d-flex justify-content-between align-items-start"
+                      style={{ cursor: 'pointer' }}
+                    >
                       <div className="flex-grow-1">
                         <div className="d-flex align-items-center gap-2 mb-1">
                           <span>{getSeverityIcon(alert.severity)}</span>
@@ -171,11 +176,6 @@ const AlertsWidget = () => {
                           {alert.message} • {alert.amount_due.toFixed(2)} €
                         </div>
                       </div>
-                      <ActionButton
-                        action="view"
-                        onClick={() => handleAlertAction(alert)}
-                        title={t('alerts.viewInvoice', 'View Invoice')}
-                      />
                     </ListGroup.Item>
                   ))}
                   {alerts.overdue_invoices.length > 5 && (
@@ -207,7 +207,13 @@ const AlertsWidget = () => {
               <div>
                 <ListGroup variant="flush">
                   {alerts.overdue_visits.slice(0, 5).map((alert, index) => (
-                    <ListGroup.Item key={index} className="d-flex justify-content-between align-items-start">
+                    <ListGroup.Item
+                      key={index}
+                      action
+                      onClick={() => handleAlertAction(alert)}
+                      className="d-flex justify-content-between align-items-start"
+                      style={{ cursor: 'pointer' }}
+                    >
                       <div className="flex-grow-1">
                         <div className="d-flex align-items-center gap-2 mb-1">
                           <span>{getSeverityIcon(alert.severity)}</span>
@@ -218,11 +224,6 @@ const AlertsWidget = () => {
                           {t('alerts.overdueBy', 'Overdue by')} {alert.overdue_text}
                         </div>
                       </div>
-                      <ActionButton
-                        action="edit"
-                        onClick={() => handleAlertAction(alert)}
-                        title={t('alerts.updateVisit', 'Update Visit')}
-                      />
                     </ListGroup.Item>
                   ))}
                   {alerts.overdue_visits.length > 5 && (
@@ -254,7 +255,13 @@ const AlertsWidget = () => {
               <div>
                 <ListGroup variant="flush">
                   {alerts.visits_without_notes.slice(0, 5).map((alert, index) => (
-                    <ListGroup.Item key={index} className="d-flex justify-content-between align-items-start">
+                    <ListGroup.Item
+                      key={index}
+                      action
+                      onClick={() => handleAlertAction(alert)}
+                      className="d-flex justify-content-between align-items-start"
+                      style={{ cursor: 'pointer' }}
+                    >
                       <div className="flex-grow-1">
                         <div className="d-flex align-items-center gap-2 mb-1">
                           <span>{getSeverityIcon(alert.severity)}</span>
@@ -266,11 +273,6 @@ const AlertsWidget = () => {
                         </div>
                         <div className="text-muted small">{alert.message}</div>
                       </div>
-                      <ActionButton
-                        action="add"
-                        onClick={() => handleAlertAction(alert)}
-                        title={t('alerts.addCustomFields', 'Add Data')}
-                      />
                     </ListGroup.Item>
                   ))}
                   {alerts.visits_without_notes.length > 5 && (
@@ -302,7 +304,13 @@ const AlertsWidget = () => {
               <div>
                 <ListGroup variant="flush">
                   {alerts.patients_followup.slice(0, 5).map((alert, index) => (
-                    <ListGroup.Item key={index} className="d-flex justify-content-between align-items-start">
+                    <ListGroup.Item
+                      key={index}
+                      action
+                      onClick={() => handleAlertAction(alert)}
+                      className="d-flex justify-content-between align-items-start"
+                      style={{ cursor: 'pointer' }}
+                    >
                       <div className="flex-grow-1">
                         <div className="d-flex align-items-center gap-2 mb-1">
                           <span>{getSeverityIcon(alert.severity)}</span>
@@ -310,11 +318,6 @@ const AlertsWidget = () => {
                         </div>
                         <div className="text-muted small">{alert.message}</div>
                       </div>
-                      <ActionButton
-                        action="schedule"
-                        onClick={() => handleAlertAction(alert)}
-                        title={t('alerts.scheduleVisit', 'Schedule Visit')}
-                      />
                     </ListGroup.Item>
                   ))}
                   {alerts.patients_followup.length > 5 && (

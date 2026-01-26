@@ -269,7 +269,11 @@ module.exports = (sequelize, DataTypes) => {
         if (!selectOptions || !Array.isArray(selectOptions)) {
           return { isValid: false, error: 'No options available for this field' };
         }
-        if (!selectOptions.includes(value)) {
+        // Support both simple string arrays and object arrays with value/label
+        const validValues = selectOptions.map(opt =>
+          typeof opt === 'object' && opt !== null ? opt.value : opt
+        );
+        if (!validValues.includes(value)) {
           return { isValid: false, error: 'Invalid option selected' };
         }
         break;

@@ -24,7 +24,9 @@ const EditPatientPage = () => {
   const [activeTab, setActiveTab] = useState('basic-info');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [exitAfterSave, setExitAfterSave] = useState(false);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
   const [dietitians, setDietitians] = useState([]);
   const [patient, setPatient] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -235,6 +237,7 @@ const EditPatientPage = () => {
 
     setSaving(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       // Update basic patient info - only send non-empty values
@@ -271,8 +274,15 @@ const EditPatientPage = () => {
         await customFieldService.updatePatientCustomFields(id, customFieldsData);
       }
 
-      // Navigate to the patient's detail page
-      navigate(`/patients/${id}`);
+      // Navigate based on which button was clicked
+      if (exitAfterSave) {
+        navigate('/patients');
+      } else {
+        // Stay on the page - show success message and refresh data
+        setSuccessMessage(t('patients.patientUpdated', 'Patient mis à jour avec succès'));
+        // Auto-hide success message after 3 seconds
+        setTimeout(() => setSuccessMessage(null), 3000);
+      }
     } catch (err) {
       setError(t('patients.failedToUpdate') + ': ' + (err.response?.data?.error || err.message));
       console.error('Error updating patient:', err);
@@ -348,6 +358,12 @@ const EditPatientPage = () => {
         {error && (
           <Alert variant="danger" dismissible onClose={() => setError(null)}>
             {error}
+          </Alert>
+        )}
+
+        {successMessage && (
+          <Alert variant="success" dismissible onClose={() => setSuccessMessage(null)}>
+            {successMessage}
           </Alert>
         )}
 
@@ -648,11 +664,26 @@ const EditPatientPage = () => {
               {/* Action Buttons */}
               <div className="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
                 <Button variant="outline-secondary" onClick={handleBack} disabled={saving}>
-                  Annuler
+                  {t('common.cancel', 'Annuler')}
                 </Button>
-                <Button variant="primary" type="submit" disabled={saving || loadingCustomFields}>
-                  {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
-                </Button>
+                <div className="d-flex gap-2">
+                  <Button
+                    variant="outline-primary"
+                    type="submit"
+                    disabled={saving || loadingCustomFields}
+                    onClick={() => setExitAfterSave(true)}
+                  >
+                    {saving && exitAfterSave ? t('common.saving', 'Enregistrement...') : t('patients.saveAndExit', 'Enregistrer et sortir')}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    disabled={saving || loadingCustomFields}
+                    onClick={() => setExitAfterSave(false)}
+                  >
+                    {saving && !exitAfterSave ? t('common.saving', 'Enregistrement...') : t('common.save', 'Enregistrer')}
+                  </Button>
+                </div>
               </div>
             </Card.Body>
           </Card>

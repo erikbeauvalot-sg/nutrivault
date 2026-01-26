@@ -213,8 +213,10 @@ const MeasureAlertsWidget = () => {
                   {criticalAlerts.slice(0, 10).map((alert) => (
                     <ListGroup.Item
                       key={alert.id}
+                      action
+                      onClick={() => handleViewPatient(alert.patient_id)}
                       className="d-flex justify-content-between align-items-start"
-                      style={{ borderLeft: '4px solid #dc3545' }}
+                      style={{ borderLeft: '4px solid #dc3545', cursor: 'pointer' }}
                     >
                       <div className="flex-grow-1">
                         <div className="d-flex align-items-center gap-2 mb-1">
@@ -242,12 +244,7 @@ const MeasureAlertsWidget = () => {
                           {new Date(alert.created_at).toLocaleString()}
                         </div>
                       </div>
-                      <div className="action-buttons flex-column">
-                        <ActionButton
-                          action="view"
-                          onClick={() => handleViewPatient(alert.patient_id)}
-                          title={t('measureAlerts.viewPatient', 'View Patient')}
-                        />
+                      <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
                         <ActionButton
                           action="acknowledge"
                           onClick={() => handleAcknowledge(alert.id)}
@@ -287,8 +284,10 @@ const MeasureAlertsWidget = () => {
                   {warningAlerts.slice(0, 10).map((alert) => (
                     <ListGroup.Item
                       key={alert.id}
+                      action
+                      onClick={() => handleViewPatient(alert.patient_id)}
                       className="d-flex justify-content-between align-items-start"
-                      style={{ borderLeft: '4px solid #ffc107' }}
+                      style={{ borderLeft: '4px solid #ffc107', cursor: 'pointer' }}
                     >
                       <div className="flex-grow-1">
                         <div className="d-flex align-items-center gap-2 mb-1">
@@ -311,12 +310,7 @@ const MeasureAlertsWidget = () => {
                           {new Date(alert.created_at).toLocaleString()}
                         </div>
                       </div>
-                      <div className="action-buttons flex-column">
-                        <ActionButton
-                          action="view"
-                          onClick={() => handleViewPatient(alert.patient_id)}
-                          title={t('measureAlerts.viewPatient', 'View Patient')}
-                        />
+                      <div className="action-buttons" onClick={(e) => e.stopPropagation()}>
                         <ActionButton
                           action="acknowledge"
                           onClick={() => handleAcknowledge(alert.id)}

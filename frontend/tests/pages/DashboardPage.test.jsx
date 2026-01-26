@@ -248,7 +248,7 @@ describe('DashboardPage', () => {
       const listItem = screen.getByText(/john doe/i).closest('[class*="list-group-item"]');
       if (listItem) {
         await user.click(listItem);
-        expect(mockNavigate).toHaveBeenCalledWith('/visits/v1');
+        expect(mockNavigate).toHaveBeenCalledWith('/visits/v1/edit');
       }
     });
   });

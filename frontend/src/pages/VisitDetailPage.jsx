@@ -421,17 +421,16 @@ const VisitDetailPage = () => {
             {/* AI Follow-up button - only for completed visits with clinical notes */}
             {visit.status === 'COMPLETED' && visit.patient?.email && (
               <Button
-                variant="outline-info"
+                variant="info"
                 onClick={() => setShowFollowupModal(true)}
                 title={t('followup.generateFollowupTooltip')}
-                style={{ border: '1px solid' }}
               >
                 🤖 {t('followup.generateFollowup')}
               </Button>
             )}
             {/* 2) Modifier */}
             {canEditVisit && (
-              <Button variant="outline-primary" onClick={handleEdit} style={{ border: '1px solid' }}>
+              <Button variant="primary" onClick={handleEdit}>
                 ✏️ {t('visits.editVisit')}
               </Button>
             )}
@@ -439,18 +438,16 @@ const VisitDetailPage = () => {
             {canFinishVisit && (
               <>
                 <Button
-                  variant="outline-success"
+                  variant="success"
                   onClick={() => setShowFinishModal(true)}
                   disabled={finishingVisit}
-                  style={{ border: '1px solid' }}
                 >
                   ✅ {t('visits.finishAndInvoice')}
                 </Button>
                 <Button
-                  variant="outline-danger"
+                  variant="danger"
                   onClick={() => setShowCancelModal(true)}
                   disabled={cancellingVisit}
-                  style={{ border: '1px solid' }}
                 >
                   ❌ {t('visits.cancelVisit')}
                 </Button>

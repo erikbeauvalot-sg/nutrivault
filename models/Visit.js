@@ -37,6 +37,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     // Clinical fields (chief_complaint, assessment, recommendations, notes)
     // have been removed - now managed via custom fields
+    visit_summary: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Auto-generated summary of changes made during the visit'
+    },
     next_visit_date: {
       type: DataTypes.DATE,
       allowNull: true

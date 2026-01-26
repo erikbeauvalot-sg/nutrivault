@@ -50,7 +50,8 @@
     "preview": "Aperçu",
     "duplicate": "Dupliquer",
     "translations": "Traductions",
-    "unknown": "Inconnu"
+    "unknown": "Inconnu",
+    "actionCannotBeUndone": "Cette action ne peut pas être annulée."
   },
   "navigation": {
     "dashboard": "Tableau de bord",
@@ -240,6 +241,7 @@
     "patientNotFound": "Patient non trouvé",
     "patientNotFoundMessage": "Le patient demandé n'a pas été trouvé.",
     "backToPatients": "Retour aux patients",
+    "saveAndExit": "Enregistrer et sortir",
     "createNewPatient": "Créer un nouveau patient",
     "enterPatientInfo": "Entrez les informations du patient dans les onglets ci-dessous",
     "personalInformationTab": "Informations personnelles",
@@ -493,7 +495,17 @@
     "invoicesTab": "Factures",
     "invoicesForVisit": "Factures de cette visite",
     "noInvoicesForVisit": "Aucune facture pour cette visite",
-    "noInvoicesHelp": "Utilisez \"Terminer & Facturer\" pour générer une facture pour cette visite."
+    "noInvoicesHelp": "Utilisez \"Terminer & Facturer\" pour générer une facture pour cette visite.",
+    "finishVisit": "Finir la visite",
+    "confirmFinishVisit": "Êtes-vous sûr de vouloir terminer cette visite ? Cela la marquera comme terminée et générera un compte-rendu.",
+    "failedToFinishVisit": "Échec de la finalisation de la visite",
+    "visitSummaryTitle": "Compte-rendu de visite",
+    "completedAt": "Terminée le",
+    "completedBy": "Terminée par",
+    "customFieldChanges": "Modifications des champs personnalisés",
+    "measureChanges": "Modifications des mesures",
+    "removed": "supprimé",
+    "noChangesRecorded": "Aucune modification enregistrée durant cette visite"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -1190,6 +1202,7 @@
     "selectMeasure": "Sélectionner une Mesure",
     "measuredAt": "Mesuré le",
     "notes": "Notes",
+    "notesPlaceholder": "Notes optionnelles...",
     "dateTime": "Date/Heure",
     "measure": "Mesure",
     "recordedBy": "Enregistré par",

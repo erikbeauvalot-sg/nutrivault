@@ -105,10 +105,10 @@ const SendReminderButton = ({ visit, onReminderSent }) => {
       >
         <span className="d-inline-block">
           <Button
-            variant="outline-primary"
+            variant="warning"
             onClick={handleSendReminder}
             disabled={!canSendReminder || loading}
-            style={{ pointerEvents: canSendReminder && !loading ? 'auto' : 'none', whiteSpace: 'nowrap', border: '1px solid' }}
+            style={{ pointerEvents: canSendReminder && !loading ? 'auto' : 'none', whiteSpace: 'nowrap' }}
           >
             {loading ? (
               <>

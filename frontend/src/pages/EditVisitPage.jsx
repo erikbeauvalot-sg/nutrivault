@@ -12,7 +12,7 @@ import Layout from '../components/layout/Layout';
 import visitService from '../services/visitService';
 import visitCustomFieldService from '../services/visitCustomFieldService';
 import userService from '../services/userService';
-import { getMeasureDefinitions, getMeasuresByVisit, logPatientMeasure, getAllMeasureTranslations } from '../services/measureService';
+import { getMeasureDefinitions, getMeasuresByVisit, logPatientMeasure, updatePatientMeasure, getAllMeasureTranslations } from '../services/measureService';
 import { fetchMeasureTranslations } from '../utils/measureTranslations';
 import CustomFieldInput from '../components/CustomFieldInput';
 
@@ -25,8 +25,13 @@ const EditVisitPage = () => {
   const [activeTab, setActiveTab] = useState('visit');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState(null);
   const [visit, setVisit] = useState(null);
+
+  // Track original values for change detection
+  const [originalFieldValues, setOriginalFieldValues] = useState({});
+  const [originalMeasureValues, setOriginalMeasureValues] = useState({});
 
   const [formData, setFormData] = useState({
     patient_id: '',
@@ -159,6 +164,7 @@ const EditVisitPage = () => {
         });
       });
       setFieldValues(values);
+      setOriginalFieldValues({ ...values }); // Store original values for change detection
     } catch (err) {
       console.error('Error fetching visit custom fields:', err);
       // Don't set error for custom fields failure
@@ -227,6 +233,7 @@ const EditVisitPage = () => {
         existingIds[defId] = m.id;
       });
       setMeasureValues(values);
+      setOriginalMeasureValues({ ...values }); // Store original values for change detection
       setExistingMeasureIds(existingIds);
     } catch (err) {
       console.error('Error fetching existing measures:', err);
@@ -257,6 +264,203 @@ const EditVisitPage = () => {
     symptoms: t('measures.categories.symptoms', 'Symptoms'),
     lifestyle: t('measures.categories.lifestyle', 'Lifestyle'),
     other: t('measures.categories.other', 'Other')
+  };
+
+  /**
+   * Generate a summary of all changes made during this visit
+   */
+  const generateChangeSummary = () => {
+    const changes = [];
+    const timestamp = new Date().toLocaleString(i18n.language === 'fr' ? 'fr-FR' : 'en-US');
+
+    changes.push(`=== ${t('visits.visitSummaryTitle', 'Visit Summary')} ===`);
+    changes.push(`${t('visits.completedAt', 'Completed at')}: ${timestamp}`);
+    changes.push(`${t('visits.completedBy', 'Completed by')}: ${user?.username || 'Unknown'}`);
+    changes.push('');
+
+    // Check custom field changes
+    const fieldChanges = [];
+    customFieldCategories.forEach(category => {
+      category.fields.forEach(field => {
+        const originalValue = originalFieldValues[field.definition_id];
+        const currentValue = fieldValues[field.definition_id];
+
+        // Check if value changed (handle null/undefined/empty string as equivalent)
+        const originalNormalized = originalValue ?? '';
+        const currentNormalized = currentValue ?? '';
+
+        if (String(originalNormalized) !== String(currentNormalized)) {
+          const fieldLabel = field.field_label || field.field_name || field.definition_id;
+          if (originalNormalized === '' && currentNormalized !== '') {
+            fieldChanges.push(`  + ${fieldLabel}: ${currentNormalized}`);
+          } else if (originalNormalized !== '' && currentNormalized === '') {
+            fieldChanges.push(`  - ${fieldLabel}: (${t('visits.removed', 'removed')})`);
+          } else {
+            fieldChanges.push(`  ~ ${fieldLabel}: ${originalNormalized} → ${currentNormalized}`);
+          }
+        }
+      });
+    });
+
+    if (fieldChanges.length > 0) {
+      changes.push(`📋 ${t('visits.customFieldChanges', 'Custom Field Changes')}:`);
+      changes.push(...fieldChanges);
+      changes.push('');
+    }
+
+    // Check measure changes
+    const measureChanges = [];
+    Object.entries(measureValues).forEach(([defId, currentValue]) => {
+      const originalValue = originalMeasureValues[defId];
+      const definition = measureDefinitions.find(d => d.id === defId);
+      const measureName = definition ? getTranslatedMeasureName(definition) : defId;
+      const unit = definition ? getTranslatedMeasureUnit(definition) : '';
+
+      const originalNormalized = originalValue ?? '';
+      const currentNormalized = currentValue ?? '';
+
+      if (String(originalNormalized) !== String(currentNormalized)) {
+        const unitStr = unit ? ` ${unit}` : '';
+        if (originalNormalized === '' && currentNormalized !== '') {
+          measureChanges.push(`  + ${measureName}: ${currentNormalized}${unitStr}`);
+        } else if (originalNormalized !== '' && currentNormalized === '') {
+          measureChanges.push(`  - ${measureName}: (${t('visits.removed', 'removed')})`);
+        } else {
+          measureChanges.push(`  ~ ${measureName}: ${originalNormalized}${unitStr} → ${currentNormalized}${unitStr}`);
+        }
+      }
+    });
+
+    if (measureChanges.length > 0) {
+      changes.push(`📏 ${t('visits.measureChanges', 'Measure Changes')}:`);
+      changes.push(...measureChanges);
+      changes.push('');
+    }
+
+    // If no changes detected, add a note
+    if (fieldChanges.length === 0 && measureChanges.length === 0) {
+      changes.push(`ℹ️ ${t('visits.noChangesRecorded', 'No changes recorded during this visit')}`);
+    }
+
+    return changes.join('\n');
+  };
+
+  /**
+   * Handle finish visit action - saves all changes, sets status to COMPLETED, and generates summary
+   */
+  const handleFinishVisit = async () => {
+    if (!validateForm()) return;
+
+    // Confirm action
+    if (!window.confirm(t('visits.confirmFinishVisit', 'Are you sure you want to finish this visit? This will mark it as completed and generate a summary.'))) {
+      return;
+    }
+
+    setFinishing(true);
+    setError(null);
+
+    try {
+      // Generate the change summary
+      const visitSummary = generateChangeSummary();
+
+      // Step 1: Update visit data with COMPLETED status and summary
+      const submitData = {
+        ...formData,
+        status: 'COMPLETED',
+        visit_summary: visitSummary,
+        visit_date: new Date(formData.visit_date).toISOString(),
+        next_visit_date: formData.next_visit_date && formData.next_visit_date.trim()
+          ? new Date(formData.next_visit_date).toISOString()
+          : null,
+        duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null
+      };
+
+      // Remove empty strings
+      Object.keys(submitData).forEach(key => {
+        if (submitData[key] === '') submitData[key] = null;
+      });
+
+      await visitService.updateVisit(id, submitData);
+
+      // Step 2: Save custom fields
+      const customFieldsToSave = [];
+      customFieldCategories.forEach(category => {
+        category.fields.forEach(field => {
+          if (fieldValues[field.definition_id] !== undefined && fieldValues[field.definition_id] !== null && fieldValues[field.definition_id] !== '') {
+            customFieldsToSave.push({
+              definition_id: field.definition_id,
+              value: fieldValues[field.definition_id]
+            });
+          }
+        });
+      });
+
+      if (customFieldsToSave.length > 0) {
+        try {
+          await visitCustomFieldService.updateVisitCustomFields(id, customFieldsToSave);
+        } catch (customFieldError) {
+          console.error('Error saving custom fields:', customFieldError);
+        }
+      }
+
+      // Step 3: Save measures (same logic as handleSubmit - update existing, create new)
+      if (visit?.patient_id && Object.keys(measureValues).length > 0) {
+        const measuresToSave = Object.entries(measureValues)
+          .filter(([_, value]) => value !== null && value !== undefined && value !== '');
+
+        for (const [definitionId, value] of measuresToSave) {
+          const definition = measureDefinitions.find(d => d.id === definitionId);
+          if (!definition) continue;
+
+          const existingMeasureId = existingMeasureIds[definitionId];
+
+          // Build payload based on measure type
+          const payload = {};
+          switch (definition.measure_type) {
+            case 'numeric':
+            case 'calculated':
+              payload.numeric_value = parseFloat(value);
+              break;
+            case 'text':
+              payload.text_value = value;
+              break;
+            case 'boolean':
+              payload.boolean_value = value;
+              break;
+            default:
+              payload.numeric_value = parseFloat(value);
+          }
+
+          try {
+            if (existingMeasureId) {
+              // UPDATE existing measure
+              await updatePatientMeasure(existingMeasureId, payload);
+            } else {
+              // CREATE new measure
+              const createPayload = {
+                measure_definition_id: definitionId,
+                visit_id: id,
+                measured_at: new Date().toISOString(),
+                ...payload
+              };
+              await logPatientMeasure(visit.patient_id, createPayload);
+            }
+          } catch (measureError) {
+            console.error('Error saving measure:', measureError);
+          }
+        }
+      }
+
+      navigate(`/visits/${id}`);
+    } catch (err) {
+      const errorMsg = err.response?.data?.details
+        ? err.response.data.details.map(d => d.msg).join(', ')
+        : err.response?.data?.error || t('visits.failedToFinishVisit', 'Failed to finish visit');
+      setError(errorMsg);
+      console.error('Error finishing visit:', err);
+    } finally {
+      setFinishing(false);
+    }
   };
 
   const handleBack = () => {
@@ -327,18 +531,16 @@ const EditVisitPage = () => {
           .filter(([_, value]) => value !== null && value !== undefined && value !== '');
 
         console.log('[EditVisit] Measures to save:', measuresToSave);
+        console.log('[EditVisit] Existing measure IDs:', existingMeasureIds);
 
         for (const [definitionId, value] of measuresToSave) {
           const definition = measureDefinitions.find(d => d.id === definitionId);
           if (!definition) continue;
 
-          const payload = {
-            measure_definition_id: definitionId,
-            visit_id: id,
-            measured_at: new Date().toISOString()
-          };
+          const existingMeasureId = existingMeasureIds[definitionId];
 
-          // Set the appropriate value field based on measure type
+          // Build payload based on measure type
+          const payload = {};
           switch (definition.measure_type) {
             case 'numeric':
             case 'calculated':
@@ -355,8 +557,21 @@ const EditVisitPage = () => {
           }
 
           try {
-            const measureResult = await logPatientMeasure(visit.patient_id, payload);
-            console.log('[EditVisit] Measure saved:', measureResult);
+            if (existingMeasureId) {
+              // UPDATE existing measure
+              console.log(`[EditVisit] Updating existing measure ${existingMeasureId}`);
+              await updatePatientMeasure(existingMeasureId, payload);
+            } else {
+              // CREATE new measure
+              console.log(`[EditVisit] Creating new measure for definition ${definitionId}`);
+              const createPayload = {
+                measure_definition_id: definitionId,
+                visit_id: id,
+                measured_at: new Date().toISOString(),
+                ...payload
+              };
+              await logPatientMeasure(visit.patient_id, createPayload);
+            }
           } catch (measureError) {
             console.error('❌ Error saving measure:', measureError);
             // Don't throw, continue with other measures
@@ -771,12 +986,32 @@ const EditVisitPage = () => {
 
               {/* Action Buttons */}
               <div className="d-flex justify-content-between align-items-center mt-4 pt-3 border-top flex-wrap gap-2">
-                <Button variant="outline-secondary" onClick={handleBack} disabled={saving}>
-                  Cancel
+                <Button variant="outline-secondary" onClick={handleBack} disabled={saving || finishing}>
+                  {t('common.cancel', 'Cancel')}
                 </Button>
-                <Button variant="primary" type="submit" disabled={saving}>
-                  {saving ? t('patients.updating') : t('visits.saveChanges')}
-                </Button>
+                <div className="d-flex gap-2 flex-wrap">
+                  <Button variant="primary" type="submit" disabled={saving || finishing}>
+                    {saving ? t('patients.updating') : t('visits.saveChanges')}
+                  </Button>
+                  {formData.status === 'SCHEDULED' && (
+                    <Button
+                      variant="success"
+                      onClick={handleFinishVisit}
+                      disabled={saving || finishing}
+                    >
+                      {finishing ? (
+                        <>
+                          <Spinner animation="border" size="sm" className="me-2" />
+                          {t('visits.finishing', 'Finishing...')}
+                        </>
+                      ) : (
+                        <>
+                          ✅ {t('visits.finishVisit', 'Finish Visit')}
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
               </div>
             </Card.Body>
           </Card>
