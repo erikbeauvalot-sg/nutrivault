@@ -267,7 +267,7 @@ const MeasuresPage = () => {
         )}
 
         <Card>
-          <Card.Header className="d-flex justify-content-between align-items-center">
+          <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h5 className="mb-0">{t('measures.cardTitle', { count: measures.length })}</h5>
             <Button variant="primary" size="sm" onClick={handleCreateMeasure}>
               ➕ {t('measures.newMeasure')}
@@ -276,7 +276,7 @@ const MeasuresPage = () => {
           <Card.Body>
             {/* Search Bar and Category Filter */}
             <Row className="mb-3">
-              <Col md={6}>
+              <Col xs={12} md={6} className="mb-3 mb-md-0">
                 <Form.Label>{t('measures.search')}</Form.Label>
                 <InputGroup>
                   <InputGroup.Text>🔍</InputGroup.Text>
@@ -297,9 +297,9 @@ const MeasuresPage = () => {
                   )}
                 </InputGroup>
               </Col>
-              <Col md={6}>
+              <Col xs={12} md={6}>
                 <Form.Label>{t('measures.filterByCategory')}</Form.Label>
-                <div className="d-flex gap-2">
+                <div className="d-flex gap-2 flex-wrap">
                   <Form.Select
                     value=""
                     onChange={(e) => {
@@ -444,39 +444,38 @@ const MeasuresPage = () => {
                         )}
                       </td>
                       <td>
-                        <Button
-                          variant="outline-info"
-                          size="sm"
-                          className="me-2"
-                          onClick={() => navigate(`/settings/measures/${measure.id}/view`)}
-                          title={t('measures.actions.viewTooltip')}
-                        >
-                          🔍 {t('measures.actions.view')}
-                        </Button>
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          className="me-2"
-                          onClick={() => handleEditMeasure(measure)}
-                        >
-                          {t('measures.actions.edit')}
-                        </Button>
-                        <Button
-                          variant="outline-secondary"
-                          size="sm"
-                          className="me-2"
-                          onClick={() => handleTranslateMeasure(measure)}
-                          title={t('measures.actions.translationsTooltip')}
-                        >
-                          🌐 {t('measures.actions.translations')}
-                        </Button>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          onClick={() => handleDeleteMeasure(measure.id)}
-                        >
-                          {t('measures.actions.delete')}
-                        </Button>
+                        <div className="d-flex gap-1 flex-wrap">
+                          <Button
+                            variant="outline-info"
+                            size="sm"
+                            onClick={() => navigate(`/settings/measures/${measure.id}/view`)}
+                            title={t('measures.actions.viewTooltip')}
+                          >
+                            🔍 {t('measures.actions.view')}
+                          </Button>
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={() => handleEditMeasure(measure)}
+                          >
+                            {t('measures.actions.edit')}
+                          </Button>
+                          <Button
+                            variant="outline-secondary"
+                            size="sm"
+                            onClick={() => handleTranslateMeasure(measure)}
+                            title={t('measures.actions.translationsTooltip')}
+                          >
+                            🌐 {t('measures.actions.translations')}
+                          </Button>
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            onClick={() => handleDeleteMeasure(measure.id)}
+                          >
+                            {t('measures.actions.delete')}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -151,10 +151,10 @@ const DashboardPage = () => {
   return (
     <Layout>
       <Container fluid>
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h1>{t('dashboard.welcomeBack', { username: user?.username })} 👋</h1>
+        <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+          <h1 className="mb-0">{t('dashboard.welcomeBack', { username: user?.username })} 👋</h1>
           <div className="dashboard-toggle">
-            <div className="btn-group" role="group">
+            <div className="btn-group flex-wrap" role="group">
               <button
                 type="button"
                 className={`btn ${dashboardMode === 'day' ? 'btn-primary' : 'btn-outline-primary'}`}
