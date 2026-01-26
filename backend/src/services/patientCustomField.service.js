@@ -11,10 +11,77 @@ const PatientCustomFieldValue = db.PatientCustomFieldValue;
 const CustomFieldDefinition = db.CustomFieldDefinition;
 const CustomFieldCategory = db.CustomFieldCategory;
 const Patient = db.Patient;
+const PatientMeasure = db.PatientMeasure;
+const MeasureDefinition = db.MeasureDefinition;
 const auditService = require('./audit.service');
 const translationService = require('./customFieldTranslation.service');
 const formulaEngine = require('./formulaEngine.service');
 const { Op } = db.Sequelize;
+
+/**
+ * Fetch latest measure values for a patient
+ * Returns a map of measure internal_name -> latest numeric value
+ *
+ * @param {string} patientId - Patient UUID
+ * @returns {Promise<Object>} Map of measure names to their latest values
+ */
+async function getLatestMeasureValues(patientId) {
+  const measureValues = {};
+
+  try {
+    // Get all measure definitions to map IDs to names
+    const definitions = await MeasureDefinition.findAll({
+      where: { is_active: true },
+      attributes: ['id', 'name', 'measure_type']
+    });
+
+    const defMap = {};
+    definitions.forEach(def => {
+      defMap[def.id] = def;
+    });
+
+    // Get all measures for this patient, ordered by measured_at DESC
+    const measures = await PatientMeasure.findAll({
+      where: { patient_id: patientId },
+      order: [['measured_at', 'DESC']],
+      attributes: ['measure_definition_id', 'numeric_value', 'text_value', 'boolean_value', 'measured_at']
+    });
+
+    // For each measure definition, get only the latest value
+    const seenDefinitions = new Set();
+    for (const measure of measures) {
+      if (seenDefinitions.has(measure.measure_definition_id)) {
+        continue; // Already have the latest for this definition
+      }
+      seenDefinitions.add(measure.measure_definition_id);
+
+      const def = defMap[measure.measure_definition_id];
+      if (!def) continue;
+
+      // Get the appropriate value based on measure type
+      let value = null;
+      if (measure.numeric_value !== null && measure.numeric_value !== undefined) {
+        value = parseFloat(measure.numeric_value);
+      } else if (measure.text_value !== null) {
+        // Try to parse as number for calculated fields
+        const parsed = parseFloat(measure.text_value);
+        if (!isNaN(parsed)) value = parsed;
+      } else if (measure.boolean_value !== null) {
+        value = measure.boolean_value ? 1 : 0;
+      }
+
+      if (value !== null && !isNaN(value)) {
+        measureValues[def.name] = value;
+      }
+    }
+
+    console.log(`[MEASURE-VALUES] Fetched ${Object.keys(measureValues).length} measure values for patient ${patientId}:`, measureValues);
+  } catch (error) {
+    console.error('[MEASURE-VALUES] Error fetching measure values:', error);
+  }
+
+  return measureValues;
+}
 
 /**
  * Check if user has access to patient
@@ -118,6 +185,23 @@ async function getPatientCustomFields(user, patientId, language = 'fr', requestM
           valueMapByName[v.field_definition.field_name] = v.getValue(v.field_definition.field_type);
         }
       });
+
+      // Check if any calculated field uses measure references
+      const hasMeasureRefs = allCalculatedFields.some(f =>
+        f.formula && formulaEngine.hasMeasureReferences(f.formula)
+      );
+
+      // If any formula uses measures, fetch the latest measure values
+      if (hasMeasureRefs) {
+        console.log('[AUTO-CALC-INIT] Some formulas use measure references, fetching measure values...');
+        const measureValues = await getLatestMeasureValues(patientId);
+
+        // Add measure values to the value map with 'measure:' prefix
+        for (const [measureName, value] of Object.entries(measureValues)) {
+          valueMapByName[`measure:${measureName}`] = value;
+        }
+        console.log('[AUTO-CALC-INIT] Added measure values to formula context:', Object.keys(measureValues));
+      }
 
       // Process each calculated field
       for (const calcField of allCalculatedFields) {
@@ -258,6 +342,9 @@ async function getPatientCustomFields(user, patientId, language = 'fr', requestM
           field_label: translatedDefinition.field_label,
           field_type: translatedDefinition.field_type,
           is_required: translatedDefinition.is_required,
+          is_calculated: translatedDefinition.is_calculated || false,
+          decimal_places: translatedDefinition.decimal_places,
+          formula: translatedDefinition.formula,
           validation_rules: validationRules,
           select_options: selectOptions,
           help_text: translatedDefinition.help_text,
@@ -441,6 +528,22 @@ async function recalculateDependentFields(patientId, changedFieldName, user) {
         valueRecordsById[v.field_definition_id] = v;
       }
     });
+
+    // Check if any calculated field uses measure references
+    const hasMeasureRefs = calculatedFields.some(f =>
+      f.formula && formulaEngine.hasMeasureReferences(f.formula)
+    );
+
+    // If any formula uses measures, fetch the latest measure values
+    if (hasMeasureRefs) {
+      console.log('[RECALC] Some formulas use measure references, fetching measure values...');
+      const measureValues = await getLatestMeasureValues(patientId);
+
+      // Add measure values to the value map with 'measure:' prefix
+      for (const [measureName, value] of Object.entries(measureValues)) {
+        valueMap[`measure:${measureName}`] = value;
+      }
+    }
 
     const updatedFields = [];
     const auditLogs = [];
@@ -860,6 +963,14 @@ async function recalculateAllValuesForField(fieldDefinitionId, user) {
             valueMap[v.field_definition.field_name] = v.getValue(v.field_definition.field_type);
           }
         });
+
+        // If formula uses measure references, fetch measure values for this patient
+        if (formulaEngine.hasMeasureReferences(fieldDefinition.formula)) {
+          const measureValues = await getLatestMeasureValues(patientId);
+          for (const [measureName, value] of Object.entries(measureValues)) {
+            valueMap[`measure:${measureName}`] = value;
+          }
+        }
 
         // Evaluate formula
         const result = formulaEngine.evaluateFormula(

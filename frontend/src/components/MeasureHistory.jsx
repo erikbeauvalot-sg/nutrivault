@@ -295,7 +295,8 @@ const MeasureHistory = ({ patientId }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       const unit = selectedDefinition?.unit || '';
-      const decimals = selectedDefinition?.decimal_places || 2;
+      // Use ?? instead of || so that 0 decimal places is respected
+      const decimals = selectedDefinition?.decimal_places ?? 2;
 
       return (
         <div style={{

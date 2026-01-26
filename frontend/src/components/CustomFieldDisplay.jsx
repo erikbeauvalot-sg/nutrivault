@@ -41,7 +41,8 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
     switch (field_type) {
       case 'calculated':
         // Display calculated fields with special formatting
-        const decimalPlaces = fieldDefinition.decimal_places || 2;
+        // Use ?? instead of || so that 0 decimal places is respected
+        const decimalPlaces = fieldDefinition.decimal_places ?? 2;
         const formattedValue = typeof value === 'number' ? value.toFixed(decimalPlaces) : value;
         return (
           <span style={{ fontWeight: '500' }}>

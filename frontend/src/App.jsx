@@ -37,6 +37,8 @@ const CustomFieldsPage = lazy(() => import('./pages/CustomFieldsPage'));
 const RolesManagementPage = lazy(() => import('./pages/RolesManagementPage'));
 const MeasuresPage = lazy(() => import('./pages/MeasuresPage'));
 const MeasureDetailPage = lazy(() => import('./pages/MeasureDetailPage'));
+const CustomFieldCategoryDetailPage = lazy(() => import('./pages/CustomFieldCategoryDetailPage'));
+const CustomFieldDefinitionDetailPage = lazy(() => import('./pages/CustomFieldDefinitionDetailPage'));
 const EmailTemplatesPage = lazy(() => import('./pages/EmailTemplatesPage'));
 const BillingTemplatesPage = lazy(() => import('./pages/BillingTemplatesPage'));
 const InvoiceCustomizationPage = lazy(() => import('./pages/InvoiceCustomizationPage'));
@@ -257,6 +259,24 @@ function App() {
         element={
           <ProtectedRoute>
             <CustomFieldsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/custom-fields/categories/:id/view"
+        element={
+          <ProtectedRoute>
+            <CustomFieldCategoryDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/custom-fields/definitions/:id/view"
+        element={
+          <ProtectedRoute>
+            <CustomFieldDefinitionDetailPage />
           </ProtectedRoute>
         }
       />

@@ -209,7 +209,8 @@ export const formatMeasureValue = (measure, definition) => {
     case 'calculated':
       value = measure.numeric_value;
       if (value === null || value === undefined) return '-';
-      const decimalPlaces = definition.decimal_places || 2;
+      // Use ?? instead of || so that 0 decimal places is respected
+      const decimalPlaces = definition.decimal_places ?? 2;
       const formattedNumber = parseFloat(value).toFixed(decimalPlaces);
       return definition.unit ? `${formattedNumber} ${definition.unit}` : formattedNumber;
 

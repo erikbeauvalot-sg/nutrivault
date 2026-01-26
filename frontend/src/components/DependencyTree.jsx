@@ -13,7 +13,47 @@ import PropTypes from 'prop-types';
  * @param {string} props.formula - Formula expression
  * @param {Array<string>} props.dependencies - List of field names this field depends on
  */
-const DependencyTree = ({ fieldName, formula, dependencies }) => {
+// Inline styles to replace styled-jsx
+const styles = {
+  treeNode: {
+    position: 'relative',
+    padding: '8px 0'
+  },
+  rootNode: {
+    position: 'relative',
+    padding: '8px 0',
+    borderBottom: '2px solid #e9ecef',
+    paddingBottom: '12px'
+  },
+  dependencyNode: {
+    position: 'relative',
+    padding: '8px 0',
+    paddingLeft: '8px'
+  },
+  treeConnector: {
+    color: '#6c757d',
+    fontWeight: 'bold'
+  },
+  treeConnectorLine: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: '2px',
+    background: '#dee2e6'
+  },
+  treeChildren: {
+    position: 'relative'
+  },
+  code: {
+    background: '#f8f9fa',
+    padding: '2px 6px',
+    borderRadius: '3px',
+    fontSize: '0.9em'
+  }
+};
+
+const DependencyTree = ({ fieldName = '', formula = '', dependencies }) => {
   if (!dependencies || dependencies.length === 0) {
     return null;
   }
@@ -26,27 +66,27 @@ const DependencyTree = ({ fieldName, formula, dependencies }) => {
       <Card.Body>
         <div className="dependency-tree">
           {/* Root node - the calculated field */}
-          <div className="tree-node root-node mb-3">
+          <div style={styles.rootNode} className="mb-3">
             <div className="d-flex align-items-center">
               <span className="badge bg-success me-2">Calculated</span>
               <strong>{fieldName || 'This Field'}</strong>
             </div>
             {formula && (
               <div className="ms-4 text-muted small mt-1">
-                <code>{formula}</code>
+                <code style={styles.code}>{formula}</code>
               </div>
             )}
           </div>
 
           {/* Dependencies */}
-          <div className="tree-children ms-4">
-            <div className="tree-connector-line"></div>
+          <div style={styles.treeChildren} className="ms-4">
+            <div style={styles.treeConnectorLine}></div>
             {dependencies.map((dep, index) => (
-              <div key={index} className="tree-node dependency-node mb-2">
+              <div key={index} style={styles.dependencyNode} className="mb-2">
                 <div className="d-flex align-items-center">
-                  <span className="tree-connector me-2">└─</span>
+                  <span style={styles.treeConnector} className="me-2">└─</span>
                   <span className="badge bg-info me-2">Depends on</span>
-                  <code className="text-primary">{dep}</code>
+                  <code style={styles.code} className="text-primary">{dep}</code>
                 </div>
               </div>
             ))}
@@ -59,48 +99,6 @@ const DependencyTree = ({ fieldName, formula, dependencies }) => {
           </div>
         </div>
       </Card.Body>
-
-      <style jsx>{`
-        .tree-node {
-          position: relative;
-          padding: 8px 0;
-        }
-
-        .root-node {
-          border-bottom: 2px solid #e9ecef;
-          padding-bottom: 12px;
-        }
-
-        .dependency-node {
-          position: relative;
-          padding-left: 8px;
-        }
-
-        .tree-connector {
-          color: #6c757d;
-          font-weight: bold;
-        }
-
-        .tree-connector-line {
-          position: absolute;
-          left: 0;
-          top: 0;
-          bottom: 0;
-          width: 2px;
-          background: #dee2e6;
-        }
-
-        .tree-children {
-          position: relative;
-        }
-
-        code {
-          background: #f8f9fa;
-          padding: 2px 6px;
-          border-radius: 3px;
-          font-size: 0.9em;
-        }
-      `}</style>
     </Card>
   );
 };
@@ -109,11 +107,6 @@ DependencyTree.propTypes = {
   fieldName: PropTypes.string,
   formula: PropTypes.string,
   dependencies: PropTypes.arrayOf(PropTypes.string).isRequired
-};
-
-DependencyTree.defaultProps = {
-  fieldName: '',
-  formula: ''
 };
 
 export default DependencyTree;

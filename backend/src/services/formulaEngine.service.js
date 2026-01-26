@@ -99,6 +99,34 @@ const FUNCTIONS = {
       return date.getDate();
     }
     throw new Error('Invalid date input');
+  },
+
+  // Age calculation in years (useful for calculating age from date_of_birth)
+  age_years: (dateInput) => {
+    let birthDate;
+    if (typeof dateInput === 'string') {
+      birthDate = new Date(dateInput);
+      if (isNaN(birthDate.getTime())) {
+        throw new Error('Invalid date format for age calculation');
+      }
+    } else if (typeof dateInput === 'number') {
+      // Assume it's days since epoch
+      birthDate = new Date(1970, 0, 1);
+      birthDate.setDate(birthDate.getDate() + dateInput);
+    } else {
+      throw new Error('Invalid date input for age calculation');
+    }
+
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+
+    // Adjust if birthday hasn't occurred yet this year
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    return age;
   }
 };
 
@@ -274,10 +302,23 @@ function evaluatePostfix(postfix, values) {
       if (value === undefined || value === null) {
         throw new Error(`Missing value for variable: ${token.name}`);
       }
-      if (isNaN(value) || !isFinite(value)) {
-        throw new Error(`Invalid value for variable ${token.name}: ${value}`);
+      // Check if value is a date string (YYYY-MM-DD format)
+      const isDateString = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value);
+
+      if (isDateString) {
+        // Keep date strings as-is for date functions like age_years()
+        stack.push(value);
+      } else if (typeof value === 'string' && isNaN(parseFloat(value))) {
+        // Non-date, non-numeric string - keep as-is for potential string functions
+        stack.push(value);
+      } else {
+        // Numeric value - convert to number
+        const numValue = parseFloat(value);
+        if (isNaN(numValue) || !isFinite(numValue)) {
+          throw new Error(`Invalid value for variable ${token.name}: ${value}`);
+        }
+        stack.push(numValue);
       }
-      stack.push(parseFloat(value));
     } else if (typeof token === 'object' && token.type === 'function') {
       const func = FUNCTIONS[token.name];
       if (!func) {
@@ -384,16 +425,19 @@ function validateFormula(formula) {
       };
     }
 
-    // Validate variable names (alphanumeric, underscores, and time-series format)
+    // Validate variable names (alphanumeric, underscores, time-series format, or measure references)
     for (const dep of dependencies) {
       // Check if it's a time-series variable (e.g., current:weight)
       const isTimeSeries = /^(current|previous|delta|avg\d+):[a-zA-Z_][a-zA-Z0-9_]*$/.test(dep);
+      // Check if it's a measure reference (e.g., measure:weight)
+      const isMeasureRef = /^measure:[a-zA-Z_][a-zA-Z0-9_]*$/.test(dep);
+      // Check if it's a regular variable
       const isRegular = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(dep);
 
-      if (!isTimeSeries && !isRegular) {
+      if (!isTimeSeries && !isMeasureRef && !isRegular) {
         return {
           valid: false,
-          error: `Invalid variable name: ${dep}. Use {measure_name} or {modifier:measure_name}`,
+          error: `Invalid variable name: ${dep}. Use {field_name}, {measure:measure_name}, or {modifier:measure_name}`,
           dependencies: []
         };
       }
@@ -502,9 +546,39 @@ function getAvailableOperators() {
       { name: 'today', description: 'Current date (days since epoch)', example: 'today()', category: 'date' },
       { name: 'year', description: 'Extract year from date', example: 'year({birth_date})', category: 'date' },
       { name: 'month', description: 'Extract month (1-12) from date', example: 'month({birth_date})', category: 'date' },
-      { name: 'day', description: 'Extract day from date', example: 'day({birth_date})', category: 'date' }
+      { name: 'day', description: 'Extract day from date', example: 'day({birth_date})', category: 'date' },
+      { name: 'age_years', description: 'Calculate age in years from birth date', example: 'age_years({date_of_birth})', category: 'date' }
     ]
   };
+}
+
+/**
+ * Extract measure references from a formula
+ * Measure references use format: {measure:internal_name}
+ * Returns the latest value for that measure
+ */
+function extractMeasureReferences(formula) {
+  if (!formula || typeof formula !== 'string') {
+    return [];
+  }
+
+  const matches = [];
+  const iterator = formula.matchAll(/\{measure:([a-zA-Z_][a-zA-Z0-9_]*)\}/g);
+  for (const match of iterator) {
+    matches.push({
+      full: match[0],
+      measureName: match[1]
+    });
+  }
+
+  return matches;
+}
+
+/**
+ * Check if formula contains measure references
+ */
+function hasMeasureReferences(formula) {
+  return extractMeasureReferences(formula).length > 0;
 }
 
 /**
@@ -580,6 +654,8 @@ module.exports = {
   evaluateFormula,
   validateFormula,
   extractDependencies,
+  extractMeasureReferences,
+  hasMeasureReferences,
   extractTimeSeriesVariables,
   hasTimeSeriesVariables,
   validateTimeSeriesModifiers,

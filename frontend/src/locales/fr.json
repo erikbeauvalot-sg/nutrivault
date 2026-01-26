@@ -505,6 +505,7 @@
     "customFieldChanges": "Modifications des champs personnalisés",
     "measureChanges": "Modifications des mesures",
     "removed": "supprimé",
+    "no_show": "absent",
     "noChangesRecorded": "Aucune modification enregistrée durant cette visite"
   },
   "dashboard": {

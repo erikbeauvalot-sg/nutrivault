@@ -107,17 +107,30 @@ const MeasuresPage = () => {
   };
 
   const handleDeleteMeasure = async (measureId) => {
-    if (!window.confirm(t('measures.confirmDelete'))) return;
+    console.log('handleDeleteMeasure called with:', measureId);
+
+    if (!window.confirm(t('measures.confirmDelete'))) {
+      console.log('User cancelled delete');
+      return;
+    }
+
+    console.log('User confirmed delete, calling API...');
 
     try {
       const result = await measureService.deleteMeasureDefinition(measureId);
-      if (result.success) {
+      console.log('Delete result:', result);
+
+      if (result && result.success) {
+        console.log('Delete successful, refreshing measures...');
         await fetchMeasures();
+        console.log('Measures refreshed');
       } else {
-        alert(result.error || t('measures.deleteError'));
+        console.log('Delete failed:', result);
+        alert(result?.error || t('measures.deleteError'));
       }
     } catch (err) {
       console.error('Error deleting measure:', err);
+      console.error('Error response:', err.response);
       const errorMessage = err.response?.data?.error || err.message || t('measures.deleteError');
       alert(errorMessage);
     }

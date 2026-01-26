@@ -195,7 +195,8 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
       case 'calculated':
         // Calculated fields are always read-only and display computed values
         const displayValue = value !== null && value !== undefined ? value : '—';
-        const decimalPlaces = fieldDefinition.decimal_places || 2;
+        // Use ?? instead of || so that 0 decimal places is respected
+        const decimalPlaces = fieldDefinition.decimal_places ?? 2;
         const formattedValue = typeof value === 'number' ? value.toFixed(decimalPlaces) : displayValue;
 
         return (

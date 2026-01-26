@@ -290,6 +290,78 @@ export const handlers = [
         { id: 'role-3', name: 'ASSISTANT', description: 'Assistant' }
       ]
     });
+  }),
+
+  // Alerts endpoint - returns categorized alerts with summary
+  http.get(`${API_URL}/alerts`, () => {
+    return HttpResponse.json({
+      success: true,
+      data: {
+        overdue_invoices: [
+          {
+            type: 'OVERDUE_INVOICE',
+            severity: 'warning',
+            invoice_id: 'invoice-2',
+            invoice_number: 'INV-2024-002',
+            patient_id: 'patient-2',
+            patient_name: 'Jane Smith',
+            amount_due: 120.00,
+            due_date: '2024-02-15',
+            days_overdue: 10,
+            message: 'Invoice #INV-2024-002 overdue by 10 days',
+            action: 'send_reminder'
+          }
+        ],
+        overdue_visits: [],
+        visits_without_notes: [],
+        patients_followup: [],
+        summary: {
+          total_count: 1,
+          critical_count: 0,
+          warning_count: 1,
+          info_count: 0
+        }
+      }
+    });
+  }),
+
+  // Measure alerts endpoint - returns alerts with grouped summary
+  // Note: Using patient-2 (Jane Smith) to avoid conflicts with visit tests that use John Doe
+  http.get(`${API_URL}/measure-alerts`, () => {
+    const alerts = [
+      {
+        id: 'measure-alert-1',
+        patient_id: 'patient-2',
+        measure_definition_id: 'measure-def-1',
+        value: 180,
+        severity: 'warning',
+        message: 'Blood pressure is above normal range',
+        is_acknowledged: false,
+        created_at: '2024-02-18T10:00:00Z',
+        patient: mockPatients[1],
+        measureDefinition: {
+          id: 'measure-def-1',
+          name: 'blood_pressure_systolic',
+          display_name: 'Blood Pressure (Systolic)',
+          unit: 'mmHg'
+        }
+      }
+    ];
+    return HttpResponse.json({
+      success: true,
+      data: alerts,
+      grouped: {
+        critical: [],
+        warning: alerts,
+        info: []
+      },
+      count: alerts.length,
+      summary: {
+        critical: 0,
+        warning: 1,
+        info: 0
+      }
+    });
   })
 ];
 

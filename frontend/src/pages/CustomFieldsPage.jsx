@@ -374,7 +374,7 @@ const CustomFieldsPage = () => {
                         return (
                           <tr
                             key={category.id}
-                            onClick={() => handleEditCategory(category)}
+                            onClick={() => navigate(`/settings/custom-fields/categories/${category.id}/view`)}
                             className="clickable-row"
                             style={{ cursor: 'pointer' }}
                           >
@@ -597,7 +597,7 @@ const CustomFieldsPage = () => {
                       {filteredDefinitions.map((definition) => (
                         <tr
                           key={definition.id}
-                          onClick={() => handleEditDefinition(definition)}
+                          onClick={() => navigate(`/settings/custom-fields/definitions/${definition.id}/view`)}
                           className="clickable-row"
                           style={{ cursor: 'pointer' }}
                         >

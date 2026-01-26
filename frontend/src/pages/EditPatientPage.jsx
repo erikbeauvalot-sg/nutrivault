@@ -378,7 +378,7 @@ const EditPatientPage = () => {
                     <InputGroup.Text>🔍</InputGroup.Text>
                     <Form.Control
                       type="text"
-                      placeholder="Search in custom fields..."
+                      placeholder="Rechercher..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -386,7 +386,7 @@ const EditPatientPage = () => {
                       <Button
                         variant="outline-secondary"
                         onClick={() => setSearchQuery('')}
-                        title="Clear search"
+                        title="Effacer la recherche"
                       >
                         ✕
                       </Button>
@@ -396,11 +396,11 @@ const EditPatientPage = () => {
                     <Form.Text className="text-muted">
                       {searchResults.hasResults ? (
                         <>
-                          {searchResults.matchingFields.length} field{searchResults.matchingFields.length !== 1 ? 's' : ''} found
-                          {searchResults.matchingCategory && ' - switched to matching tab'}
+                          {searchResults.matchingFields.length} champ{searchResults.matchingFields.length !== 1 ? 's' : ''} trouvé
+                          {searchResults.matchingCategory && ' - basculé vers l\'onglet correspondant'}
                         </>
                       ) : (
-                        'No fields found matching your search'
+                        'Aucun champ ne correspond à votre recherche'
                       )}
                     </Form.Text>
                   )}

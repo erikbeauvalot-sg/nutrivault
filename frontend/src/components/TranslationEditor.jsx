@@ -149,7 +149,7 @@ const TranslationEditor = ({ entityType, entityId, originalValues }) => {
   };
 
   return (
-    <div className="translation-editor">
+    <div className="translation-editor" style={{ minHeight: '200px' }}>
       {error && (
         <Alert variant="danger" dismissible onClose={() => setError(null)}>
           {error}
@@ -287,11 +287,6 @@ const TranslationEditor = ({ entityType, entityId, originalValues }) => {
         </>
       )}
 
-      <style jsx>{`
-        .translation-editor {
-          min-height: 200px;
-        }
-      `}</style>
     </div>
   );
 };
