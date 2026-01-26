@@ -299,55 +299,93 @@ const EmailHistory = ({ patientId }) => {
           </div>
         ) : (
           <>
-            <Table hover responsive className="mb-0">
-              <thead>
-                <tr>
-                  <th className="d-none d-md-table-cell" style={{ width: '140px' }}>{t('emailHistory.date', 'Date')}</th>
-                  <th style={{ width: '100px' }}>{t('emailHistory.type', 'Type')}</th>
-                  <th>{t('emailHistory.subject', 'Objet')}</th>
-                  <th className="d-none d-sm-table-cell" style={{ width: '100px' }}>{t('emailHistory.status', 'Statut')}</th>
-                  <th className="d-none d-lg-table-cell" style={{ width: '150px' }}>{t('emailHistory.sentBy', 'Envoyé par')}</th>
-                  <th style={{ width: '60px' }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {emails.map((email) => {
-                  const typeConfig = getEmailTypeConfig(email.email_type);
-                  return (
-                    <tr key={email.id}>
-                      <td className="d-none d-md-table-cell text-muted small">{formatDate(email.sent_at)}</td>
-                      <td>
-                        <Badge bg={typeConfig.color}>
-                          {typeConfig.icon} <span className="d-none d-sm-inline">{isEn ? typeConfig.labelEn : typeConfig.label}</span>
-                        </Badge>
-                      </td>
-                      <td>
-                        <div className="text-truncate" style={{ maxWidth: '200px' }}>
-                          {email.subject}
-                        </div>
-                        <small className="d-md-none text-muted">{formatDate(email.sent_at)}</small>
-                      </td>
-                      <td className="d-none d-sm-table-cell">{getStatusBadge(email.status)}</td>
-                      <td className="d-none d-lg-table-cell text-muted small">
-                        {email.sender
-                          ? `${email.sender.first_name} ${email.sender.last_name}`
-                          : '-'}
-                      </td>
-                      <td>
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          onClick={() => handleViewEmail(email)}
-                          title={t('emailHistory.view', 'Voir')}
-                        >
-                          <FaEye />
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </Table>
+            {/* Desktop: Table view */}
+            <div className="d-none d-md-block">
+              <Table hover responsive className="mb-0">
+                <thead>
+                  <tr>
+                    <th style={{ width: '140px' }}>{t('emailHistory.date', 'Date')}</th>
+                    <th style={{ width: '100px' }}>{t('emailHistory.type', 'Type')}</th>
+                    <th>{t('emailHistory.subject', 'Objet')}</th>
+                    <th style={{ width: '100px' }}>{t('emailHistory.status', 'Statut')}</th>
+                    <th className="d-none d-lg-table-cell" style={{ width: '150px' }}>{t('emailHistory.sentBy', 'Envoyé par')}</th>
+                    <th style={{ width: '60px' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {emails.map((email) => {
+                    const typeConfig = getEmailTypeConfig(email.email_type);
+                    return (
+                      <tr key={email.id}>
+                        <td className="text-muted small">{formatDate(email.sent_at)}</td>
+                        <td>
+                          <Badge bg={typeConfig.color}>
+                            {typeConfig.icon} {isEn ? typeConfig.labelEn : typeConfig.label}
+                          </Badge>
+                        </td>
+                        <td>
+                          <div className="text-truncate" style={{ maxWidth: '300px' }}>
+                            {email.subject}
+                          </div>
+                        </td>
+                        <td>{getStatusBadge(email.status)}</td>
+                        <td className="d-none d-lg-table-cell text-muted small">
+                          {email.sender
+                            ? `${email.sender.first_name} ${email.sender.last_name}`
+                            : '-'}
+                        </td>
+                        <td>
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={() => handleViewEmail(email)}
+                            title={t('emailHistory.view', 'Voir')}
+                          >
+                            <FaEye />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </Table>
+            </div>
+
+            {/* Mobile: Card/List view */}
+            <div className="d-md-none">
+              {emails.map((email) => {
+                const typeConfig = getEmailTypeConfig(email.email_type);
+                return (
+                  <div key={email.id} className="border-bottom p-3">
+                    {/* Line 1: Type + Status + Date */}
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <Badge bg={typeConfig.color}>
+                        {typeConfig.icon} {isEn ? typeConfig.labelEn : typeConfig.label}
+                      </Badge>
+                      <div className="d-flex align-items-center gap-2">
+                        {getStatusBadge(email.status)}
+                        <small className="text-muted">{formatDate(email.sent_at)}</small>
+                      </div>
+                    </div>
+                    {/* Line 2: Subject (can wrap) */}
+                    <div className="mb-2">
+                      {email.subject}
+                    </div>
+                    {/* Line 3: Action */}
+                    <div className="d-flex justify-content-end">
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => handleViewEmail(email)}
+                      >
+                        <FaEye className="me-1" />
+                        {t('emailHistory.view', 'Voir')}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
             {/* Pagination */}
             {totalPages > 1 && (
