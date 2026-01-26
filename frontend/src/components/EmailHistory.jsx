@@ -165,21 +165,20 @@ const EmailHistory = ({ patientId }) => {
 
   return (
     <Card>
-      <Card.Header className="d-flex justify-content-between align-items-center">
+      <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h5 className="mb-0">
           <FaEnvelope className="me-2" />
           {t('emailHistory.title', 'Historique des communications')}
           {stats && <Badge bg="secondary" className="ms-2">{stats.total}</Badge>}
         </h5>
-        <div>
+        <div className="d-flex gap-2">
           <Button
             variant="outline-secondary"
             size="sm"
-            className="me-2"
             onClick={() => setShowFilters(!showFilters)}
           >
             <FaFilter className="me-1" />
-            {t('common.filter', 'Filtrer')}
+            <span className="d-none d-sm-inline">{t('common.filter', 'Filtrer')}</span>
           </Button>
           <Button
             variant="outline-primary"
@@ -221,7 +220,7 @@ const EmailHistory = ({ patientId }) => {
       {showFilters && (
         <Card.Body className="border-bottom bg-light py-3">
           <Row className="g-3 align-items-end">
-            <Col md={3}>
+            <Col xs={6} md={3}>
               <Form.Group>
                 <Form.Label size="sm">{t('emailHistory.type', 'Type')}</Form.Label>
                 <Form.Select
@@ -238,7 +237,7 @@ const EmailHistory = ({ patientId }) => {
                 </Form.Select>
               </Form.Group>
             </Col>
-            <Col md={2}>
+            <Col xs={6} md={2}>
               <Form.Group>
                 <Form.Label size="sm">{t('emailHistory.status', 'Statut')}</Form.Label>
                 <Form.Select
@@ -253,7 +252,7 @@ const EmailHistory = ({ patientId }) => {
                 </Form.Select>
               </Form.Group>
             </Col>
-            <Col md={2}>
+            <Col xs={6} md={2}>
               <Form.Group>
                 <Form.Label size="sm">{t('common.startDate', 'Du')}</Form.Label>
                 <Form.Control
@@ -264,7 +263,7 @@ const EmailHistory = ({ patientId }) => {
                 />
               </Form.Group>
             </Col>
-            <Col md={2}>
+            <Col xs={6} md={2}>
               <Form.Group>
                 <Form.Label size="sm">{t('common.endDate', 'Au')}</Form.Label>
                 <Form.Control
@@ -275,8 +274,8 @@ const EmailHistory = ({ patientId }) => {
                 />
               </Form.Group>
             </Col>
-            <Col md={3}>
-              <Button variant="outline-secondary" size="sm" onClick={resetFilters}>
+            <Col xs={12} md={3}>
+              <Button variant="outline-secondary" size="sm" onClick={resetFilters} className="w-100 w-md-auto">
                 {t('common.reset', 'Réinitialiser')}
               </Button>
             </Col>
@@ -303,12 +302,12 @@ const EmailHistory = ({ patientId }) => {
             <Table hover responsive className="mb-0">
               <thead>
                 <tr>
-                  <th style={{ width: '140px' }}>{t('emailHistory.date', 'Date')}</th>
+                  <th className="d-none d-md-table-cell" style={{ width: '140px' }}>{t('emailHistory.date', 'Date')}</th>
                   <th style={{ width: '100px' }}>{t('emailHistory.type', 'Type')}</th>
                   <th>{t('emailHistory.subject', 'Objet')}</th>
-                  <th style={{ width: '100px' }}>{t('emailHistory.status', 'Statut')}</th>
-                  <th style={{ width: '150px' }}>{t('emailHistory.sentBy', 'Envoyé par')}</th>
-                  <th style={{ width: '80px' }}></th>
+                  <th className="d-none d-sm-table-cell" style={{ width: '100px' }}>{t('emailHistory.status', 'Statut')}</th>
+                  <th className="d-none d-lg-table-cell" style={{ width: '150px' }}>{t('emailHistory.sentBy', 'Envoyé par')}</th>
+                  <th style={{ width: '60px' }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -316,19 +315,20 @@ const EmailHistory = ({ patientId }) => {
                   const typeConfig = getEmailTypeConfig(email.email_type);
                   return (
                     <tr key={email.id}>
-                      <td className="text-muted small">{formatDate(email.sent_at)}</td>
+                      <td className="d-none d-md-table-cell text-muted small">{formatDate(email.sent_at)}</td>
                       <td>
                         <Badge bg={typeConfig.color}>
-                          {typeConfig.icon} {isEn ? typeConfig.labelEn : typeConfig.label}
+                          {typeConfig.icon} <span className="d-none d-sm-inline">{isEn ? typeConfig.labelEn : typeConfig.label}</span>
                         </Badge>
                       </td>
                       <td>
-                        <span className="text-truncate d-inline-block" style={{ maxWidth: '300px' }}>
+                        <div className="text-truncate" style={{ maxWidth: '200px' }}>
                           {email.subject}
-                        </span>
+                        </div>
+                        <small className="d-md-none text-muted">{formatDate(email.sent_at)}</small>
                       </td>
-                      <td>{getStatusBadge(email.status)}</td>
-                      <td className="text-muted small">
+                      <td className="d-none d-sm-table-cell">{getStatusBadge(email.status)}</td>
+                      <td className="d-none d-lg-table-cell text-muted small">
                         {email.sender
                           ? `${email.sender.first_name} ${email.sender.last_name}`
                           : '-'}
@@ -351,19 +351,18 @@ const EmailHistory = ({ patientId }) => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="d-flex justify-content-between align-items-center p-3 border-top">
+              <div className="d-flex justify-content-between align-items-center p-3 border-top flex-wrap gap-2">
                 <small className="text-muted">
-                  {t('emailHistory.showing', 'Affichage')} {page * limit + 1} - {Math.min((page + 1) * limit, total)} {t('emailHistory.of', 'sur')} {total}
+                  {page * limit + 1}-{Math.min((page + 1) * limit, total)} / {total}
                 </small>
-                <div>
+                <div className="d-flex gap-2">
                   <Button
                     variant="outline-secondary"
                     size="sm"
-                    className="me-2"
                     disabled={page === 0}
                     onClick={() => setPage(p => p - 1)}
                   >
-                    {t('common.previous', 'Précédent')}
+                    ←
                   </Button>
                   <Button
                     variant="outline-secondary"
@@ -371,7 +370,7 @@ const EmailHistory = ({ patientId }) => {
                     disabled={page >= totalPages - 1}
                     onClick={() => setPage(p => p + 1)}
                   >
-                    {t('common.next', 'Suivant')}
+                    →
                   </Button>
                 </div>
               </div>
@@ -381,9 +380,9 @@ const EmailHistory = ({ patientId }) => {
       </Card.Body>
 
       {/* Email Preview Modal */}
-      <Modal show={showPreview} onHide={() => setShowPreview(false)} size="lg" scrollable>
+      <Modal show={showPreview} onHide={() => setShowPreview(false)} size="lg" scrollable fullscreen="md-down">
         <Modal.Header closeButton>
-          <Modal.Title>
+          <Modal.Title className="text-truncate">
             <FaEnvelope className="me-2" />
             {selectedEmail?.subject || t('emailHistory.emailPreview', 'Aperçu de l\'email')}
           </Modal.Title>
@@ -396,17 +395,17 @@ const EmailHistory = ({ patientId }) => {
           ) : selectedEmail ? (
             <>
               <div className="mb-3 pb-3 border-bottom">
-                <Row>
-                  <Col sm={3}><strong>{t('emailHistory.to', 'À')}:</strong></Col>
-                  <Col sm={9}>{selectedEmail.sent_to}</Col>
+                <Row className="mb-2">
+                  <Col xs={4} sm={3}><strong>{t('emailHistory.to', 'À')}:</strong></Col>
+                  <Col xs={8} sm={9} className="text-truncate">{selectedEmail.sent_to}</Col>
                 </Row>
-                <Row className="mt-2">
-                  <Col sm={3}><strong>{t('emailHistory.date', 'Date')}:</strong></Col>
-                  <Col sm={9}>{formatDate(selectedEmail.sent_at)}</Col>
+                <Row className="mb-2">
+                  <Col xs={4} sm={3}><strong>{t('emailHistory.date', 'Date')}:</strong></Col>
+                  <Col xs={8} sm={9}>{formatDate(selectedEmail.sent_at)}</Col>
                 </Row>
-                <Row className="mt-2">
-                  <Col sm={3}><strong>{t('emailHistory.type', 'Type')}:</strong></Col>
-                  <Col sm={9}>
+                <Row className="mb-2">
+                  <Col xs={4} sm={3}><strong>{t('emailHistory.type', 'Type')}:</strong></Col>
+                  <Col xs={8} sm={9}>
                     <Badge bg={getEmailTypeConfig(selectedEmail.email_type).color}>
                       {getEmailTypeConfig(selectedEmail.email_type).icon}{' '}
                       {isEn
@@ -415,9 +414,9 @@ const EmailHistory = ({ patientId }) => {
                     </Badge>
                   </Col>
                 </Row>
-                <Row className="mt-2">
-                  <Col sm={3}><strong>{t('emailHistory.status', 'Statut')}:</strong></Col>
-                  <Col sm={9}>{getStatusBadge(selectedEmail.status)}</Col>
+                <Row>
+                  <Col xs={4} sm={3}><strong>{t('emailHistory.status', 'Statut')}:</strong></Col>
+                  <Col xs={8} sm={9}>{getStatusBadge(selectedEmail.status)}</Col>
                 </Row>
               </div>
 
