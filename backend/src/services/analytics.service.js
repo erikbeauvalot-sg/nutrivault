@@ -73,7 +73,7 @@ async function getHealthTrends(options = {}) {
       include: [{
         model: MeasureDefinition,
         as: 'measureDefinition',
-        attributes: ['id', 'name', 'display_name', 'unit', 'category', 'min_normal', 'max_normal'],
+        attributes: ['id', 'name', 'display_name', 'unit', 'category', 'normal_range_min', 'normal_range_max'],
         where: { is_active: true }
       }],
       group: ['measure_definition_id', 'measureDefinition.id'],
@@ -127,8 +127,8 @@ async function getHealthTrends(options = {}) {
         minValue: parseFloat(m.get('min_value')) || 0,
         maxValue: parseFloat(m.get('max_value')) || 0,
         normalRange: {
-          min: m.measureDefinition?.min_normal,
-          max: m.measureDefinition?.max_normal
+          min: m.measureDefinition?.normal_range_min,
+          max: m.measureDefinition?.normal_range_max
         }
       })),
       riskDistribution,
@@ -152,7 +152,7 @@ async function getOutOfRangeMeasureCounts(dateFilter = {}) {
     include: [{
       model: MeasureDefinition,
       as: 'measureDefinition',
-      attributes: ['min_normal', 'max_normal', 'min_critical', 'max_critical'],
+      attributes: ['normal_range_min', 'normal_range_max', 'alert_threshold_min', 'alert_threshold_max'],
       where: { is_active: true }
     }],
     attributes: ['patient_id', 'numeric_value']
@@ -167,12 +167,12 @@ async function getOutOfRangeMeasureCounts(dateFilter = {}) {
     if (!def) return;
 
     const isOutOfRange =
-      (def.min_normal !== null && value < def.min_normal) ||
-      (def.max_normal !== null && value > def.max_normal);
+      (def.normal_range_min !== null && value < def.normal_range_min) ||
+      (def.normal_range_max !== null && value > def.normal_range_max);
 
     const isCritical =
-      (def.min_critical !== null && value < def.min_critical) ||
-      (def.max_critical !== null && value > def.max_critical);
+      (def.alert_threshold_min !== null && value < def.alert_threshold_min) ||
+      (def.alert_threshold_max !== null && value > def.alert_threshold_max);
 
     if (!patientOutOfRange[m.patient_id]) {
       patientOutOfRange[m.patient_id] = { outOfRange: 0, critical: 0, total: 0 };
@@ -606,7 +606,7 @@ async function calculatePatientHealthScore(patientId) {
       include: [{
         model: MeasureDefinition,
         as: 'measureDefinition',
-        attributes: ['min_normal', 'max_normal']
+        attributes: ['normal_range_min', 'normal_range_max']
       }]
     });
 
@@ -615,8 +615,8 @@ async function calculatePatientHealthScore(patientId) {
       const value = parseFloat(m.numeric_value);
       const def = m.measureDefinition;
       if (def && (
-        (def.min_normal !== null && value < def.min_normal) ||
-        (def.max_normal !== null && value > def.max_normal)
+        (def.normal_range_min !== null && value < def.normal_range_min) ||
+        (def.normal_range_max !== null && value > def.normal_range_max)
       )) {
         outOfRangeCount++;
       }
