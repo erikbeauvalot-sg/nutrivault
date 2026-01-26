@@ -12,6 +12,7 @@ import Layout from '../components/layout/Layout';
 import roleService from '../services/roleService';
 import RoleModal from '../components/RoleModal';
 import ActionButton from '../components/ActionButton';
+import ConfirmModal from '../components/ConfirmModal';
 
 const RolesManagementPage = () => {
   const { t } = useTranslation();
@@ -25,6 +26,8 @@ const RolesManagementPage = () => {
   const [selectedRole, setSelectedRole] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState(null);
 
   // Handle responsive layout
   useEffect(() => {
@@ -85,20 +88,24 @@ const RolesManagementPage = () => {
     }
   };
 
-  const handleDelete = async (roleId) => {
+  const handleDelete = (roleId) => {
     const targetRole = roles.find(r => r.id === roleId);
+    setRoleToDelete(targetRole);
+    setShowDeleteConfirm(true);
+  };
 
-    if (!window.confirm(t('roles.confirmDelete', `Are you sure you want to delete the role "${targetRole?.name}"? This action cannot be undone!`))) {
-      return;
-    }
+  const confirmDeleteRole = async () => {
+    if (!roleToDelete) return;
 
     try {
-      await roleService.deleteRole(roleId);
+      await roleService.deleteRole(roleToDelete.id);
       fetchRoles();
     } catch (err) {
       console.error('Error deleting role:', err);
       const errorMessage = err.response?.data?.error || t('roles.failedToDelete', 'Failed to delete role');
-      alert(errorMessage);
+      setError(errorMessage);
+    } finally {
+      setRoleToDelete(null);
     }
   };
 
@@ -301,6 +308,20 @@ const RolesManagementPage = () => {
         mode={roleModalMode}
         role={selectedRole}
         onSave={handleRoleModalSave}
+      />
+
+      {/* Delete Confirm Modal */}
+      <ConfirmModal
+        show={showDeleteConfirm}
+        onHide={() => {
+          setShowDeleteConfirm(false);
+          setRoleToDelete(null);
+        }}
+        onConfirm={confirmDeleteRole}
+        title={t('common.confirmation', 'Confirmation')}
+        message={t('roles.confirmDelete', { name: roleToDelete?.name, defaultValue: `Are you sure you want to delete the role "${roleToDelete?.name}"? This action cannot be undone!` })}
+        confirmLabel={t('common.delete', 'Delete')}
+        variant="danger"
       />
     </Layout>
   );

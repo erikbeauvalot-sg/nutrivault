@@ -28,8 +28,11 @@ import Layout from '../components/layout/Layout';
 import billingTemplateService from '../services/billingTemplateService';
 import BillingTemplateModal from '../components/BillingTemplateModal';
 import ActionButton from '../components/ActionButton';
+import ConfirmModal from '../components/ConfirmModal';
+import { useTranslation } from 'react-i18next';
 
 const BillingTemplatesPage = () => {
+  const { t } = useTranslation();
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -43,6 +46,8 @@ const BillingTemplatesPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('create'); // 'create' or 'edit'
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState(null);
 
   useEffect(() => {
     fetchTemplates();
@@ -92,23 +97,28 @@ const BillingTemplatesPage = () => {
   /**
    * Handle delete template
    */
-  const handleDelete = async (template) => {
+  const handleDelete = (template) => {
     if (template.is_default) {
-      alert('Cannot delete the default template. Set another template as default first.');
+      setError(t('billingTemplates.cannotDeleteDefault', 'Cannot delete the default template. Set another template as default first.'));
       return;
     }
 
-    if (!window.confirm(`Are you sure you want to delete "${template.name}"?`)) {
-      return;
-    }
+    setTemplateToDelete(template);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteTemplate = async () => {
+    if (!templateToDelete) return;
 
     try {
-      await billingTemplateService.deleteTemplate(template.id);
-      setSuccess(`Template "${template.name}" deleted successfully`);
+      await billingTemplateService.deleteTemplate(templateToDelete.id);
+      setSuccess(t('billingTemplates.deleteSuccess', { name: templateToDelete.name, defaultValue: `Template "${templateToDelete.name}" deleted successfully` }));
       fetchTemplates();
     } catch (err) {
       console.error('Error deleting template:', err);
-      setError(err.response?.data?.error || 'Failed to delete template');
+      setError(err.response?.data?.error || t('billingTemplates.deleteFailed', 'Failed to delete template'));
+    } finally {
+      setTemplateToDelete(null);
     }
   };
 
@@ -355,6 +365,20 @@ const BillingTemplatesPage = () => {
           template={selectedTemplate}
         />
       )}
+
+      {/* Delete Confirm Modal */}
+      <ConfirmModal
+        show={showDeleteConfirm}
+        onHide={() => {
+          setShowDeleteConfirm(false);
+          setTemplateToDelete(null);
+        }}
+        onConfirm={confirmDeleteTemplate}
+        title={t('common.confirmation', 'Confirmation')}
+        message={t('billingTemplates.confirmDelete', { name: templateToDelete?.name, defaultValue: `Are you sure you want to delete "${templateToDelete?.name}"?` })}
+        confirmLabel={t('common.delete', 'Delete')}
+        variant="danger"
+      />
     </Layout>
   );
 };

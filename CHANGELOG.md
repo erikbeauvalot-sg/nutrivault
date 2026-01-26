@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.14] - 2026-01-26
+
+### Added
+- New `ConfirmModal` reusable component replacing all `window.confirm()` dialogs
+- Unit tests for `ConfirmModal` component (16 test cases)
+
+### Changed
+- Replaced all `window.confirm()` calls with proper Bootstrap modals for better UX consistency
+- Updated 22+ pages/components to use the new ConfirmModal component
+- Improved user experience with consistent styling across all confirmation dialogs
+
+### Files Modified
+- `ConfirmModal.jsx` (new) - Reusable confirmation modal component
+- `ConfirmModal.test.jsx` (new) - Component unit tests
+- Pages: PatientsPage, VisitsPage, UsersPage, BillingPage, InvoiceDetailPage, UserDetailPage, PatientDetailPage, CustomFieldsPage, BillingTemplatesPage, RolesManagementPage, InvoiceCustomizationPage, EmailTemplatesPage, AIConfigPage, EditVisitPage, CustomFieldDefinitionDetailPage, CustomFieldCategoryDetailPage
+- Components: InvoiceList, PatientMeasuresTable, SendReminderButton, EmailTemplateTranslationModal
+- Locales: Added translation keys for confirmation dialogs (fr.json, en.json)
+
+---
+
 ## [5.0.0-alpha] - 2026-01-25
 
 ### Added

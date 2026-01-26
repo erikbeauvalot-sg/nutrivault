@@ -18,6 +18,7 @@ import { formatDateTime } from '../utils/dateUtils';
 import { getCategoryBadgeVariant, getCategoryDisplayName } from '../utils/measureUtils';
 import { applyTranslationsToMeasures, fetchMeasureTranslations, applyMeasureTranslations } from '../utils/measureTranslations';
 import LogMeasureModal from './LogMeasureModal';
+import ConfirmModal from './ConfirmModal';
 
 const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
   const { t, i18n } = useTranslation();
@@ -42,6 +43,8 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
   const [showLogModal, setShowLogModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingMeasure, setEditingMeasure] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [measureToDelete, setMeasureToDelete] = useState(null);
 
   // Set default date range (last 30 days)
   useEffect(() => {
@@ -153,17 +156,22 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
     }
   };
 
-  const handleDelete = async (measureId) => {
-    if (!window.confirm(t('measures.confirmDelete', 'Are you sure you want to delete this measure?'))) {
-      return;
-    }
+  const handleDelete = (measureId) => {
+    setMeasureToDelete(measureId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteMeasure = async () => {
+    if (!measureToDelete) return;
 
     try {
-      await deletePatientMeasure(measureId);
+      await deletePatientMeasure(measureToDelete);
       fetchMeasures(); // Refresh the list
     } catch (err) {
       console.error('Error deleting measure:', err);
-      alert(t('measures.errorDeleting', 'Failed to delete measure: ') + (err.response?.data?.error || err.message));
+      setError(t('measures.errorDeleting', 'Failed to delete measure: ') + (err.response?.data?.error || err.message));
+    } finally {
+      setMeasureToDelete(null);
     }
   };
 
@@ -528,6 +536,20 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
           }}
         />
       )}
+
+      {/* Delete Confirm Modal */}
+      <ConfirmModal
+        show={showDeleteConfirm}
+        onHide={() => {
+          setShowDeleteConfirm(false);
+          setMeasureToDelete(null);
+        }}
+        onConfirm={confirmDeleteMeasure}
+        title={t('common.confirmation', 'Confirmation')}
+        message={t('measures.confirmDelete', 'Are you sure you want to delete this measure?')}
+        confirmLabel={t('common.delete', 'Delete')}
+        variant="danger"
+      />
     </div>
   );
 };

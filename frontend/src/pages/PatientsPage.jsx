@@ -12,6 +12,7 @@ import Layout from '../components/layout/Layout';
 import PatientList from '../components/PatientList';
 import ExportModal from '../components/ExportModal';
 import QuickPatientModal from '../components/QuickPatientModal';
+import ConfirmModal from '../components/ConfirmModal';
 import api from '../services/api';
 
 const PatientsPage = () => {
@@ -23,6 +24,8 @@ const PatientsPage = () => {
   const [error, setError] = useState(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showQuickPatientModal, setShowQuickPatientModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [patientToDelete, setPatientToDelete] = useState(null);
   
   // Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -74,17 +77,22 @@ const PatientsPage = () => {
   };
 
 
-  const handleDeletePatient = async (id) => {
-    if (!window.confirm(t('patients.confirmDelete'))) {
-      return;
-    }
+  const handleDeletePatient = (id) => {
+    setPatientToDelete(id);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeletePatient = async () => {
+    if (!patientToDelete) return;
 
     try {
-      await api.delete(`/api/patients/${id}`);
-      setPatients(patients.filter(p => p.id !== id));
+      await api.delete(`/api/patients/${patientToDelete}`);
+      setPatients(patients.filter(p => p.id !== patientToDelete));
       setError(null);
     } catch (err) {
       setError(t('errors.failedToDeletePatient', { error: err.response?.data?.error || err.message }));
+    } finally {
+      setPatientToDelete(null);
     }
   };
 
@@ -205,6 +213,19 @@ const PatientsPage = () => {
         show={showQuickPatientModal}
         onHide={() => setShowQuickPatientModal(false)}
         onPatientCreated={handlePatientCreated}
+      />
+
+      <ConfirmModal
+        show={showDeleteConfirm}
+        onHide={() => {
+          setShowDeleteConfirm(false);
+          setPatientToDelete(null);
+        }}
+        onConfirm={confirmDeletePatient}
+        title={t('common.confirmation', 'Confirmation')}
+        message={t('patients.confirmDelete')}
+        confirmLabel={t('common.delete', 'Delete')}
+        variant="danger"
       />
     </Layout>
   );

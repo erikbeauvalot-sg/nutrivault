@@ -20,13 +20,19 @@ import {
 import { HexColorPicker } from 'react-colorful';
 import Layout from '../components/layout/Layout';
 import invoiceCustomizationService from '../services/invoiceCustomizationService';
+import ConfirmModal from '../components/ConfirmModal';
+import { useTranslation } from 'react-i18next';
 
 const InvoiceCustomizationPage = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [customization, setCustomization] = useState(null);
+  const [showDeleteLogoConfirm, setShowDeleteLogoConfirm] = useState(false);
+  const [showDeleteSignatureConfirm, setShowDeleteSignatureConfirm] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -172,17 +178,19 @@ const InvoiceCustomizationPage = () => {
     }
   };
 
-  const handleLogoDelete = async () => {
-    if (!window.confirm('Delete logo image?')) return;
+  const handleLogoDelete = () => {
+    setShowDeleteLogoConfirm(true);
+  };
 
+  const confirmDeleteLogo = async () => {
     try {
       setSaving(true);
       await invoiceCustomizationService.deleteLogo();
-      setSuccess('Logo deleted successfully');
+      setSuccess(t('invoiceCustomization.logoDeletedSuccess', 'Logo deleted successfully'));
       setLogoPreview(null);
       await fetchCustomization();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to delete logo');
+      setError(err.response?.data?.error || t('invoiceCustomization.logoDeleteFailed', 'Failed to delete logo'));
     } finally {
       setSaving(false);
     }
@@ -204,17 +212,19 @@ const InvoiceCustomizationPage = () => {
     }
   };
 
-  const handleSignatureDelete = async () => {
-    if (!window.confirm('Delete signature image?')) return;
+  const handleSignatureDelete = () => {
+    setShowDeleteSignatureConfirm(true);
+  };
 
+  const confirmDeleteSignature = async () => {
     try {
       setSaving(true);
       await invoiceCustomizationService.deleteSignature();
-      setSuccess('Signature deleted successfully');
+      setSuccess(t('invoiceCustomization.signatureDeletedSuccess', 'Signature deleted successfully'));
       setSignaturePreview(null);
       await fetchCustomization();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to delete signature');
+      setError(err.response?.data?.error || t('invoiceCustomization.signatureDeleteFailed', 'Failed to delete signature'));
     } finally {
       setSaving(false);
     }
@@ -234,18 +244,20 @@ const InvoiceCustomizationPage = () => {
     }
   };
 
-  const handleReset = async () => {
-    if (!window.confirm('Reset all customization to defaults? This will delete uploaded files.')) return;
+  const handleReset = () => {
+    setShowResetConfirm(true);
+  };
 
+  const confirmReset = async () => {
     try {
       setSaving(true);
       await invoiceCustomizationService.resetToDefaults();
-      setSuccess('Settings reset to defaults');
+      setSuccess(t('invoiceCustomization.resetSuccess', 'Settings reset to defaults'));
       setLogoPreview(null);
       setSignaturePreview(null);
       await fetchCustomization();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to reset settings');
+      setError(err.response?.data?.error || t('invoiceCustomization.resetFailed', 'Failed to reset settings'));
     } finally {
       setSaving(false);
     }
@@ -717,6 +729,39 @@ const InvoiceCustomizationPage = () => {
             </Card>
           </Tab>
         </Tabs>
+
+        {/* Delete Logo Confirm Modal */}
+        <ConfirmModal
+          show={showDeleteLogoConfirm}
+          onHide={() => setShowDeleteLogoConfirm(false)}
+          onConfirm={confirmDeleteLogo}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('invoiceCustomization.confirmDeleteLogo', 'Delete logo image?')}
+          confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
+        />
+
+        {/* Delete Signature Confirm Modal */}
+        <ConfirmModal
+          show={showDeleteSignatureConfirm}
+          onHide={() => setShowDeleteSignatureConfirm(false)}
+          onConfirm={confirmDeleteSignature}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('invoiceCustomization.confirmDeleteSignature', 'Delete signature image?')}
+          confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
+        />
+
+        {/* Reset Confirm Modal */}
+        <ConfirmModal
+          show={showResetConfirm}
+          onHide={() => setShowResetConfirm(false)}
+          onConfirm={confirmReset}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('invoiceCustomization.confirmReset', 'Reset all customization to defaults? This will delete uploaded files.')}
+          confirmLabel={t('common.reset', 'Reset')}
+          variant="warning"
+        />
       </Container>
     </Layout>
   );

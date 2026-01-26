@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import * as billingService from '../services/billingService';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import ActionButton from './ActionButton';
+import ConfirmModal from './ConfirmModal';
 import './InvoiceList.css';
 
 function InvoiceList({
@@ -30,6 +31,8 @@ function InvoiceList({
   const [selectedInvoices, setSelectedInvoices] = useState([]);
   const [batchLoading, setBatchLoading] = useState(false);
   const [batchResult, setBatchResult] = useState(null);
+  const [showSendInvoicesConfirm, setShowSendInvoicesConfirm] = useState(false);
+  const [showSendRemindersConfirm, setShowSendRemindersConfirm] = useState(false);
 
   // Handle responsive layout
   useEffect(() => {
@@ -89,16 +92,12 @@ function InvoiceList({
     });
   };
 
-  const handleBatchSendInvoices = async () => {
+  const handleBatchSendInvoices = () => {
     if (selectedInvoices.length === 0) return;
+    setShowSendInvoicesConfirm(true);
+  };
 
-    if (!window.confirm(t('billing.confirmBatchSendInvoices', {
-      count: selectedInvoices.length,
-      defaultValue: `Send ${selectedInvoices.length} invoice(s) by email?`
-    }))) {
-      return;
-    }
-
+  const confirmBatchSendInvoices = async () => {
     try {
       setBatchLoading(true);
       setBatchResult(null);
@@ -118,16 +117,12 @@ function InvoiceList({
     }
   };
 
-  const handleBatchSendReminders = async () => {
+  const handleBatchSendReminders = () => {
     if (selectedInvoices.length === 0) return;
+    setShowSendRemindersConfirm(true);
+  };
 
-    if (!window.confirm(t('billing.confirmBatchSendReminders', {
-      count: selectedInvoices.length,
-      defaultValue: `Send payment reminders for ${selectedInvoices.length} invoice(s)?`
-    }))) {
-      return;
-    }
-
+  const confirmBatchSendReminders = async () => {
     try {
       setBatchLoading(true);
       setBatchResult(null);
@@ -528,6 +523,33 @@ function InvoiceList({
 
       {/* Pagination */}
       {renderPagination()}
+
+      {/* Confirm Modals */}
+      <ConfirmModal
+        show={showSendInvoicesConfirm}
+        onHide={() => setShowSendInvoicesConfirm(false)}
+        onConfirm={confirmBatchSendInvoices}
+        title={t('common.confirmation', 'Confirmation')}
+        message={t('billing.confirmBatchSendInvoices', {
+          count: selectedInvoices.length,
+          defaultValue: `Send ${selectedInvoices.length} invoice(s) by email?`
+        })}
+        confirmLabel={t('billing.send', 'Send')}
+        variant="primary"
+      />
+
+      <ConfirmModal
+        show={showSendRemindersConfirm}
+        onHide={() => setShowSendRemindersConfirm(false)}
+        onConfirm={confirmBatchSendReminders}
+        title={t('common.confirmation', 'Confirmation')}
+        message={t('billing.confirmBatchSendReminders', {
+          count: selectedInvoices.length,
+          defaultValue: `Send payment reminders for ${selectedInvoices.length} invoice(s)?`
+        })}
+        confirmLabel={t('billing.send', 'Send')}
+        variant="warning"
+      />
     </div>
   );
 }

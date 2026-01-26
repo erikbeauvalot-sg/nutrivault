@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import InvoiceList from '../components/InvoiceList';
 import ExportModal from '../components/ExportModal';
+import ConfirmModal from '../components/ConfirmModal';
 import * as billingService from '../services/billingService';
 
 const BillingPage = () => {
@@ -36,6 +37,8 @@ const BillingPage = () => {
 
   // Modal states
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState(null);
 
   // Individual invoice view state
   const [currentInvoice, setCurrentInvoice] = useState(null);
@@ -97,16 +100,21 @@ const BillingPage = () => {
     }
   };
 
-  const handleDeleteInvoice = async (invoiceId) => {
-    if (!window.confirm(t('billing.confirmDeleteInvoice'))) {
-      return;
-    }
+  const handleDeleteInvoice = (invoiceId) => {
+    setInvoiceToDelete(invoiceId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteInvoice = async () => {
+    if (!invoiceToDelete) return;
 
     try {
-      await billingService.deleteInvoice(invoiceId);
+      await billingService.deleteInvoice(invoiceToDelete);
       fetchInvoices(); // Refresh list
     } catch (err) {
       setError(t('errors.failedToDeleteInvoice', { error: err.response?.data?.error || err.message }));
+    } finally {
+      setInvoiceToDelete(null);
     }
   };
 
@@ -274,6 +282,19 @@ const BillingPage = () => {
           show={showExportModal}
           onHide={() => setShowExportModal(false)}
           dataType="billing"
+        />
+
+        <ConfirmModal
+          show={showDeleteConfirm}
+          onHide={() => {
+            setShowDeleteConfirm(false);
+            setInvoiceToDelete(null);
+          }}
+          onConfirm={confirmDeleteInvoice}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('billing.confirmDeleteInvoice')}
+          confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
         />
       </Container>
     </Layout>

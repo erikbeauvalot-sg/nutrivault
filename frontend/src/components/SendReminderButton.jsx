@@ -9,11 +9,13 @@ import { Button, Spinner, OverlayTrigger, Tooltip, Alert } from 'react-bootstrap
 import { FaEnvelope, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
 import appointmentReminderService from '../services/appointmentReminderService';
+import ConfirmModal from './ConfirmModal';
 
 const SendReminderButton = ({ visit, onReminderSent }) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null); // { type: 'success' | 'danger', text: string }
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Determine if reminder can be sent
   const canSendReminder =
@@ -40,12 +42,11 @@ const SendReminderButton = ({ visit, onReminderSent }) => {
   /**
    * Handle send reminder button click
    */
-  const handleSendReminder = async () => {
-    const patientName = `${visit.patient.first_name} ${visit.patient.last_name}`;
-    if (!window.confirm(t('appointmentReminders.confirmSend', { patientName }))) {
-      return;
-    }
+  const handleSendReminder = () => {
+    setShowConfirmModal(true);
+  };
 
+  const confirmSendReminder = async () => {
     setLoading(true);
     setMessage(null);
     try {
@@ -132,6 +133,16 @@ const SendReminderButton = ({ visit, onReminderSent }) => {
           </Button>
         </span>
       </OverlayTrigger>
+
+      <ConfirmModal
+        show={showConfirmModal}
+        onHide={() => setShowConfirmModal(false)}
+        onConfirm={confirmSendReminder}
+        title={t('common.confirmation', 'Confirmation')}
+        message={t('appointmentReminders.confirmSend', { patientName: `${visit?.patient?.first_name} ${visit?.patient?.last_name}` })}
+        confirmLabel={t('appointmentReminders.sendReminder', 'Send Reminder')}
+        variant="warning"
+      />
     </div>
   );
 };

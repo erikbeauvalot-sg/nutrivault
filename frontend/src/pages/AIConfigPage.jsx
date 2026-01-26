@@ -40,6 +40,7 @@ import {
   FaStar,
   FaFileAlt
 } from 'react-icons/fa';
+import ConfirmModal from '../components/ConfirmModal';
 
 const AIConfigPage = () => {
   const { t } = useTranslation();
@@ -64,6 +65,8 @@ const AIConfigPage = () => {
   const [promptsLoading, setPromptsLoading] = useState(false);
   const [showPromptEditor, setShowPromptEditor] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState(null);
+  const [showDeletePromptConfirm, setShowDeletePromptConfirm] = useState(false);
+  const [promptToDelete, setPromptToDelete] = useState(null);
 
   // Redirect if not admin
   useEffect(() => {
@@ -133,18 +136,23 @@ const AIConfigPage = () => {
     fetchPrompts();
   };
 
-  const handleDeletePrompt = async (promptId) => {
-    if (!window.confirm(t('aiPrompt.confirmDelete'))) {
-      return;
-    }
+  const handleDeletePrompt = (promptId) => {
+    setPromptToDelete(promptId);
+    setShowDeletePromptConfirm(true);
+  };
+
+  const confirmDeletePrompt = async () => {
+    if (!promptToDelete) return;
 
     try {
-      await aiPromptService.delete(promptId);
+      await aiPromptService.delete(promptToDelete);
       setSuccess(t('aiPrompt.deletedSuccess'));
       fetchPrompts();
     } catch (err) {
       console.error('Error deleting prompt:', err);
       setError(err.response?.data?.error || t('aiPrompt.deleteError'));
+    } finally {
+      setPromptToDelete(null);
     }
   };
 
@@ -821,6 +829,20 @@ const AIConfigPage = () => {
           onHide={() => setShowPromptEditor(false)}
           prompt={editingPrompt}
           onSaved={handlePromptSaved}
+        />
+
+        {/* Delete Prompt Confirm Modal */}
+        <ConfirmModal
+          show={showDeletePromptConfirm}
+          onHide={() => {
+            setShowDeletePromptConfirm(false);
+            setPromptToDelete(null);
+          }}
+          onConfirm={confirmDeletePrompt}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('aiPrompt.confirmDelete')}
+          confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
         />
       </Container>
     </Layout>

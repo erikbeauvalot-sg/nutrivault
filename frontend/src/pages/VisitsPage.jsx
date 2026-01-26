@@ -13,6 +13,7 @@ import visitService from '../services/visitService';
 import { getPatients } from '../services/patientService';
 import ExportModal from '../components/ExportModal';
 import ActionButton from '../components/ActionButton';
+import ConfirmModal from '../components/ConfirmModal';
 import './VisitsPage.css';
 
 const VisitsPage = () => {
@@ -34,6 +35,8 @@ const VisitsPage = () => {
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'timeline'
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [visitToDelete, setVisitToDelete] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   // Handle responsive layout
@@ -96,15 +99,22 @@ const VisitsPage = () => {
     setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
   };
 
-  const handleDelete = async (visitId) => {
-    if (!window.confirm(t('visits.confirmDelete'))) return;
+  const handleDelete = (visitId) => {
+    setVisitToDelete(visitId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteVisit = async () => {
+    if (!visitToDelete) return;
 
     try {
-      await visitService.deleteVisit(visitId);
+      await visitService.deleteVisit(visitToDelete);
       fetchVisits();
     } catch (err) {
       console.error('Error deleting visit:', err);
-      alert(err.response?.data?.error || t('errors.failedToDeleteVisit'));
+      setError(err.response?.data?.error || t('errors.failedToDeleteVisit'));
+    } finally {
+      setVisitToDelete(null);
     }
   };
 
@@ -531,6 +541,19 @@ const VisitsPage = () => {
           show={showExportModal}
           onHide={() => setShowExportModal(false)}
           dataType="visits"
+        />
+
+        <ConfirmModal
+          show={showDeleteConfirm}
+          onHide={() => {
+            setShowDeleteConfirm(false);
+            setVisitToDelete(null);
+          }}
+          onConfirm={confirmDeleteVisit}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('visits.confirmDelete')}
+          confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
         />
       </Container>
     </Layout>

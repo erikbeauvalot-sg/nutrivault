@@ -13,6 +13,7 @@ import userService from '../services/userService';
 import UserModal from '../components/UserModal';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import ActionButton from '../components/ActionButton';
+import ConfirmModal from '../components/ConfirmModal';
 import './UsersPage.css';
 
 const UsersPage = () => {
@@ -33,8 +34,10 @@ const UsersPage = () => {
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
   const [showUserModal, setShowUserModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [userModalMode, setUserModalMode] = useState('create');
   const [selectedUser, setSelectedUser] = useState(null);
+  const [userToDelete, setUserToDelete] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   // Handle responsive layout
@@ -107,9 +110,9 @@ const UsersPage = () => {
     }
   };
 
-  const handleDelete = async (userId) => {
+  const handleDelete = (userId) => {
     if (userId === user.id) {
-      alert(t('users.cannotDeleteOwnAccount'));
+      setError(t('users.cannotDeleteOwnAccount'));
       return;
     }
 
@@ -117,21 +120,25 @@ const UsersPage = () => {
     const targetUser = users.find(u => u.id === userId);
 
     if (targetUser?.is_active) {
-      alert(t('users.mustDeactivateBeforeDelete', 'You must deactivate this user before deleting. Please deactivate the user first, then you can delete them.'));
+      setError(t('users.mustDeactivateBeforeDelete', 'You must deactivate this user before deleting. Please deactivate the user first, then you can delete them.'));
       return;
     }
 
-    if (!window.confirm(t('users.confirmDelete', 'Are you sure you want to PERMANENTLY delete this user? This action cannot be undone!'))) {
-      return;
-    }
+    setUserToDelete(userId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
 
     try {
-      await userService.deleteUser(userId);
+      await userService.deleteUser(userToDelete);
       fetchUsers();
     } catch (err) {
       console.error('Error deleting user:', err);
-      const errorMessage = err.response?.data?.error || t('users.failedToDelete');
-      alert(errorMessage);
+      setError(err.response?.data?.error || t('users.failedToDelete'));
+    } finally {
+      setUserToDelete(null);
     }
   };
 
@@ -493,6 +500,19 @@ const UsersPage = () => {
           username={selectedUser?.username}
           isAdmin={user?.role === 'ADMIN'}
           onSuccess={handlePasswordSuccess}
+        />
+
+        <ConfirmModal
+          show={showDeleteConfirm}
+          onHide={() => {
+            setShowDeleteConfirm(false);
+            setUserToDelete(null);
+          }}
+          onConfirm={confirmDeleteUser}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('users.confirmDelete', 'Are you sure you want to PERMANENTLY delete this user? This action cannot be undone!')}
+          confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
         />
       </Container>
     </Layout>

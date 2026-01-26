@@ -21,6 +21,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import emailTemplateService from '../services/emailTemplateService';
 import { SUPPORTED_LANGUAGES, getLanguageFlag, formatLanguageDisplay } from '../utils/languages';
+import ConfirmModal from './ConfirmModal';
 
 const EmailTemplateTranslationModal = ({ show, onHide, template, onSaved }) => {
   const { t } = useTranslation();
@@ -36,6 +37,7 @@ const EmailTemplateTranslationModal = ({ show, onHide, template, onSaved }) => {
     body_html: '',
     body_text: ''
   });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (show && template?.id) {
@@ -145,11 +147,11 @@ const EmailTemplateTranslationModal = ({ show, onHide, template, onSaved }) => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm(t('emailTemplates.translations.confirmDelete', 'Are you sure you want to delete this translation?'))) {
-      return;
-    }
+  const handleDelete = () => {
+    setShowDeleteConfirm(true);
+  };
 
+  const confirmDelete = async () => {
     try {
       setSaving(true);
       setError(null);
@@ -304,6 +306,16 @@ const EmailTemplateTranslationModal = ({ show, onHide, template, onSaved }) => {
           )}
         </Button>
       </Modal.Footer>
+
+      <ConfirmModal
+        show={showDeleteConfirm}
+        onHide={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        title={t('common.confirmation', 'Confirmation')}
+        message={t('emailTemplates.translations.confirmDelete', 'Are you sure you want to delete this translation?')}
+        confirmLabel={t('common.delete', 'Delete')}
+        variant="danger"
+      />
     </Modal>
   );
 };

@@ -35,6 +35,7 @@ import {
   FaEnvelope
 } from 'react-icons/fa';
 import ActionButton from '../components/ActionButton';
+import ConfirmModal from '../components/ConfirmModal';
 
 const EmailTemplatesPage = () => {
   const { t } = useTranslation();
@@ -54,6 +55,8 @@ const EmailTemplatesPage = () => {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showTranslationModal, setShowTranslationModal] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState(null);
 
   // Category options
   const categories = [
@@ -151,22 +154,27 @@ const EmailTemplatesPage = () => {
     }
   };
 
-  const handleDeleteTemplate = async (template) => {
+  const handleDeleteTemplate = (template) => {
     if (template.is_system) {
-      alert('System templates cannot be deleted. You can deactivate them instead.');
+      setError(t('emailTemplates.cannotDeleteSystem', 'System templates cannot be deleted. You can deactivate them instead.'));
       return;
     }
 
-    if (!window.confirm(`Are you sure you want to delete "${template.name}"?`)) {
-      return;
-    }
+    setTemplateToDelete(template);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteTemplate = async () => {
+    if (!templateToDelete) return;
 
     try {
-      await emailTemplateService.deleteTemplate(template.id);
+      await emailTemplateService.deleteTemplate(templateToDelete.id);
       fetchTemplates();
     } catch (err) {
       console.error('Error deleting template:', err);
-      alert(err.response?.data?.error || 'Failed to delete template');
+      setError(err.response?.data?.error || t('emailTemplates.deleteFailed', 'Failed to delete template'));
+    } finally {
+      setTemplateToDelete(null);
     }
   };
 
@@ -409,6 +417,20 @@ const EmailTemplatesPage = () => {
             onSaved={fetchTemplates}
           />
         )}
+
+        {/* Delete Confirm Modal */}
+        <ConfirmModal
+          show={showDeleteConfirm}
+          onHide={() => {
+            setShowDeleteConfirm(false);
+            setTemplateToDelete(null);
+          }}
+          onConfirm={confirmDeleteTemplate}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('emailTemplates.confirmDelete', { name: templateToDelete?.name, defaultValue: `Are you sure you want to delete "${templateToDelete?.name}"?` })}
+          confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
+        />
       </Container>
     </Layout>
   );

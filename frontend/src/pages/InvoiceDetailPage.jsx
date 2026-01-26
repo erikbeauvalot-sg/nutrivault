@@ -9,6 +9,7 @@ import { Container, Row, Col, Card, Button, Badge, Alert, Spinner, Table, Modal,
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
+import ConfirmModal from '../components/ConfirmModal';
 import * as billingService from '../services/billingService';
 
 const InvoiceDetailPage = () => {
@@ -32,6 +33,7 @@ const InvoiceDetailPage = () => {
   const [showPaymentStatusModal, setShowPaymentStatusModal] = useState(false);
   const [newPaymentStatus, setNewPaymentStatus] = useState('');
   const [changingPaymentStatus, setChangingPaymentStatus] = useState(false);
+  const [showMarkPaidConfirm, setShowMarkPaidConfirm] = useState(false);
 
   useEffect(() => {
     if (id && hasPermission('billing.read')) {
@@ -147,11 +149,11 @@ const InvoiceDetailPage = () => {
     }
   };
 
-  const handleMarkAsPaid = async () => {
-    if (!window.confirm(t('billing.confirmMarkAsPaid'))) {
-      return;
-    }
+  const handleMarkAsPaid = () => {
+    setShowMarkPaidConfirm(true);
+  };
 
+  const confirmMarkAsPaid = async () => {
     try {
       setMarkingPaid(true);
       setError(null);
@@ -676,6 +678,17 @@ const InvoiceDetailPage = () => {
             </Button>
           </Modal.Footer>
         </Modal>
+
+        {/* Mark as Paid Confirm Modal */}
+        <ConfirmModal
+          show={showMarkPaidConfirm}
+          onHide={() => setShowMarkPaidConfirm(false)}
+          onConfirm={confirmMarkAsPaid}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('billing.confirmMarkAsPaid')}
+          confirmLabel={t('billing.markAsPaid', 'Mark as Paid')}
+          variant="success"
+        />
 
         {/* Change Status Modal */}
         <Modal show={showStatusModal} onHide={() => setShowStatusModal(false)} centered scrollable>

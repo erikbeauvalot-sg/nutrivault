@@ -16,6 +16,7 @@ import userService from '../services/userService';
 import { getMeasureDefinitions, getMeasuresByVisit, logPatientMeasure, updatePatientMeasure, getAllMeasureTranslations } from '../services/measureService';
 import { fetchMeasureTranslations } from '../utils/measureTranslations';
 import CustomFieldInput from '../components/CustomFieldInput';
+import ConfirmModal from '../components/ConfirmModal';
 
 const EditVisitPage = () => {
   const { t, i18n } = useTranslation();
@@ -54,6 +55,9 @@ const EditVisitPage = () => {
   const [measureTranslations, setMeasureTranslations] = useState({});
   const [measureValues, setMeasureValues] = useState({});
   const [existingMeasureIds, setExistingMeasureIds] = useState({});
+
+  // Finish visit confirm modal
+  const [showFinishConfirm, setShowFinishConfirm] = useState(false);
 
   useEffect(() => {
     if (i18n.resolvedLanguage) {
@@ -351,16 +355,17 @@ const EditVisitPage = () => {
   };
 
   /**
-   * Handle finish visit action - saves all changes, sets status to COMPLETED, and generates summary
+   * Handle finish visit action - shows confirmation modal
    */
-  const handleFinishVisit = async () => {
+  const handleFinishVisit = () => {
     if (!validateForm()) return;
+    setShowFinishConfirm(true);
+  };
 
-    // Confirm action
-    if (!window.confirm(t('visits.confirmFinishVisit', 'Are you sure you want to finish this visit? This will mark it as completed and generate a summary.'))) {
-      return;
-    }
-
+  /**
+   * Confirm finish visit - saves all changes, sets status to COMPLETED, and generates summary
+   */
+  const confirmFinishVisit = async () => {
     setFinishing(true);
     setError(null);
 
@@ -1021,6 +1026,17 @@ const EditVisitPage = () => {
             </Card.Body>
           </Card>
         </Form>
+
+        {/* Finish Visit Confirm Modal */}
+        <ConfirmModal
+          show={showFinishConfirm}
+          onHide={() => setShowFinishConfirm(false)}
+          onConfirm={confirmFinishVisit}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('visits.confirmFinishVisit', 'Are you sure you want to finish this visit? This will mark it as completed and generate a summary.')}
+          confirmLabel={t('visits.finishVisit', 'Finish Visit')}
+          variant="success"
+        />
       </Container>
     </Layout>
   );

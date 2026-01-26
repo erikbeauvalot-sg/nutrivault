@@ -50,7 +50,9 @@
     "fieldsFound": "field(s) found",
     "switchedToTab": "switched to matching tab",
     "noFieldsMatch": "No fields match your search",
-    "add": "Add"
+    "add": "Add",
+    "confirm": "Confirm",
+    "confirmation": "Confirmation"
   },
   "navigation": {
     "dashboard": "Dashboard",

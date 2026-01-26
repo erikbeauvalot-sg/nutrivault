@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import Layout from '../components/layout/Layout';
 import customFieldService from '../services/customFieldService';
 import CustomFieldDefinitionModal from '../components/CustomFieldDefinitionModal';
+import ConfirmModal from '../components/ConfirmModal';
 import { useAuth } from '../contexts/AuthContext';
 
 const CustomFieldDefinitionDetailPage = () => {
@@ -26,6 +27,7 @@ const CustomFieldDefinitionDetailPage = () => {
 
   // Modal state
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const isAdmin = user?.role === 'ADMIN';
 
@@ -74,15 +76,17 @@ const CustomFieldDefinitionDetailPage = () => {
     setShowEditModal(true);
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm(t('customFields.confirmDeleteField', 'Are you sure you want to delete this field definition?'))) return;
+  const handleDelete = () => {
+    setShowDeleteConfirm(true);
+  };
 
+  const confirmDeleteDefinition = async () => {
     try {
       await customFieldService.deleteDefinition(id);
       navigate('/settings/custom-fields');
     } catch (err) {
       console.error('Error deleting definition:', err);
-      alert(err.response?.data?.error || t('customFields.deleteFieldError', 'Failed to delete field'));
+      setError(err.response?.data?.error || t('customFields.deleteFieldError', 'Failed to delete field'));
     }
   };
 
@@ -366,6 +370,17 @@ const CustomFieldDefinitionDetailPage = () => {
             fetchData();
             setShowEditModal(false);
           }}
+        />
+
+        {/* Delete Confirm Modal */}
+        <ConfirmModal
+          show={showDeleteConfirm}
+          onHide={() => setShowDeleteConfirm(false)}
+          onConfirm={confirmDeleteDefinition}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('customFields.confirmDeleteField', 'Are you sure you want to delete this field definition?')}
+          confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
         />
       </Container>
     </Layout>

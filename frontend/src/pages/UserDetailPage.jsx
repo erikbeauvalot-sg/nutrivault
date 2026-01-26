@@ -15,6 +15,7 @@ import userService from '../services/userService';
 import visitService from '../services/visitService';
 import UserModal from '../components/UserModal';
 import ChangePasswordModal from '../components/ChangePasswordModal';
+import ConfirmModal from '../components/ConfirmModal';
 
 const UserDetailPage = () => {
   const { t } = useTranslation();
@@ -28,6 +29,7 @@ const UserDetailPage = () => {
   const [error, setError] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Dietitian-specific data
   const [dietitianVisits, setDietitianVisits] = useState([]);
@@ -138,27 +140,27 @@ const UserDetailPage = () => {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (user.id === currentUser.id) {
-      alert(t('users.cannotDeleteOwnAccount'));
+      setError(t('users.cannotDeleteOwnAccount'));
       return;
     }
 
     if (user.is_active) {
-      alert(t('users.mustDeactivateBeforeDelete'));
+      setError(t('users.mustDeactivateBeforeDelete'));
       return;
     }
 
-    if (!window.confirm(t('users.confirmDelete'))) {
-      return;
-    }
+    setShowDeleteConfirm(true);
+  };
 
+  const confirmDeleteUser = async () => {
     try {
       await userService.deleteUser(user.id);
       navigate('/users');
     } catch (err) {
       console.error('Error deleting user:', err);
-      alert(err.response?.data?.error || t('users.failedToDelete'));
+      setError(err.response?.data?.error || t('users.failedToDelete'));
     }
   };
 
@@ -649,6 +651,17 @@ const UserDetailPage = () => {
             setShowPasswordModal(false);
             fetchUser();
           }}
+        />
+
+        {/* Delete Confirm Modal */}
+        <ConfirmModal
+          show={showDeleteConfirm}
+          onHide={() => setShowDeleteConfirm(false)}
+          onConfirm={confirmDeleteUser}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('users.confirmDelete')}
+          confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
         />
       </Container>
     </Layout>

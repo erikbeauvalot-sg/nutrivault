@@ -56,7 +56,9 @@
     "fieldsFound": "champ(s) trouvé(s)",
     "switchedToTab": "basculé vers l'onglet correspondant",
     "noFieldsMatch": "Aucun champ ne correspond à votre recherche",
-    "add": "Ajouter"
+    "add": "Ajouter",
+    "confirm": "Confirmer",
+    "confirmation": "Confirmation"
   },
   "navigation": {
     "dashboard": "Tableau de bord",

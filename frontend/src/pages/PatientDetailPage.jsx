@@ -20,6 +20,7 @@ import MeasureComparison from '../components/MeasureComparison';
 import EmailHistory from '../components/EmailHistory';
 import PatientHealthScore from '../components/PatientHealthScore';
 import ActionButton from '../components/ActionButton';
+import ConfirmModal from '../components/ConfirmModal';
 import customFieldService from '../services/customFieldService';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import { getBMICategory, calculateBMI } from '../utils/bmiUtils';
@@ -66,6 +67,10 @@ const PatientDetailPage = () => {
   const [measuresLoading, setMeasuresLoading] = useState(false);
   const [measuresDisplayLimit, setMeasuresDisplayLimit] = useState(20);
   const [measureTranslations, setMeasureTranslations] = useState({});
+  const [showDeleteVisitConfirm, setShowDeleteVisitConfirm] = useState(false);
+  const [visitToDelete, setVisitToDelete] = useState(null);
+  const [showDeleteInvoiceConfirm, setShowDeleteInvoiceConfirm] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState(null);
 
   useEffect(() => {
     if (id) {
@@ -351,18 +356,23 @@ const PatientDetailPage = () => {
     navigate(`/visits/${visitId}/edit`);
   };
 
-  const handleDeleteVisit = async (visitId) => {
-    if (!window.confirm(t('visits.confirmDelete') || 'Are you sure you want to delete this visit?')) {
-      return;
-    }
+  const handleDeleteVisit = (visitId) => {
+    setVisitToDelete(visitId);
+    setShowDeleteVisitConfirm(true);
+  };
+
+  const confirmDeleteVisit = async () => {
+    if (!visitToDelete) return;
 
     try {
-      await api.delete(`/api/visits/${visitId}`);
+      await api.delete(`/api/visits/${visitToDelete}`);
       // Refresh patient details to update visit list
       fetchPatientDetails();
     } catch (err) {
       console.error('Error deleting visit:', err);
       setError(t('errors.failedToDeleteVisit', { error: err.response?.data?.error || err.message }));
+    } finally {
+      setVisitToDelete(null);
     }
   };
 
@@ -386,18 +396,23 @@ const PatientDetailPage = () => {
     navigate(`/billing/${invoice.id}/record-payment`);
   };
 
-  const handleDeleteInvoice = async (invoiceId) => {
-    if (!window.confirm(t('billing.confirmDeleteInvoice') || 'Are you sure you want to delete this invoice?')) {
-      return;
-    }
+  const handleDeleteInvoice = (invoiceId) => {
+    setInvoiceToDelete(invoiceId);
+    setShowDeleteInvoiceConfirm(true);
+  };
+
+  const confirmDeleteInvoice = async () => {
+    if (!invoiceToDelete) return;
 
     try {
-      await billingService.deleteInvoice(invoiceId);
+      await billingService.deleteInvoice(invoiceToDelete);
       // Refresh invoices list
       fetchPatientInvoices();
     } catch (err) {
       console.error('Error deleting invoice:', err);
       setError(t('errors.failedToDeleteInvoice', { error: err.response?.data?.error || err.message }));
+    } finally {
+      setInvoiceToDelete(null);
     }
   };
 
@@ -1205,6 +1220,34 @@ const PatientDetailPage = () => {
             </Button>
           </Modal.Footer>
         </Modal>
+
+        {/* Delete Visit Confirm Modal */}
+        <ConfirmModal
+          show={showDeleteVisitConfirm}
+          onHide={() => {
+            setShowDeleteVisitConfirm(false);
+            setVisitToDelete(null);
+          }}
+          onConfirm={confirmDeleteVisit}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('visits.confirmDelete')}
+          confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
+        />
+
+        {/* Delete Invoice Confirm Modal */}
+        <ConfirmModal
+          show={showDeleteInvoiceConfirm}
+          onHide={() => {
+            setShowDeleteInvoiceConfirm(false);
+            setInvoiceToDelete(null);
+          }}
+          onConfirm={confirmDeleteInvoice}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('billing.confirmDeleteInvoice')}
+          confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
+        />
 
       </Container>
     </Layout>

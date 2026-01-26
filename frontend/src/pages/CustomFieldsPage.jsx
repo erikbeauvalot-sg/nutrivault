@@ -16,6 +16,7 @@ import customFieldService from '../services/customFieldService';
 import CustomFieldCategoryModal from '../components/CustomFieldCategoryModal';
 import CustomFieldDefinitionModal from '../components/CustomFieldDefinitionModal';
 import ActionButton from '../components/ActionButton';
+import ConfirmModal from '../components/ConfirmModal';
 
 const CustomFieldsPage = () => {
   const { t } = useTranslation();
@@ -51,6 +52,10 @@ const CustomFieldsPage = () => {
   const [showDefinitionModal, setShowDefinitionModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedDefinition, setSelectedDefinition] = useState(null);
+  const [showDeleteCategoryConfirm, setShowDeleteCategoryConfirm] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [showDeleteDefinitionConfirm, setShowDeleteDefinitionConfirm] = useState(false);
+  const [definitionToDelete, setDefinitionToDelete] = useState(null);
 
   // Redirect if not admin
   useEffect(() => {
@@ -109,20 +114,27 @@ const CustomFieldsPage = () => {
     setShowCategoryModal(true);
   };
 
-  const handleDeleteCategory = async (categoryId) => {
-    if (!window.confirm(t('customFields.confirmDeleteCategory', 'Are you sure you want to delete this category?'))) return;
+  const handleDeleteCategory = (categoryId) => {
+    setCategoryToDelete(categoryId);
+    setShowDeleteCategoryConfirm(true);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
 
     try {
-      const result = await customFieldService.deleteCategory(categoryId);
+      const result = await customFieldService.deleteCategory(categoryToDelete);
       if (result.success !== false) {
         await fetchData();
       } else {
-        alert(result.error || t('customFields.deleteError', 'Failed to delete category'));
+        setError(result.error || t('customFields.deleteError', 'Failed to delete category'));
       }
     } catch (err) {
       console.error('Error deleting category:', err);
       const errorMessage = err.response?.data?.error || err.message || t('customFields.deleteError', 'Failed to delete category');
-      alert(errorMessage);
+      setError(errorMessage);
+    } finally {
+      setCategoryToDelete(null);
     }
   };
 
@@ -137,20 +149,27 @@ const CustomFieldsPage = () => {
     setShowDefinitionModal(true);
   };
 
-  const handleDeleteDefinition = async (definitionId) => {
-    if (!window.confirm(t('customFields.confirmDeleteField', 'Are you sure you want to delete this field definition?'))) return;
+  const handleDeleteDefinition = (definitionId) => {
+    setDefinitionToDelete(definitionId);
+    setShowDeleteDefinitionConfirm(true);
+  };
+
+  const confirmDeleteDefinition = async () => {
+    if (!definitionToDelete) return;
 
     try {
-      const result = await customFieldService.deleteDefinition(definitionId);
+      const result = await customFieldService.deleteDefinition(definitionToDelete);
       if (result.success !== false) {
         await fetchData();
       } else {
-        alert(result.error || t('customFields.deleteFieldError', 'Failed to delete field definition'));
+        setError(result.error || t('customFields.deleteFieldError', 'Failed to delete field definition'));
       }
     } catch (err) {
       console.error('Error deleting definition:', err);
       const errorMessage = err.response?.data?.error || err.message || t('customFields.deleteFieldError', 'Failed to delete field definition');
-      alert(errorMessage);
+      setError(errorMessage);
+    } finally {
+      setDefinitionToDelete(null);
     }
   };
 
@@ -687,6 +706,34 @@ const CustomFieldsPage = () => {
             setShowDefinitionModal(false);
             setSelectedDefinition(null);
           }}
+        />
+
+        {/* Delete Category Confirm Modal */}
+        <ConfirmModal
+          show={showDeleteCategoryConfirm}
+          onHide={() => {
+            setShowDeleteCategoryConfirm(false);
+            setCategoryToDelete(null);
+          }}
+          onConfirm={confirmDeleteCategory}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('customFields.confirmDeleteCategory', 'Are you sure you want to delete this category?')}
+          confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
+        />
+
+        {/* Delete Definition Confirm Modal */}
+        <ConfirmModal
+          show={showDeleteDefinitionConfirm}
+          onHide={() => {
+            setShowDeleteDefinitionConfirm(false);
+            setDefinitionToDelete(null);
+          }}
+          onConfirm={confirmDeleteDefinition}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('customFields.confirmDeleteField', 'Are you sure you want to delete this field definition?')}
+          confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
         />
       </Container>
     </Layout>
