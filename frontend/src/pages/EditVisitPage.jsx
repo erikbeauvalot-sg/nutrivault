@@ -217,21 +217,25 @@ const EditVisitPage = () => {
   const fetchExistingMeasures = async () => {
     try {
       const measures = await getMeasuresByVisit(id);
+      console.log('[EditVisit] Fetched measures for visit:', measures);
       // Build a map of definition_id -> value and track existing measure IDs
       const values = {};
       const existingIds = {};
       (measures || []).forEach(m => {
-        const defId = m.measure_definition_id;
-        // Store the appropriate value based on type
-        if (m.numeric_value !== null) {
-          values[defId] = m.numeric_value;
-        } else if (m.text_value !== null) {
-          values[defId] = m.text_value;
-        } else if (m.boolean_value !== null) {
-          values[defId] = m.boolean_value;
+        // Backend returns measure_definition.id, not measure_definition_id
+        const defId = m.measure_definition?.id || m.measure_definition_id;
+        if (!defId) {
+          console.warn('[EditVisit] Measure missing definition ID:', m);
+          return;
+        }
+        // Backend returns 'value' which is already extracted based on type
+        if (m.value !== null && m.value !== undefined) {
+          values[defId] = m.value;
         }
         existingIds[defId] = m.id;
       });
+      console.log('[EditVisit] Parsed measure values:', values);
+      console.log('[EditVisit] Existing measure IDs:', existingIds);
       setMeasureValues(values);
       setOriginalMeasureValues({ ...values }); // Store original values for change detection
       setExistingMeasureIds(existingIds);
