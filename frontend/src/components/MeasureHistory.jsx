@@ -45,6 +45,9 @@ const MeasureHistory = ({ patientId }) => {
   const [error, setError] = useState(null);
   const [chartType, setChartType] = useState('line');
 
+  // Responsive state
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
   // Trend visualization controls
   const [showMA7, setShowMA7] = useState(true);
   const [showMA30, setShowMA30] = useState(true);
@@ -58,6 +61,15 @@ const MeasureHistory = ({ patientId }) => {
 
   // Export ref (Phase 4)
   const chartContainerRef = useRef(null);
+
+  // Handle resize for responsive layout
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Get default start date (90 days ago)
   function getDefaultStartDate() {
@@ -473,14 +485,15 @@ const MeasureHistory = ({ patientId }) => {
         <h5>{t('measures.measureHistory')}</h5>
       </Card.Header>
       <Card.Body>
-        {/* Controls */}
-        <Row className="mb-3">
-          <Col md={4}>
+        {/* Controls - Responsive layout */}
+        <Row className="mb-3 g-2">
+          <Col xs={12} md={4}>
             <Form.Group>
               <Form.Label>{t('measures.selectMeasure')}</Form.Label>
               <Form.Select
                 value={selectedMeasureId}
                 onChange={handleMeasureChange}
+                size={isMobile ? 'sm' : undefined}
               >
                 {measureDefinitions.map(measure => (
                   <option key={measure.id} value={measure.id}>
@@ -490,30 +503,36 @@ const MeasureHistory = ({ patientId }) => {
               </Form.Select>
             </Form.Group>
           </Col>
-          <Col md={3}>
+          <Col xs={6} md={3}>
             <Form.Group>
               <Form.Label>{t('measures.startDate')}</Form.Label>
               <Form.Control
                 type="date"
                 value={dateRange.start_date}
                 onChange={(e) => handleDateRangeChange('start_date', e.target.value)}
+                size={isMobile ? 'sm' : undefined}
               />
             </Form.Group>
           </Col>
-          <Col md={3}>
+          <Col xs={6} md={3}>
             <Form.Group>
               <Form.Label>{t('measures.endDate')}</Form.Label>
               <Form.Control
                 type="date"
                 value={dateRange.end_date}
                 onChange={(e) => handleDateRangeChange('end_date', e.target.value)}
+                size={isMobile ? 'sm' : undefined}
               />
             </Form.Group>
           </Col>
-          <Col md={2}>
+          <Col xs={12} md={2}>
             <Form.Group>
               <Form.Label>{t('measures.chartType')}</Form.Label>
-              <Form.Select value={chartType} onChange={(e) => setChartType(e.target.value)}>
+              <Form.Select
+                value={chartType}
+                onChange={(e) => setChartType(e.target.value)}
+                size={isMobile ? 'sm' : undefined}
+              >
                 <option value="line">{t('measures.line')}</option>
                 <option value="area">{t('measures.area')}</option>
               </Form.Select>
@@ -551,20 +570,20 @@ const MeasureHistory = ({ patientId }) => {
           </Row>
         )}
 
-        {/* Trend Indicator */}
+        {/* Trend Indicator - Responsive */}
         {trendIndicator && trendData?.data?.length > 0 && (
-          <Alert variant={trendIndicator.color === 'green' ? 'success' : trendIndicator.color === 'red' ? 'danger' : 'info'} className="mb-3">
-            <div className="d-flex align-items-center justify-content-between">
+          <Alert variant={trendIndicator.color === 'green' ? 'success' : trendIndicator.color === 'red' ? 'danger' : 'info'} className="mb-3 py-2">
+            <div className={`d-flex ${isMobile ? 'flex-column' : 'align-items-center justify-content-between'}`}>
               <div>
-                <strong style={{ fontSize: '1.1em' }}>{trendIndicator.formattedText}</strong>
+                <strong style={{ fontSize: isMobile ? '0.95em' : '1.1em' }}>{trendIndicator.formattedText}</strong>
                 {trendData.trend.velocity !== 0 && (
-                  <span style={{ marginLeft: '15px', fontSize: '0.9em' }}>
-                    Velocity: {trendData.trend.velocity > 0 ? '+' : ''}{trendData.trend.velocity.toFixed(2)} {selectedDefinition?.unit}/day
+                  <span style={{ marginLeft: isMobile ? '0' : '15px', fontSize: isMobile ? '0.8em' : '0.9em', display: isMobile ? 'block' : 'inline' }}>
+                    {t('measures.velocity', 'Velocity')}: {trendData.trend.velocity > 0 ? '+' : ''}{trendData.trend.velocity.toFixed(2)} {selectedDefinition?.unit}/{t('measures.day', 'day')}
                   </span>
                 )}
               </div>
               {trendData.trend.rSquared > 0 && (
-                <Badge bg="secondary" className="p-2">
+                <Badge bg="secondary" className={isMobile ? 'mt-1 align-self-start' : 'p-2'} style={{ fontSize: isMobile ? '0.7em' : undefined }}>
                   R² = {trendData.trend.rSquared.toFixed(3)}
                 </Badge>
               )}
@@ -572,59 +591,101 @@ const MeasureHistory = ({ patientId }) => {
           </Alert>
         )}
 
-        {/* Moving Average Toggles */}
+        {/* Moving Average Toggles - Responsive */}
         {trendData?.movingAverages && (
           <Row className="mb-3">
             <Col>
-              <div className="d-flex gap-3 align-items-center">
-                <strong style={{ fontSize: '0.9em' }}>Display Options:</strong>
-                <Form.Check
-                  type="checkbox"
-                  id="showMA7"
-                  label={<span style={{ color: getMAColor(7) }}>MA 7-day</span>}
-                  checked={showMA7}
-                  onChange={(e) => setShowMA7(e.target.checked)}
-                  disabled={!trendData.movingAverages.ma7 || trendData.movingAverages.ma7.length === 0}
-                />
-                <Form.Check
-                  type="checkbox"
-                  id="showMA30"
-                  label={<span style={{ color: getMAColor(30) }}>MA 30-day</span>}
-                  checked={showMA30}
-                  onChange={(e) => setShowMA30(e.target.checked)}
-                  disabled={!trendData.movingAverages.ma30 || trendData.movingAverages.ma30.length === 0}
-                />
-                <Form.Check
-                  type="checkbox"
-                  id="showMA90"
-                  label={<span style={{ color: getMAColor(90) }}>MA 90-day</span>}
-                  checked={showMA90}
-                  onChange={(e) => setShowMA90(e.target.checked)}
-                  disabled={!trendData.movingAverages.ma90 || trendData.movingAverages.ma90.length === 0}
-                />
-                <Form.Check
-                  type="checkbox"
-                  id="showTrendLine"
-                  label={<span style={{ color: '#ef4444' }}>Trend Line</span>}
-                  checked={showTrendLine}
-                  onChange={(e) => setShowTrendLine(e.target.checked)}
-                  disabled={!trendData.trendLine}
-                />
-              </div>
+              {isMobile ? (
+                <div>
+                  <strong style={{ fontSize: '0.85em', display: 'block', marginBottom: '8px' }}>{t('measures.displayOptions', 'Display Options')}:</strong>
+                  <div className="d-flex flex-wrap gap-2">
+                    <Form.Check
+                      type="checkbox"
+                      id="showMA7"
+                      label={<small style={{ color: getMAColor(7) }}>MA7</small>}
+                      checked={showMA7}
+                      onChange={(e) => setShowMA7(e.target.checked)}
+                      disabled={!trendData.movingAverages.ma7 || trendData.movingAverages.ma7.length === 0}
+                    />
+                    <Form.Check
+                      type="checkbox"
+                      id="showMA30"
+                      label={<small style={{ color: getMAColor(30) }}>MA30</small>}
+                      checked={showMA30}
+                      onChange={(e) => setShowMA30(e.target.checked)}
+                      disabled={!trendData.movingAverages.ma30 || trendData.movingAverages.ma30.length === 0}
+                    />
+                    <Form.Check
+                      type="checkbox"
+                      id="showMA90"
+                      label={<small style={{ color: getMAColor(90) }}>MA90</small>}
+                      checked={showMA90}
+                      onChange={(e) => setShowMA90(e.target.checked)}
+                      disabled={!trendData.movingAverages.ma90 || trendData.movingAverages.ma90.length === 0}
+                    />
+                    <Form.Check
+                      type="checkbox"
+                      id="showTrendLine"
+                      label={<small style={{ color: '#ef4444' }}>Trend</small>}
+                      checked={showTrendLine}
+                      onChange={(e) => setShowTrendLine(e.target.checked)}
+                      disabled={!trendData.trendLine}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="d-flex gap-3 align-items-center">
+                  <strong style={{ fontSize: '0.9em' }}>{t('measures.displayOptions', 'Display Options')}:</strong>
+                  <Form.Check
+                    type="checkbox"
+                    id="showMA7"
+                    label={<span style={{ color: getMAColor(7) }}>MA 7-day</span>}
+                    checked={showMA7}
+                    onChange={(e) => setShowMA7(e.target.checked)}
+                    disabled={!trendData.movingAverages.ma7 || trendData.movingAverages.ma7.length === 0}
+                  />
+                  <Form.Check
+                    type="checkbox"
+                    id="showMA30"
+                    label={<span style={{ color: getMAColor(30) }}>MA 30-day</span>}
+                    checked={showMA30}
+                    onChange={(e) => setShowMA30(e.target.checked)}
+                    disabled={!trendData.movingAverages.ma30 || trendData.movingAverages.ma30.length === 0}
+                  />
+                  <Form.Check
+                    type="checkbox"
+                    id="showMA90"
+                    label={<span style={{ color: getMAColor(90) }}>MA 90-day</span>}
+                    checked={showMA90}
+                    onChange={(e) => setShowMA90(e.target.checked)}
+                    disabled={!trendData.movingAverages.ma90 || trendData.movingAverages.ma90.length === 0}
+                  />
+                  <Form.Check
+                    type="checkbox"
+                    id="showTrendLine"
+                    label={<span style={{ color: '#ef4444' }}>Trend Line</span>}
+                    checked={showTrendLine}
+                    onChange={(e) => setShowTrendLine(e.target.checked)}
+                    disabled={!trendData.trendLine}
+                  />
+                </div>
+              )}
             </Col>
           </Row>
         )}
 
-        {/* Enhanced Statistics */}
+        {/* Enhanced Statistics - Responsive */}
         {formattedStats && (
           <Card className="mb-3 bg-light">
-            <Card.Body>
-              <h6 className="mb-3">📊 Statistical Summary</h6>
-              <Row>
+            <Card.Body className={isMobile ? 'p-2' : ''}>
+              <h6 className={isMobile ? 'mb-2' : 'mb-3'} style={{ fontSize: isMobile ? '0.9em' : '1em' }}>
+                📊 {t('measures.statisticalSummary', 'Statistical Summary')}
+              </h6>
+              <Row className="g-1">
                 {formattedStats.map(stat => (
-                  <Col key={stat.key} xs={6} md={2} className="mb-2">
-                    <div style={{ fontSize: '0.85em', color: '#666' }}>{stat.label}</div>
-                    <div style={{ fontWeight: 'bold', fontSize: '1em' }}>{stat.value}</div>
+                  <Col key={stat.key} xs={4} md={2} className="mb-1">
+                    <div style={{ fontSize: isMobile ? '0.7em' : '0.85em', color: '#666' }}>{stat.label}</div>
+                    <div style={{ fontWeight: 'bold', fontSize: isMobile ? '0.8em' : '1em' }}>{stat.value}</div>
                   </Col>
                 ))}
               </Row>
@@ -643,28 +704,42 @@ const MeasureHistory = ({ patientId }) => {
           </Alert>
         ) : (
           <div ref={chartContainerRef}>
-            <ResponsiveContainer width="100%" height={450}>
+            <ResponsiveContainer width="100%" height={isMobile ? 280 : 450}>
             {chartType === 'area' ? (
-              <AreaChart data={chartData}>
+              <AreaChart data={chartData} margin={isMobile ? { left: -15, right: 5 } : undefined}>
                 {getReferenceAreas()}
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: isMobile ? 10 : 12 }}
+                  angle={isMobile ? -45 : 0}
+                  textAnchor={isMobile ? 'end' : 'middle'}
+                  height={isMobile ? 60 : 30}
+                  interval={isMobile ? 'preserveStartEnd' : 0}
+                  tickFormatter={(value) => {
+                    if (isMobile) {
+                      // Format as short date on mobile: "12/01"
+                      const parts = value.split('/');
+                      return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : value;
+                    }
+                    return value;
+                  }}
                 />
                 <YAxis
-                  label={{
+                  label={isMobile ? undefined : {
                     value: selectedDefinition?.unit || '',
                     angle: -90,
                     position: 'insideLeft'
                   }}
+                  tick={{ fontSize: isMobile ? 10 : 12 }}
+                  width={isMobile ? 40 : 60}
                   domain={[
                     selectedDefinition?.min_value ? parseFloat(selectedDefinition.min_value) : 'auto',
                     selectedDefinition?.max_value ? parseFloat(selectedDefinition.max_value) : 'auto'
                   ]}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend />
+                {!isMobile && <Legend />}
                 <Area
                   type="monotone"
                   dataKey="value"
@@ -682,7 +757,7 @@ const MeasureHistory = ({ patientId }) => {
                     fill="none"
                     strokeDasharray="5 5"
                     name="MA 7-day"
-                    strokeWidth={2}
+                    strokeWidth={isMobile ? 1 : 2}
                   />
                 )}
                 {showMA30 && (
@@ -693,7 +768,7 @@ const MeasureHistory = ({ patientId }) => {
                     fill="none"
                     strokeDasharray="5 5"
                     name="MA 30-day"
-                    strokeWidth={2}
+                    strokeWidth={isMobile ? 1 : 2}
                   />
                 )}
                 {showMA90 && (
@@ -704,7 +779,7 @@ const MeasureHistory = ({ patientId }) => {
                     fill="none"
                     strokeDasharray="5 5"
                     name="MA 90-day"
-                    strokeWidth={2}
+                    strokeWidth={isMobile ? 1 : 2}
                   />
                 )}
                 {showTrendLine && (
@@ -715,38 +790,52 @@ const MeasureHistory = ({ patientId }) => {
                     fill="none"
                     strokeDasharray="3 3"
                     name="Trend Line"
-                    strokeWidth={2}
+                    strokeWidth={isMobile ? 1 : 2}
                   />
                 )}
               </AreaChart>
             ) : (
-              <LineChart data={chartData}>
+              <LineChart data={chartData} margin={isMobile ? { left: -15, right: 5 } : undefined}>
                 {getReferenceAreas()}
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: isMobile ? 10 : 12 }}
+                  angle={isMobile ? -45 : 0}
+                  textAnchor={isMobile ? 'end' : 'middle'}
+                  height={isMobile ? 60 : 30}
+                  interval={isMobile ? 'preserveStartEnd' : 0}
+                  tickFormatter={(value) => {
+                    if (isMobile) {
+                      // Format as short date on mobile: "12/01"
+                      const parts = value.split('/');
+                      return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : value;
+                    }
+                    return value;
+                  }}
                 />
                 <YAxis
-                  label={{
+                  label={isMobile ? undefined : {
                     value: selectedDefinition?.unit || '',
                     angle: -90,
                     position: 'insideLeft'
                   }}
+                  tick={{ fontSize: isMobile ? 10 : 12 }}
+                  width={isMobile ? 40 : 60}
                   domain={[
                     selectedDefinition?.min_value ? parseFloat(selectedDefinition.min_value) : 'auto',
                     selectedDefinition?.max_value ? parseFloat(selectedDefinition.max_value) : 'auto'
                   ]}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend />
+                {!isMobile && <Legend />}
                 {/* Main value line */}
                 <Line
                   type="monotone"
                   dataKey="value"
                   stroke="#3b82f6"
-                  strokeWidth={2}
-                  dot={(props) => {
+                  strokeWidth={isMobile ? 1.5 : 2}
+                  dot={isMobile ? { r: 2 } : (props) => {
                     const { cx, cy, payload } = props;
                     if (payload.isOutlier) {
                       return (
@@ -762,7 +851,7 @@ const MeasureHistory = ({ patientId }) => {
                     }
                     return <circle cx={cx} cy={cy} r={4} fill="#3b82f6" />;
                   }}
-                  activeDot={{ r: 6 }}
+                  activeDot={{ r: isMobile ? 4 : 6 }}
                   name={selectedDefinition?.display_name || t('measures.value')}
                 />
                 {/* Moving Average 7 */}
@@ -771,7 +860,7 @@ const MeasureHistory = ({ patientId }) => {
                     type="monotone"
                     dataKey="ma7"
                     stroke={getMAColor(7)}
-                    strokeWidth={2}
+                    strokeWidth={isMobile ? 1 : 2}
                     strokeDasharray="5 5"
                     dot={false}
                     name="MA 7-day"
@@ -783,7 +872,7 @@ const MeasureHistory = ({ patientId }) => {
                     type="monotone"
                     dataKey="ma30"
                     stroke={getMAColor(30)}
-                    strokeWidth={2}
+                    strokeWidth={isMobile ? 1 : 2}
                     strokeDasharray="5 5"
                     dot={false}
                     name="MA 30-day"
@@ -795,7 +884,7 @@ const MeasureHistory = ({ patientId }) => {
                     type="monotone"
                     dataKey="ma90"
                     stroke={getMAColor(90)}
-                    strokeWidth={2}
+                    strokeWidth={isMobile ? 1 : 2}
                     strokeDasharray="5 5"
                     dot={false}
                     name="MA 90-day"
@@ -807,7 +896,7 @@ const MeasureHistory = ({ patientId }) => {
                     type="monotone"
                     dataKey="trendLine"
                     stroke="#ef4444"
-                    strokeWidth={2}
+                    strokeWidth={isMobile ? 1 : 2}
                     strokeDasharray="3 3"
                     dot={false}
                     name="Trend Line"
@@ -836,45 +925,46 @@ const MeasureHistory = ({ patientId }) => {
             )}
           </ResponsiveContainer>
 
-          {/* Range Zone Legend */}
+          {/* Range Zone Legend - Responsive */}
           {selectedDefinition?.normal_range_min && selectedDefinition?.normal_range_max && (
-            <div className="mt-3 d-flex justify-content-center gap-4" style={{ fontSize: '0.85em' }}>
+            <div className={`mt-3 d-flex ${isMobile ? 'flex-wrap' : ''} justify-content-center gap-${isMobile ? '2' : '4'}`} style={{ fontSize: isMobile ? '0.75em' : '0.85em' }}>
               {selectedDefinition.alert_threshold_min && (
                 <div className="d-flex align-items-center gap-1">
-                  <div style={{ width: '20px', height: '12px', backgroundColor: '#dc3545', opacity: 0.3 }}></div>
-                  <span>Critical Low</span>
+                  <div style={{ width: isMobile ? '14px' : '20px', height: isMobile ? '10px' : '12px', backgroundColor: '#dc3545', opacity: 0.3 }}></div>
+                  <span>{t('measures.criticalLow', 'Critical Low')}</span>
                 </div>
               )}
               <div className="d-flex align-items-center gap-1">
-                <div style={{ width: '20px', height: '12px', backgroundColor: '#ffc107', opacity: 0.4 }}></div>
-                <span>Warning</span>
+                <div style={{ width: isMobile ? '14px' : '20px', height: isMobile ? '10px' : '12px', backgroundColor: '#ffc107', opacity: 0.4 }}></div>
+                <span>{t('measures.warning', 'Warning')}</span>
               </div>
               <div className="d-flex align-items-center gap-1">
-                <div style={{ width: '20px', height: '12px', backgroundColor: '#28a745', opacity: 0.3 }}></div>
+                <div style={{ width: isMobile ? '14px' : '20px', height: isMobile ? '10px' : '12px', backgroundColor: '#28a745', opacity: 0.3 }}></div>
                 <span>
-                  Normal ({parseFloat(selectedDefinition.normal_range_min).toFixed(1)} - {parseFloat(selectedDefinition.normal_range_max).toFixed(1)} {selectedDefinition.unit})
+                  {t('measures.normal', 'Normal')} {!isMobile && `(${parseFloat(selectedDefinition.normal_range_min).toFixed(1)} - ${parseFloat(selectedDefinition.normal_range_max).toFixed(1)} ${selectedDefinition.unit})`}
                 </span>
               </div>
               {selectedDefinition.alert_threshold_max && (
                 <div className="d-flex align-items-center gap-1">
-                  <div style={{ width: '20px', height: '12px', backgroundColor: '#dc3545', opacity: 0.3 }}></div>
-                  <span>Critical High</span>
+                  <div style={{ width: isMobile ? '14px' : '20px', height: isMobile ? '10px' : '12px', backgroundColor: '#dc3545', opacity: 0.3 }}></div>
+                  <span>{t('measures.criticalHigh', 'Critical High')}</span>
                 </div>
               )}
             </div>
           )}
 
-          {/* Annotation List */}
+          {/* Annotation List - Responsive */}
           {annotations.length > 0 && (
             <div className="mt-3">
-              <h6>📌 Annotations</h6>
+              <h6 style={{ fontSize: isMobile ? '0.9em' : '1em' }}>📌 {t('annotations.annotations', 'Annotations')}</h6>
               <div className="d-flex flex-wrap gap-2">
                 {annotations.map(annotation => (
                   <Badge
                     key={annotation.id}
                     style={{
                       backgroundColor: annotation.color || '#FF5733',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      fontSize: isMobile ? '0.75em' : undefined
                     }}
                     onClick={() => {
                       setEditingAnnotation(annotation);
