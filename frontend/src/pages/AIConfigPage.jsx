@@ -294,7 +294,7 @@ const AIConfigPage = () => {
 
         <Row>
           {/* Provider Selection */}
-          <Col lg={6} className="mb-4">
+          <Col xs={12} lg={6} className="mb-4">
             <Card>
               <Card.Header>
                 <h5 className="mb-0">{t('aiConfig.selectProvider')}</h5>
@@ -349,7 +349,7 @@ const AIConfigPage = () => {
           </Col>
 
           {/* Model Selection */}
-          <Col lg={6} className="mb-4">
+          <Col xs={12} lg={6} className="mb-4">
             <Card>
               <Card.Header>
                 <h5 className="mb-0">{t('aiConfig.selectModel')}</h5>

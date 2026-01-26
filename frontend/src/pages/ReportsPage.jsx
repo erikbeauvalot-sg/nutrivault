@@ -178,8 +178,8 @@ const ReportsPage = () => {
   return (
     <Layout>
       <Container className="py-4">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h1>{t('reports.title', 'Reports & Export')}</h1>
+        <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+          <h1 className="mb-0">{t('reports.title', 'Reports & Export')}</h1>
           <Button
             variant="outline-primary"
             onClick={loadStatistics}
