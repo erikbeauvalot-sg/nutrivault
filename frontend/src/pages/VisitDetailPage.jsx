@@ -15,7 +15,6 @@ import { applyTranslationsToMeasures, fetchMeasureTranslations } from '../utils/
 import visitService from '../services/visitService';
 import visitCustomFieldService from '../services/visitCustomFieldService';
 import CustomFieldDisplay from '../components/CustomFieldDisplay';
-import LogMeasureModal from '../components/LogMeasureModal';
 import SendReminderButton from '../components/SendReminderButton';
 import GenerateFollowupModal from '../components/GenerateFollowupModal';
 import { getMeasuresByVisit, formatMeasureValue, getAllMeasureTranslations } from '../services/measureService';
@@ -52,7 +51,6 @@ const VisitDetailPage = () => {
   const [measures, setMeasures] = useState([]);
   const [measureTranslations, setMeasureTranslations] = useState({});
   const [loadingMeasures, setLoadingMeasures] = useState(false);
-  const [showLogMeasureModal, setShowLogMeasureModal] = useState(false);
 
   // Follow-up modal state
   const [showFollowupModal, setShowFollowupModal] = useState(false);
@@ -590,16 +588,7 @@ const VisitDetailPage = () => {
               <Tab eventKey="measures" title={`📏 ${t('measures.healthMeasures', 'Measures')} (${measures.length})`}>
                 <Row className="mb-3">
                   <Col>
-                    <div className="d-flex justify-content-between align-items-center">
-                      <h5>{t('measures.measuresForVisit', 'Measures for this visit')}</h5>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => setShowLogMeasureModal(true)}
-                      >
-                        + {t('measures.logMeasure', 'Log Measure')}
-                      </Button>
-                    </div>
+                    <h5>{t('measures.measuresForVisit', 'Measures for this visit')}</h5>
                   </Col>
                 </Row>
 
@@ -612,7 +601,7 @@ const VisitDetailPage = () => {
                   <Alert variant="info">
                     <strong>{t('measures.noMeasuresForVisit', 'No measures logged for this visit yet')}</strong>
                     <p className="mb-0 mt-2">
-                      {t('measures.clickLogMeasureToStart', 'Click "Log Measure" to add health measurements for this visit.')}
+                      {t('measures.editVisitToAddMeasures', 'Edit this visit to add health measurements.')}
                     </p>
                   </Alert>
                 ) : (
@@ -1004,20 +993,6 @@ const VisitDetailPage = () => {
             </Button>
           </Modal.Footer>
         </Modal>
-
-        {/* Log Measure Modal */}
-        {visit?.patient && (
-          <LogMeasureModal
-            show={showLogMeasureModal}
-            onHide={() => setShowLogMeasureModal(false)}
-            patientId={visit.patient.id}
-            visitId={id}
-            onSuccess={() => {
-              fetchVisitMeasures();
-              setShowLogMeasureModal(false);
-            }}
-          />
-        )}
 
         {/* Generate Follow-up Modal */}
         {visit && (

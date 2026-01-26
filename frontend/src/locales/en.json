@@ -1247,6 +1247,7 @@
     "measuresForVisit": "Measures for this visit",
     "noMeasuresForVisit": "No measures recorded for this visit yet",
     "clickLogMeasureToStart": "Click \"Log Measure\" to add health measurements for this visit.",
+    "editVisitToAddMeasures": "Edit this visit to add health measurements.",
     "modal": {
       "editTitle": "Edit Measure Definition",
       "createTitle": "Create Measure Definition",

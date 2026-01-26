@@ -1262,6 +1262,7 @@
     "measuresForVisit": "Mesures pour cette visite",
     "noMeasuresForVisit": "Aucune mesure enregistrée pour cette visite",
     "clickLogMeasureToStart": "Cliquez sur « Enregistrer une mesure » pour ajouter des mesures de santé pour cette visite.",
+    "editVisitToAddMeasures": "Modifiez cette visite pour ajouter des mesures de santé.",
     "editMeasure": "Modifier la Mesure",
     "updateMeasure": "Mettre à Jour la Mesure",
     "updateSuccess": "Mesure mise à jour avec succès !",
