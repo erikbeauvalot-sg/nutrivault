@@ -84,6 +84,8 @@
     "lastName": "Nom",
     "name": "Nom",
     "status": "Status",
+    "active": "Actif",
+    "inactive": "Inactif",
     "email": "Mail",
     "phone": "Téléphone",
     "dateOfBirth": "Date de naissance",
