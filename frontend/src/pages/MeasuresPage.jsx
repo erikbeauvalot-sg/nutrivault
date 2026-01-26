@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { Container, Row, Col, Card, Table, Button, Badge, Alert, Spinner, Form, InputGroup } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Button, Badge, Alert, Spinner, Form, InputGroup, Modal } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -44,6 +44,9 @@ const MeasuresPage = () => {
   const [selectedMeasure, setSelectedMeasure] = useState(null);
   const [showTranslationModal, setShowTranslationModal] = useState(false);
   const [translationMeasure, setTranslationMeasure] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [measureToDelete, setMeasureToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Define available categories
   const categories = [
@@ -106,33 +109,30 @@ const MeasuresPage = () => {
     setShowMeasureModal(true);
   };
 
-  const handleDeleteMeasure = async (measureId) => {
-    console.log('handleDeleteMeasure called with:', measureId);
+  const handleDeleteMeasure = (measure) => {
+    setMeasureToDelete(measure);
+    setShowDeleteModal(true);
+  };
 
-    if (!window.confirm(t('measures.confirmDelete'))) {
-      console.log('User cancelled delete');
-      return;
-    }
+  const confirmDeleteMeasure = async () => {
+    if (!measureToDelete) return;
 
-    console.log('User confirmed delete, calling API...');
-
+    setDeleting(true);
     try {
-      const result = await measureService.deleteMeasureDefinition(measureId);
-      console.log('Delete result:', result);
+      const result = await measureService.deleteMeasureDefinition(measureToDelete.id);
 
       if (result && result.success) {
-        console.log('Delete successful, refreshing measures...');
         await fetchMeasures();
-        console.log('Measures refreshed');
+        setShowDeleteModal(false);
+        setMeasureToDelete(null);
       } else {
-        console.log('Delete failed:', result);
-        alert(result?.error || t('measures.deleteError'));
+        setError(result?.error || t('measures.deleteError'));
       }
     } catch (err) {
       console.error('Error deleting measure:', err);
-      console.error('Error response:', err.response);
-      const errorMessage = err.response?.data?.error || err.message || t('measures.deleteError');
-      alert(errorMessage);
+      setError(err.response?.data?.error || err.message || t('measures.deleteError'));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -492,7 +492,7 @@ const MeasuresPage = () => {
                           {!measure.is_system ? (
                             <ActionButton
                               action="delete"
-                              onClick={() => handleDeleteMeasure(measure.id)}
+                              onClick={() => handleDeleteMeasure(measure)}
                               title={t('common.delete', 'Delete')}
                             />
                           ) : (
@@ -539,6 +539,41 @@ const MeasuresPage = () => {
             fetchMeasures();
           }}
         />
+
+        {/* Delete Confirmation Modal */}
+        <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>🗑️ {t('measures.confirmDeleteTitle', 'Delete Measure')}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <p>{t('measures.confirmDelete', 'Are you sure you want to delete this measure definition?')}</p>
+            {measureToDelete && (
+              <Alert variant="warning">
+                <strong>{measureToDelete.display_name}</strong>
+                <br />
+                <code>{measureToDelete.name}</code>
+              </Alert>
+            )}
+            <p className="text-muted mb-0">
+              {t('measures.deleteWarning', 'This action cannot be undone. All patient data associated with this measure will also be deleted.')}
+            </p>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowDeleteModal(false)} disabled={deleting}>
+              {t('common.cancel', 'Cancel')}
+            </Button>
+            <Button variant="danger" onClick={confirmDeleteMeasure} disabled={deleting}>
+              {deleting ? (
+                <>
+                  <Spinner animation="border" size="sm" className="me-2" />
+                  {t('common.deleting', 'Deleting...')}
+                </>
+              ) : (
+                <>🗑️ {t('common.delete', 'Delete')}</>
+              )}
+            </Button>
+          </Modal.Footer>
+        </Modal>
       </Container>
     </Layout>
   );
