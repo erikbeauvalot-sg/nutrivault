@@ -1292,7 +1292,15 @@
       "previewCalculation": "Aperçu du Calcul",
       "textNote": "Les mesures texte peuvent stocker des valeurs texte libres.",
       "booleanNote": "Les mesures booléennes stockent des valeurs Oui/Non.",
-      "activeHelp": "Les mesures inactives ne seront pas disponibles pour l'enregistrement"
+      "activeHelp": "Les mesures inactives ne seront pas disponibles pour l'enregistrement",
+      "trendPreference": "Préférence de Tendance",
+      "trendPreferenceHelp": "Détermine comment l'indicateur de tendance est affiché dans les graphiques (vert pour positif, rouge pour négatif).",
+      "trendIncrease": "Hausse positive",
+      "trendIncreaseExample": "ex: masse musculaire",
+      "trendDecrease": "Baisse positive",
+      "trendDecreaseExample": "ex: poids, graisse corporelle",
+      "trendNeutral": "Neutre",
+      "trendNeutralExample": "pas de préférence"
     },
     "chart": {
       "ma7": "MM 7j",

@@ -179,6 +179,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true,
       comment: 'Timestamp of last formula modification for audit trail'
+    },
+    trend_preference: {
+      type: DataTypes.ENUM('increase', 'decrease', 'neutral'),
+      allowNull: false,
+      defaultValue: 'increase',
+      comment: 'Whether increase or decrease is considered positive (increase=good when going up, decrease=good when going down)'
     }
   }, {
     tableName: 'measure_definitions',

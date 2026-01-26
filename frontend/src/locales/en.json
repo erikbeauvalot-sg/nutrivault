@@ -1235,7 +1235,15 @@
       "previewCalculation": "Preview Calculation",
       "textNote": "Text measures can store free-form text values.",
       "booleanNote": "Boolean measures store Yes/No values.",
-      "activeHelp": "Inactive measures will not be available for logging"
+      "activeHelp": "Inactive measures will not be available for logging",
+      "trendPreference": "Trend Preference",
+      "trendPreferenceHelp": "Determines how the trend indicator is displayed in charts (green for positive, red for negative).",
+      "trendIncrease": "Increase is positive",
+      "trendIncreaseExample": "e.g., muscle mass",
+      "trendDecrease": "Decrease is positive",
+      "trendDecreaseExample": "e.g., weight, body fat",
+      "trendNeutral": "Neutral",
+      "trendNeutralExample": "no preference"
     },
     "chart": {
       "ma7": "MA 7d",
