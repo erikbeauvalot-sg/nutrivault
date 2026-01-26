@@ -155,35 +155,31 @@ const VisitsPage = () => {
   return (
     <Layout>
       <Container fluid>
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h1>📅 {t('visits.title')}</h1>
-          <div>
+        <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+          <h1 className="mb-0">📅 {t('visits.title')}</h1>
+          <div className="d-flex flex-wrap gap-2">
             <Button
               variant={viewMode === 'table' ? 'primary' : 'outline-primary'}
-              size="lg"
-              className="me-2"
+              className="d-none d-md-inline-block"
               onClick={() => setViewMode('table')}
             >
               📋 {t('visits.tableView')}
             </Button>
             <Button
               variant={viewMode === 'timeline' ? 'primary' : 'outline-primary'}
-              size="lg"
-              className="me-2"
+              className="d-none d-md-inline-block"
               onClick={() => setViewMode('timeline')}
             >
               ⏱️ {t('visits.timelineView')}
             </Button>
             <Button
               variant="outline-secondary"
-              size="lg"
-              className="me-2"
               onClick={() => setShowExportModal(true)}
             >
-              <i className="bi bi-download me-2"></i>
+              <i className="bi bi-download me-1"></i>
               {t('common.export', 'Export')}
             </Button>
-            <Button variant="primary" size="lg" onClick={handleCreateClick}>
+            <Button variant="primary" onClick={handleCreateClick}>
               {t('visits.createVisit')}
             </Button>
           </div>
@@ -195,7 +191,7 @@ const VisitsPage = () => {
         <Card className="mb-4">
           <Card.Body>
             <Row>
-              <Col md={4}>
+              <Col xs={12} md={4}>
                 <Form.Group className="mb-3">
                   <Form.Label>{t('visits.searchPatient')}</Form.Label>
                   <InputGroup>
@@ -210,7 +206,7 @@ const VisitsPage = () => {
                 </Form.Group>
               </Col>
 
-              <Col md={3}>
+              <Col xs={12} sm={6} md={3}>
                 <Form.Group className="mb-3">
                   <Form.Label>{t('visits.patient')}</Form.Label>
                   <Form.Select
@@ -227,7 +223,7 @@ const VisitsPage = () => {
                 </Form.Group>
               </Col>
 
-              <Col md={3}>
+              <Col xs={12} sm={6} md={3}>
                 <Form.Group className="mb-3">
                   <Form.Label>{t('visits.status')}</Form.Label>
                   <Form.Select
@@ -243,7 +239,7 @@ const VisitsPage = () => {
                 </Form.Group>
               </Col>
 
-              <Col md={2} className="d-flex align-items-end">
+              <Col xs={12} md={2} className="d-flex align-items-end">
                 <Button
                   variant="outline-secondary"
                   className="mb-3 w-100"
@@ -388,7 +384,7 @@ const VisitsPage = () => {
                             <td>{getStatusBadge(visit.status)}</td>
                             <td>{visit.duration_minutes ? `${visit.duration_minutes} min` : '-'}</td>
                             <td onClick={(e) => e.stopPropagation()}>
-                              <div className="d-flex gap-1">
+                              <div className="d-flex gap-1 flex-wrap">
                                 {canEdit(visit) && (
                                   <>
                                     <Button
@@ -482,9 +478,9 @@ const VisitsPage = () => {
                           >
                             <Card.Body>
                               <Row>
-                                <Col md={8}>
-                                  <div className="d-flex align-items-center mb-2">
-                                    <h5 className="mb-0 me-3">
+                                <Col xs={12} md={8}>
+                                  <div className="d-flex align-items-center mb-2 flex-wrap gap-2">
+                                    <h5 className="mb-0">
                                       📅 {formatDate(visit.visit_date)}
                                     </h5>
                                     {getStatusBadge(visit.status)}
@@ -506,9 +502,9 @@ const VisitsPage = () => {
                                     </div>
                                   )}
                                 </Col>
-                                <Col md={4} className="text-end">
+                                <Col xs={12} md={4} className="text-md-end mt-3 mt-md-0">
                                   <div
-                                    className="timeline-actions d-flex gap-1 justify-content-end"
+                                    className="timeline-actions d-flex gap-1 justify-content-start justify-content-md-end flex-wrap"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     {canEdit(visit) && (
