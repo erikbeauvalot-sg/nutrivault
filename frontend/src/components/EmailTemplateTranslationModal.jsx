@@ -179,7 +179,7 @@ const EmailTemplateTranslationModal = ({ show, onHide, template, onSaved }) => {
   if (!template) return null;
 
   return (
-    <Modal show={show} onHide={onHide} size="xl" centered scrollable>
+    <Modal show={show} onHide={onHide} size="xl" fullscreen="md-down" centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
           {t('emailTemplates.translations.title', 'Translations')}: {template.name}

@@ -214,13 +214,13 @@ const EmailTemplatesPage = () => {
         {/* Header */}
         <Row className="mb-4">
           <Col>
-            <div className="d-flex justify-content-between align-items-center">
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
               <div>
                 <h2>
                   <FaEnvelope className="me-2" />
                   Email Templates
                 </h2>
-                <p className="text-muted">Manage email templates for automated notifications</p>
+                <p className="text-muted mb-0">Manage email templates for automated notifications</p>
               </div>
               <Button
                 variant="primary"
@@ -235,7 +235,7 @@ const EmailTemplatesPage = () => {
 
         {/* Filters */}
         <Row className="mb-4">
-          <Col md={6}>
+          <Col xs={12} md={6} className="mb-3 mb-md-0">
             <Form onSubmit={handleSearch}>
               <InputGroup>
                 <InputGroup.Text>

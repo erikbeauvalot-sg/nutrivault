@@ -71,7 +71,7 @@ function FormulaPreviewModal({ show, onHide, formula, dependencies }) {
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered scrollable>
+    <Modal show={show} onHide={onHide} size="lg" fullscreen="md-down" centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>Preview Formula Calculation</Modal.Title>
       </Modal.Header>

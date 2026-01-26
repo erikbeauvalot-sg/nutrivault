@@ -113,7 +113,7 @@ const AnnotationModal = ({ show, onHide, patientId, annotation, measureDefinitio
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered scrollable>
+    <Modal show={show} onHide={onHide} size="lg" fullscreen="md-down" centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
           {annotation ? t('annotations.editAnnotation') : t('annotations.createAnnotation')}

@@ -395,7 +395,7 @@ const GenerateFollowupModal = ({ show, onHide, visit, onSent }) => {
   );
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered backdrop="static" scrollable>
+    <Modal show={show} onHide={onHide} size="lg" fullscreen="md-down" centered backdrop="static" scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
           <FaRobot className="me-2" />

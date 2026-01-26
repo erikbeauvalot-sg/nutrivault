@@ -321,7 +321,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
 
   return (
     <>
-    <Modal show={show} onHide={handleClose} size="lg" centered scrollable>
+    <Modal show={show} onHide={handleClose} size="lg" fullscreen="md-down" centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
           {isEditing ? t('measures.modal.editTitle', 'Edit Measure Definition') : t('measures.modal.createTitle', 'Create Measure Definition')}

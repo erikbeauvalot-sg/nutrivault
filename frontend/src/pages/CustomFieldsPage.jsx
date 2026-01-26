@@ -250,7 +250,7 @@ const CustomFieldsPage = () => {
           {/* Categories Tab */}
           <Tab eventKey="categories" title={`📁 Categories (${categories.length})`}>
             <Card>
-              <Card.Header className="d-flex justify-content-between align-items-center">
+              <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h5 className="mb-0">Field Categories</h5>
                 <Button variant="primary" size="sm" onClick={handleCreateCategory}>
                   ➕ New Category
@@ -339,7 +339,7 @@ const CustomFieldsPage = () => {
           {/* Definitions Tab */}
           <Tab eventKey="definitions" title={`📝 Field Definitions (${definitions.length})`}>
             <Card>
-              <Card.Header className="d-flex justify-content-between align-items-center">
+              <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h5 className="mb-0">Field Definitions</h5>
                 <Button variant="primary" size="sm" onClick={handleCreateDefinition}>
                   ➕ New Field

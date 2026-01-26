@@ -348,7 +348,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
   if (!patient) return null;
 
   return (
-    <Modal show={show} onHide={handleClose} size="xl" centered scrollable>
+    <Modal show={show} onHide={handleClose} size="xl" fullscreen="md-down" centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>{t('patients.editPatient')}: {patient.first_name} {patient.last_name}</Modal.Title>
       </Modal.Header>

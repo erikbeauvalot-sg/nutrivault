@@ -130,7 +130,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
 
   if (error) {
     return (
-      <Modal show={show} onHide={onHide} size="lg" scrollable>
+      <Modal show={show} onHide={onHide} size="lg" fullscreen="md-down" scrollable>
         <Modal.Header closeButton>
           <Modal.Title>{t('patients.error')}</Modal.Title>
         </Modal.Header>

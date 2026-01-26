@@ -64,7 +64,7 @@ function FormulaTemplatesModal({ show, onHide, onApply }) {
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered scrollable>
+    <Modal show={show} onHide={onHide} size="lg" fullscreen="md-down" centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>Formula Templates</Modal.Title>
       </Modal.Header>

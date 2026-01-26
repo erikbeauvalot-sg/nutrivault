@@ -188,7 +188,7 @@ const EmailTemplateModal = ({ show, onHide, template }) => {
   };
 
   return (
-    <Modal show={show} onHide={() => onHide(false)} size="xl" backdrop="static" scrollable>
+    <Modal show={show} onHide={() => onHide(false)} size="xl" fullscreen="md-down" backdrop="static" scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
           {isEditing ? 'Edit Email Template' : 'Create Email Template'}

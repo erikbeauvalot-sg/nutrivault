@@ -487,7 +487,7 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
   const progress = (currentStep / totalSteps) * 100;
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg" centered scrollable>
+    <Modal show={show} onHide={handleClose} size="lg" fullscreen="md-down" centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>Créer un nouveau patient</Modal.Title>
       </Modal.Header>
