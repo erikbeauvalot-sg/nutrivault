@@ -121,7 +121,7 @@ const AnnotationModal = ({ show, onHide, patientId, annotation, measureDefinitio
       </Modal.Header>
 
       <Form onSubmit={handleSubmit}>
-        <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+        <Modal.Body>
           {error && <Alert variant="danger">{error}</Alert>}
 
           {/* Event Date */}

@@ -1,0 +1,117 @@
+/* CustomFieldsPage Mobile Styles */
+
+/* Desktop table - hide on mobile */
+.custom-fields-table-desktop {
+  display: block;
+}
+
+.custom-fields-cards-mobile {
+  display: none;
+}
+
+/* Mobile cards - show on mobile */
+@media (max-width: 767.98px) {
+  .custom-fields-table-desktop {
+    display: none;
+  }
+
+  .custom-fields-cards-mobile {
+    display: block;
+  }
+
+  /* Category Card */
+  .category-card-mobile,
+  .field-card-mobile {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: box-shadow 0.2s ease;
+  }
+
+  .category-card-mobile:hover,
+  .field-card-mobile:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .category-card-mobile:active,
+  .field-card-mobile:active {
+    background: #f8f9fa;
+  }
+
+  /* Card Header */
+  .card-mobile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+  }
+
+  .card-mobile-title {
+    font-weight: 600;
+    font-size: 1rem;
+    margin: 0;
+    color: #212529;
+  }
+
+  .card-mobile-subtitle {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+  }
+
+  /* Card Body */
+  .card-mobile-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .card-mobile-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .card-mobile-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+    min-width: 80px;
+  }
+
+  .card-mobile-value {
+    font-size: 0.9rem;
+  }
+
+  /* Card Footer with Actions */
+  .card-mobile-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #eee;
+  }
+
+  /* Badges in cards */
+  .card-mobile-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+  }
+
+  /* Field type icon */
+  .field-type-icon {
+    font-size: 1.25rem;
+    margin-right: 0.5rem;
+  }
+}
+
+/* Clickable row hover effect for desktop */
+.clickable-row:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+}

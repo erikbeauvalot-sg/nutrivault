@@ -139,7 +139,7 @@ function MeasureTranslationModal({ show, onHide, measure, onSuccess }) {
         </Modal.Title>
       </Modal.Header>
 
-      <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+      <Modal.Body>
         {error && (
           <Alert variant="danger" dismissible onClose={() => setError(null)}>
             {error}

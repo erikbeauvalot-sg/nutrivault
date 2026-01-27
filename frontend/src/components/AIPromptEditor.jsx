@@ -281,7 +281,7 @@ const AIPromptEditor = ({ show, onHide, prompt, onSaved }) => {
       </Modal.Header>
 
       <Form onSubmit={handleSubmit}>
-        <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+        <Modal.Body>
           {/* Alerts */}
           {error && (
             <Alert variant="danger" dismissible onClose={() => setError(null)}>

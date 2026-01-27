@@ -128,7 +128,7 @@ const ChangePasswordModal = ({ show, onHide, userId, username, isAdmin, onSucces
       </Modal.Header>
 
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <Modal.Body style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+        <Modal.Body>
           {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
           {success && <Alert variant="success">Password changed successfully!</Alert>}
 

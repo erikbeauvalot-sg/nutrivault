@@ -335,7 +335,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
       </Modal.Header>
 
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+        <Modal.Body>
           {error && (
             <Alert variant="danger" dismissible onClose={() => setError(null)}>
               {error}

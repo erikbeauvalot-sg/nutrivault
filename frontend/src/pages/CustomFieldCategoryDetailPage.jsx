@@ -15,6 +15,7 @@ import CustomFieldDefinitionModal from '../components/CustomFieldDefinitionModal
 import ActionButton from '../components/ActionButton';
 import ConfirmModal from '../components/ConfirmModal';
 import { useAuth } from '../contexts/AuthContext';
+import './CustomFieldsPage.css';
 
 const CustomFieldCategoryDetailPage = () => {
   const { t } = useTranslation();
@@ -288,64 +289,122 @@ const CustomFieldCategoryDetailPage = () => {
                 {t('customFields.noFieldsInCategory', 'No fields in this category yet. Create one to get started!')}
               </Alert>
             ) : (
-              <Table striped bordered hover responsive>
-                <thead>
-                  <tr>
-                    <th>{t('customFields.fieldName', 'Field Name')}</th>
-                    <th>{t('customFields.fieldLabel', 'Label')}</th>
-                    <th>{t('customFields.fieldType', 'Type')}</th>
-                    <th>{t('customFields.required', 'Required')}</th>
-                    <th>{t('customFields.status', 'Status')}</th>
-                    <th>{t('customFields.actions', 'Actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                {/* Desktop Table View */}
+                <div className="custom-fields-table-desktop">
+                  <Table striped bordered hover>
+                    <thead>
+                      <tr>
+                        <th>{t('customFields.fieldName', 'Field Name')}</th>
+                        <th>{t('customFields.fieldLabel', 'Label')}</th>
+                        <th>{t('customFields.fieldType', 'Type')}</th>
+                        <th>{t('customFields.required', 'Required')}</th>
+                        <th>{t('customFields.status', 'Status')}</th>
+                        <th>{t('customFields.actions', 'Actions')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {definitions.map((definition) => (
+                        <tr
+                          key={definition.id}
+                          onClick={() => navigate(`/settings/custom-fields/definitions/${definition.id}/view`)}
+                          className="clickable-row"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <td><code>{definition.field_name}</code></td>
+                          <td><strong>{definition.field_label}</strong></td>
+                          <td>
+                            <Badge bg={getFieldTypeBadgeVariant(definition.field_type)}>
+                              {getFieldTypeIcon(definition.field_type)} {definition.field_type}
+                            </Badge>
+                          </td>
+                          <td>
+                            {definition.is_required ? (
+                              <Badge bg="warning" text="dark">{t('common.yes', 'Yes')}</Badge>
+                            ) : (
+                              <Badge bg="secondary">{t('common.no', 'No')}</Badge>
+                            )}
+                          </td>
+                          <td>
+                            {definition.is_active ? (
+                              <Badge bg="success">{t('common.active', 'Active')}</Badge>
+                            ) : (
+                              <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>
+                            )}
+                          </td>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <div className="action-buttons">
+                              <ActionButton
+                                action="edit"
+                                onClick={() => handleEditDefinition(definition)}
+                                title={t('common.edit', 'Edit')}
+                              />
+                              <ActionButton
+                                action="delete"
+                                onClick={() => handleDeleteDefinition(definition.id)}
+                                title={t('common.delete', 'Delete')}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="custom-fields-cards-mobile">
                   {definitions.map((definition) => (
-                    <tr
+                    <div
                       key={definition.id}
+                      className="field-card-mobile"
                       onClick={() => navigate(`/settings/custom-fields/definitions/${definition.id}/view`)}
-                      className="clickable-row"
-                      style={{ cursor: 'pointer' }}
                     >
-                      <td><code>{definition.field_name}</code></td>
-                      <td><strong>{definition.field_label}</strong></td>
-                      <td>
-                        <Badge bg={getFieldTypeBadgeVariant(definition.field_type)}>
-                          {getFieldTypeIcon(definition.field_type)} {definition.field_type}
-                        </Badge>
-                      </td>
-                      <td>
-                        {definition.is_required ? (
-                          <Badge bg="warning" text="dark">{t('common.yes', 'Yes')}</Badge>
-                        ) : (
-                          <Badge bg="secondary">{t('common.no', 'No')}</Badge>
-                        )}
-                      </td>
-                      <td>
+                      <div className="card-mobile-header">
+                        <div>
+                          <h6 className="card-mobile-title">
+                            <span className="field-type-icon">{getFieldTypeIcon(definition.field_type)}</span>
+                            {definition.field_label}
+                          </h6>
+                          <div className="card-mobile-subtitle">
+                            <code>{definition.field_name}</code>
+                          </div>
+                        </div>
                         {definition.is_active ? (
                           <Badge bg="success">{t('common.active', 'Active')}</Badge>
                         ) : (
                           <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>
                         )}
-                      </td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <div className="action-buttons">
-                          <ActionButton
-                            action="edit"
-                            onClick={() => handleEditDefinition(definition)}
-                            title={t('common.edit', 'Edit')}
-                          />
-                          <ActionButton
-                            action="delete"
-                            onClick={() => handleDeleteDefinition(definition.id)}
-                            title={t('common.delete', 'Delete')}
-                          />
-                        </div>
-                      </td>
-                    </tr>
+                      </div>
+
+                      <div className="card-mobile-badges">
+                        <Badge bg={getFieldTypeBadgeVariant(definition.field_type)}>
+                          {definition.field_type}
+                        </Badge>
+                        {definition.is_required && (
+                          <Badge bg="warning" text="dark">{t('customFields.required', 'Required')}</Badge>
+                        )}
+                      </div>
+
+                      <div
+                        className="card-mobile-actions"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ActionButton
+                          action="edit"
+                          onClick={() => handleEditDefinition(definition)}
+                          title={t('common.edit', 'Edit')}
+                        />
+                        <ActionButton
+                          action="delete"
+                          onClick={() => handleDeleteDefinition(definition.id)}
+                          title={t('common.delete', 'Delete')}
+                        />
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </Table>
+                </div>
+              </>
             )}
           </Card.Body>
         </Card>

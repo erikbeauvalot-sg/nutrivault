@@ -172,7 +172,7 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
       </Modal.Header>
 
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <Modal.Body style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+        <Modal.Body>
           {/* Hidden input for color */}
           <input type="hidden" {...register('color')} />
 

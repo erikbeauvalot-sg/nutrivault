@@ -130,7 +130,7 @@ const DocumentUploadModal = ({
         <Modal.Title>{t('documents.uploadDocuments', 'Upload Documents')}</Modal.Title>
       </Modal.Header>
 
-      <Modal.Body style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+      <Modal.Body>
         {error && (
           <Alert variant="danger" dismissible onClose={() => setError(null)}>
             {error}

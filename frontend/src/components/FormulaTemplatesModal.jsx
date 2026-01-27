@@ -68,7 +68,7 @@ function FormulaTemplatesModal({ show, onHide, onApply }) {
       <Modal.Header closeButton>
         <Modal.Title>Formula Templates</Modal.Title>
       </Modal.Header>
-      <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+      <Modal.Body>
         {loading ? (
           <div className="text-center py-5">
             <Spinner animation="border" role="status">

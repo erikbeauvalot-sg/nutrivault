@@ -25,6 +25,7 @@ import {
   FaSync
 } from 'react-icons/fa';
 import Layout from '../components/layout/Layout';
+import '../styles/MobileListCards.css';
 import billingTemplateService from '../services/billingTemplateService';
 import BillingTemplateModal from '../components/BillingTemplateModal';
 import ActionButton from '../components/ActionButton';
@@ -271,85 +272,159 @@ const BillingTemplatesPage = () => {
                 )}
               </div>
             ) : (
-              <Table responsive hover>
-                <thead>
-                  <tr>
-                    <th style={{ width: '40px' }}></th>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th className="text-center">Items</th>
-                    <th className="text-end">Total</th>
-                    <th className="text-center">Status</th>
-                    <th className="text-end">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                {/* Desktop Table */}
+                <div className="list-table-desktop">
+                  <Table responsive hover>
+                    <thead>
+                      <tr>
+                        <th style={{ width: '40px' }}></th>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th className="text-center">Items</th>
+                        <th className="text-end">Total</th>
+                        <th className="text-center">Status</th>
+                        <th className="text-end">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredTemplates.map((template) => (
+                        <tr
+                          key={template.id}
+                          onClick={() => handleEdit(template)}
+                          className="clickable-row"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <td className="text-center">
+                            {template.is_default ? (
+                              <FaStar className="text-warning" title="Default template" />
+                            ) : (
+                              <FaRegStar className="text-muted" title="Not default" />
+                            )}
+                          </td>
+                          <td>
+                            <strong>{template.name}</strong>
+                          </td>
+                          <td>
+                            <small className="text-muted">
+                              {template.description || '-'}
+                            </small>
+                          </td>
+                          <td className="text-center">
+                            <Badge bg="secondary">{template.item_count}</Badge>
+                          </td>
+                          <td className="text-end">
+                            <strong>{formatCurrency(template.total_amount)}</strong>
+                          </td>
+                          <td className="text-center">
+                            {template.is_active ? (
+                              <Badge bg="success">Active</Badge>
+                            ) : (
+                              <Badge bg="secondary">Inactive</Badge>
+                            )}
+                          </td>
+                          <td className="text-end" onClick={(e) => e.stopPropagation()}>
+                            <div className="action-buttons justify-content-end">
+                              <ActionButton
+                                action="edit"
+                                onClick={() => handleEdit(template)}
+                                title="Edit"
+                              />
+                              <ActionButton
+                                action="clone"
+                                onClick={() => handleClone(template)}
+                                title="Clone"
+                              />
+                              {!template.is_default && (
+                                <ActionButton
+                                  action="setDefault"
+                                  onClick={() => handleSetDefault(template)}
+                                  title="Set as Default"
+                                />
+                              )}
+                              <ActionButton
+                                action="delete"
+                                onClick={() => handleDelete(template)}
+                                disabled={template.is_default}
+                                title={template.is_default ? 'Cannot delete default template' : 'Delete'}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="list-cards-mobile">
                   {filteredTemplates.map((template) => (
-                    <tr
+                    <div
                       key={template.id}
+                      className="list-card-mobile"
                       onClick={() => handleEdit(template)}
-                      className="clickable-row"
-                      style={{ cursor: 'pointer' }}
                     >
-                      <td className="text-center">
-                        {template.is_default ? (
-                          <FaStar className="text-warning" title="Default template" />
-                        ) : (
-                          <FaRegStar className="text-muted" title="Not default" />
-                        )}
-                      </td>
-                      <td>
-                        <strong>{template.name}</strong>
-                      </td>
-                      <td>
-                        <small className="text-muted">
-                          {template.description || '-'}
-                        </small>
-                      </td>
-                      <td className="text-center">
-                        <Badge bg="secondary">{template.item_count}</Badge>
-                      </td>
-                      <td className="text-end">
-                        <strong>{formatCurrency(template.total_amount)}</strong>
-                      </td>
-                      <td className="text-center">
+                      <div className="list-card-header">
+                        <div>
+                          <h6 className="list-card-title">
+                            {template.is_default ? (
+                              <FaStar className="text-warning me-2" />
+                            ) : (
+                              <FaRegStar className="text-muted me-2" />
+                            )}
+                            {template.name}
+                          </h6>
+                          {template.description && (
+                            <div className="list-card-subtitle">{template.description}</div>
+                          )}
+                        </div>
                         {template.is_active ? (
                           <Badge bg="success">Active</Badge>
                         ) : (
                           <Badge bg="secondary">Inactive</Badge>
                         )}
-                      </td>
-                      <td className="text-end" onClick={(e) => e.stopPropagation()}>
-                        <div className="action-buttons justify-content-end">
-                          <ActionButton
-                            action="edit"
-                            onClick={() => handleEdit(template)}
-                            title="Edit"
-                          />
-                          <ActionButton
-                            action="clone"
-                            onClick={() => handleClone(template)}
-                            title="Clone"
-                          />
-                          {!template.is_default && (
-                            <ActionButton
-                              action="setDefault"
-                              onClick={() => handleSetDefault(template)}
-                              title="Set as Default"
-                            />
-                          )}
-                          <ActionButton
-                            action="delete"
-                            onClick={() => handleDelete(template)}
-                            disabled={template.is_default}
-                            title={template.is_default ? 'Cannot delete default template' : 'Delete'}
-                          />
+                      </div>
+
+                      <div className="list-card-body">
+                        <div className="list-card-row">
+                          <span className="list-card-label">Items:</span>
+                          <Badge bg="secondary">{template.item_count}</Badge>
                         </div>
-                      </td>
-                    </tr>
+                        <div className="list-card-row">
+                          <span className="list-card-label">Total:</span>
+                          <strong>{formatCurrency(template.total_amount)}</strong>
+                        </div>
+                      </div>
+
+                      <div className="list-card-actions" onClick={(e) => e.stopPropagation()}>
+                        <ActionButton
+                          action="edit"
+                          onClick={() => handleEdit(template)}
+                          title="Edit"
+                        />
+                        <ActionButton
+                          action="clone"
+                          onClick={() => handleClone(template)}
+                          title="Clone"
+                        />
+                        {!template.is_default && (
+                          <ActionButton
+                            action="setDefault"
+                            onClick={() => handleSetDefault(template)}
+                            title="Set as Default"
+                          />
+                        )}
+                        <ActionButton
+                          action="delete"
+                          onClick={() => handleDelete(template)}
+                          disabled={template.is_default}
+                          title={template.is_default ? 'Cannot delete default template' : 'Delete'}
+                        />
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </Table>
+                </div>
+              </>
             )}
           </Card.Body>
         </Card>

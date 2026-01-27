@@ -182,7 +182,7 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
       </Modal.Header>
 
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <Modal.Body style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+        <Modal.Body>
           {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
 
           <h5 className="mb-3">{t('users.accountInfo')}</h5>

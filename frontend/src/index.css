@@ -348,22 +348,43 @@ body {
    MODAL MOBILE OPTIMIZATIONS (US-9.1)
    =================================== */
 
-/* Ensure modals are scrollable on small screens */
-.modal-dialog {
+/* Base modal structure for scrollable modals */
+.modal-dialog-scrollable {
   max-height: calc(100vh - 2rem);
-  margin: 1rem;
 }
 
-.modal-content {
+.modal-dialog-scrollable .modal-content {
   max-height: calc(100vh - 2rem);
   display: flex;
   flex-direction: column;
 }
 
-.modal-body {
+.modal-dialog-scrollable .modal-body {
   overflow-y: auto;
   flex: 1 1 auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Fix for Form wrapper inside Modal breaking flex layout */
+.modal-content > form,
+.modal-content > div > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.modal-content > form > .modal-body,
+.modal-content > div > form > .modal-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-content > form > .modal-footer,
+.modal-content > div > form > .modal-footer {
+  flex-shrink: 0;
 }
 
 /* Touch-friendly modal buttons */
@@ -378,14 +399,78 @@ body {
   font-size: 1rem;
 }
 
-/* Mobile modal optimizations */
+/* Fullscreen modals on mobile - ensure proper layout */
+@media (max-width: 767.98px) {
+  .modal-fullscreen-md-down {
+    padding: 0 !important;
+  }
+
+  .modal-fullscreen-md-down .modal-dialog {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    margin: 0;
+  }
+
+  .modal-fullscreen-md-down .modal-content {
+    height: 100%;
+    max-height: 100%;
+    border: 0;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-fullscreen-md-down .modal-header {
+    border-radius: 0;
+    flex-shrink: 0;
+  }
+
+  /* Form wrapper inside fullscreen modal */
+  .modal-fullscreen-md-down .modal-content > form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .modal-fullscreen-md-down .modal-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0;
+  }
+
+  .modal-fullscreen-md-down .modal-footer {
+    border-radius: 0;
+    flex-shrink: 0;
+    padding: 1rem;
+    background: #fff;
+    border-top: 1px solid #dee2e6;
+  }
+
+  /* Full-width buttons on mobile fullscreen modals */
+  .modal-fullscreen-md-down .modal-footer .btn {
+    width: 100%;
+    margin: 0 !important;
+    min-height: 48px;
+  }
+
+  .modal-fullscreen-md-down .modal-footer .btn + .btn {
+    margin-top: 0.5rem !important;
+  }
+}
+
+/* Mobile modal optimizations for non-fullscreen modals */
 @media (max-width: 576px) {
-  .modal-dialog {
+  .modal-dialog:not(.modal-fullscreen-md-down .modal-dialog) {
     margin: 0.5rem;
     max-height: calc(100vh - 1rem);
   }
 
-  .modal-content {
+  .modal-content:not(.modal-fullscreen-md-down .modal-content) {
     max-height: calc(100vh - 1rem);
     border-radius: 0.5rem;
   }
@@ -427,7 +512,7 @@ body {
 
 /* Extra small phones */
 @media (max-width: 360px) {
-  .modal-dialog {
+  .modal-dialog:not(.modal-fullscreen-md-down .modal-dialog) {
     margin: 0.25rem;
   }
 
@@ -649,6 +734,65 @@ html {
 
   .card-body {
     padding: 1rem;
+  }
+}
+
+/* ============================================
+   BORDERLESS CARDS ON MOBILE
+   Remove card borders for cleaner mobile UI
+   ============================================ */
+
+@media (max-width: 576px) {
+  .card {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    margin-left: -0.75rem;
+    margin-right: -0.75rem;
+    background: transparent;
+  }
+
+  /* Keep a subtle top border for visual separation between cards */
+  .card + .card,
+  .card.mb-3 + .card.mb-3,
+  .card.mb-4 + .card.mb-4 {
+    border-top: 1px solid #e9ecef;
+    padding-top: 0.5rem;
+  }
+
+  /* Card body adjustments */
+  .card > .card-body {
+    padding: 0.75rem 0;
+    background: transparent;
+  }
+
+  /* Card header - keep visual distinction */
+  .card > .card-header {
+    border-radius: 0;
+    margin-left: 0;
+    margin-right: 0;
+    border: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  /* Nested cards inside main card - keep some styling */
+  .card .card {
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    margin-left: 0;
+    margin-right: 0;
+    background: #fff;
+  }
+
+  /* Tables inside cards */
+  .card .table {
+    margin-bottom: 0;
+  }
+
+  /* Container fluid adjustments for borderless cards */
+  .container-fluid > .card {
+    margin-left: -12px;
+    margin-right: -12px;
   }
 }
 

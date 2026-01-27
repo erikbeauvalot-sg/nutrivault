@@ -15,6 +15,7 @@ import MeasureTranslationModal from '../components/MeasureTranslationModal';
 import * as measureService from '../services/measureService';
 import ActionButton from '../components/ActionButton';
 import i18n from '../i18n';
+import '../styles/MobileListCards.css';
 
 const MeasuresPage = () => {
   const { t } = useTranslation();
@@ -417,97 +418,167 @@ const MeasuresPage = () => {
                 {t('measures.noResults')}
               </Alert>
             ) : (
-              <Table striped bordered hover responsive>
-                <thead>
-                  <tr>
-                    <th>{t('measures.table.name')}</th>
-                    <th>{t('measures.table.displayName')}</th>
-                    <th>{t('measures.table.category')}</th>
-                    <th>{t('measures.table.type')}</th>
-                    <th>{t('measures.table.unit')}</th>
-                    <th>{t('measures.table.status')}</th>
-                    <th>{t('measures.table.actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                {/* Desktop Table View */}
+                <div className="list-table-desktop">
+                  <Table striped bordered hover>
+                    <thead>
+                      <tr>
+                        <th>{t('measures.table.name')}</th>
+                        <th>{t('measures.table.displayName')}</th>
+                        <th>{t('measures.table.category')}</th>
+                        <th>{t('measures.table.type')}</th>
+                        <th>{t('measures.table.unit')}</th>
+                        <th>{t('measures.table.status')}</th>
+                        <th>{t('measures.table.actions')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredMeasures.map((measure) => (
+                        <tr
+                          key={measure.id}
+                          onClick={() => navigate(`/settings/measures/${measure.id}/view`)}
+                          className="clickable-row"
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <td>
+                            <code>{highlightText(measure.name, searchQuery)}</code>
+                            {measure.is_system && (
+                              <Badge bg="info" className="ms-2" title={t('measures.systemMeasureTooltip', 'System measures cannot be deleted')}>
+                                {t('measures.system', 'System')}
+                              </Badge>
+                            )}
+                          </td>
+                          <td>
+                            <strong>{highlightText(getTranslatedDisplayName(measure), searchQuery)}</strong>
+                          </td>
+                          <td>
+                            <Badge bg="light" text="dark">
+                              {getCategoryIcon(measure.category)} {highlightText(getCategoryName(measure.category), searchQuery)}
+                            </Badge>
+                          </td>
+                          <td>
+                            <Badge bg={getMeasureTypeBadgeVariant(measure.measure_type)}>
+                              {measure.measure_type}
+                            </Badge>
+                          </td>
+                          <td>
+                            {measure.unit ? (
+                              <code>{highlightText(measure.unit, searchQuery)}</code>
+                            ) : (
+                              <span className="text-muted">-</span>
+                            )}
+                          </td>
+                          <td>
+                            {measure.is_active ? (
+                              <Badge bg="success">{t('measures.status.active')}</Badge>
+                            ) : (
+                              <Badge bg="secondary">{t('measures.status.inactive')}</Badge>
+                            )}
+                          </td>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <div className="action-buttons">
+                              <ActionButton
+                                action="edit"
+                                onClick={() => handleEditMeasure(measure)}
+                                title={t('common.edit', 'Edit')}
+                              />
+                              <ActionButton
+                                action="translate"
+                                onClick={() => handleTranslateMeasure(measure)}
+                                title={t('measures.actions.translationsTooltip')}
+                              />
+                              {!measure.is_system ? (
+                                <ActionButton
+                                  action="delete"
+                                  onClick={() => handleDeleteMeasure(measure)}
+                                  title={t('common.delete', 'Delete')}
+                                />
+                              ) : (
+                                <ActionButton
+                                  action="delete"
+                                  disabled={true}
+                                  title={t('measures.systemMeasureTooltip', 'System measures cannot be deleted')}
+                                />
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="list-cards-mobile">
                   {filteredMeasures.map((measure) => (
-                    <tr
+                    <div
                       key={measure.id}
+                      className="list-card-mobile"
                       onClick={() => navigate(`/settings/measures/${measure.id}/view`)}
-                      className="clickable-row"
-                      style={{ cursor: 'pointer' }}
                     >
-                      <td>
-                        <code>{highlightText(measure.name, searchQuery)}</code>
-                        {measure.is_system && (
-                          <Badge bg="info" className="ms-2" title={t('measures.systemMeasureTooltip', 'System measures cannot be deleted')}>
-                            {t('measures.system', 'System')}
-                          </Badge>
-                        )}
-                      </td>
-                      <td>
-                        <strong>{highlightText(getTranslatedDisplayName(measure), searchQuery)}</strong>
-                      </td>
-                      <td>
-                        <Badge bg="light" text="dark">
-                          {getCategoryIcon(measure.category)} {highlightText(getCategoryName(measure.category), searchQuery)}
-                        </Badge>
-                      </td>
-                      <td>
-                        <Badge bg={getMeasureTypeBadgeVariant(measure.measure_type)}>
-                          {measure.measure_type}
-                        </Badge>
-                      </td>
-                      <td>
-                        {measure.unit ? (
-                          <code>{highlightText(measure.unit, searchQuery)}</code>
-                        ) : (
-                          <span className="text-muted">-</span>
-                        )}
-                      </td>
-                      <td>
+                      <div className="list-card-header">
+                        <div>
+                          <h6 className="list-card-title">
+                            <span className="list-card-icon">{getCategoryIcon(measure.category)}</span>
+                            {highlightText(getTranslatedDisplayName(measure), searchQuery)}
+                          </h6>
+                          <div className="list-card-subtitle">
+                            <code>{highlightText(measure.name, searchQuery)}</code>
+                            {measure.unit && <span className="ms-2">({measure.unit})</span>}
+                          </div>
+                        </div>
                         {measure.is_active ? (
                           <Badge bg="success">{t('measures.status.active')}</Badge>
                         ) : (
                           <Badge bg="secondary">{t('measures.status.inactive')}</Badge>
                         )}
-                      </td>
-                      <td onClick={(e) => e.stopPropagation()}>
-                        <div className="action-buttons">
+                      </div>
+
+                      <div className="list-card-badges">
+                        <Badge bg={getMeasureTypeBadgeVariant(measure.measure_type)}>
+                          {measure.measure_type}
+                        </Badge>
+                        <Badge bg="light" text="dark">
+                          {getCategoryName(measure.category)}
+                        </Badge>
+                        {measure.is_system && (
+                          <Badge bg="info">{t('measures.system', 'System')}</Badge>
+                        )}
+                      </div>
+
+                      <div
+                        className="list-card-actions"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ActionButton
+                          action="edit"
+                          onClick={() => handleEditMeasure(measure)}
+                          title={t('common.edit', 'Edit')}
+                        />
+                        <ActionButton
+                          action="translate"
+                          onClick={() => handleTranslateMeasure(measure)}
+                          title={t('measures.actions.translationsTooltip')}
+                        />
+                        {!measure.is_system ? (
                           <ActionButton
-                            action="view"
-                            onClick={() => navigate(`/settings/measures/${measure.id}/view`)}
-                            title={t('common.view', 'View')}
+                            action="delete"
+                            onClick={() => handleDeleteMeasure(measure)}
+                            title={t('common.delete', 'Delete')}
                           />
+                        ) : (
                           <ActionButton
-                            action="edit"
-                            onClick={() => handleEditMeasure(measure)}
-                            title={t('common.edit', 'Edit')}
+                            action="delete"
+                            disabled={true}
+                            title={t('measures.systemMeasureTooltip', 'System measures cannot be deleted')}
                           />
-                          <ActionButton
-                            action="translate"
-                            onClick={() => handleTranslateMeasure(measure)}
-                            title={t('measures.actions.translationsTooltip')}
-                          />
-                          {!measure.is_system ? (
-                            <ActionButton
-                              action="delete"
-                              onClick={() => handleDeleteMeasure(measure)}
-                              title={t('common.delete', 'Delete')}
-                            />
-                          ) : (
-                            <ActionButton
-                              action="delete"
-                              disabled={true}
-                              title={t('measures.systemMeasureTooltip', 'System measures cannot be deleted')}
-                            />
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+                        )}
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </Table>
+                </div>
+              </>
             )}
           </Card.Body>
         </Card>

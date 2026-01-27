@@ -167,7 +167,7 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
       </Modal.Header>
 
       <Form onSubmit={handleSubmit}>
-        <Modal.Body style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+        <Modal.Body>
           {error && (
             <Alert variant="danger" dismissible onClose={() => setError(null)}>
               {error}

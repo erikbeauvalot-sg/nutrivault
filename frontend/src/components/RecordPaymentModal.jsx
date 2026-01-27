@@ -100,7 +100,7 @@ const RecordPaymentModal = ({ show, onHide, onSubmit, invoice }) => {
       </Modal.Header>
 
       <Form onSubmit={handleSubmit}>
-        <Modal.Body style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+        <Modal.Body>
           {invoice && (
             <Alert variant="info">
               <strong>{t('billing.invoice', 'Invoice')}:</strong> {invoice.invoice_number}
