@@ -409,8 +409,8 @@ const EditPatientPage = () => {
               </Row>
 
               <ResponsiveTabs activeKey={activeTab} onSelect={setActiveTab} id="edit-patient-tabs">
-                {/* Basic Info Tab */}
-                <Tab eventKey="basic-info" title={`📋 ${t('patients.basicInformation', 'Informations de base')}`}>
+                {/* 1. Aperçu Tab */}
+                <Tab eventKey="basic-info" title={`📋 ${t('patients.basicInformation', 'Aperçu')}`}>
                   <Row>
                     <Col xs={12} md={6}>
                       <Card className="mb-3">
@@ -568,7 +568,7 @@ const EditPatientPage = () => {
                   </Row>
                 </Tab>
 
-                {/* Custom Field Categories Tabs */}
+                {/* 2. Custom Field Categories Tabs */}
                 {loadingCustomFields ? (
                   <Tab eventKey="loading" title="⏳ Chargement..." disabled>
                     <div className="text-center py-5">
@@ -650,8 +650,8 @@ const EditPatientPage = () => {
                   ))
                 )}
 
-                {/* Measures Tab */}
-                <Tab eventKey="measures" title={`📏 ${t('measures.healthMeasures', 'Measures')}`}>
+                {/* 3. Measures Tab */}
+                <Tab eventKey="measures" title={`📏 ${t('measures.healthMeasures', 'Mesures')}`}>
                   <h5 className="mb-3">{t('measures.patientMeasures', 'Patient Measures')}</h5>
 
                   {/* Measures Table */}

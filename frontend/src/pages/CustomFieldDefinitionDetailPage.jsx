@@ -239,7 +239,7 @@ const CustomFieldDefinitionDetailPage = () => {
                     <Badge bg="light" text="dark">{definition.display_order || 0}</Badge>
                   </dd>
 
-                  <dt className="col-sm-4">{t('customFields.showInBasicInfo', 'Show in Basic Info')}</dt>
+                  <dt className="col-sm-4">{t('customFields.showInOverview', 'Show in Overview')}</dt>
                   <dd className="col-sm-8">
                     {definition.show_in_basic_info ? (
                       <Badge bg="info">{t('common.yes', 'Yes')}</Badge>

@@ -238,7 +238,8 @@
     "createNewPatient": "Create New Patient",
     "enterPatientInfo": "Enter patient information in the tabs below",
     "personalInformationTab": "Personal Information",
-    "basicInformation": "Basic Information",
+    "basicInformation": "Overview",
+    "overviewTab": "Overview",
     "addressContact": "Address & Contact",
     "medicalInformationTab": "Medical Information",
     "medicalDetails": "Medical Details",
@@ -1076,7 +1077,9 @@
     "fieldDeleted": "Field definition deleted successfully",
     "failedToLoad": "Failed to load custom fields",
     "failedToSave": "Failed to save",
-    "failedToDelete": "Failed to delete"
+    "failedToDelete": "Failed to delete",
+    "showInOverview": "Show in Overview",
+    "showInOverviewHelp": "If checked, this field will be displayed in the Overview tab"
   },
   "gdpr": {
     "actions": "GDPR",

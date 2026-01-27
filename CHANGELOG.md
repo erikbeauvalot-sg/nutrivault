@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.15] - 2026-01-27
+
+### Changed
+- Renamed "Informations de base" tab to "Aperçu" (Overview) in patient pages
+- Reorganized patient detail page tabs order: Aperçu → Custom Fields → Mesures → Documents → Visites → Factures → Administratif → Raw Data (dev only)
+- Updated CustomFieldDefinitionModal and CustomFieldDefinitionDetailPage labels from "Show in Basic Information" to "Show in Overview"
+- Fixed duplicate translation key in fr.json that was overriding the "Aperçu" value
+
+### Files Modified
+- `PatientDetailPage.jsx` - Tab reordering and renaming
+- `EditPatientPage.jsx` - Tab renaming to "Aperçu"
+- `CustomFieldDefinitionModal.jsx` - Label update
+- `CustomFieldDefinitionDetailPage.jsx` - Label update
+- `fr.json` - Fixed duplicate basicInformation key, added showInOverview translations
+- `en.json` - Added showInOverview translations
+
+---
+
 ## [5.2.14] - 2026-01-26
 
 ### Added

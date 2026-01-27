@@ -699,11 +699,11 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
                 />
                 <Form.Check
                   type="checkbox"
-                  label="Show in Basic Information"
+                  label={t('customFields.showInOverview', 'Show in Overview')}
                   {...register('show_in_basic_info')}
                 />
                 <Form.Text className="text-muted d-block mb-3">
-                  If checked, this field will be displayed in the Basic Information tab
+                  {t('customFields.showInOverviewHelp', 'If checked, this field will be displayed in the Overview tab')}
                 </Form.Text>
 
                 <Form.Check

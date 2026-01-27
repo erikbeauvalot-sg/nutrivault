@@ -615,8 +615,8 @@ const PatientDetailPage = () => {
             </Row>
 
             <ResponsiveTabs activeKey={activeTab} onSelect={setActiveTab} id="patient-detail-tabs">
-              {/* Basic Info Tab */}
-              <Tab eventKey="basic-info" title={`📋 ${t('patients.basicInformation', 'Basic Information')}`}>
+              {/* 1. Aperçu Tab */}
+              <Tab eventKey="basic-info" title={`📋 ${t('patients.basicInformation', 'Overview')}`}>
                 {/* Essential Patient Info */}
                 <Card className="mb-3">
                   <Card.Header className="bg-primary text-white">
@@ -775,7 +775,42 @@ const PatientDetailPage = () => {
                 </Tab>
               ))}
 
-              {/* Visits Tab */}
+              {/* 3. Measures Tab */}
+              <Tab eventKey="measures" title={`📊 ${t('patients.measures', 'Measures')}`}>
+                <Card>
+                  <Card.Header>
+                    <h5 className="mb-0">{t('patients.measuresTab', 'Patient Measures')}</h5>
+                    <p className="text-muted mb-0 small">
+                      {t('patients.measuresDescription', 'View and track patient health measures over time')}
+                    </p>
+                  </Card.Header>
+                  <Card.Body>
+                    <MeasureHistory patientId={id} />
+                  </Card.Body>
+                </Card>
+              </Tab>
+
+              {/* 4. Documents Tab */}
+              <Tab eventKey="documents" title={`📄 Documents (${documents.length})`}>
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h5 className="mb-0">{t('documents.patientDocuments', 'Patient Documents')}</h5>
+                  <Button
+                    variant="outline-primary"
+                    size="sm"
+                    onClick={() => navigate(`/documents/upload?resourceType=patient&resourceId=${id}`)}
+                  >
+                    <i className="fas fa-upload me-1"></i>
+                    {t('documents.upload', 'Upload Document')}
+                  </Button>
+                </div>
+                <DocumentListComponent
+                  documents={documents}
+                  onDocumentDeleted={fetchPatientDocuments}
+                  showResourceColumn={false}
+                />
+              </Tab>
+
+              {/* 5. Visits Tab */}
               <Tab eventKey="visits" title={`${t('patients.visitsTab', 'Visits')} (${visits.length})`}>
                 <Card>
                   <Card.Header>
@@ -898,7 +933,105 @@ const PatientDetailPage = () => {
                 </Card>
               </Tab>
 
-              {/* Raw Measurements Tab (Development Only) */}
+              {/* 6. Invoices Tab */}
+              <Tab eventKey="invoices" title={`💰 ${t('billing.invoices', 'Factures')} (${invoices.length})`}>
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h5 className="mb-0">{t('billing.patientInvoices', 'Factures du patient')}</h5>
+                  <Button
+                    variant="outline-primary"
+                    size="sm"
+                    onClick={handleAddPayment}
+                  >
+                    ➕ {t('billing.createInvoice', 'Créer une facture')}
+                  </Button>
+                </div>
+                {invoicesLoading ? (
+                  <div className="text-center py-5">
+                    <Spinner animation="border" role="status">
+                      <span className="visually-hidden">{t('common.loading')}</span>
+                    </Spinner>
+                    <p className="mt-2">{t('billing.loadingInvoices', 'Chargement des factures...')}</p>
+                  </div>
+                ) : invoices.length === 0 ? (
+                  <Card className="text-center py-5">
+                    <Card.Body>
+                      <div className="mb-3">💰</div>
+                      <h6>{t('billing.noInvoices', 'Aucune facture')}</h6>
+                      <p className="text-muted">
+                        {t('billing.noInvoicesForPatient', 'Aucune facture trouvée pour ce patient')}
+                      </p>
+                      <Button variant="outline-primary" onClick={handleAddPayment}>
+                        ➕ {t('billing.createFirstInvoice', 'Créer la première facture')}
+                      </Button>
+                    </Card.Body>
+                  </Card>
+                ) : (
+                  <InvoiceList
+                    invoices={invoices}
+                    loading={false}
+                    filters={{}}
+                    pagination={null}
+                    onFilterChange={() => {}}
+                    onPageChange={() => {}}
+                    onView={handleViewInvoice}
+                    onEdit={handleEditInvoice}
+                    onRecordPayment={handleRecordPayment}
+                    onDelete={handleDeleteInvoice}
+                    canCreate={canEditPatient}
+                    canUpdate={canEditPatient}
+                    canDelete={canEditPatient}
+                  />
+                )}
+              </Tab>
+
+              {/* 7. Administrative Tab */}
+              {canEditPatient && (
+                <Tab eventKey="admin" title={t('patients.administrativeTab', 'Administratif')}>
+                  {/* Administrative Info Card */}
+                  <Card className="mb-4">
+                    <Card.Header>
+                      <h5 className="mb-0">{t('patients.administrativeInfo', 'Informations administratives')}</h5>
+                    </Card.Header>
+                    <Card.Body>
+                      <Row>
+                        <Col xs={12} md={6}>
+                          <Row>
+                            <Col sm={5}><strong>{t('patients.assignedDietitian', 'Diététicien assigné')}:</strong></Col>
+                            <Col sm={7}>
+                              {patient.assigned_dietitian ? (
+                                `${patient.assigned_dietitian.first_name} ${patient.assigned_dietitian.last_name}`
+                              ) : t('patients.notAssigned', 'Non assigné')}
+                            </Col>
+                          </Row>
+                          <Row className="mt-3">
+                            <Col sm={5}><strong>{t('patients.createdLabel', 'Créé le')}:</strong></Col>
+                            <Col sm={7}>{formatDateTime(patient.created_at)}</Col>
+                          </Row>
+                          <Row className="mt-3">
+                            <Col sm={5}><strong>{t('patients.lastUpdated', 'Mis à jour le')}:</strong></Col>
+                            <Col sm={7}>{formatDateTime(patient.updated_at)}</Col>
+                          </Row>
+                        </Col>
+                        <Col xs={12} md={6} className="mt-3 mt-md-0">
+                          <Row>
+                            <Col sm={4}><strong>{t('patients.notes', 'Notes')}:</strong></Col>
+                            <Col sm={8}>
+                              {patient.notes ? (
+                                <div style={{ whiteSpace: 'pre-wrap' }}>{patient.notes}</div>
+                              ) : '-'}
+                            </Col>
+                          </Row>
+                        </Col>
+                      </Row>
+                    </Card.Body>
+                  </Card>
+
+                  {/* Email Communication History */}
+                  <EmailHistory patientId={id} />
+                </Tab>
+              )}
+
+              {/* 8. Raw Measurements Tab (Development Only) */}
               {import.meta.env.DEV && (
                 <Tab eventKey="raw-measurements" title={`🔧 Raw Data`}>
                   <Card>
@@ -1015,140 +1148,7 @@ const PatientDetailPage = () => {
                 </Tab>
               )}
 
-              {/* Administrative Tab */}
-              {canEditPatient && (
-                <Tab eventKey="admin" title={t('patients.administrativeTab', 'Administratif')}>
-                  {/* Administrative Info Card */}
-                  <Card className="mb-4">
-                    <Card.Header>
-                      <h5 className="mb-0">{t('patients.administrativeInfo', 'Informations administratives')}</h5>
-                    </Card.Header>
-                    <Card.Body>
-                      <Row>
-                        <Col xs={12} md={6}>
-                          <Row>
-                            <Col sm={5}><strong>{t('patients.assignedDietitian', 'Diététicien assigné')}:</strong></Col>
-                            <Col sm={7}>
-                              {patient.assigned_dietitian ? (
-                                `${patient.assigned_dietitian.first_name} ${patient.assigned_dietitian.last_name}`
-                              ) : t('patients.notAssigned', 'Non assigné')}
-                            </Col>
-                          </Row>
-                          <Row className="mt-3">
-                            <Col sm={5}><strong>{t('patients.createdLabel', 'Créé le')}:</strong></Col>
-                            <Col sm={7}>{formatDateTime(patient.created_at)}</Col>
-                          </Row>
-                          <Row className="mt-3">
-                            <Col sm={5}><strong>{t('patients.lastUpdated', 'Mis à jour le')}:</strong></Col>
-                            <Col sm={7}>{formatDateTime(patient.updated_at)}</Col>
-                          </Row>
-                        </Col>
-                        <Col xs={12} md={6} className="mt-3 mt-md-0">
-                          <Row>
-                            <Col sm={4}><strong>{t('patients.notes', 'Notes')}:</strong></Col>
-                            <Col sm={8}>
-                              {patient.notes ? (
-                                <div style={{ whiteSpace: 'pre-wrap' }}>{patient.notes}</div>
-                              ) : '-'}
-                            </Col>
-                          </Row>
-                        </Col>
-                      </Row>
-                    </Card.Body>
-                  </Card>
-
-                  {/* Email Communication History */}
-                  <EmailHistory patientId={id} />
-                </Tab>
-              )}
-
-              {/* Documents Tab */}
-              <Tab eventKey="documents" title={`📄 Documents (${documents.length})`}>
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h5 className="mb-0">Patient Documents</h5>
-                  <Button
-                    variant="outline-primary"
-                    size="sm"
-                    onClick={() => navigate(`/documents/upload?resourceType=patient&resourceId=${id}`)}
-                  >
-                    <i className="fas fa-upload me-1"></i>
-                    Upload Document
-                  </Button>
-                </div>
-                <DocumentListComponent
-                  documents={documents}
-                  onDocumentDeleted={fetchPatientDocuments}
-                  showResourceColumn={false}
-                />
-              </Tab>
-
-              {/* Invoices Tab */}
-              <Tab eventKey="invoices" title={`💰 ${t('billing.invoices', 'Factures')} (${invoices.length})`}>
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h5 className="mb-0">{t('billing.patientInvoices', 'Factures du patient')}</h5>
-                  <Button
-                    variant="outline-primary"
-                    size="sm"
-                    onClick={handleAddPayment}
-                  >
-                    ➕ {t('billing.createInvoice', 'Créer une facture')}
-                  </Button>
-                </div>
-                {invoicesLoading ? (
-                  <div className="text-center py-5">
-                    <Spinner animation="border" role="status">
-                      <span className="visually-hidden">{t('common.loading')}</span>
-                    </Spinner>
-                    <p className="mt-2">{t('billing.loadingInvoices', 'Chargement des factures...')}</p>
-                  </div>
-                ) : invoices.length === 0 ? (
-                  <Card className="text-center py-5">
-                    <Card.Body>
-                      <div className="mb-3">💰</div>
-                      <h6>{t('billing.noInvoices', 'Aucune facture')}</h6>
-                      <p className="text-muted">
-                        {t('billing.noInvoicesForPatient', 'Aucune facture trouvée pour ce patient')}
-                      </p>
-                      <Button variant="outline-primary" onClick={handleAddPayment}>
-                        ➕ {t('billing.createFirstInvoice', 'Créer la première facture')}
-                      </Button>
-                    </Card.Body>
-                  </Card>
-                ) : (
-                  <InvoiceList
-                    invoices={invoices}
-                    loading={false}
-                    filters={{}}
-                    pagination={null}
-                    onFilterChange={() => {}}
-                    onPageChange={() => {}}
-                    onView={handleViewInvoice}
-                    onEdit={handleEditInvoice}
-                    onRecordPayment={handleRecordPayment}
-                    onDelete={handleDeleteInvoice}
-                    canCreate={canEditPatient}
-                    canUpdate={canEditPatient}
-                    canDelete={canEditPatient}
-                  />
-                )}
-              </Tab>
-
-              {/* Measures Tab */}
-              <Tab eventKey="measures" title={`📊 ${t('patients.measures', 'Measures')}`}>
-                <Card>
-                  <Card.Header>
-                    <h5 className="mb-0">{t('patients.measuresTab', 'Patient Measures')}</h5>
-                    <p className="text-muted mb-0 small">
-                      {t('patients.measuresDescription', 'View and track patient health measures over time')}
-                    </p>
-                  </Card.Header>
-                  <Card.Body>
-                    <MeasureHistory patientId={id} />
-                  </Card.Body>
-                </Card>
-              </Tab>
-
-              {/* Compare Measures Tab - Temporarily disabled, to be improved later
+{/* Compare Measures Tab - Temporarily disabled, to be improved later
               <Tab eventKey="compare-measures" title="📈 Compare Measures">
                 <Card>
                   <Card.Header>

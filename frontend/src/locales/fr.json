@@ -147,8 +147,9 @@
     "measures": "Mesures",
     "measuresTab": "Mesures du Patient",
     "measuresDescription": "Consulter et suivre les mesures de santé du patient",
-    "basicInformation": "Informations de base",
+    "basicInformation": "Aperçu",
     "basicInformationTitle": "Informations de base du patient",
+    "overviewTab": "Aperçu",
     "measurementsTab": "Mesures",
     "measurementTrends": "Tendances des mesures",
     "measurementTrendsDescription": "Suivre les changements dans les mesures des patients au fil du temps",
@@ -252,7 +253,6 @@
     "createNewPatient": "Créer un nouveau patient",
     "enterPatientInfo": "Entrez les informations du patient dans les onglets ci-dessous",
     "personalInformationTab": "Informations personnelles",
-    "basicInformation": "Informations de base",
     "addressContact": "Adresse et contact",
     "medicalInformationTab": "Informations médicales",
     "medicalDetails": "Détails médicaux",
@@ -1108,7 +1108,9 @@
     "fieldDeleted": "Définition de champ supprimée avec succès",
     "failedToLoad": "Échec du chargement des champs personnalisés",
     "failedToSave": "Échec de l'enregistrement",
-    "failedToDelete": "Échec de la suppression"
+    "failedToDelete": "Échec de la suppression",
+    "showInOverview": "Afficher dans l'Aperçu",
+    "showInOverviewHelp": "Si coché, ce champ sera affiché dans l'onglet Aperçu"
   },
   "gdpr": {
     "actions": "RGPD",
