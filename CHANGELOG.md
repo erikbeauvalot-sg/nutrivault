@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Backend Changes**:
   - Added 'separator' to CustomFieldDefinition ENUM validation
   - Updated field type validation logic
+  - **Database Migration**: Added migration to support 'calculated' and 'separator' field types in production PostgreSQL database
 - **Frontend Changes**:
   - Modified `CustomFieldDisplay.jsx` to conditionally hide separator labels
   - Updated `PatientDetailPage.jsx` and `VisitDetailPage.jsx` for proper separator layout
@@ -36,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Files Modified
 - `models/CustomFieldDefinition.js` - Added separator field type validation
 - `backend/src/controllers/customFieldDefinitionController.js` - Updated validation
+- `migrations/20260128063448-add-calculated-and-separator-field-types.js` - Database migration for new field types
 - `frontend/src/components/CustomFieldDisplay.jsx` - Separator rendering logic
 - `frontend/src/components/CustomFieldInput.jsx` - Separator input handling
 - `frontend/src/pages/PatientDetailPage.jsx` - Layout adjustments for separators
