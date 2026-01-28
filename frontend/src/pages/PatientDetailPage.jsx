@@ -696,7 +696,7 @@ const PatientDetailPage = () => {
                         <Card.Body>
                           <Row>
                             {basicInfoFields.map((field) => (
-                              <Col xs={12} md={6} key={field.definition_id}>
+                              <Col xs={12} md={field.field_type === 'separator' ? 12 : 6} key={field.definition_id} className={field.field_type === 'separator' ? 'mb-3' : ''}>
                                 <CustomFieldDisplay
                                   fieldDefinition={field}
                                   value={fieldValues[field.definition_id]}
@@ -760,7 +760,7 @@ const PatientDetailPage = () => {
                     ) : (
                       <Row>
                         {category.fields.map(field => (
-                          <Col key={field.definition_id} xs={12} md={6}>
+                          <Col key={field.definition_id} xs={12} md={field.field_type === 'separator' ? 12 : 6} className={field.field_type === 'separator' ? 'mb-3' : ''}>
                             <CustomFieldDisplay
                               fieldDefinition={field}
                               value={fieldValues[field.definition_id]}

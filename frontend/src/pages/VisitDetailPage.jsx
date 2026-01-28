@@ -584,6 +584,68 @@ const VisitDetailPage = () => {
                 </Row>
               </Tab>
 
+
+              {/* Custom Fields Tabs - Only visible if there are categories for visits */}
+              {customFieldCategories.length > 0 && customFieldCategories.map((category) => (
+                <Tab
+                  key={category.id}
+                  eventKey={`category-${category.id}`}
+                  title={
+                    <span>
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          width: '12px',
+                          height: '12px',
+                          backgroundColor: category.color || '#3498db',
+                          borderRadius: '50%',
+                          marginRight: '8px',
+                          verticalAlign: 'middle',
+                          border: '2px solid rgba(255,255,255,0.5)'
+                        }}
+                      />
+                      {category.name}
+                    </span>
+                  }
+                >
+                  <div
+                    className="mb-3"
+                    style={{
+                      borderLeft: `4px solid ${category.color || '#3498db'}`,
+                      paddingLeft: '15px'
+                    }}
+                  >
+                    {category.description && (
+                      <Alert
+                        variant="info"
+                        style={{
+                          borderLeft: `4px solid ${category.color || '#3498db'}`,
+                          backgroundColor: `${category.color || '#3498db'}10`
+                        }}
+                      >
+                        {category.description}
+                      </Alert>
+                    )}
+                    {category.fields.length === 0 ? (
+                      <Alert variant="warning">
+                        No fields defined for this category
+                      </Alert>
+                    ) : (
+                      <Row>
+                        {category.fields.map(field => (
+                          <Col key={field.definition_id} xs={12} md={field.field_type === 'separator' ? 12 : 6} className={field.field_type === 'separator' ? 'mb-3' : ''}>
+                            <CustomFieldDisplay
+                              fieldDefinition={field}
+                              value={fieldValues[field.definition_id]}
+                            />
+                          </Col>
+                        ))}
+                      </Row>
+                    )}
+                  </div>
+                </Tab>
+              ))}
+
               {/* Health Measures Tab */}
               <Tab eventKey="measures" title={`📏 ${t('measures.healthMeasures', 'Measures')} (${measures.length})`}>
                 <Row className="mb-3">
@@ -728,67 +790,6 @@ const VisitDetailPage = () => {
                   </Table>
                 )}
               </Tab>
-
-              {/* Custom Fields Tabs - Only visible if there are categories for visits */}
-              {customFieldCategories.length > 0 && customFieldCategories.map((category) => (
-                <Tab
-                  key={category.id}
-                  eventKey={`category-${category.id}`}
-                  title={
-                    <span>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          width: '12px',
-                          height: '12px',
-                          backgroundColor: category.color || '#3498db',
-                          borderRadius: '50%',
-                          marginRight: '8px',
-                          verticalAlign: 'middle',
-                          border: '2px solid rgba(255,255,255,0.5)'
-                        }}
-                      />
-                      {category.name}
-                    </span>
-                  }
-                >
-                  <div
-                    className="mb-3"
-                    style={{
-                      borderLeft: `4px solid ${category.color || '#3498db'}`,
-                      paddingLeft: '15px'
-                    }}
-                  >
-                    {category.description && (
-                      <Alert
-                        variant="info"
-                        style={{
-                          borderLeft: `4px solid ${category.color || '#3498db'}`,
-                          backgroundColor: `${category.color || '#3498db'}10`
-                        }}
-                      >
-                        {category.description}
-                      </Alert>
-                    )}
-                    {category.fields.length === 0 ? (
-                      <Alert variant="warning">
-                        No fields defined for this category
-                      </Alert>
-                    ) : (
-                      <Row>
-                        {category.fields.map(field => (
-                          <Col key={field.definition_id} xs={12} md={6}>
-                            <CustomFieldDisplay
-                              fieldDefinition={field}
-                              value={fieldValues[field.definition_id]}
-                            />
-                          </Col>
-                        ))}
-                      </Row>
-                    )}
-                  </div>
-                </Tab>
-              ))}
 
               {/* Administrative Tab */}
               <Tab eventKey="admin" title={`⚙️ ${t('visits.administrativeTab')}`}>

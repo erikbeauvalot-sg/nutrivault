@@ -39,7 +39,7 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
     }
 
     switch (field_type) {
-      case 'calculated':
+      case 'calculated': {
         // Display calculated fields with special formatting
         // Use ?? instead of || so that 0 decimal places is respected
         const decimalPlaces = fieldDefinition.decimal_places ?? 2;
@@ -49,13 +49,14 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
             🧮 {formattedValue}
           </span>
         );
+      }
 
       case 'boolean':
         return value === true || value === 'true' ?
           <Badge bg="success">Oui</Badge> :
           <Badge bg="secondary">Non</Badge>;
 
-      case 'date':
+      case 'date': {
         // Format date based on validation_rules.dateFormat
         const dateFormat = validation_rules?.dateFormat || 'DD/MM/YYYY';
         if (!value) return <span className="text-muted">-</span>;
@@ -73,8 +74,9 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
           default:
             return `${day}/${month}/${year}`;
         }
+      }
 
-      case 'select':
+      case 'select': {
         // Handle value that might be stored as object {value, label} or just string
         // Also look up the label from select_options if available
         let displayLabel = value;
@@ -91,6 +93,7 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
           }
         }
         return <Badge bg="primary">{displayLabel}</Badge>;
+      }
 
       case 'number':
         return <strong>{value}</strong>;
@@ -102,7 +105,10 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
           </div>
         );
 
-      case 'text':
+      case 'separator':
+        // Display separator as a horizontal line
+        return <hr style={{ margin: '20px 0', borderTop: '2px solid #dee2e6' }} />;
+
       default:
         return <span>{searchQuery ? highlight(value, searchQuery) : value}</span>;
     }
@@ -110,9 +116,11 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
 
   return (
     <div className="mb-3">
-      <div className="text-muted small mb-1">
-        {searchQuery ? highlight(field_label, searchQuery) : field_label}
-      </div>
+      {field_type !== 'separator' && (
+        <div className="text-muted small mb-1">
+          {searchQuery ? highlight(field_label, searchQuery) : field_label}
+        </div>
+      )}
       <div>{formatValue()}</div>
     </div>
   );
@@ -121,7 +129,7 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
 CustomFieldDisplay.propTypes = {
   fieldDefinition: PropTypes.shape({
     field_label: PropTypes.string.isRequired,
-    field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean', 'calculated']).isRequired,
+    field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean', 'calculated', 'separator']).isRequired,
     validation_rules: PropTypes.object,
     select_options: PropTypes.arrayOf(
       PropTypes.oneOfType([

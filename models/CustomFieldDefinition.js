@@ -28,10 +28,10 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     field_type: {
-      type: DataTypes.ENUM('text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated'),
+      type: DataTypes.ENUM('text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator'),
       allowNull: false,
       validate: {
-        isIn: [['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated']]
+        isIn: [['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator']]
       }
     },
     is_required: {
@@ -55,6 +55,9 @@ module.exports = (sequelize, DataTypes) => {
             if (value.length === 0) {
               throw new Error('select_options must have at least one option');
             }
+          }
+          if (this.field_type !== 'select' && this.field_type !== 'separator' && value) {
+            throw new Error('select_options can only be set for select fields');
           }
         }
       }
@@ -99,7 +102,7 @@ module.exports = (sequelize, DataTypes) => {
           if (this.field_type === 'calculated' && !value) {
             throw new Error('Formula is required for calculated fields');
           }
-          if (this.field_type !== 'calculated' && value) {
+          if (this.field_type !== 'calculated' && this.field_type !== 'separator' && value) {
             throw new Error('Formula can only be set for calculated fields');
           }
         }
@@ -112,6 +115,9 @@ module.exports = (sequelize, DataTypes) => {
         isValidDependencies(value) {
           if (value && !Array.isArray(value)) {
             throw new Error('Dependencies must be an array');
+          }
+          if (this.field_type !== 'calculated' && this.field_type !== 'separator' && value && value.length > 0) {
+            throw new Error('Dependencies can only be set for calculated fields');
           }
         }
       }
@@ -282,6 +288,10 @@ module.exports = (sequelize, DataTypes) => {
         if (typeof value !== 'boolean' && value !== 'true' && value !== 'false') {
           return { isValid: false, error: 'Value must be true or false' };
         }
+        break;
+
+      case 'separator':
+        // Separators don't store values, so they're always valid
         break;
 
       default:

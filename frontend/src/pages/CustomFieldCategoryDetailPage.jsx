@@ -144,7 +144,8 @@ const CustomFieldCategoryDetailPage = () => {
       date: '📅',
       select: '📋',
       boolean: '☑️',
-      calculated: '🧮'
+      calculated: '🧮',
+      separator: '➖'
     };
     return icons[type] || '❓';
   };
@@ -157,7 +158,8 @@ const CustomFieldCategoryDetailPage = () => {
       date: 'warning',
       select: 'secondary',
       boolean: 'dark',
-      calculated: 'danger'
+      calculated: 'danger',
+      separator: 'light'
     };
     return variants[type] || 'secondary';
   };

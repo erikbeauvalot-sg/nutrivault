@@ -14,3 +14,4 @@
 - [ ] Suppression d'un type de mesure ne fonctionne pas : pas d'erreur mais le type de mesure reste présente.
 
 - Remplacer tous les appels 'windows.alert' par des modales plus jolies.
+
