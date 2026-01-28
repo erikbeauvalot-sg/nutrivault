@@ -591,13 +591,6 @@ async function duplicateDefinition(user, definitionId, overrides = {}, requestMe
       throw error;
     }
 
-    // Check permissions
-    if (user.role !== 'ADMIN') {
-      const error = new Error('Insufficient permissions to duplicate field definition');
-      error.statusCode = 403;
-      throw error;
-    }
-
     // Create the duplicated definition data
     const duplicatedData = {
       category_id: overrides.category_id || originalDefinition.category_id,
@@ -622,11 +615,19 @@ async function duplicateDefinition(user, definitionId, overrides = {}, requestMe
     const duplicatedDefinition = await CustomFieldDefinition.create(duplicatedData);
 
     // Log the action
-    await auditService.logAction(user.id, 'CREATE', 'CustomFieldDefinition', duplicatedDefinition.id, {
-      action: 'DUPLICATE',
-      original_id: definitionId,
-      duplicated_data: duplicatedData
-    }, requestMetadata);
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'CREATE',
+      resource_type: 'CustomFieldDefinition',
+      resource_id: duplicatedDefinition.id,
+      changes: {
+        action: 'DUPLICATE',
+        original_id: definitionId,
+        duplicated_data: duplicatedData
+      },
+      ...requestMetadata
+    });
 
     // Get the full duplicated definition with translations
     const result = await getDefinitionById(user, duplicatedDefinition.id, null, requestMetadata);

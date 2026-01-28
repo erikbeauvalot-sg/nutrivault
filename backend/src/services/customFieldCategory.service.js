@@ -358,13 +358,6 @@ async function duplicateCategory(user, categoryId, overrides = {}, requestMetada
       throw error;
     }
 
-    // Check permissions
-    if (user.role !== 'ADMIN') {
-      const error = new Error('Insufficient permissions to duplicate category');
-      error.statusCode = 403;
-      throw error;
-    }
-
     // Create the duplicated category data
     const duplicatedData = {
       name: overrides.name || `${originalCategory.name} (Copy)`,
@@ -379,11 +372,19 @@ async function duplicateCategory(user, categoryId, overrides = {}, requestMetada
     const duplicatedCategory = await CustomFieldCategory.create(duplicatedData);
 
     // Log the action
-    await auditService.logAction(user.id, 'CREATE', 'CustomFieldCategory', duplicatedCategory.id, {
-      action: 'DUPLICATE',
-      original_id: categoryId,
-      duplicated_data: duplicatedData
-    }, requestMetadata);
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'CREATE',
+      resource_type: 'CustomFieldCategory',
+      resource_id: duplicatedCategory.id,
+      changes: {
+        action: 'DUPLICATE',
+        original_id: categoryId,
+        duplicated_data: duplicatedData
+      },
+      ...requestMetadata
+    });
 
     // Get the full duplicated category with translations
     const result = await getCategoryById(user, duplicatedCategory.id, {}, requestMetadata);
