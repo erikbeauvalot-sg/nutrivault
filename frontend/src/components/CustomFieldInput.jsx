@@ -202,32 +202,25 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
         const formattedValue = typeof value === 'number' ? value.toFixed(decimalPlaces) : displayValue;
 
         return (
-          <div className="position-relative">
-            <Form.Control
-              type="text"
-              id={field_name}
-              value={formattedValue}
-              readOnly
-              disabled={true}
-              style={{
-                backgroundColor: '#f8f9fa',
-                cursor: 'not-allowed',
-                fontWeight: '500'
-              }}
-              title={fieldDefinition.formula ? `Formula: ${fieldDefinition.formula}` : 'Calculated field'}
-            />
-            <span
-              className="position-absolute"
-              style={{
-                right: '10px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                fontSize: '18px',
-                pointerEvents: 'none'
-              }}
-            >
-              🧮
-            </span>
+          <div>
+            <Form.Label htmlFor={field_name} className="form-label">
+              🧮 {field_label}
+            </Form.Label>
+            <div className="position-relative">
+              <Form.Control
+                type="text"
+                id={field_name}
+                value={formattedValue}
+                readOnly
+                disabled={true}
+                style={{
+                  backgroundColor: '#f8f9fa',
+                  cursor: 'not-allowed',
+                  fontWeight: '500'
+                }}
+                title={fieldDefinition.formula ? `Formula: ${fieldDefinition.formula}` : 'Calculated field'}
+              />
+            </div>
           </div>
         );
       }
