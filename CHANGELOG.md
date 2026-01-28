@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.3.0] - 2026-01-28
+
+### Added
+- **Separator Custom Field Type**: New field type for visual organization in forms
+  - Horizontal line separators that span full width in forms
+  - No data input required - purely visual elements
+  - Perfect for creating section breaks in Patient and Visit forms
+  - Available in custom field creation interface
+
+### Changed
+- **Form Layout Improvements**: Enhanced layout handling for different field types
+  - Separators display as full-width horizontal lines in view mode
+  - Regular fields maintain 2-column grid layout for optimal space usage
+  - Edit forms use full-width layout for better input experience
+- **Custom Field Display**: Improved rendering logic for special field types
+  - Separators hide labels and display only horizontal lines
+  - Better visual hierarchy in form sections
+
+### Technical Details
+- **Backend Changes**:
+  - Added 'separator' to CustomFieldDefinition ENUM validation
+  - Updated field type validation logic
+- **Frontend Changes**:
+  - Modified `CustomFieldDisplay.jsx` to conditionally hide separator labels
+  - Updated `PatientDetailPage.jsx` and `VisitDetailPage.jsx` for proper separator layout
+  - Enhanced `CreateVisitPage.jsx` and `PatientCustomFieldsTabs.jsx` for edit mode
+  - Improved responsive grid system for mixed field types
+
+### Files Modified
+- `models/CustomFieldDefinition.js` - Added separator field type validation
+- `backend/src/controllers/customFieldDefinitionController.js` - Updated validation
+- `frontend/src/components/CustomFieldDisplay.jsx` - Separator rendering logic
+- `frontend/src/components/CustomFieldInput.jsx` - Separator input handling
+- `frontend/src/pages/PatientDetailPage.jsx` - Layout adjustments for separators
+- `frontend/src/pages/VisitDetailPage.jsx` - Layout adjustments for separators
+- `frontend/src/pages/CreateVisitPage.jsx` - Edit form layout
+- `frontend/src/components/PatientCustomFieldsTabs.jsx` - Edit form layout
+- `frontend/src/components/CustomFieldDefinitionModal.jsx` - Added separator option
+
+---
+
 ## [5.2.15] - 2026-01-27
 
 ### Changed
