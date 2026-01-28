@@ -115,11 +115,11 @@ async function saveUserTokens(userId, tokens) {
  * @param {string} calendarId - Google Calendar ID (default: primary)
  * @returns {Promise<Object>} Google Calendar event
  */
-async function createOrUpdateCalendarEvent(visit, user, calendarId = 'primary') {
+async function createOrUpdateCalendarEvent(visit, user, calendarId = 'primary', includeDietitianName = false) {
   const oauth2Client = getOAuth2Client(user);
   const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-  // Get patient info for event title
+  // Get patient and dietitian info
   const patient = await Patient.findByPk(visit.patient_id, {
     attributes: ['first_name', 'last_name']
   });
@@ -128,13 +128,24 @@ async function createOrUpdateCalendarEvent(visit, user, calendarId = 'primary') 
     throw new Error('Patient not found');
   }
 
+  // Get dietitian info if needed for title
+  let dietitianName = '';
+  if (includeDietitianName && visit.dietitian_id !== user.id) {
+    const dietitian = await User.findByPk(visit.dietitian_id, {
+      attributes: ['first_name', 'last_name', 'username']
+    });
+    if (dietitian) {
+      dietitianName = ` (${dietitian.first_name} ${dietitian.last_name})`;
+    }
+  }
+
   // Calculate end time (default 60 minutes if not specified)
   const startDateTime = new Date(visit.visit_date);
   const endDateTime = new Date(startDateTime.getTime() + (visit.duration_minutes || 60) * 60000);
 
   const eventData = {
-    summary: `Consultation - ${patient.first_name} ${patient.last_name}`,
-    description: `Rendez-vous avec ${patient.first_name} ${patient.last_name}\nType: ${visit.visit_type || 'Consultation'}\nStatut: ${visit.status}`,
+    summary: `Consultation - ${patient.first_name} ${patient.last_name}${dietitianName}`,
+    description: `Rendez-vous avec ${patient.first_name} ${patient.last_name}\nType: ${visit.visit_type || 'Consultation'}\nStatut: ${visit.status}${dietitianName ? `\nDiététicien: ${dietitianName.trim()}` : ''}`,
     start: {
       dateTime: startDateTime.toISOString(),
       timeZone: 'Europe/Paris' // Default timezone, could be configurable
@@ -151,7 +162,8 @@ async function createOrUpdateCalendarEvent(visit, user, calendarId = 'primary') 
     extendedProperties: {
       private: {
         nutrivault_visit_id: visit.id,
-        nutrivault_patient_id: visit.patient_id
+        nutrivault_patient_id: visit.patient_id,
+        nutrivault_dietitian_id: visit.dietitian_id
       }
     }
   };
@@ -203,32 +215,51 @@ async function deleteCalendarEvent(eventId, user, calendarId = 'primary') {
  * @param {Object} options - Sync options
  * @param {Date} options.since - Sync visits since this date
  * @param {string} options.calendarId - Google Calendar ID
+ * @param {boolean} options.syncAllDietitians - If true and user is admin, sync all dietitians' visits
  * @returns {Promise<Object>} Sync results
  */
 async function syncVisitsToCalendar(userId, options = {}) {
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(userId, {
+    include: [{
+      model: db.Role,
+      as: 'role'
+    }]
+  });
   if (!user || !user.google_access_token) {
     throw new Error('User not connected to Google Calendar');
   }
 
   const since = options.since || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // Last 30 days
   const calendarId = options.calendarId || user.google_calendar_id || 'primary';
+  const isAdmin = user.role && user.role.name === 'ADMIN';
+  const syncAllDietitians = options.syncAllDietitians && isAdmin;
+
+  // Build where clause for visits
+  const whereClause = {
+    visit_date: {
+      [db.Sequelize.Op.gte]: since
+    },
+    status: {
+      [db.Sequelize.Op.in]: ['SCHEDULED', 'COMPLETED']
+    }
+  };
+
+  // If not syncing all dietitians, filter by current user
+  if (!syncAllDietitians) {
+    whereClause.dietitian_id = userId;
+  }
 
   // Get visits that need to be synced
   const visits = await Visit.findAll({
-    where: {
-      dietitian_id: userId,
-      visit_date: {
-        [db.Sequelize.Op.gte]: since
-      },
-      status: {
-        [db.Sequelize.Op.in]: ['SCHEDULED', 'COMPLETED']
-      }
-    },
+    where: whereClause,
     include: [{
       model: Patient,
       as: 'patient',
       attributes: ['first_name', 'last_name', 'email']
+    }, {
+      model: User,
+      as: 'dietitian',
+      attributes: ['username', 'first_name', 'last_name']
     }]
   });
 
@@ -240,11 +271,27 @@ async function syncVisitsToCalendar(userId, options = {}) {
 
   for (const visit of visits) {
     try {
-      const event = await createOrUpdateCalendarEvent(visit, user, calendarId);
+      // For admin syncing all dietitians, use the admin's Google Calendar
+      // For regular sync, use the current user's calendar
+      const calendarUser = syncAllDietitians ? user : user;
+      const eventCalendarId = syncAllDietitians ? (user.google_calendar_id || 'primary') : calendarId;
+
+      // Skip if the calendar user (admin for global sync) doesn't have Google Calendar enabled
+      if (!calendarUser.google_access_token) {
+        results.events.push({
+          visitId: visit.id,
+          error: `Calendar user ${calendarUser.username} not connected to Google Calendar`,
+          status: 'skipped'
+        });
+        continue;
+      }
+
+      const event = await createOrUpdateCalendarEvent(visit, calendarUser, eventCalendarId, syncAllDietitians);
       results.synced++;
       results.events.push({
         visitId: visit.id,
         eventId: event.id,
+        dietitian: calendarUser.username,
         status: 'synced'
       });
 
@@ -258,7 +305,8 @@ async function syncVisitsToCalendar(userId, options = {}) {
         changes: {
           action: 'SYNC_VISIT',
           visit_id: visit.id,
-          calendar_id: calendarId
+          calendar_id: eventCalendarId,
+          dietitian_id: calendarUser.id
         }
       });
     } catch (error) {

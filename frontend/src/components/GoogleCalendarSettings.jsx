@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import api from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import ActionButton from './ActionButton';
 import ConfirmModal from './ConfirmModal';
 
@@ -12,11 +13,13 @@ import ConfirmModal from './ConfirmModal';
  */
 const GoogleCalendarSettings = () => {
   const { t } = useTranslation();
+  const { user, isAdmin } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [calendars, setCalendars] = useState([]);
   const [selectedCalendar, setSelectedCalendar] = useState('primary');
   const [syncEnabled, setSyncEnabled] = useState(false);
+  const [syncAllDietitians, setSyncAllDietitians] = useState(false);
   const [showDisconnectModal, setShowDisconnectModal] = useState(false);
 
   // Load current sync status on component mount
@@ -120,7 +123,8 @@ const GoogleCalendarSettings = () => {
     try {
       setIsLoading(true);
       const response = await api.post('/calendar/sync-to-calendar', {
-        calendarId: selectedCalendar
+        calendarId: selectedCalendar,
+        syncAllDietitians: isAdmin && syncAllDietitians
       });
 
       if (response.data.success) {
@@ -238,6 +242,26 @@ const GoogleCalendarSettings = () => {
               {t('googleCalendar.autoSyncDescription')}
             </small>
           </div>
+
+          {isAdmin && (
+            <div className="form-group">
+              <div className="form-check">
+                <input
+                  type="checkbox"
+                  id="sync-all-dietitians"
+                  checked={syncAllDietitians}
+                  onChange={(e) => setSyncAllDietitians(e.target.checked)}
+                  className="form-check-input"
+                />
+                <label htmlFor="sync-all-dietitians" className="form-check-label">
+                  {t('googleCalendar.syncAllDietitians')}
+                </label>
+              </div>
+              <small className="form-text text-muted">
+                {t('googleCalendar.syncAllDietitiansDescription')}
+              </small>
+            </div>
+          )}
 
           <div className="button-group">
             <ActionButton

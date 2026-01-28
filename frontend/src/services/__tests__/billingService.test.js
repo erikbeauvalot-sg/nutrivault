@@ -30,7 +30,7 @@ describe('billingService', () => {
 
       await getInvoices();
 
-      expect(api.get).toHaveBeenCalledWith('/api/billing', { params: {} });
+      expect(api.get).toHaveBeenCalledWith('/billing', { params: {} });
     });
 
     it('should pass filters to API', async () => {
@@ -40,7 +40,7 @@ describe('billingService', () => {
       const filters = { status: 'PAID', patient_id: 'test-id' };
       await getInvoices(filters);
 
-      expect(api.get).toHaveBeenCalledWith('/api/billing', { params: filters });
+      expect(api.get).toHaveBeenCalledWith('/billing', { params: filters });
     });
   });
 
@@ -52,7 +52,7 @@ describe('billingService', () => {
       const visitId = 'visit-123';
       await getInvoicesByVisit(visitId);
 
-      expect(api.get).toHaveBeenCalledWith('/api/billing', { params: { visit_id: visitId } });
+      expect(api.get).toHaveBeenCalledWith('/billing', { params: { visit_id: visitId } });
     });
 
     it('should return invoices for the visit', async () => {
@@ -86,7 +86,7 @@ describe('billingService', () => {
 
       await getInvoiceById('inv-123');
 
-      expect(api.get).toHaveBeenCalledWith('/api/billing/inv-123');
+      expect(api.get).toHaveBeenCalledWith('/billing/inv-123');
     });
   });
 
@@ -98,7 +98,7 @@ describe('billingService', () => {
 
       const result = await downloadInvoicePDF('inv-123');
 
-      expect(api.get).toHaveBeenCalledWith('/api/billing/inv-123/pdf', { responseType: 'blob' });
+      expect(api.get).toHaveBeenCalledWith('/billing/inv-123/pdf', { responseType: 'blob' });
       expect(result.data).toBe(mockBlob);
     });
   });

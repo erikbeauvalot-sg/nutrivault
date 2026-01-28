@@ -6,6 +6,7 @@
  */
 
 const visitService = require('../services/visit.service');
+const autoSyncService = require('../services/autoSync.service');
 
 /**
  * Extract request metadata for audit logging

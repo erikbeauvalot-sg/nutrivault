@@ -117,11 +117,20 @@ exports.getCalendars = async (req, res) => {
 exports.syncToCalendar = async (req, res) => {
   try {
     const { user } = req;
-    const { since, calendarId } = req.body;
+    const { since, calendarId, syncAllDietitians } = req.body;
+
+    // Check if user is admin when trying to sync all dietitians
+    if (syncAllDietitians && user.role.name !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        error: 'Only administrators can sync visits from all dietitians'
+      });
+    }
 
     const results = await googleCalendarService.syncVisitsToCalendar(user.id, {
       since: since ? new Date(since) : undefined,
-      calendarId
+      calendarId,
+      syncAllDietitians: syncAllDietitians && user.role.name === 'ADMIN'
     });
 
     res.json({
