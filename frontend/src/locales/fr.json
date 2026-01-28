@@ -1810,5 +1810,50 @@
     "noShowReduction": "Réduction des absences : {{rate}}%",
     "noReductionData": "Données insuffisantes",
     "monthlyEmailVolume": "Volume d'emails mensuel"
+  },
+  "googleCalendar": {
+    "title": "Intégration Google Calendar",
+    "description": "Connectez votre Google Calendar pour synchroniser automatiquement les rendez-vous et visites.",
+    "notConnected": "Non connecté à Google Calendar",
+    "connected": "Connecté",
+    "connect": "Connecter Google Calendar",
+    "disconnect": "Déconnecter",
+    "selectCalendar": "Sélectionner un calendrier",
+    "primaryCalendar": "Calendrier principal",
+    "enableAutoSync": "Activer la synchronisation automatique",
+    "autoSyncDescription": "Synchroniser automatiquement les visites vers Google Calendar lors de la création, modification ou annulation",
+    "updateSettings": "Mettre à jour les paramètres",
+    "syncToCalendar": "Synchroniser vers le calendrier",
+    "syncFromCalendar": "Synchroniser depuis le calendrier",
+    "disconnectConfirm": {
+      "title": "Déconnecter Google Calendar",
+      "message": "Êtes-vous sûr de vouloir déconnecter Google Calendar ? Cela arrêtera la synchronisation automatique mais ne supprimera pas les événements existants."
+    },
+    "success": {
+      "connected": "Connecté avec succès à Google Calendar",
+      "settingsUpdated": "Paramètres mis à jour avec succès",
+      "syncToCalendar": "{{count}} visites synchronisées vers Google Calendar",
+      "syncFromCalendar": "{{count}} événements synchronisés depuis Google Calendar",
+      "disconnected": "Google Calendar déconnecté avec succès"
+    },
+    "errors": {
+      "getAuthUrl": "Échec de l'obtention de l'URL d'autorisation",
+      "authTimeout": "Délai d'autorisation dépassé",
+      "loadCalendars": "Échec du chargement des calendriers",
+      "updateSettings": "Échec de la mise à jour des paramètres",
+      "syncToCalendar": "Échec de la synchronisation vers le calendrier",
+      "syncFromCalendar": "Échec de la synchronisation depuis le calendrier",
+      "disconnect": "Échec de la déconnexion de Google Calendar"
+    }
+  },
+  "settings": {
+    "title": "Paramètres",
+    "account": {
+      "title": "Paramètres du compte",
+      "password": {
+        "title": "Changer le mot de passe",
+        "description": "Mettez à jour le mot de passe de votre compte pour la sécurité."
+      }
+    }
   }
 }

@@ -7,6 +7,8 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Spinner } from 'react-bootstrap';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -44,6 +46,7 @@ const BillingTemplatesPage = lazy(() => import('./pages/BillingTemplatesPage'));
 const InvoiceCustomizationPage = lazy(() => import('./pages/InvoiceCustomizationPage'));
 const AIConfigPage = lazy(() => import('./pages/AIConfigPage'));
 const AnalyticsDashboardPage = lazy(() => import('./pages/AnalyticsDashboardPage'));
+const UserSettingsPage = lazy(() => import('./pages/UserSettingsPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -353,6 +356,15 @@ function App() {
         }
       />
 
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <UserSettingsPage />
+          </ProtectedRoute>
+        }
+      />
+
       {/* Default Route */}
       <Route
         path="/"
@@ -365,6 +377,18 @@ function App() {
         element={<Navigate to="/" replace />}
       />
     </Routes>
+    <ToastContainer
+      position="top-right"
+      autoClose={5000}
+      hideProgressBar={false}
+      newestOnTop={false}
+      closeOnClick
+      rtl={false}
+      pauseOnFocusLoss
+      draggable
+      pauseOnHover
+      theme="light"
+    />
     </Suspense>
   );
 }

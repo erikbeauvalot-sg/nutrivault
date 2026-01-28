@@ -11,7 +11,7 @@ import api from './api';
  * @returns {Promise<Object>} API response
  */
 export const sendReminderManually = async (visitId) => {
-  const response = await api.post(`/api/appointment-reminders/send/${visitId}`);
+  const response = await api.post(`/appointment-reminders/send/${visitId}`);
   return response.data;
 };
 
@@ -20,7 +20,7 @@ export const sendReminderManually = async (visitId) => {
  * @returns {Promise<Object>} Reminder stats
  */
 export const getReminderStats = async () => {
-  const response = await api.get('/api/appointment-reminders/stats');
+  const response = await api.get('/appointment-reminders/stats');
   return response.data;
 };
 
@@ -30,7 +30,7 @@ export const getReminderStats = async () => {
  * @returns {Promise<Object>} API response
  */
 export const unsubscribeFromReminders = async (token) => {
-  const response = await api.post(`/api/appointment-reminders/unsubscribe/${token}`);
+  const response = await api.post(`/appointment-reminders/unsubscribe/${token}`);
   return response.data;
 };
 
@@ -40,7 +40,7 @@ export const unsubscribeFromReminders = async (token) => {
  * @returns {Promise<Object>} API response
  */
 export const resubscribeToReminders = async (patientId) => {
-  const response = await api.post('/api/appointment-reminders/resubscribe', {
+  const response = await api.post('/appointment-reminders/resubscribe', {
     patientId
   });
   return response.data;
@@ -51,7 +51,7 @@ export const resubscribeToReminders = async (patientId) => {
  * @returns {Promise<Object>} Batch job results
  */
 export const triggerBatchReminders = async () => {
-  const response = await api.post('/api/appointment-reminders/batch/send-now');
+  const response = await api.post('/appointment-reminders/batch/send-now');
   return response.data;
 };
 

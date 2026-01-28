@@ -21,7 +21,7 @@ export const getPatients = async (filters = {}) => {
     }
   });
   
-  const response = await api.get(`/api/patients?${params.toString()}`);
+  const response = await api.get(`/patients?${params.toString()}`);
   return response;
 };
 
@@ -31,7 +31,7 @@ export const getPatients = async (filters = {}) => {
  * @returns {Promise<object>} Patient object
  */
 export const getPatientById = async (id) => {
-  const response = await api.get(`/api/patients/${id}`);
+  const response = await api.get(`/patients/${id}`);
   return response;
 };
 
@@ -41,7 +41,7 @@ export const getPatientById = async (id) => {
  * @returns {Promise<object>} Patient object with visits and measurements
  */
 export const getPatientDetails = async (id) => {
-  const response = await api.get(`/api/patients/${id}/details`);
+  const response = await api.get(`/patients/${id}/details`);
   return response;
 };
 
@@ -51,7 +51,7 @@ export const getPatientDetails = async (id) => {
  * @returns {Promise<object>} Created patient
  */
 export const createPatient = async (patientData) => {
-  const response = await api.post('/api/patients', patientData);
+  const response = await api.post('/patients', patientData);
   return response.data;
 };
 
@@ -62,7 +62,7 @@ export const createPatient = async (patientData) => {
  * @returns {Promise<object>} Updated patient
  */
 export const updatePatient = async (id, patientData) => {
-  const response = await api.put(`/api/patients/${id}`, patientData);
+  const response = await api.put(`/patients/${id}`, patientData);
   return response.data;
 };
 
@@ -72,6 +72,6 @@ export const updatePatient = async (id, patientData) => {
  * @returns {Promise<void>}
  */
 export const deletePatient = async (id) => {
-  const response = await api.delete(`/api/patients/${id}`);
+  const response = await api.delete(`/patients/${id}`);
   return response.data;
 };

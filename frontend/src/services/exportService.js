@@ -11,7 +11,7 @@ import api from './api';
  * @returns {Promise} API response with file download
  */
 export const exportPatients = async (format = 'csv') => {
-  const response = await api.get(`/api/export/patients?format=${format}`, {
+  const response = await api.get(`/export/patients?format=${format}`, {
     responseType: 'blob' // Important for file downloads
   });
   return response;
@@ -23,7 +23,7 @@ export const exportPatients = async (format = 'csv') => {
  * @returns {Promise} API response with file download
  */
 export const exportVisits = async (format = 'csv') => {
-  const response = await api.get(`/api/export/visits?format=${format}`, {
+  const response = await api.get(`/export/visits?format=${format}`, {
     responseType: 'blob' // Important for file downloads
   });
   return response;
@@ -35,7 +35,7 @@ export const exportVisits = async (format = 'csv') => {
  * @returns {Promise} API response with file download
  */
 export const exportBilling = async (format = 'csv') => {
-  const response = await api.get(`/api/export/billing?format=${format}`, {
+  const response = await api.get(`/export/billing?format=${format}`, {
     responseType: 'blob' // Important for file downloads
   });
   return response;

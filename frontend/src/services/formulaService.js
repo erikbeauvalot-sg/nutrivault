@@ -13,7 +13,7 @@ const formulaService = {
    */
   async validateFormula(formula) {
     try {
-      const response = await api.post('/api/formulas/validate', { formula });
+      const response = await api.post('/formulas/validate', { formula });
       return response.data.data;
     } catch (error) {
       console.error('Error validating formula:', error);
@@ -30,7 +30,7 @@ const formulaService = {
    */
   async previewFormula(formula, values, decimalPlaces = 2) {
     try {
-      const response = await api.post('/api/formulas/preview', {
+      const response = await api.post('/formulas/preview', {
         formula,
         values,
         decimalPlaces
@@ -48,7 +48,7 @@ const formulaService = {
    */
   async getOperators() {
     try {
-      const response = await api.get('/api/formulas/operators');
+      const response = await api.get('/formulas/operators');
       return response.data.data;
     } catch (error) {
       console.error('Error getting operators:', error);
@@ -62,7 +62,7 @@ const formulaService = {
    */
   async getTemplates() {
     try {
-      const response = await api.get('/api/formulas/templates');
+      const response = await api.get('/formulas/templates');
       return response.data.data;
     } catch (error) {
       console.error('Error getting templates:', error);
@@ -78,7 +78,7 @@ const formulaService = {
    */
   async applyTemplate(templateId, fieldMapping = {}) {
     try {
-      const response = await api.post('/api/formulas/templates/apply', {
+      const response = await api.post('/formulas/templates/apply', {
         templateId,
         fieldMapping
       });

@@ -21,7 +21,7 @@ export const getAllTemplates = async (filters = {}) => {
   }
 
   const queryString = params.toString();
-  const url = `/api/billing-templates${queryString ? `?${queryString}` : ''}`;
+  const url = `/billing-templates${queryString ? `?${queryString}` : ''}`;
 
   const response = await api.get(url);
   return response.data;
@@ -33,7 +33,7 @@ export const getAllTemplates = async (filters = {}) => {
  * @returns {Promise<Object>} API response with template
  */
 export const getTemplateById = async (templateId) => {
-  const response = await api.get(`/api/billing-templates/${templateId}`);
+  const response = await api.get(`/billing-templates/${templateId}`);
   return response.data;
 };
 
@@ -43,7 +43,7 @@ export const getTemplateById = async (templateId) => {
  * @returns {Promise<Object>} API response with created template
  */
 export const createTemplate = async (templateData) => {
-  const response = await api.post('/api/billing-templates', templateData);
+  const response = await api.post('/billing-templates', templateData);
   return response.data;
 };
 
@@ -54,7 +54,7 @@ export const createTemplate = async (templateData) => {
  * @returns {Promise<Object>} API response with updated template
  */
 export const updateTemplate = async (templateId, templateData) => {
-  const response = await api.put(`/api/billing-templates/${templateId}`, templateData);
+  const response = await api.put(`/billing-templates/${templateId}`, templateData);
   return response.data;
 };
 
@@ -64,7 +64,7 @@ export const updateTemplate = async (templateId, templateData) => {
  * @returns {Promise<Object>} API response
  */
 export const deleteTemplate = async (templateId) => {
-  const response = await api.delete(`/api/billing-templates/${templateId}`);
+  const response = await api.delete(`/billing-templates/${templateId}`);
   return response.data;
 };
 
@@ -75,7 +75,7 @@ export const deleteTemplate = async (templateId) => {
  * @returns {Promise<Object>} API response with cloned template
  */
 export const cloneTemplate = async (templateId, newName) => {
-  const response = await api.post(`/api/billing-templates/${templateId}/clone`, {
+  const response = await api.post(`/billing-templates/${templateId}/clone`, {
     name: newName
   });
   return response.data;
@@ -87,7 +87,7 @@ export const cloneTemplate = async (templateId, newName) => {
  * @returns {Promise<Object>} API response
  */
 export const setAsDefault = async (templateId) => {
-  const response = await api.post(`/api/billing-templates/${templateId}/set-default`);
+  const response = await api.post(`/billing-templates/${templateId}/set-default`);
   return response.data;
 };
 
@@ -96,7 +96,7 @@ export const setAsDefault = async (templateId) => {
  * @returns {Promise<Object>} API response with default template
  */
 export const getDefaultTemplate = async () => {
-  const response = await api.get('/api/billing-templates/default');
+  const response = await api.get('/billing-templates/default');
   return response.data;
 };
 

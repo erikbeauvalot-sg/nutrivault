@@ -20,7 +20,7 @@ export const getAllTemplates = async (filters = {}) => {
     }
   });
 
-  const response = await api.get(`/api/email-templates?${params.toString()}`);
+  const response = await api.get(`/email-templates?${params.toString()}`);
   return response;
 };
 
@@ -30,7 +30,7 @@ export const getAllTemplates = async (filters = {}) => {
  * @returns {Promise<object>} Template object
  */
 export const getTemplateById = async (id) => {
-  const response = await api.get(`/api/email-templates/${id}`);
+  const response = await api.get(`/email-templates/${id}`);
   return response;
 };
 
@@ -40,7 +40,7 @@ export const getTemplateById = async (id) => {
  * @returns {Promise<object>} Created template
  */
 export const createTemplate = async (templateData) => {
-  const response = await api.post('/api/email-templates', templateData);
+  const response = await api.post('/email-templates', templateData);
   return response.data;
 };
 
@@ -51,7 +51,7 @@ export const createTemplate = async (templateData) => {
  * @returns {Promise<object>} Updated template
  */
 export const updateTemplate = async (id, templateData) => {
-  const response = await api.put(`/api/email-templates/${id}`, templateData);
+  const response = await api.put(`/email-templates/${id}`, templateData);
   return response.data;
 };
 
@@ -61,7 +61,7 @@ export const updateTemplate = async (id, templateData) => {
  * @returns {Promise<void>}
  */
 export const deleteTemplate = async (id) => {
-  const response = await api.delete(`/api/email-templates/${id}`);
+  const response = await api.delete(`/email-templates/${id}`);
   return response.data;
 };
 
@@ -72,7 +72,7 @@ export const deleteTemplate = async (id) => {
  * @returns {Promise<object>} New template
  */
 export const duplicateTemplate = async (id, overrides = {}) => {
-  const response = await api.post(`/api/email-templates/${id}/duplicate`, overrides);
+  const response = await api.post(`/email-templates/${id}/duplicate`, overrides);
   return response.data;
 };
 
@@ -82,7 +82,7 @@ export const duplicateTemplate = async (id, overrides = {}) => {
  * @returns {Promise<object>} Updated template
  */
 export const toggleActive = async (id) => {
-  const response = await api.patch(`/api/email-templates/${id}/toggle-active`);
+  const response = await api.patch(`/email-templates/${id}/toggle-active`);
   return response.data;
 };
 
@@ -93,7 +93,7 @@ export const toggleActive = async (id) => {
  * @returns {Promise<object>} Rendered template (subject, html, text)
  */
 export const previewTemplate = async (id, sampleData = {}) => {
-  const response = await api.post(`/api/email-templates/${id}/preview`, sampleData);
+  const response = await api.post(`/email-templates/${id}/preview`, sampleData);
   return response;
 };
 
@@ -103,7 +103,7 @@ export const previewTemplate = async (id, sampleData = {}) => {
  * @returns {Promise<object>} Available variables array
  */
 export const getAvailableVariables = async (category) => {
-  const response = await api.get(`/api/email-templates/categories/${category}/variables`);
+  const response = await api.get(`/email-templates/categories/${category}/variables`);
   return response;
 };
 
@@ -112,7 +112,7 @@ export const getAvailableVariables = async (category) => {
  * @returns {Promise<object>} Template statistics
  */
 export const getTemplateStats = async () => {
-  const response = await api.get('/api/email-templates/stats');
+  const response = await api.get('/email-templates/stats');
   return response;
 };
 
@@ -126,7 +126,7 @@ export const getTemplateStats = async () => {
  * @returns {Promise<object>} Translations object keyed by language code
  */
 export const getTranslations = async (templateId) => {
-  const response = await api.get(`/api/email-templates/${templateId}/translations`);
+  const response = await api.get(`/email-templates/${templateId}/translations`);
   return response;
 };
 
@@ -137,7 +137,7 @@ export const getTranslations = async (templateId) => {
  * @returns {Promise<object>} Translation object
  */
 export const getTranslation = async (templateId, languageCode) => {
-  const response = await api.get(`/api/email-templates/${templateId}/translations/${languageCode}`);
+  const response = await api.get(`/email-templates/${templateId}/translations/${languageCode}`);
   return response;
 };
 
@@ -149,7 +149,7 @@ export const getTranslation = async (templateId, languageCode) => {
  * @returns {Promise<object>} Saved translation
  */
 export const saveTranslation = async (templateId, languageCode, translationData) => {
-  const response = await api.post(`/api/email-templates/${templateId}/translations/${languageCode}`, translationData);
+  const response = await api.post(`/email-templates/${templateId}/translations/${languageCode}`, translationData);
   return response;
 };
 
@@ -160,7 +160,7 @@ export const saveTranslation = async (templateId, languageCode, translationData)
  * @returns {Promise<void>}
  */
 export const deleteTranslation = async (templateId, languageCode) => {
-  const response = await api.delete(`/api/email-templates/${templateId}/translations/${languageCode}`);
+  const response = await api.delete(`/email-templates/${templateId}/translations/${languageCode}`);
   return response;
 };
 
@@ -170,7 +170,7 @@ export const deleteTranslation = async (templateId, languageCode) => {
  * @returns {Promise<object>} Base template content
  */
 export const getBaseContent = async (templateId) => {
-  const response = await api.get(`/api/email-templates/${templateId}/base-content`);
+  const response = await api.get(`/email-templates/${templateId}/base-content`);
   return response;
 };
 
@@ -179,7 +179,7 @@ export const getBaseContent = async (templateId) => {
  * @returns {Promise<Array>} Supported languages
  */
 export const getSupportedLanguages = async () => {
-  const response = await api.get('/api/email-templates/supported-languages');
+  const response = await api.get('/email-templates/supported-languages');
   return response;
 };
 
@@ -192,7 +192,7 @@ export const getSupportedLanguages = async () => {
  */
 export const previewTranslation = async (templateId, languageCode, sampleData = {}) => {
   const response = await api.post(
-    `/api/email-templates/${templateId}/preview-translation?languageCode=${languageCode}`,
+    `/email-templates/${templateId}/preview-translation?languageCode=${languageCode}`,
     sampleData
   );
   return response;

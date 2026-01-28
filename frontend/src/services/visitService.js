@@ -18,7 +18,7 @@ export const getVisits = async (filters = {}) => {
     }
   });
   
-  const response = await api.get(`/api/visits?${params.toString()}`);
+  const response = await api.get(`/visits?${params.toString()}`);
   return response;
 };
 
@@ -28,7 +28,7 @@ export const getVisits = async (filters = {}) => {
  * @returns {Promise} API response
  */
 export const getVisitById = async (id) => {
-  const response = await api.get(`/api/visits/${id}`);
+  const response = await api.get(`/visits/${id}`);
   return response;
 };
 
@@ -38,7 +38,7 @@ export const getVisitById = async (id) => {
  * @returns {Promise} API response
  */
 export const createVisit = async (visitData) => {
-  const response = await api.post('/api/visits', visitData);
+  const response = await api.post('/visits', visitData);
   return response;
 };
 
@@ -49,7 +49,7 @@ export const createVisit = async (visitData) => {
  * @returns {Promise} API response
  */
 export const updateVisit = async (id, updateData) => {
-  const response = await api.put(`/api/visits/${id}`, updateData);
+  const response = await api.put(`/visits/${id}`, updateData);
   return response;
 };
 
@@ -59,7 +59,7 @@ export const updateVisit = async (id, updateData) => {
  * @returns {Promise} API response
  */
 export const deleteVisit = async (id) => {
-  const response = await api.delete(`/api/visits/${id}`);
+  const response = await api.delete(`/visits/${id}`);
   return response;
 };
 
@@ -74,7 +74,7 @@ export const deleteVisit = async (id) => {
  * @returns {Promise} API response with visit, invoice, and email status
  */
 export const finishAndInvoice = async (id, options = {}) => {
-  const response = await api.post(`/api/visits/${id}/finish-and-invoice`, options);
+  const response = await api.post(`/visits/${id}/finish-and-invoice`, options);
   return response;
 };
 

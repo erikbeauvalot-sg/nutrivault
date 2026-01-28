@@ -15,7 +15,7 @@ import * as tokenStorage from '../utils/tokenStorage';
  */
 export const login = async (username, password, rememberMe = false) => {
   try {
-    const response = await api.post('/api/auth/login', {
+    const response = await api.post('/auth/login', {
       username,
       password,
       rememberMe,
@@ -46,7 +46,7 @@ export const logout = async () => {
     
     if (refreshToken) {
       // Call backend to invalidate refresh token
-      await api.post('/api/auth/logout', { refreshToken });
+      await api.post('/auth/logout', { refreshToken });
     }
   } catch (error) {
     console.error('Logout error:', error);
@@ -70,7 +70,7 @@ export const refreshToken = async () => {
   }
 
   try {
-    const response = await api.post('/api/auth/refresh', {
+    const response = await api.post('/auth/refresh', {
       refreshToken,
     });
 

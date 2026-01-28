@@ -12,7 +12,7 @@ import api from './api';
  * @returns {Promise<Object>} Providers list
  */
 export const getProviders = async () => {
-  const response = await api.get('/api/ai-config/providers');
+  const response = await api.get('/ai-config/providers');
   return response.data;
 };
 
@@ -21,7 +21,7 @@ export const getProviders = async () => {
  * @returns {Promise<Object>} Pricing info
  */
 export const getPricing = async () => {
-  const response = await api.get('/api/ai-config/pricing');
+  const response = await api.get('/ai-config/pricing');
   return response.data;
 };
 
@@ -30,7 +30,7 @@ export const getPricing = async () => {
  * @returns {Promise<Object>} Current config
  */
 export const getCurrentConfig = async () => {
-  const response = await api.get('/api/ai-config/current');
+  const response = await api.get('/ai-config/current');
   return response.data;
 };
 
@@ -41,7 +41,7 @@ export const getCurrentConfig = async () => {
  * @returns {Promise<Object>} Save result
  */
 export const saveConfig = async (provider, model) => {
-  const response = await api.put('/api/ai-config', { provider, model });
+  const response = await api.put('/ai-config', { provider, model });
   return response.data;
 };
 
@@ -52,7 +52,7 @@ export const saveConfig = async (provider, model) => {
  * @returns {Promise<Object>} Test result
  */
 export const testConnection = async (provider, model) => {
-  const response = await api.post('/api/ai-config/test', { provider, model });
+  const response = await api.post('/ai-config/test', { provider, model });
   return response.data;
 };
 

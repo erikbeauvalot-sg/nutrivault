@@ -21,7 +21,7 @@ export const getUsers = async (filters = {}) => {
     }
   });
   
-  const response = await api.get(`/api/users?${params.toString()}`);
+  const response = await api.get(`/users?${params.toString()}`);
   return response;
 };
 
@@ -31,7 +31,7 @@ export const getUsers = async (filters = {}) => {
  * @returns {Promise} API response
  */
 export const getUserById = async (id) => {
-  const response = await api.get(`/api/users/${id}`);
+  const response = await api.get(`/users/${id}`);
   return response;
 };
 
@@ -41,7 +41,7 @@ export const getUserById = async (id) => {
  * @returns {Promise} API response
  */
 export const createUser = async (userData) => {
-  const response = await api.post('/api/users', userData);
+  const response = await api.post('/users', userData);
   return response;
 };
 
@@ -52,7 +52,7 @@ export const createUser = async (userData) => {
  * @returns {Promise} API response
  */
 export const updateUser = async (id, updateData) => {
-  const response = await api.put(`/api/users/${id}`, updateData);
+  const response = await api.put(`/users/${id}`, updateData);
   return response;
 };
 
@@ -62,7 +62,7 @@ export const updateUser = async (id, updateData) => {
  * @returns {Promise} API response
  */
 export const deleteUser = async (id) => {
-  const response = await api.delete(`/api/users/${id}`);
+  const response = await api.delete(`/users/${id}`);
   return response;
 };
 
@@ -73,7 +73,7 @@ export const deleteUser = async (id) => {
  * @returns {Promise} API response
  */
 export const changePassword = async (id, passwordData) => {
-  const response = await api.put(`/api/users/${id}/password`, passwordData);
+  const response = await api.put(`/users/${id}/password`, passwordData);
   return response;
 };
 
@@ -83,7 +83,7 @@ export const changePassword = async (id, passwordData) => {
  * @returns {Promise} API response
  */
 export const toggleUserStatus = async (id) => {
-  const response = await api.put(`/api/users/${id}/toggle-status`);
+  const response = await api.put(`/users/${id}/toggle-status`);
   return response;
 };
 
@@ -92,7 +92,7 @@ export const toggleUserStatus = async (id) => {
  * @returns {Promise} API response with list of dietitians
  */
 export const getDietitians = async () => {
-  const response = await api.get('/api/users/list/dietitians');
+  const response = await api.get('/users/list/dietitians');
   return response;
 };
 
@@ -101,7 +101,7 @@ export const getDietitians = async () => {
  * @returns {Promise} API response
  */
 export const getRoles = async () => {
-  const response = await api.get('/api/users/roles');
+  const response = await api.get('/users/roles');
   return response;
 };
 

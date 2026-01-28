@@ -10,7 +10,7 @@ import api from './api';
  * @returns {Promise} API response with list of roles
  */
 export const getRoles = async () => {
-  const response = await api.get('/api/roles');
+  const response = await api.get('/roles');
   return response;
 };
 
@@ -20,7 +20,7 @@ export const getRoles = async () => {
  * @returns {Promise} API response with role details
  */
 export const getRoleById = async (id) => {
-  const response = await api.get(`/api/roles/${id}`);
+  const response = await api.get(`/roles/${id}`);
   return response;
 };
 
@@ -30,7 +30,7 @@ export const getRoleById = async (id) => {
  * @returns {Promise} API response with created role
  */
 export const createRole = async (roleData) => {
-  const response = await api.post('/api/roles', roleData);
+  const response = await api.post('/roles', roleData);
   return response;
 };
 
@@ -41,7 +41,7 @@ export const createRole = async (roleData) => {
  * @returns {Promise} API response with updated role
  */
 export const updateRole = async (id, updateData) => {
-  const response = await api.put(`/api/roles/${id}`, updateData);
+  const response = await api.put(`/roles/${id}`, updateData);
   return response;
 };
 
@@ -52,7 +52,7 @@ export const updateRole = async (id, updateData) => {
  * @returns {Promise} API response with updated role
  */
 export const updateRolePermissions = async (id, permissionIds) => {
-  const response = await api.put(`/api/roles/${id}/permissions`, {
+  const response = await api.put(`/roles/${id}/permissions`, {
     permission_ids: permissionIds
   });
   return response;
@@ -64,7 +64,7 @@ export const updateRolePermissions = async (id, permissionIds) => {
  * @returns {Promise} API response
  */
 export const deleteRole = async (id) => {
-  const response = await api.delete(`/api/roles/${id}`);
+  const response = await api.delete(`/roles/${id}`);
   return response;
 };
 
@@ -73,7 +73,7 @@ export const deleteRole = async (id) => {
  * @returns {Promise} API response with list of permissions
  */
 export const getAllPermissions = async () => {
-  const response = await api.get('/api/roles/all/permissions');
+  const response = await api.get('/roles/all/permissions');
   return response;
 };
 

@@ -10,7 +10,7 @@ import api from './api';
  * @returns {Promise} API response with categorized alerts
  */
 export const getAlerts = async () => {
-  const response = await api.get('/api/alerts');
+  const response = await api.get('/alerts');
   return response;
 };
 

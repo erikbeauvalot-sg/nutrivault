@@ -18,7 +18,7 @@ export const getAllMeasureAlerts = async (options = {}) => {
   if (options.severity) params.severity = options.severity;
   if (options.limit) params.limit = options.limit;
 
-  const response = await api.get('/api/measure-alerts', { params });
+  const response = await api.get('/measure-alerts', { params });
   return response;
 };
 
@@ -35,7 +35,7 @@ export const getPatientMeasureAlerts = async (patientId, options = {}) => {
   if (options.includeAcknowledged) params.include_acknowledged = 'true';
   if (options.limit) params.limit = options.limit;
 
-  const response = await api.get(`/api/patients/${patientId}/measure-alerts`, { params });
+  const response = await api.get(`/patients/${patientId}/measure-alerts`, { params });
   return response;
 };
 
@@ -45,7 +45,7 @@ export const getPatientMeasureAlerts = async (patientId, options = {}) => {
  * @returns {Promise} API response
  */
 export const acknowledgeMeasureAlert = async (alertId) => {
-  const response = await api.patch(`/api/measure-alerts/${alertId}/acknowledge`);
+  const response = await api.patch(`/measure-alerts/${alertId}/acknowledge`);
   return response;
 };
 
@@ -62,7 +62,7 @@ export const acknowledgePatientAlerts = async (patientId, options = {}) => {
   if (options.severity) body.severity = options.severity;
   if (options.measureDefinitionId) body.measure_definition_id = options.measureDefinitionId;
 
-  const response = await api.post(`/api/patients/${patientId}/measure-alerts/acknowledge`, body);
+  const response = await api.post(`/patients/${patientId}/measure-alerts/acknowledge`, body);
   return response;
 };
 

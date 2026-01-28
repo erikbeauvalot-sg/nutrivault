@@ -24,7 +24,7 @@ export const getPatientEmailLogs = async (patientId, options = {}) => {
   if (options.sortOrder) params.append('sortOrder', options.sortOrder);
 
   const queryString = params.toString();
-  const url = `/api/patients/${patientId}/email-logs${queryString ? `?${queryString}` : ''}`;
+  const url = `/patients/${patientId}/email-logs${queryString ? `?${queryString}` : ''}`;
 
   const response = await api.get(url);
   return response.data;
@@ -36,7 +36,7 @@ export const getPatientEmailLogs = async (patientId, options = {}) => {
  * @returns {Promise<Object>} Email log details
  */
 export const getEmailLog = async (id) => {
-  const response = await api.get(`/api/email-logs/${id}`);
+  const response = await api.get(`/email-logs/${id}`);
   return response.data;
 };
 
@@ -46,7 +46,7 @@ export const getEmailLog = async (id) => {
  * @returns {Promise<Object>} Email statistics
  */
 export const getPatientEmailStats = async (patientId) => {
-  const response = await api.get(`/api/patients/${patientId}/email-stats`);
+  const response = await api.get(`/patients/${patientId}/email-stats`);
   return response.data;
 };
 
@@ -55,7 +55,7 @@ export const getPatientEmailStats = async (patientId) => {
  * @returns {Promise<Array>} Email types
  */
 export const getEmailTypes = async () => {
-  const response = await api.get('/api/email-logs/types');
+  const response = await api.get('/email-logs/types');
   return response.data;
 };
 

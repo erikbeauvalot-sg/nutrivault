@@ -11,7 +11,7 @@ import api from './api';
  * @returns {Promise<object>} Documents array and pagination info
  */
 export const getDocuments = async (filters = {}) => {
-  const response = await api.get('/api/documents', { params: filters });
+  const response = await api.get('/documents', { params: filters });
   return response.data;
 };
 
@@ -20,7 +20,7 @@ export const getDocuments = async (filters = {}) => {
  * @returns {Promise<object>} Document statistics
  */
 export const getDocumentStatistics = async () => {
-  const response = await api.get('/api/documents/stats');
+  const response = await api.get('/documents/stats');
   return response.data;
 };
 
@@ -30,7 +30,7 @@ export const getDocumentStatistics = async () => {
  * @returns {Promise<object>} Document object
  */
 export const getDocumentById = async (id) => {
-  const response = await api.get(`/api/documents/${id}`);
+  const response = await api.get(`/documents/${id}`);
   return response.data;
 };
 
@@ -40,7 +40,7 @@ export const getDocumentById = async (id) => {
  * @returns {Promise<Blob>} File blob for download
  */
 export const downloadDocument = async (id) => {
-  const response = await api.get(`/api/documents/${id}/download`, {
+  const response = await api.get(`/documents/${id}/download`, {
     responseType: 'blob'
   });
   return response.data;
@@ -52,7 +52,7 @@ export const downloadDocument = async (id) => {
  * @returns {Promise<object>} Created document
  */
 export const uploadDocument = async (formData) => {
-  const response = await api.post('/api/documents', formData, {
+  const response = await api.post('/documents', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
@@ -67,7 +67,7 @@ export const uploadDocument = async (formData) => {
  * @returns {Promise<object>} Updated document
  */
 export const updateDocument = async (id, updates) => {
-  const response = await api.put(`/api/documents/${id}`, updates);
+  const response = await api.put(`/documents/${id}`, updates);
   return response.data;
 };
 
@@ -77,7 +77,7 @@ export const updateDocument = async (id, updates) => {
  * @returns {Promise<object>} Success response
  */
 export const deleteDocument = async (id) => {
-  const response = await api.delete(`/api/documents/${id}`);
+  const response = await api.delete(`/documents/${id}`);
   return response.data;
 };
 
@@ -88,7 +88,7 @@ export const deleteDocument = async (id) => {
  * @returns {Promise<object>} Documents for the resource
  */
 export const getDocumentsForResource = async (resourceType, resourceId) => {
-  const response = await api.get('/api/documents', {
+  const response = await api.get('/documents', {
     params: { resource_type: resourceType, resource_id: resourceId }
   });
   return response.data;
@@ -100,7 +100,7 @@ export const getDocumentsForResource = async (resourceType, resourceId) => {
  * @returns {Promise<object>} Documents array and pagination info
  */
 export const searchDocuments = async (filters = {}) => {
-  const response = await api.get('/api/documents/search', { params: filters });
+  const response = await api.get('/documents/search', { params: filters });
   return response.data;
 };
 
@@ -111,7 +111,7 @@ export const searchDocuments = async (filters = {}) => {
  * @returns {Promise<object>} Updated document
  */
 export const addTags = async (id, tags) => {
-  const response = await api.post(`/api/documents/${id}/tags`, { tags });
+  const response = await api.post(`/documents/${id}/tags`, { tags });
   return response.data;
 };
 
@@ -122,7 +122,7 @@ export const addTags = async (id, tags) => {
  * @returns {Promise<object>} Updated document
  */
 export const removeTags = async (id, tags) => {
-  const response = await api.delete(`/api/documents/${id}/tags`, { data: { tags } });
+  const response = await api.delete(`/documents/${id}/tags`, { data: { tags } });
   return response.data;
 };
 
@@ -134,7 +134,7 @@ export const removeTags = async (id, tags) => {
  * @returns {Promise<object>} Document share record
  */
 export const sendToPatient = async (id, patientId, options = {}) => {
-  const response = await api.post(`/api/documents/${id}/send-to-patient`, {
+  const response = await api.post(`/documents/${id}/send-to-patient`, {
     patient_id: patientId,
     ...options
   });
@@ -149,7 +149,7 @@ export const sendToPatient = async (id, patientId, options = {}) => {
  * @returns {Promise<object>} Results with successful and failed sends
  */
 export const sendToGroup = async (id, patientIds, options = {}) => {
-  const response = await api.post(`/api/documents/${id}/send-to-group`, {
+  const response = await api.post(`/documents/${id}/send-to-group`, {
     patient_ids: patientIds,
     ...options
   });
@@ -162,7 +162,7 @@ export const sendToGroup = async (id, patientIds, options = {}) => {
  * @returns {Promise<array>} Array of document share records
  */
 export const getDocumentShares = async (id) => {
-  const response = await api.get(`/api/documents/${id}/shares`);
+  const response = await api.get(`/documents/${id}/shares`);
   return response.data;
 };
 

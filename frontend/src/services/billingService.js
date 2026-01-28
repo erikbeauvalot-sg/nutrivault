@@ -11,7 +11,7 @@ import api from './api';
  * @returns {Promise<object>} Invoices array and pagination info
  */
 export const getInvoices = async (filters = {}) => {
-  const response = await api.get('/api/billing', { params: filters });
+  const response = await api.get('/billing', { params: filters });
   return response;
 };
 
@@ -21,7 +21,7 @@ export const getInvoices = async (filters = {}) => {
  * @returns {Promise<object>} Invoices array
  */
 export const getInvoicesByVisit = async (visitId) => {
-  const response = await api.get('/api/billing', { params: { visit_id: visitId } });
+  const response = await api.get('/billing', { params: { visit_id: visitId } });
   return response;
 };
 
@@ -31,7 +31,7 @@ export const getInvoicesByVisit = async (visitId) => {
  * @returns {Promise<object>} Invoice object
  */
 export const getInvoiceById = async (id) => {
-  const response = await api.get(`/api/billing/${id}`);
+  const response = await api.get(`/billing/${id}`);
   return response;
 };
 
@@ -41,7 +41,7 @@ export const getInvoiceById = async (id) => {
  * @returns {Promise<object>} Created invoice
  */
 export const createInvoice = async (invoiceData) => {
-  const response = await api.post('/api/billing', invoiceData);
+  const response = await api.post('/billing', invoiceData);
   return response.data;
 };
 
@@ -52,7 +52,7 @@ export const createInvoice = async (invoiceData) => {
  * @returns {Promise<object>} Updated invoice
  */
 export const updateInvoice = async (id, invoiceData) => {
-  const response = await api.put(`/api/billing/${id}`, invoiceData);
+  const response = await api.put(`/billing/${id}`, invoiceData);
   return response.data;
 };
 
@@ -63,7 +63,7 @@ export const updateInvoice = async (id, invoiceData) => {
  * @returns {Promise<object>} Updated invoice
  */
 export const recordPayment = async (id, paymentData) => {
-  const response = await api.post(`/api/billing/${id}/payment`, paymentData);
+  const response = await api.post(`/billing/${id}/payment`, paymentData);
   return response.data;
 };
 
@@ -73,7 +73,7 @@ export const recordPayment = async (id, paymentData) => {
  * @returns {Promise<void>}
  */
 export const deleteInvoice = async (id) => {
-  const response = await api.delete(`/api/billing/${id}`);
+  const response = await api.delete(`/billing/${id}`);
   return response.data;
 };
 
@@ -83,7 +83,7 @@ export const deleteInvoice = async (id) => {
  * @returns {Promise<object>} Response with success message
  */
 export const sendInvoiceEmail = async (id) => {
-  const response = await api.post(`/api/billing/${id}/send-email`);
+  const response = await api.post(`/billing/${id}/send-email`);
   return response.data;
 };
 
@@ -93,7 +93,7 @@ export const sendInvoiceEmail = async (id) => {
  * @returns {Promise<object>} Updated invoice
  */
 export const markAsPaid = async (id) => {
-  const response = await api.post(`/api/billing/${id}/mark-paid`);
+  const response = await api.post(`/billing/${id}/mark-paid`);
   return response.data;
 };
 
@@ -103,7 +103,7 @@ export const markAsPaid = async (id) => {
  * @returns {Promise<Blob>} CSV file as blob
  */
 export const exportInvoicesCSV = async (filters = {}) => {
-  const response = await api.get('/api/billing/export/csv', {
+  const response = await api.get('/billing/export/csv', {
     params: filters,
     responseType: 'blob'
   });
@@ -116,7 +116,7 @@ export const exportInvoicesCSV = async (filters = {}) => {
  * @returns {Promise<object>} Results with successful and failed arrays
  */
 export const sendInvoiceBatch = async (invoiceIds) => {
-  const response = await api.post('/api/billing/batch/send-invoices', {
+  const response = await api.post('/billing/batch/send-invoices', {
     invoice_ids: invoiceIds
   });
   return response.data;
@@ -128,7 +128,7 @@ export const sendInvoiceBatch = async (invoiceIds) => {
  * @returns {Promise<object>} Results with successful and failed arrays
  */
 export const sendReminderBatch = async (invoiceIds) => {
-  const response = await api.post('/api/billing/batch/send-reminders', {
+  const response = await api.post('/billing/batch/send-reminders', {
     invoice_ids: invoiceIds
   });
   return response.data;
@@ -142,7 +142,7 @@ export const sendReminderBatch = async (invoiceIds) => {
  * @returns {Promise<object>} Updated invoice
  */
 export const changeInvoiceStatus = async (id, status) => {
-  const response = await api.patch(`/api/billing/${id}/status`, { status });
+  const response = await api.patch(`/billing/${id}/status`, { status });
   return response.data;
 };
 
@@ -154,7 +154,7 @@ export const changeInvoiceStatus = async (id, status) => {
  * @returns {Promise<object>} Updated invoice
  */
 export const updatePaymentAmount = async (id, amountPaid) => {
-  const response = await api.patch(`/api/billing/${id}/payment-amount`, { amount_paid: amountPaid });
+  const response = await api.patch(`/billing/${id}/payment-amount`, { amount_paid: amountPaid });
   return response.data;
 };
 
@@ -166,7 +166,7 @@ export const updatePaymentAmount = async (id, amountPaid) => {
  * @returns {Promise<object>} Updated payment and invoice
  */
 export const changePaymentStatus = async (paymentId, status) => {
-  const response = await api.patch(`/api/billing/payments/${paymentId}/status`, { status });
+  const response = await api.patch(`/billing/payments/${paymentId}/status`, { status });
   return response.data;
 };
 
@@ -177,7 +177,7 @@ export const changePaymentStatus = async (paymentId, status) => {
  * @returns {Promise<Blob>} PDF file as blob
  */
 export const downloadInvoicePDF = async (id) => {
-  const response = await api.get(`/api/billing/${id}/pdf`, {
+  const response = await api.get(`/billing/${id}/pdf`, {
     responseType: 'blob'
   });
   return response;

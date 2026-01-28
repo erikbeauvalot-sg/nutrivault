@@ -24,7 +24,7 @@ export const getMeasureDefinitions = async (filters = {}) => {
   });
 
   const queryString = params.toString();
-  const response = await api.get(`/api/measures${queryString ? '?' + queryString : ''}`);
+  const response = await api.get(`/measures${queryString ? '?' + queryString : ''}`);
   return response.data.data || response.data;
 };
 
@@ -34,7 +34,7 @@ export const getMeasureDefinitions = async (filters = {}) => {
  * @returns {Promise<object>} Measure definition object
  */
 export const getMeasureDefinitionById = async (id) => {
-  const response = await api.get(`/api/measures/${id}`);
+  const response = await api.get(`/measures/${id}`);
   return response.data.data || response.data;
 };
 
@@ -44,7 +44,7 @@ export const getMeasureDefinitionById = async (id) => {
  * @returns {Promise<object>} Created measure definition
  */
 export const createMeasureDefinition = async (measureData) => {
-  const response = await api.post('/api/measures', measureData);
+  const response = await api.post('/measures', measureData);
   return response.data;
 };
 
@@ -55,7 +55,7 @@ export const createMeasureDefinition = async (measureData) => {
  * @returns {Promise<object>} Updated measure definition
  */
 export const updateMeasureDefinition = async (id, measureData) => {
-  const response = await api.put(`/api/measures/${id}`, measureData);
+  const response = await api.put(`/measures/${id}`, measureData);
   return response.data;
 };
 
@@ -65,7 +65,7 @@ export const updateMeasureDefinition = async (id, measureData) => {
  * @returns {Promise<void>}
  */
 export const deleteMeasureDefinition = async (id) => {
-  const response = await api.delete(`/api/measures/${id}`);
+  const response = await api.delete(`/measures/${id}`);
   return response.data;
 };
 
@@ -75,7 +75,7 @@ export const deleteMeasureDefinition = async (id) => {
  * @returns {Promise<Array>} Array of measure definitions
  */
 export const getMeasuresByCategory = async (category) => {
-  const response = await api.get(`/api/measures/category/${category}`);
+  const response = await api.get(`/measures/category/${category}`);
   return response.data.data || response.data;
 };
 
@@ -84,7 +84,7 @@ export const getMeasuresByCategory = async (category) => {
  * @returns {Promise<Array>} Array of categories with measure counts
  */
 export const getMeasureCategories = async () => {
-  const response = await api.get('/api/measures/categories');
+  const response = await api.get('/measures/categories');
   return response.data.data || response.data;
 };
 
@@ -99,7 +99,7 @@ export const getMeasureCategories = async () => {
  * @returns {Promise<object>} Created measure
  */
 export const logPatientMeasure = async (patientId, measureData) => {
-  const response = await api.post(`/api/patients/${patientId}/measures`, measureData);
+  const response = await api.post(`/patients/${patientId}/measures`, measureData);
   return response.data;
 };
 
@@ -118,7 +118,7 @@ export const getPatientMeasures = async (patientId, filters = {}) => {
   });
 
   const queryString = params.toString();
-  const response = await api.get(`/api/patients/${patientId}/measures${queryString ? '?' + queryString : ''}`);
+  const response = await api.get(`/patients/${patientId}/measures${queryString ? '?' + queryString : ''}`);
   return response.data.data || response.data;
 };
 
@@ -136,7 +136,7 @@ export const getMeasureHistory = async (patientId, measureDefId, dateRange = {})
 
   const queryString = params.toString();
   const response = await api.get(
-    `/api/patients/${patientId}/measures/${measureDefId}/history${queryString ? '?' + queryString : ''}`
+    `/patients/${patientId}/measures/${measureDefId}/history${queryString ? '?' + queryString : ''}`
   );
   return response.data.data || response.data;
 };
@@ -158,7 +158,7 @@ export const getMeasureTrend = async (patientId, measureDefId, options = {}) => 
 
   const queryString = params.toString();
   const response = await api.get(
-    `/api/patients/${patientId}/measures/${measureDefId}/trend${queryString ? '?' + queryString : ''}`
+    `/patients/${patientId}/measures/${measureDefId}/trend${queryString ? '?' + queryString : ''}`
   );
   return response.data.data || response.data;
 };
@@ -170,7 +170,7 @@ export const getMeasureTrend = async (patientId, measureDefId, options = {}) => 
  * @returns {Promise<object>} Updated measure
  */
 export const updatePatientMeasure = async (measureId, measureData) => {
-  const response = await api.put(`/api/patient-measures/${measureId}`, measureData);
+  const response = await api.put(`/patient-measures/${measureId}`, measureData);
   return response.data;
 };
 
@@ -180,7 +180,7 @@ export const updatePatientMeasure = async (measureId, measureData) => {
  * @returns {Promise<void>}
  */
 export const deletePatientMeasure = async (measureId) => {
-  const response = await api.delete(`/api/patient-measures/${measureId}`);
+  const response = await api.delete(`/patient-measures/${measureId}`);
   return response.data;
 };
 
@@ -190,7 +190,7 @@ export const deletePatientMeasure = async (measureId) => {
  * @returns {Promise<Array>} Array of measures for the visit
  */
 export const getMeasuresByVisit = async (visitId) => {
-  const response = await api.get(`/api/visits/${visitId}/measures`);
+  const response = await api.get(`/visits/${visitId}/measures`);
   return response.data.data || response.data;
 };
 
@@ -259,7 +259,7 @@ export const getMeasureValue = (measure, measureType) => {
  * @returns {Promise<object>} { valid: boolean, error: string|null, dependencies: string[] }
  */
 export const validateFormula = async (formula) => {
-  const response = await api.post('/api/formulas/validate', { formula });
+  const response = await api.post('/formulas/validate', { formula });
   return response.data.data || response.data;
 };
 
@@ -270,7 +270,7 @@ export const validateFormula = async (formula) => {
  * @returns {Promise<object>} { success: boolean, result: number|null, error: string|null }
  */
 export const previewFormula = async (formula, values) => {
-  const response = await api.post('/api/formulas/preview', { formula, values });
+  const response = await api.post('/formulas/preview', { formula, values });
   return response.data.data || response.data;
 };
 
@@ -279,7 +279,7 @@ export const previewFormula = async (formula, values) => {
  * @returns {Promise<Array>} Array of measure template objects
  */
 export const getMeasureTemplates = async () => {
-  const response = await api.get('/api/formulas/templates/measures');
+  const response = await api.get('/formulas/templates/measures');
   return response.data.data || response.data;
 };
 
@@ -289,7 +289,7 @@ export const getMeasureTemplates = async () => {
  * @returns {Promise<object>} { count: number, calculated: Array }
  */
 export const recalculatePatientMeasures = async (patientId) => {
-  const response = await api.post(`/api/patient-measures/${patientId}/recalculate`);
+  const response = await api.post(`/patient-measures/${patientId}/recalculate`);
   return response.data.data || response.data;
 };
 
@@ -299,7 +299,7 @@ export const recalculatePatientMeasures = async (patientId) => {
  * @returns {Promise<object>} { patientsAffected: number, valuesCalculated: number }
  */
 export const recalculateMeasureAcrossAll = async (measureDefinitionId) => {
-  const response = await api.post(`/api/measures/${measureDefinitionId}/recalculate-all`);
+  const response = await api.post(`/measures/${measureDefinitionId}/recalculate-all`);
   return response.data.data || response.data;
 };
 
@@ -313,7 +313,7 @@ export const recalculateMeasureAcrossAll = async (measureDefinitionId) => {
  * @returns {Promise<object>} { en: {...}, fr: {...}, ... }
  */
 export const getAllMeasureTranslations = async (measureId) => {
-  const response = await api.get(`/api/measures/${measureId}/translations`);
+  const response = await api.get(`/measures/${measureId}/translations`);
   return response.data.data || response.data;
 };
 
@@ -324,7 +324,7 @@ export const getAllMeasureTranslations = async (measureId) => {
  * @returns {Promise<object>} { display_name: '...', description: '...', unit: '...' }
  */
 export const getMeasureTranslations = async (measureId, languageCode) => {
-  const response = await api.get(`/api/measures/${measureId}/translations/${languageCode}`);
+  const response = await api.get(`/measures/${measureId}/translations/${languageCode}`);
   return response.data.data || response.data;
 };
 
@@ -336,7 +336,7 @@ export const getMeasureTranslations = async (measureId, languageCode) => {
  * @returns {Promise<object>} Updated translations
  */
 export const setMeasureTranslations = async (measureId, languageCode, translations) => {
-  const response = await api.post(`/api/measures/${measureId}/translations/${languageCode}`, translations);
+  const response = await api.post(`/measures/${measureId}/translations/${languageCode}`, translations);
   return response.data.data || response.data;
 };
 
@@ -349,7 +349,7 @@ export const setMeasureTranslations = async (measureId, languageCode, translatio
  * @returns {Promise<object>} Updated translation
  */
 export const setMeasureTranslation = async (measureId, languageCode, fieldName, value) => {
-  const response = await api.put(`/api/measures/${measureId}/translations/${languageCode}/${fieldName}`, { value });
+  const response = await api.put(`/measures/${measureId}/translations/${languageCode}/${fieldName}`, { value });
   return response.data.data || response.data;
 };
 
@@ -359,7 +359,7 @@ export const setMeasureTranslation = async (measureId, languageCode, fieldName, 
  * @returns {Promise<void>}
  */
 export const deleteMeasureTranslation = async (translationId) => {
-  const response = await api.delete(`/api/measures/translations/${translationId}`);
+  const response = await api.delete(`/measures/translations/${translationId}`);
   return response.data;
 };
 
@@ -371,6 +371,6 @@ export const deleteMeasureTranslation = async (translationId) => {
  * @returns {Promise<object>} Measure with translated fields
  */
 export const getMeasureWithTranslations = async (measureId, languageCode, fallbackLanguage = 'en') => {
-  const response = await api.get(`/api/measures/${measureId}/translated/${languageCode}?fallback=${fallbackLanguage}`);
+  const response = await api.get(`/measures/${measureId}/translated/${languageCode}?fallback=${fallbackLanguage}`);
   return response.data.data || response.data;
 };

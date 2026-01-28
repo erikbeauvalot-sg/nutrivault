@@ -15,7 +15,7 @@ const visitCustomFieldService = {
   getVisitCustomFields: async (visitId, language = null) => {
     try {
       const params = language ? { language } : {};
-      const response = await api.get(`/api/visits/${visitId}/custom-fields`, { params });
+      const response = await api.get(`/visits/${visitId}/custom-fields`, { params });
       return response.data.data || response.data || [];
     } catch (error) {
       console.error('Error fetching visit custom fields:', error);
@@ -31,7 +31,7 @@ const visitCustomFieldService = {
    */
   updateVisitCustomFields: async (visitId, fields) => {
     try {
-      const response = await api.put(`/api/visits/${visitId}/custom-fields`, {
+      const response = await api.put(`/visits/${visitId}/custom-fields`, {
         fields
       });
       return response.data;
@@ -49,7 +49,7 @@ const visitCustomFieldService = {
    */
   deleteVisitCustomField: async (visitId, fieldValueId) => {
     try {
-      const response = await api.delete(`/api/visits/${visitId}/custom-fields/${fieldValueId}`);
+      const response = await api.delete(`/visits/${visitId}/custom-fields/${fieldValueId}`);
       return response.data;
     } catch (error) {
       console.error('Error deleting visit custom field:', error);

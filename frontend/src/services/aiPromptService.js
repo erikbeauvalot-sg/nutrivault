@@ -17,7 +17,7 @@ const aiPromptService = {
     if (filters.language_code) params.append('language_code', filters.language_code);
     if (filters.is_active !== undefined) params.append('is_active', filters.is_active);
 
-    return api.get(`/api/ai-prompts?${params.toString()}`);
+    return api.get(`/ai-prompts?${params.toString()}`);
   },
 
   /**
@@ -26,7 +26,7 @@ const aiPromptService = {
    * @returns {Promise} API response
    */
   getById: async (id) => {
-    return api.get(`/api/ai-prompts/${id}`);
+    return api.get(`/ai-prompts/${id}`);
   },
 
   /**
@@ -36,7 +36,7 @@ const aiPromptService = {
    * @returns {Promise} API response
    */
   getActivePrompt: async (usage, languageCode = 'fr') => {
-    return api.get(`/api/ai-prompts/usage/${usage}?language_code=${languageCode}`);
+    return api.get(`/ai-prompts/usage/${usage}?language_code=${languageCode}`);
   },
 
   /**
@@ -44,7 +44,7 @@ const aiPromptService = {
    * @returns {Promise} API response
    */
   getUsageTypes: async () => {
-    return api.get('/api/ai-prompts/usage-types');
+    return api.get('/ai-prompts/usage-types');
   },
 
   /**
@@ -53,7 +53,7 @@ const aiPromptService = {
    * @returns {Promise} API response
    */
   create: async (data) => {
-    return api.post('/api/ai-prompts', data);
+    return api.post('/ai-prompts', data);
   },
 
   /**
@@ -63,7 +63,7 @@ const aiPromptService = {
    * @returns {Promise} API response
    */
   update: async (id, data) => {
-    return api.put(`/api/ai-prompts/${id}`, data);
+    return api.put(`/ai-prompts/${id}`, data);
   },
 
   /**
@@ -72,7 +72,7 @@ const aiPromptService = {
    * @returns {Promise} API response
    */
   delete: async (id) => {
-    return api.delete(`/api/ai-prompts/${id}`);
+    return api.delete(`/ai-prompts/${id}`);
   },
 
   /**
@@ -81,7 +81,7 @@ const aiPromptService = {
    * @returns {Promise} API response
    */
   setAsDefault: async (id) => {
-    return api.post(`/api/ai-prompts/${id}/set-default`);
+    return api.post(`/ai-prompts/${id}/set-default`);
   },
 
   /**
@@ -91,7 +91,7 @@ const aiPromptService = {
    * @returns {Promise} API response
    */
   duplicate: async (id, overrides = {}) => {
-    return api.post(`/api/ai-prompts/${id}/duplicate`, overrides);
+    return api.post(`/ai-prompts/${id}/duplicate`, overrides);
   },
 
   /**
@@ -101,7 +101,7 @@ const aiPromptService = {
    * @returns {Promise} API response
    */
   test: async (id, sampleData = {}) => {
-    return api.post(`/api/ai-prompts/${id}/test`, sampleData);
+    return api.post(`/ai-prompts/${id}/test`, sampleData);
   }
 };
 

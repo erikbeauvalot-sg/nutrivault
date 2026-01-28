@@ -23,7 +23,7 @@ export const getCategories = async (filters = {}) => {
   });
 
   const queryString = params.toString();
-  const response = await api.get(`/api/custom-fields/categories${queryString ? '?' + queryString : ''}`);
+  const response = await api.get(`/custom-fields/categories${queryString ? '?' + queryString : ''}`);
   return response.data.data || response.data;
 };
 
@@ -34,7 +34,7 @@ export const getCategories = async (filters = {}) => {
  * @returns {Promise<object>} Category object
  */
 export const getCategoryById = async (id, language = null) => {
-  const url = `/api/custom-fields/categories/${id}`;
+  const url = `/custom-fields/categories/${id}`;
   const params = language ? { language } : {};
   const response = await api.get(url, { params });
   return response.data.data || response.data;
@@ -46,7 +46,7 @@ export const getCategoryById = async (id, language = null) => {
  * @returns {Promise<object>} Created category
  */
 export const createCategory = async (categoryData) => {
-  const response = await api.post('/api/custom-fields/categories', categoryData);
+  const response = await api.post('/custom-fields/categories', categoryData);
   return response.data;
 };
 
@@ -57,7 +57,7 @@ export const createCategory = async (categoryData) => {
  * @returns {Promise<object>} Updated category
  */
 export const updateCategory = async (id, categoryData) => {
-  const response = await api.put(`/api/custom-fields/categories/${id}`, categoryData);
+  const response = await api.put(`/custom-fields/categories/${id}`, categoryData);
   return response.data;
 };
 
@@ -67,7 +67,7 @@ export const updateCategory = async (id, categoryData) => {
  * @returns {Promise<void>}
  */
 export const deleteCategory = async (id) => {
-  const response = await api.delete(`/api/custom-fields/categories/${id}`);
+  const response = await api.delete(`/custom-fields/categories/${id}`);
   return response.data;
 };
 
@@ -77,7 +77,7 @@ export const deleteCategory = async (id) => {
  * @returns {Promise<void>}
  */
 export const reorderCategories = async (order) => {
-  const response = await api.post('/api/custom-fields/categories/reorder', { order });
+  const response = await api.post('/custom-fields/categories/reorder', { order });
   return response.data;
 };
 
@@ -92,7 +92,7 @@ export const reorderCategories = async (order) => {
  */
 export const getDefinitions = async (language = null) => {
   const params = language ? { language } : {};
-  const response = await api.get('/api/custom-fields/definitions', { params });
+  const response = await api.get('/custom-fields/definitions', { params });
   return response.data.data || response.data;
 };
 
@@ -104,7 +104,7 @@ export const getDefinitions = async (language = null) => {
  */
 export const getDefinitionsByCategory = async (categoryId, language = null) => {
   const params = language ? { language } : {};
-  const response = await api.get(`/api/custom-fields/definitions/category/${categoryId}`, { params });
+  const response = await api.get(`/custom-fields/definitions/category/${categoryId}`, { params });
   return response.data.data || response.data;
 };
 
@@ -116,7 +116,7 @@ export const getDefinitionsByCategory = async (categoryId, language = null) => {
  */
 export const getDefinitionById = async (id, language = null) => {
   const params = language ? { language } : {};
-  const response = await api.get(`/api/custom-fields/definitions/${id}`, { params });
+  const response = await api.get(`/custom-fields/definitions/${id}`, { params });
   return response.data.data || response.data;
 };
 
@@ -126,7 +126,7 @@ export const getDefinitionById = async (id, language = null) => {
  * @returns {Promise<object>} Created definition
  */
 export const createDefinition = async (definitionData) => {
-  const response = await api.post('/api/custom-fields/definitions', definitionData);
+  const response = await api.post('/custom-fields/definitions', definitionData);
   return response.data;
 };
 
@@ -137,7 +137,7 @@ export const createDefinition = async (definitionData) => {
  * @returns {Promise<object>} Updated definition
  */
 export const updateDefinition = async (id, definitionData) => {
-  const response = await api.put(`/api/custom-fields/definitions/${id}`, definitionData);
+  const response = await api.put(`/custom-fields/definitions/${id}`, definitionData);
   return response.data;
 };
 
@@ -147,7 +147,7 @@ export const updateDefinition = async (id, definitionData) => {
  * @returns {Promise<void>}
  */
 export const deleteDefinition = async (id) => {
-  const response = await api.delete(`/api/custom-fields/definitions/${id}`);
+  const response = await api.delete(`/custom-fields/definitions/${id}`);
   return response.data;
 };
 
@@ -157,7 +157,7 @@ export const deleteDefinition = async (id) => {
  * @returns {Promise<void>}
  */
 export const reorderFields = async (order) => {
-  const response = await api.post('/api/custom-fields/definitions/reorder', { order });
+  const response = await api.post('/custom-fields/definitions/reorder', { order });
   return response.data;
 };
 
@@ -173,7 +173,7 @@ export const reorderFields = async (order) => {
  */
 export const getPatientCustomFields = async (patientId, language = null) => {
   const params = language ? { language } : {};
-  const response = await api.get(`/api/patients/${patientId}/custom-fields`, { params });
+  const response = await api.get(`/patients/${patientId}/custom-fields`, { params });
   return response.data.data || response.data;
 };
 
@@ -184,7 +184,7 @@ export const getPatientCustomFields = async (patientId, language = null) => {
  * @returns {Promise<object>} Update result
  */
 export const updatePatientCustomFields = async (patientId, fields) => {
-  const response = await api.put(`/api/patients/${patientId}/custom-fields`, { fields });
+  const response = await api.put(`/patients/${patientId}/custom-fields`, { fields });
   return response.data;
 };
 
@@ -195,7 +195,7 @@ export const updatePatientCustomFields = async (patientId, fields) => {
  * @returns {Promise<void>}
  */
 export const deletePatientCustomField = async (patientId, fieldValueId) => {
-  const response = await api.delete(`/api/patients/${patientId}/custom-fields/${fieldValueId}`);
+  const response = await api.delete(`/patients/${patientId}/custom-fields/${fieldValueId}`);
   return response.data;
 };
 
@@ -210,7 +210,7 @@ export const deletePatientCustomField = async (patientId, fieldValueId) => {
  * @returns {Promise<object>} Translations grouped by language code
  */
 export const getAllTranslations = async (entityType, entityId) => {
-  const response = await api.get(`/api/custom-fields/${entityType}/${entityId}/translations`);
+  const response = await api.get(`/custom-fields/${entityType}/${entityId}/translations`);
   return response.data;
 };
 
@@ -222,7 +222,7 @@ export const getAllTranslations = async (entityType, entityId) => {
  * @returns {Promise<object>} Translations { name: "...", description: "..." }
  */
 export const getTranslations = async (entityType, entityId, languageCode) => {
-  const response = await api.get(`/api/custom-fields/${entityType}/${entityId}/translations/${languageCode}`);
+  const response = await api.get(`/custom-fields/${entityType}/${entityId}/translations/${languageCode}`);
   return response.data;
 };
 
@@ -236,7 +236,7 @@ export const getTranslations = async (entityType, entityId, languageCode) => {
  */
 export const setTranslations = async (entityType, entityId, languageCode, translations) => {
   const response = await api.post(
-    `/api/custom-fields/${entityType}/${entityId}/translations/${languageCode}`,
+    `/custom-fields/${entityType}/${entityId}/translations/${languageCode}`,
     translations
   );
   return response.data;
@@ -248,7 +248,7 @@ export const setTranslations = async (entityType, entityId, languageCode, transl
  * @returns {Promise<void>}
  */
 export const deleteTranslation = async (translationId) => {
-  const response = await api.delete(`/api/custom-fields/translations/${translationId}`);
+  const response = await api.delete(`/custom-fields/translations/${translationId}`);
   return response.data;
 };
 
@@ -259,7 +259,7 @@ export const deleteTranslation = async (translationId) => {
  * @returns {Promise<object>} Created category
  */
 export const duplicateCategory = async (id, overrides = {}) => {
-  const response = await api.post(`/api/custom-fields/categories/${id}/duplicate`, overrides);
+  const response = await api.post(`/custom-fields/categories/${id}/duplicate`, overrides);
   return response.data;
 };
 
@@ -270,7 +270,7 @@ export const duplicateCategory = async (id, overrides = {}) => {
  * @returns {Promise<object>} Created definition
  */
 export const duplicateDefinition = async (id, overrides = {}) => {
-  const response = await api.post(`/api/custom-fields/definitions/${id}/duplicate`, overrides);
+  const response = await api.post(`/custom-fields/definitions/${id}/duplicate`, overrides);
   return response.data;
 };
 

@@ -12,7 +12,7 @@ import api from './api';
  * @returns {Promise<Object>} AI status response
  */
 export const getAIStatus = async () => {
-  const response = await api.get('/api/followups/status');
+  const response = await api.get('/followups/status');
   return response.data;
 };
 
@@ -27,7 +27,7 @@ export const getAIStatus = async () => {
  * @returns {Promise<Object>} Generated content
  */
 export const generateFollowup = async (visitId, options = {}) => {
-  const response = await api.post(`/api/followups/generate/${visitId}`, options);
+  const response = await api.post(`/followups/generate/${visitId}`, options);
   return response.data;
 };
 
@@ -42,7 +42,7 @@ export const generateFollowup = async (visitId, options = {}) => {
  * @returns {Promise<Object>} Send result
  */
 export const sendFollowup = async (visitId, emailData) => {
-  const response = await api.post(`/api/followups/send/${visitId}`, emailData);
+  const response = await api.post(`/followups/send/${visitId}`, emailData);
   return response.data;
 };
 
@@ -52,7 +52,7 @@ export const sendFollowup = async (visitId, emailData) => {
  * @returns {Promise<Object>} Email history
  */
 export const getFollowupHistory = async (visitId) => {
-  const response = await api.get(`/api/followups/history/${visitId}`);
+  const response = await api.get(`/followups/history/${visitId}`);
   return response.data;
 };
 

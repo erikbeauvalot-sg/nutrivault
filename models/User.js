@@ -70,6 +70,34 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'fr',
       comment: 'User preferred language (fr=french, en=english)'
+    },
+    // Google Calendar integration fields
+    google_access_token: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Google OAuth2 access token for Calendar API'
+    },
+    google_refresh_token: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Google OAuth2 refresh token for Calendar API'
+    },
+    google_token_expiry: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Google access token expiry date'
+    },
+    google_calendar_sync_enabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: 'Whether Google Calendar sync is enabled for this user'
+    },
+    google_calendar_id: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      defaultValue: 'primary',
+      comment: 'Google Calendar ID to sync with (default: primary)'
     }
   }, {
     tableName: 'users',

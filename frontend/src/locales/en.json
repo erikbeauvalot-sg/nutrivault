@@ -1703,5 +1703,50 @@
     "noShowReduction": "No-show reduction: {{rate}}%",
     "noReductionData": "Not enough data",
     "monthlyEmailVolume": "Monthly Email Volume"
+  },
+  "googleCalendar": {
+    "title": "Google Calendar Integration",
+    "description": "Connect your Google Calendar to automatically sync appointments and visits.",
+    "notConnected": "Not connected to Google Calendar",
+    "connected": "Connected",
+    "connect": "Connect Google Calendar",
+    "disconnect": "Disconnect",
+    "selectCalendar": "Select Calendar",
+    "primaryCalendar": "Primary Calendar",
+    "enableAutoSync": "Enable automatic synchronization",
+    "autoSyncDescription": "Automatically sync visits to Google Calendar when created, updated, or cancelled",
+    "updateSettings": "Update Settings",
+    "syncToCalendar": "Sync to Calendar",
+    "syncFromCalendar": "Sync from Calendar",
+    "disconnectConfirm": {
+      "title": "Disconnect Google Calendar",
+      "message": "Are you sure you want to disconnect Google Calendar? This will stop automatic synchronization but won't delete existing events."
+    },
+    "success": {
+      "connected": "Successfully connected to Google Calendar",
+      "settingsUpdated": "Settings updated successfully",
+      "syncToCalendar": "Synced {{count}} visits to Google Calendar",
+      "syncFromCalendar": "Synced {{count}} events from Google Calendar",
+      "disconnected": "Google Calendar disconnected successfully"
+    },
+    "errors": {
+      "getAuthUrl": "Failed to get authorization URL",
+      "authTimeout": "Authorization timed out",
+      "loadCalendars": "Failed to load calendars",
+      "updateSettings": "Failed to update settings",
+      "syncToCalendar": "Failed to sync visits to calendar",
+      "syncFromCalendar": "Failed to sync events from calendar",
+      "disconnect": "Failed to disconnect Google Calendar"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "account": {
+      "title": "Account Settings",
+      "password": {
+        "title": "Change Password",
+        "description": "Update your account password for security."
+      }
+    }
   }
 }

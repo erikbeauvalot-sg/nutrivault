@@ -13,7 +13,7 @@ import api from './api';
  * @returns {Promise} Export data
  */
 export const exportPatientData = async (patientId, format = 'json') => {
-  const response = await api.get(`/api/gdpr/patients/${patientId}/export`, {
+  const response = await api.get(`/gdpr/patients/${patientId}/export`, {
     params: { format },
     responseType: format === 'json' ? 'json' : 'blob'
   });
@@ -42,7 +42,7 @@ export const exportPatientData = async (patientId, format = 'json') => {
  * @returns {Promise} Deletion result
  */
 export const deletePatientPermanently = async (patientId) => {
-  const response = await api.delete(`/api/gdpr/patients/${patientId}/permanent`, {
+  const response = await api.delete(`/gdpr/patients/${patientId}/permanent`, {
     data: {
       confirm: 'DELETE_PERMANENTLY'
     }

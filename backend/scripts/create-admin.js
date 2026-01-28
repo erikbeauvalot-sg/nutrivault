@@ -6,7 +6,7 @@
  */
 
 const bcrypt = require('bcryptjs');
-const db = require('/models');
+const db = require('../../models');
 
 const DEFAULT_PASSWORD = 'Admin123!Change';
 
