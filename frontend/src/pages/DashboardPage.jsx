@@ -15,6 +15,7 @@ import MeasureAlertsWidget from '../components/MeasureAlertsWidget';
 import api from '../services/api';
 import visitService from '../services/visitService';
 import userService from '../services/userService';
+import * as patientService from '../services/patientService';
 import { format, isToday, startOfDay, endOfDay } from 'date-fns';
 
 const DashboardPage = () => {
@@ -59,7 +60,7 @@ const DashboardPage = () => {
   const fetchStats = async () => {
     try {
       // Fetch patients count
-      const patientsResponse = await api.get('/api/patients');
+      const patientsResponse = await patientService.getPatients({ limit: 1000 }); // Get all patients for stats
       const patientsData = patientsResponse.data.data || patientsResponse.data;
       const totalPatients = Array.isArray(patientsData) ? patientsData.length : 0;
       const activePatients = Array.isArray(patientsData)

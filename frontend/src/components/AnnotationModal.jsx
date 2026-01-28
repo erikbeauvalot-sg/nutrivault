@@ -93,10 +93,10 @@ const AnnotationModal = ({ show, onHide, patientId, annotation, measureDefinitio
 
       if (annotation) {
         // Update existing annotation
-        await api.put(`/api/annotations/${annotation.id}`, payload);
+        await api.put(`/annotations/${annotation.id}`, payload);
       } else {
         // Create new annotation
-        await api.post(`/api/patients/${patientId}/annotations`, payload);
+        await api.post(`/patients/${patientId}/annotations`, payload);
       }
 
       if (onSave) {

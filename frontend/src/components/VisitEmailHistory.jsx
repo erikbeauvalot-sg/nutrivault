@@ -44,7 +44,7 @@ const VisitEmailHistory = ({ visitId, refreshKey = 0 }) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get(`/api/visits/${visitId}/email-logs`);
+      const response = await api.get(`/visits/${visitId}/email-logs`);
       setEmails(response.data?.data || []);
     } catch (err) {
       console.error('Error fetching visit emails:', err);

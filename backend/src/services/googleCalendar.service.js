@@ -397,9 +397,10 @@ async function getUserCalendars(userId) {
 
   const response = await calendar.calendarList.list();
 
-  // Filter to show only calendars where user can create events
+  // Filter to show calendars the user can access (not just write to)
+  // Include calendars with reader, writer, or owner access
   const accessibleCalendars = response.data.items.filter(cal =>
-    cal.accessRole === 'owner' || cal.accessRole === 'writer'
+    cal.accessRole === 'owner' || cal.accessRole === 'writer' || cal.accessRole === 'reader'
   );
 
   return accessibleCalendars.map(cal => ({

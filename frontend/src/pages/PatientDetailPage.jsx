@@ -29,6 +29,9 @@ import * as gdprService from '../services/gdprService';
 import * as billingService from '../services/billingService';
 import * as measureService from '../services/measureService';
 import api from '../services/api';
+import * as patientService from '../services/patientService';
+import * as documentService from '../services/documentService';
+import visitService from '../services/visitService';
 import './PatientDetailPage.css';
 
 const PatientDetailPage = () => {
@@ -104,8 +107,8 @@ const PatientDetailPage = () => {
   const fetchPatientDetails = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/patients/${id}/details`);
-      const patientData = response.data.data || response.data;
+      const response = await patientService.getPatientDetails(id);
+      const patientData = response.data || response;
       setPatient(patientData);
       setVisits(patientData.visits || []);
       setError(null);
@@ -119,8 +122,10 @@ const PatientDetailPage = () => {
 
   const fetchPatientDocuments = async () => {
     try {
-      const response = await api.get(`/api/documents?resource_type=patient&resource_id=${id}`);
-      const documentsData = response.data?.data || response.data || [];
+      const documentsData = await documentService.getDocuments({
+        resource_type: 'patient',
+        resource_id: id
+      });
       setDocuments(Array.isArray(documentsData) ? documentsData : []);
     } catch (err) {
       console.error('Error fetching patient documents:', err);
@@ -145,8 +150,7 @@ const PatientDetailPage = () => {
   const fetchPatientMeasures = async () => {
     try {
       setMeasuresLoading(true);
-      const response = await api.get(`/api/patients/${id}/measures`);
-      const measuresData = response.data?.data || response.data || [];
+      const measuresData = await measureService.getPatientMeasures(id);
       const measuresArray = Array.isArray(measuresData) ? measuresData : [];
 
       // Get unique measure definition IDs
@@ -365,7 +369,7 @@ const PatientDetailPage = () => {
     if (!visitToDelete) return;
 
     try {
-      await api.delete(`/api/visits/${visitToDelete}`);
+      await visitService.deleteVisit(visitToDelete);
       // Refresh patient details to update visit list
       fetchPatientDetails();
     } catch (err) {

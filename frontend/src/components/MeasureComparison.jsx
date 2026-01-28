@@ -108,7 +108,7 @@ const MeasureComparison = ({ patientId }) => {
 
     try {
       setLoading(true);
-      const response = await api.post(`/api/patients/${patientId}/measures/compare`, {
+      const response = await api.post(`/patients/${patientId}/measures/compare`, {
         measureDefinitionIds: selectedMeasures,
         start_date: dateRange.start_date,
         end_date: dateRange.end_date,

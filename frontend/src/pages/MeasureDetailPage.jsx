@@ -52,11 +52,11 @@ const MeasureDetailPage = () => {
       setError(null);
 
       // Fetch measure definition
-      const defResponse = await api.get(`/api/measures/${id}`);
+      const defResponse = await api.get(`/measures/${id}`);
       setMeasureDefinition(defResponse.data.data || defResponse.data);
 
       // Fetch all measures for this definition (no filters)
-      const measuresResponse = await api.get(`/api/patient-measures/all`, {
+      const measuresResponse = await api.get(`/patient-measures/all`, {
         params: {
           measure_definition_id: id,
           limit: 10000 // Large limit to get all records

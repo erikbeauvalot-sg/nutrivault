@@ -113,7 +113,7 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
     setEmailValidation({ status: 'checking', message: 'Vérification...' });
 
     try {
-      const response = await api.get(`/api/patients/check-email/${encodeURIComponent(email.trim().toLowerCase())}`);
+      const response = await api.get(`/patients/check-email/${encodeURIComponent(email.trim().toLowerCase())}`);
       const isAvailable = response.data?.available;
 
       if (isAvailable) {

@@ -60,7 +60,7 @@ const EditPatientPage = () => {
   const fetchPatientData = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/patients/${id}`);
+      const response = await api.get(`/patients/${id}`);
       const patientData = response.data.data || response.data;
       setPatient(patientData);
 
@@ -259,7 +259,7 @@ const EditPatientPage = () => {
         basicData.assigned_dietitian_id = formData.assigned_dietitian_id.trim();
       }
 
-      await api.put(`/api/patients/${id}`, basicData);
+      await api.put(`/patients/${id}`, basicData);
 
       // Update custom fields - only include fields with non-empty values
       const customFieldsData = Object.keys(fieldValues)

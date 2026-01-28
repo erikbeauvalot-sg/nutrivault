@@ -10,14 +10,14 @@ const googleCalendarController = require('../controllers/googleCalendarControlle
 const authenticate = require('../middleware/authenticate');
 const { requireAnyRole } = require('../middleware/rbac');
 
-// All routes require authentication
+// Handle OAuth callback (public route for Google redirect - BEFORE authentication middleware)
+router.get('/callback', googleCalendarController.handleCallback);
+
+// All other routes require authentication
 router.use(authenticate);
 
 // Get Google OAuth authorization URL
 router.get('/auth-url', authenticate, googleCalendarController.getAuthUrl);
-
-// Handle OAuth callback (public route for Google redirect)
-router.get('/callback', googleCalendarController.handleCallback);
 
 // Get user's calendar list
 router.get('/calendars', authenticate, googleCalendarController.getCalendars);

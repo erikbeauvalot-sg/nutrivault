@@ -191,7 +191,7 @@ const MeasureHistory = ({ patientId }) => {
     if (!selectedMeasureId) return;
 
     try {
-      const response = await api.get(`/api/patients/${patientId}/annotations`, {
+      const response = await api.get(`/patients/${patientId}/annotations`, {
         params: {
           measure_definition_id: selectedMeasureId,
           start_date: dateRange.start_date,

@@ -13,7 +13,7 @@ import PatientList from '../components/PatientList';
 import ExportModal from '../components/ExportModal';
 import QuickPatientModal from '../components/QuickPatientModal';
 import ConfirmModal from '../components/ConfirmModal';
-import api from '../services/api';
+import { getPatients, deletePatient } from '../services/patientService';
 
 const PatientsPage = () => {
   const { t } = useTranslation();
@@ -42,23 +42,18 @@ const PatientsPage = () => {
     try {
       setLoading(true);
       
-      // Build query parameters
-      const params = new URLSearchParams();
+      // Build filters object for patient service
+      const filters = {};
       if (searchTerm.trim()) {
-        params.append('search', searchTerm.trim());
+        filters.search = searchTerm.trim();
       }
       if (statusFilter !== 'all') {
-        params.append('is_active', statusFilter === 'active');
+        filters.is_active = statusFilter === 'active';
       }
-      params.append('page', currentPage.toString());
-      params.append('limit', '10'); // Match PatientList itemsPerPage
-      
-      const queryString = params.toString();
-      const url = `/api/patients${queryString ? `?${queryString}` : ''}`;
+      filters.page = currentPage;
+      filters.limit = 10; // Match PatientList itemsPerPage
 
-      console.log('Fetching patients from URL:', url);
-      
-      const response = await api.get(url);
+      const response = await getPatients(filters);
       
       // Handle API response format
       const patientsData = response.data.data || response.data;
@@ -86,7 +81,7 @@ const PatientsPage = () => {
     if (!patientToDelete) return;
 
     try {
-      await api.delete(`/api/patients/${patientToDelete}`);
+      await deletePatient(patientToDelete);
       setPatients(patients.filter(p => p.id !== patientToDelete));
       setError(null);
     } catch (err) {
