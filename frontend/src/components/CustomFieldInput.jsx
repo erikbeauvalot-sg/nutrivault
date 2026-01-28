@@ -82,7 +82,7 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
           />
         );
 
-      case 'date':
+      case 'date': {
         // Get date format from validation_rules, default to DD/MM/YYYY
         const dateFormat = validation_rules?.dateFormat || 'DD/MM/YYYY';
         const placeholder = dateFormat.toLowerCase();
@@ -152,8 +152,9 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
             maxLength={10}
           />
         );
+      }
 
-      case 'select':
+      case 'select': {
         // Handle select_options that can be either strings or {value, label} objects
         const normalizedOptions = select_options?.map(opt => {
           if (typeof opt === 'string') {
@@ -178,6 +179,7 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
             ))}
           </Form.Select>
         );
+      }
 
       case 'boolean':
         return (
@@ -192,7 +194,7 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
           />
         );
 
-      case 'calculated':
+      case 'calculated': {
         // Calculated fields are always read-only and display computed values
         const displayValue = value !== null && value !== undefined ? value : '—';
         // Use ?? instead of || so that 0 decimal places is respected
@@ -228,6 +230,11 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
             </span>
           </div>
         );
+      }
+
+      case 'separator':
+        // Display separator as a horizontal line
+        return <hr style={{ margin: '20px 0', borderTop: '2px solid #dee2e6' }} />;
 
       default:
         return (
@@ -242,6 +249,11 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
         );
     }
   };
+
+  // For separator type, just render the separator without form group
+  if (field_type === 'separator') {
+    return renderInput();
+  }
 
   // For boolean type, the label is part of the checkbox, so we don't show it separately
   if (field_type === 'boolean') {
@@ -281,7 +293,7 @@ CustomFieldInput.propTypes = {
     definition_id: PropTypes.string.isRequired,
     field_name: PropTypes.string.isRequired,
     field_label: PropTypes.string.isRequired,
-    field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean', 'calculated']).isRequired,
+    field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean', 'calculated', 'separator']).isRequired,
     is_required: PropTypes.bool,
     validation_rules: PropTypes.object,
     select_options: PropTypes.arrayOf(

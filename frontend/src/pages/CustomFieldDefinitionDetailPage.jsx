@@ -98,7 +98,8 @@ const CustomFieldDefinitionDetailPage = () => {
       date: '📅',
       select: '📋',
       boolean: '☑️',
-      calculated: '🧮'
+      calculated: '🧮',
+      separator: '➖'
     };
     return icons[type] || '❓';
   };
@@ -111,7 +112,8 @@ const CustomFieldDefinitionDetailPage = () => {
       date: 'warning',
       select: 'secondary',
       boolean: 'dark',
-      calculated: 'danger'
+      calculated: 'danger',
+      separator: 'light'
     };
     return variants[type] || 'secondary';
   };
