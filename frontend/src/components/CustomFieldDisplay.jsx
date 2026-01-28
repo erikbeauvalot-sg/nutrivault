@@ -33,7 +33,18 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
   const highlight = highlightText || defaultHighlightText;
 
   const formatValue = () => {
-    // Handle empty values
+    // Handle special field types that don't need values
+    switch (field_type) {
+      case 'separator':
+        // Display separator as a horizontal line
+        return <hr style={{ margin: '20px 0', borderTop: '2px solid #dee2e6' }} />;
+
+      case 'blank':
+        // Display blank space
+        return <div style={{ height: '20px' }}>&nbsp;</div>;
+    }
+
+    // Handle empty values for other field types
     if (value === null || value === undefined || value === '') {
       return <span className="text-muted">-</span>;
     }
@@ -105,10 +116,6 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
           </div>
         );
 
-      case 'separator':
-        // Display separator as a horizontal line
-        return <hr style={{ margin: '20px 0', borderTop: '2px solid #dee2e6' }} />;
-
       default:
         return <span>{searchQuery ? highlight(value, searchQuery) : value}</span>;
     }
@@ -116,7 +123,7 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
 
   return (
     <div className="mb-3">
-      {field_type !== 'separator' && (
+      {field_type !== 'separator' && field_type !== 'blank' && (
         <div className="text-muted small mb-1">
           {searchQuery ? highlight(field_label, searchQuery) : field_label}
         </div>
@@ -129,7 +136,7 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
 CustomFieldDisplay.propTypes = {
   fieldDefinition: PropTypes.shape({
     field_label: PropTypes.string.isRequired,
-    field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean', 'calculated', 'separator']).isRequired,
+    field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean', 'calculated', 'separator', 'blank']).isRequired,
     validation_rules: PropTypes.object,
     select_options: PropTypes.arrayOf(
       PropTypes.oneOfType([

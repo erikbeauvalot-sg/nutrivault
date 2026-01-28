@@ -727,7 +727,7 @@ const CreateVisitPage = () => {
                     {category.fields && category.fields.length > 0 ? (
                       <Row>
                         {category.fields.map(field => (
-                          <Col key={field.definition_id} xs={12} className={field.field_type === 'separator' ? 'mb-3' : ''}>
+                          <Col key={field.definition_id} xs={12} className={(field.field_type === 'separator' || field.field_type === 'blank') ? 'mb-3' : ''}>
                             <CustomFieldInput
                               fieldDefinition={field}
                               value={fieldValues[field.definition_id]}

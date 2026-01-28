@@ -23,7 +23,8 @@ const FIELD_TYPES = [
   { value: 'select', label: 'Dropdown', icon: '📋' },
   { value: 'boolean', label: 'Yes/No', icon: '☑️' },
   { value: 'calculated', label: 'Calculated', icon: '🧮' },
-  { value: 'separator', label: 'Separator', icon: '➖' }
+  { value: 'separator', label: 'Separator', icon: '➖' },
+  { value: 'blank', label: 'Blank Space', icon: '⬜' }
 ];
 
 // Validation schema
@@ -41,7 +42,7 @@ const definitionSchema = (t) => yup.object().shape({
     .max(200, t('forms.maxLength', { count: 200 })),
   field_type: yup.string()
     .required(t('forms.required'))
-    .oneOf(['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator']),
+    .oneOf(['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator', 'blank']),
   help_text: yup.string()
     .max(500, t('forms.maxLength', { count: 500 }))
     .nullable(),
@@ -399,7 +400,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
           </Form.Group>
 
           {/* Dynamic validation rules based on field type */}
-          {selectedFieldType !== 'separator' && (
+          {selectedFieldType !== 'separator' && selectedFieldType !== 'blank' && (
             <Card className="mb-3">
               <Card.Header>Validation Rules</Card.Header>
               <Card.Body>

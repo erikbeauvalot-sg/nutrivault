@@ -633,7 +633,7 @@ const VisitDetailPage = () => {
                     ) : (
                       <Row>
                         {category.fields.map(field => (
-                          <Col key={field.definition_id} xs={12} md={field.field_type === 'separator' ? 12 : 6} className={field.field_type === 'separator' ? 'mb-3' : ''}>
+                          <Col key={field.definition_id} xs={12} md={6} className={(field.field_type === 'separator' || field.field_type === 'blank') ? 'mb-3' : ''}>
                             <CustomFieldDisplay
                               fieldDefinition={field}
                               value={fieldValues[field.definition_id]}

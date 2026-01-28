@@ -236,6 +236,10 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
         // Display separator as a horizontal line
         return <hr style={{ margin: '20px 0', borderTop: '2px solid #dee2e6' }} />;
 
+      case 'blank':
+        // Display blank space
+        return <div style={{ height: '20px' }}>&nbsp;</div>;
+
       default:
         return (
           <Form.Control
@@ -250,8 +254,8 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
     }
   };
 
-  // For separator type, just render the separator without form group
-  if (field_type === 'separator') {
+  // For separator and blank types, just render the element without form group
+  if (field_type === 'separator' || field_type === 'blank') {
     return renderInput();
   }
 
@@ -293,7 +297,7 @@ CustomFieldInput.propTypes = {
     definition_id: PropTypes.string.isRequired,
     field_name: PropTypes.string.isRequired,
     field_label: PropTypes.string.isRequired,
-    field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean', 'calculated', 'separator']).isRequired,
+    field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean', 'calculated', 'separator', 'blank']).isRequired,
     is_required: PropTypes.bool,
     validation_rules: PropTypes.object,
     select_options: PropTypes.arrayOf(
