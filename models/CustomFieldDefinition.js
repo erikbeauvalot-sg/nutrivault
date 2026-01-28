@@ -62,6 +62,18 @@ module.exports = (sequelize, DataTypes) => {
         }
       }
     },
+    allow_multiple: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      validate: {
+        isValidAllowMultiple(value) {
+          if (value && this.field_type !== 'select') {
+            throw new Error('allow_multiple can only be set for select fields');
+          }
+        }
+      }
+    },
     help_text: {
       type: DataTypes.STRING(500),
       allowNull: true,

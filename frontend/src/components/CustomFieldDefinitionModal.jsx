@@ -60,6 +60,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
   const [success, setSuccess] = useState(false);
   const [selectedFieldType, setSelectedFieldType] = useState('text');
   const [selectOptions, setSelectOptions] = useState([]);
+  const [allowMultiple, setAllowMultiple] = useState(false);
   const [validationRules, setValidationRules] = useState({});
   const [activeTab, setActiveTab] = useState('general');
   const [formula, setFormula] = useState('');
@@ -151,6 +152,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       });
       setSelectedFieldType(definition.field_type || 'text');
       setSelectOptions(definition.select_options || []);
+      setAllowMultiple(definition.allow_multiple || false);
       setValidationRules(definition.validation_rules || {});
       setFormula(definition.formula || '');
       setDecimalPlaces(definition.decimal_places !== undefined ? definition.decimal_places : 2);
@@ -170,6 +172,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       });
       setSelectedFieldType('text');
       setSelectOptions([]);
+      setAllowMultiple(false);
       setValidationRules({});
       setFormula('');
       setDecimalPlaces(2);
@@ -197,6 +200,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       // Add select_options only for select type
       if (selectedFieldType === 'select') {
         payload.select_options = selectOptions;
+        payload.allow_multiple = allowMultiple;
       }
 
       // Add formula and decimal_places for calculated type
@@ -228,6 +232,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       setSuccess(true);
       reset();
       setSelectOptions([]);
+      setAllowMultiple(false);
       setValidationRules({});
       setFormula('');
       setDecimalPlaces(2);
@@ -251,6 +256,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
     setError(null);
     setSuccess(false);
     setSelectOptions([]);
+    setAllowMultiple(false);
     setValidationRules({});
     setFormula('');
     setDecimalPlaces(2);
@@ -474,6 +480,18 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
                       At least one option is required
                     </Form.Text>
                   )}
+                  <Form.Group className="mt-3">
+                    <Form.Check
+                      type="checkbox"
+                      id="allow_multiple"
+                      label="Allow multiple selections"
+                      checked={allowMultiple}
+                      onChange={(e) => setAllowMultiple(e.target.checked)}
+                    />
+                    <Form.Text className="text-muted">
+                      When enabled, users can select multiple options. Values will be displayed as a comma-separated list.
+                    </Form.Text>
+                  </Form.Group>
                 </div>
               )}
 
