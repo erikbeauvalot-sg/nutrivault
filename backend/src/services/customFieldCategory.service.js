@@ -339,11 +339,68 @@ async function reorderCategories(user, orderData, requestMetadata = {}) {
   }
 }
 
+/**
+ * Duplicate a category
+ *
+ * @param {Object} user - Authenticated user object
+ * @param {string} categoryId - ID of the category to duplicate
+ * @param {Object} overrides - Optional overrides for the duplicated category
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Duplicated category
+ */
+async function duplicateCategory(user, categoryId, overrides = {}, requestMetadata = {}) {
+  try {
+    // Get the original category
+    const originalCategory = await CustomFieldCategory.findByPk(categoryId);
+    if (!originalCategory) {
+      const error = new Error('Category not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Check permissions
+    if (user.role !== 'ADMIN') {
+      const error = new Error('Insufficient permissions to duplicate category');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // Create the duplicated category data
+    const duplicatedData = {
+      name: overrides.name || `${originalCategory.name} (Copy)`,
+      description: overrides.description !== undefined ? overrides.description : originalCategory.description,
+      color: overrides.color || originalCategory.color,
+      display_order: overrides.display_order !== undefined ? overrides.display_order : originalCategory.display_order + 1,
+      entity_types: overrides.entity_types || originalCategory.entity_types,
+      is_active: overrides.is_active !== undefined ? overrides.is_active : true
+    };
+
+    // Create the duplicated category
+    const duplicatedCategory = await CustomFieldCategory.create(duplicatedData);
+
+    // Log the action
+    await auditService.logAction(user.id, 'CREATE', 'CustomFieldCategory', duplicatedCategory.id, {
+      action: 'DUPLICATE',
+      original_id: categoryId,
+      duplicated_data: duplicatedData
+    }, requestMetadata);
+
+    // Get the full duplicated category with translations
+    const result = await getCategoryById(user, duplicatedCategory.id, {}, requestMetadata);
+
+    return result;
+  } catch (error) {
+    console.error('Error in duplicateCategory:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getAllCategories,
   getCategoryById,
   createCategory,
   updateCategory,
   deleteCategory,
+  duplicateCategory,
   reorderCategories
 };

@@ -120,6 +120,21 @@ const CustomFieldsPage = () => {
     setShowDeleteCategoryConfirm(true);
   };
 
+  const handleDuplicateCategory = async (category) => {
+    try {
+      setLoading(true);
+      const duplicatedCategory = await customFieldService.duplicateCategory(category.id);
+      await fetchData();
+      // Optionally navigate to the new category
+      // navigate(`/settings/custom-fields/categories/${duplicatedCategory.id}/view`);
+    } catch (err) {
+      console.error('Error duplicating category:', err);
+      setError(err.response?.data?.error || t('customFields.duplicateError', 'Failed to duplicate category'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const confirmDeleteCategory = async () => {
     if (!categoryToDelete) return;
 
@@ -153,6 +168,21 @@ const CustomFieldsPage = () => {
   const handleDeleteDefinition = (definitionId) => {
     setDefinitionToDelete(definitionId);
     setShowDeleteDefinitionConfirm(true);
+  };
+
+  const handleDuplicateDefinition = async (definition) => {
+    try {
+      setLoading(true);
+      const duplicatedDefinition = await customFieldService.duplicateDefinition(definition.id);
+      await fetchData();
+      // Optionally navigate to the new definition
+      // navigate(`/settings/custom-fields/definitions/${duplicatedDefinition.id}/view`);
+    } catch (err) {
+      console.error('Error duplicating definition:', err);
+      setError(err.response?.data?.error || t('customFields.duplicateError', 'Failed to duplicate field'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const confirmDeleteDefinition = async () => {
@@ -444,6 +474,11 @@ const CustomFieldsPage = () => {
                                 </td>
                                 <td onClick={(e) => e.stopPropagation()}>
                                   <div className="action-buttons">
+                                    <ActionButton
+                                      action="duplicate"
+                                      onClick={() => handleDuplicateCategory(category)}
+                                      title={t('common.duplicate', 'Duplicate')}
+                                    />
                                     <ActionButton
                                       action="edit"
                                       onClick={() => handleEditCategory(category)}
@@ -747,6 +782,11 @@ const CustomFieldsPage = () => {
                               </td>
                               <td onClick={(e) => e.stopPropagation()}>
                                 <div className="action-buttons">
+                                  <ActionButton
+                                    action="duplicate"
+                                    onClick={() => handleDuplicateDefinition(definition)}
+                                    title={t('common.duplicate', 'Duplicate')}
+                                  />
                                   <ActionButton
                                     action="edit"
                                     onClick={() => handleEditDefinition(definition)}

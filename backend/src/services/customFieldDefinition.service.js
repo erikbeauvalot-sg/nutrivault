@@ -572,6 +572,72 @@ async function reorderFields(user, orderData, requestMetadata = {}) {
   }
 }
 
+/**
+ * Duplicate a field definition
+ *
+ * @param {Object} user - Authenticated user object
+ * @param {string} definitionId - ID of the definition to duplicate
+ * @param {Object} overrides - Optional overrides for the duplicated definition
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Duplicated definition
+ */
+async function duplicateDefinition(user, definitionId, overrides = {}, requestMetadata = {}) {
+  try {
+    // Get the original definition
+    const originalDefinition = await CustomFieldDefinition.findByPk(definitionId);
+    if (!originalDefinition) {
+      const error = new Error('Field definition not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Check permissions
+    if (user.role !== 'ADMIN') {
+      const error = new Error('Insufficient permissions to duplicate field definition');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // Create the duplicated definition data
+    const duplicatedData = {
+      category_id: overrides.category_id || originalDefinition.category_id,
+      field_name: overrides.field_name || `${originalDefinition.field_name}_copy`,
+      field_label: overrides.field_label || `${originalDefinition.field_label} (Copy)`,
+      field_type: overrides.field_type || originalDefinition.field_type,
+      help_text: overrides.help_text !== undefined ? overrides.help_text : originalDefinition.help_text,
+      display_order: overrides.display_order !== undefined ? overrides.display_order : originalDefinition.display_order + 1,
+      is_required: overrides.is_required !== undefined ? overrides.is_required : originalDefinition.is_required,
+      is_active: overrides.is_active !== undefined ? overrides.is_active : true,
+      show_in_basic_info: overrides.show_in_basic_info !== undefined ? overrides.show_in_basic_info : originalDefinition.show_in_basic_info,
+      show_in_list: overrides.show_in_list !== undefined ? overrides.show_in_list : originalDefinition.show_in_list,
+      select_options: overrides.select_options || originalDefinition.select_options,
+      validation_rules: overrides.validation_rules || originalDefinition.validation_rules,
+      formula: overrides.formula || originalDefinition.formula,
+      decimal_places: overrides.decimal_places !== undefined ? overrides.decimal_places : originalDefinition.decimal_places,
+      allow_multiple: overrides.allow_multiple !== undefined ? overrides.allow_multiple : originalDefinition.allow_multiple,
+      dependencies: overrides.dependencies || originalDefinition.dependencies
+    };
+
+    // Create the duplicated definition
+    const duplicatedDefinition = await CustomFieldDefinition.create(duplicatedData);
+
+    // Log the action
+    await auditService.logAction(user.id, 'CREATE', 'CustomFieldDefinition', duplicatedDefinition.id, {
+      action: 'DUPLICATE',
+      original_id: definitionId,
+      duplicated_data: duplicatedData
+    }, requestMetadata);
+
+    // Get the full duplicated definition with translations
+    const result = await getDefinitionById(user, duplicatedDefinition.id, null, requestMetadata);
+
+    return result;
+  } catch (error) {
+    console.error('Error in duplicateDefinition:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getAllActiveDefinitions,
   getDefinitionsByCategory,
@@ -579,6 +645,7 @@ module.exports = {
   createDefinition,
   updateDefinition,
   deleteDefinition,
+  duplicateDefinition,
   validateFieldValue,
   reorderFields
 };

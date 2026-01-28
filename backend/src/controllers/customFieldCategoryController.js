@@ -284,12 +284,46 @@ const validateReorderCategories = [
     .withMessage('Each item must have a valid display_order')
 ];
 
+/**
+ * Duplicate a category
+ * POST /api/custom-fields/categories/:id/duplicate
+ */
+const duplicateCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = req.user;
+    const overrides = req.body || {};
+
+    const requestMetadata = {
+      ip_address: req.ip,
+      user_agent: req.get('user-agent'),
+      request_method: req.method,
+      request_path: req.originalUrl
+    };
+
+    const duplicatedCategory = await customFieldCategoryService.duplicateCategory(user, id, overrides, requestMetadata);
+
+    res.status(201).json({
+      success: true,
+      data: duplicatedCategory,
+      message: 'Category duplicated successfully'
+    });
+  } catch (error) {
+    console.error('Duplicate category error:', error);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message || 'Failed to duplicate category'
+    });
+  }
+};
+
 module.exports = {
   getAllCategories,
   getCategoryById,
   createCategory,
   updateCategory,
   deleteCategory,
+  duplicateCategory,
   reorderCategories,
   validateCreateCategory,
   validateUpdateCategory,

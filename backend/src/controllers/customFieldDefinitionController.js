@@ -397,6 +397,39 @@ const validateReorderFields = [
     .withMessage('Each item must have a valid display_order')
 ];
 
+/**
+ * Duplicate a field definition
+ * POST /api/custom-fields/definitions/:id/duplicate
+ */
+const duplicateDefinition = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = req.user;
+    const overrides = req.body || {};
+
+    const requestMetadata = {
+      ip_address: req.ip,
+      user_agent: req.get('user-agent'),
+      request_method: req.method,
+      request_path: req.originalUrl
+    };
+
+    const duplicatedDefinition = await customFieldDefinitionService.duplicateDefinition(user, id, overrides, requestMetadata);
+
+    res.status(201).json({
+      success: true,
+      data: duplicatedDefinition,
+      message: 'Field definition duplicated successfully'
+    });
+  } catch (error) {
+    console.error('Duplicate definition error:', error);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message || 'Failed to duplicate field definition'
+    });
+  }
+};
+
 module.exports = {
   getAllActiveDefinitions,
   getDefinitionsByCategory,
@@ -404,6 +437,7 @@ module.exports = {
   createDefinition,
   updateDefinition,
   deleteDefinition,
+  duplicateDefinition,
   reorderFields,
   validateCreateDefinition,
   validateUpdateDefinition,

@@ -252,6 +252,28 @@ export const deleteTranslation = async (translationId) => {
   return response.data;
 };
 
+/**
+ * Duplicate a category
+ * @param {string} id - Category UUID to duplicate
+ * @param {object} overrides - Optional overrides for the duplicated category
+ * @returns {Promise<object>} Created category
+ */
+export const duplicateCategory = async (id, overrides = {}) => {
+  const response = await api.post(`/api/custom-fields/categories/${id}/duplicate`, overrides);
+  return response.data;
+};
+
+/**
+ * Duplicate a field definition
+ * @param {string} id - Definition UUID to duplicate
+ * @param {object} overrides - Optional overrides for the duplicated definition
+ * @returns {Promise<object>} Created definition
+ */
+export const duplicateDefinition = async (id, overrides = {}) => {
+  const response = await api.post(`/api/custom-fields/definitions/${id}/duplicate`, overrides);
+  return response.data;
+};
+
 export default {
   // Categories
   getCategories,
@@ -259,6 +281,7 @@ export default {
   createCategory,
   updateCategory,
   deleteCategory,
+  duplicateCategory,
   reorderCategories,
 
   // Definitions
@@ -268,6 +291,7 @@ export default {
   createDefinition,
   updateDefinition,
   deleteDefinition,
+  duplicateDefinition,
   reorderFields,
 
   // Patient values

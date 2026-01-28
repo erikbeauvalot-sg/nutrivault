@@ -80,6 +80,19 @@ const CustomFieldDefinitionDetailPage = () => {
     setShowDeleteConfirm(true);
   };
 
+  const handleDuplicate = async () => {
+    try {
+      setLoading(true);
+      const duplicatedDefinition = await customFieldService.duplicateDefinition(id);
+      navigate(`/settings/custom-fields/definitions/${duplicatedDefinition.id}/view`);
+    } catch (err) {
+      console.error('Error duplicating definition:', err);
+      setError(err.response?.data?.error || t('customFields.duplicateError', 'Failed to duplicate field'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const confirmDeleteDefinition = async () => {
     try {
       await customFieldService.deleteDefinition(id);
@@ -169,6 +182,9 @@ const CustomFieldDefinitionDetailPage = () => {
                 </p>
               </div>
               <div className="d-flex gap-2">
+                <Button variant="outline-success" onClick={handleDuplicate} disabled={loading}>
+                  📋 {t('common.duplicate', 'Duplicate')}
+                </Button>
                 <Button variant="outline-primary" onClick={handleEdit}>
                   ✏️ {t('common.edit', 'Edit')}
                 </Button>

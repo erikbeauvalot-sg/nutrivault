@@ -95,6 +95,30 @@ router.post(
   customFieldCategoryController.reorderCategories
 );
 
+/**
+ * POST /api/custom-fields/categories/:id/duplicate
+ * Duplicate a category
+ * Role: ADMIN only
+ */
+router.post(
+  '/categories/:id/duplicate',
+  authenticate,
+  requireRole('ADMIN'),
+  customFieldCategoryController.duplicateCategory
+);
+
+/**
+ * POST /api/custom-fields/definitions/:id/duplicate
+ * Duplicate a field definition
+ * Role: ADMIN only
+ */
+router.post(
+  '/definitions/:id/duplicate',
+  authenticate,
+  requireRole('ADMIN'),
+  customFieldDefinitionController.duplicateDefinition
+);
+
 // ===========================================
 // Field Definition Routes
 // ===========================================

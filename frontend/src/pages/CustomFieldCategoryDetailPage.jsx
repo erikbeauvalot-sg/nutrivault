@@ -122,6 +122,19 @@ const CustomFieldCategoryDetailPage = () => {
     setShowDeleteDefinitionConfirm(true);
   };
 
+  const handleDuplicateCategory = async () => {
+    try {
+      setLoading(true);
+      const duplicatedCategory = await customFieldService.duplicateCategory(id);
+      navigate(`/settings/custom-fields/categories/${duplicatedCategory.id}`);
+    } catch (err) {
+      console.error('Error duplicating category:', err);
+      setError(err.response?.data?.error || t('customFields.duplicateError', 'Failed to duplicate category'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const confirmDeleteDefinition = async () => {
     if (!definitionToDelete) return;
 
@@ -215,6 +228,9 @@ const CustomFieldCategoryDetailPage = () => {
                 )}
               </div>
               <div className="d-flex gap-2">
+                <Button variant="outline-success" onClick={handleDuplicateCategory} disabled={loading}>
+                  📋 {t('common.duplicate', 'Duplicate')}
+                </Button>
                 <Button variant="outline-primary" onClick={handleEditCategory}>
                   ✏️ {t('common.edit', 'Edit')}
                 </Button>
