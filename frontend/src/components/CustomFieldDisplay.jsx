@@ -88,22 +88,32 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
       }
 
       case 'select': {
-        // Handle value that might be stored as object {value, label} or just string
-        // Also look up the label from select_options if available
-        let displayLabel = value;
-        if (typeof value === 'object' && value !== null) {
-          displayLabel = value.label || value.value || JSON.stringify(value);
-        } else if (select_options && Array.isArray(select_options)) {
-          // Try to find matching label from options
-          const matchingOption = select_options.find(opt => {
-            if (typeof opt === 'string') return opt === value;
-            return opt.value === value;
+        // Handle multiple values (array) or single value
+        const values = Array.isArray(value) ? value : [value];
+
+        // Process each value to get display labels
+        const displayLabels = values
+          .filter(v => v !== null && v !== undefined && v !== '')
+          .map(val => {
+            let displayLabel = val;
+            if (typeof val === 'object' && val !== null) {
+              displayLabel = val.label || val.value || JSON.stringify(val);
+            } else if (select_options && Array.isArray(select_options)) {
+              // Try to find matching label from options
+              const matchingOption = select_options.find(opt => {
+                if (typeof opt === 'string') return opt === val;
+                return opt.value === val;
+              });
+              if (matchingOption) {
+                displayLabel = typeof matchingOption === 'string' ? matchingOption : matchingOption.label;
+              }
+            }
+            return displayLabel;
           });
-          if (matchingOption) {
-            displayLabel = typeof matchingOption === 'string' ? matchingOption : matchingOption.label;
-          }
-        }
-        return <Badge bg="primary">{displayLabel}</Badge>;
+
+        // Display as comma-separated list
+        const displayText = displayLabels.join(', ');
+        return displayText ? <Badge bg="primary">{displayText}</Badge> : <span className="text-muted">—</span>;
       }
 
       case 'number':

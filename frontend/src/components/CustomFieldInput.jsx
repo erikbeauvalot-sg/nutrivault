@@ -163,22 +163,63 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
           return opt;
         }) || [];
 
-        return (
-          <Form.Select
-            id={field_name}
-            value={value || ''}
-            onChange={handleChange}
-            disabled={disabled}
-            isInvalid={!!error}
-          >
-            <option value="">-- Select {field_label} --</option>
-            {normalizedOptions.map((option, index) => (
-              <option key={index} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Form.Select>
-        );
+        // Check if multiple selection is allowed
+        const allowMultiple = fieldDefinition.allow_multiple || false;
+
+        if (allowMultiple) {
+          // Multiple selection using checkboxes
+          const currentValues = Array.isArray(value) ? value : (value ? [value] : []);
+
+          const handleMultipleChange = (optionValue, checked) => {
+            let newValues;
+            if (checked) {
+              newValues = [...currentValues, optionValue];
+            } else {
+              newValues = currentValues.filter(v => v !== optionValue);
+            }
+            onChange(fieldDefinition.definition_id, newValues);
+          };
+
+          return (
+            <div>
+              <Form.Label htmlFor={`${field_name}_container`} className="form-label">
+                {field_label}
+              </Form.Label>
+              <div id={`${field_name}_container`} className="border rounded p-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                {normalizedOptions.map((option, index) => (
+                  <Form.Check
+                    key={index}
+                    type="checkbox"
+                    id={`${field_name}_${index}`}
+                    label={option.label}
+                    checked={currentValues.includes(option.value)}
+                    onChange={(e) => handleMultipleChange(option.value, e.target.checked)}
+                    disabled={disabled}
+                    className="mb-1"
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        } else {
+          // Single selection using dropdown
+          return (
+            <Form.Select
+              id={field_name}
+              value={value || ''}
+              onChange={handleChange}
+              disabled={disabled}
+              isInvalid={!!error}
+            >
+              <option value="">-- Select {field_label} --</option>
+              {normalizedOptions.map((option, index) => (
+                <option key={index} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Form.Select>
+          );
+        }
       }
 
       case 'boolean':
