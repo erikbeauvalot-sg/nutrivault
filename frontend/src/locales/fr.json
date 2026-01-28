@@ -1080,6 +1080,7 @@
     "fieldType": "Type de Champ",
     "helpText": "Texte d'Aide",
     "required": "Obligatoire",
+    "order": "Ordre",
     "validationRules": "Règles de Validation",
     "selectOptions": "Options de la Liste",
     "addOption": "Ajouter une Option",

@@ -692,6 +692,7 @@ const CustomFieldsPage = () => {
                             <th>{t('customFields.fieldLabel', 'Label')}</th>
                             <th>{t('customFields.fieldType', 'Type')}</th>
                             <th>{t('customFields.category', 'Category')}</th>
+                            <th>{t('customFields.order', 'Order')}</th>
                             <th>{t('customFields.required', 'Required')}</th>
                             <th>{t('customFields.status', 'Status')}</th>
                             <th>{t('customFields.actions', 'Actions')}</th>
@@ -724,6 +725,11 @@ const CustomFieldsPage = () => {
                                 ) : (
                                   <span className="text-muted">{t('common.unknown', 'Unknown')}</span>
                                 )}
+                              </td>
+                              <td>
+                                <Badge bg="info" text="dark">
+                                  {definition.display_order || 0}
+                                </Badge>
                               </td>
                               <td>
                                 {definition.is_required ? (
@@ -793,6 +799,9 @@ const CustomFieldsPage = () => {
                                 {highlightText(definition.category.name, searchQuery)}
                               </Badge>
                             )}
+                            <Badge bg="info" text="dark">
+                              {t('customFields.order', 'Order')}: {definition.display_order || 0}
+                            </Badge>
                             {definition.is_required && (
                               <Badge bg="warning" text="dark">{t('customFields.required', 'Required')}</Badge>
                             )}

@@ -1049,6 +1049,7 @@
     "fieldType": "Field Type",
     "helpText": "Help Text",
     "required": "Required",
+    "order": "Order",
     "validationRules": "Validation Rules",
     "selectOptions": "Dropdown Options",
     "addOption": "Add Option",
