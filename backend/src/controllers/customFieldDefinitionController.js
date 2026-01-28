@@ -309,7 +309,11 @@ const validateCreateDefinition = [
   body('is_active')
     .optional()
     .isBoolean()
-    .withMessage('is_active must be a boolean')
+    .withMessage('is_active must be a boolean'),
+  body('allow_multiple')
+    .optional()
+    .isBoolean()
+    .withMessage('allow_multiple must be a boolean')
 ];
 
 const validateUpdateDefinition = [
@@ -374,7 +378,11 @@ const validateUpdateDefinition = [
   body('is_active')
     .optional()
     .isBoolean()
-    .withMessage('is_active must be a boolean')
+    .withMessage('is_active must be a boolean'),
+  body('allow_multiple')
+    .optional()
+    .isBoolean()
+    .withMessage('allow_multiple must be a boolean')
 ];
 
 const validateReorderFields = [

@@ -282,6 +282,7 @@ async function createDefinition(user, definitionData, requestMetadata = {}) {
       is_required: definitionData.is_required || false,
       validation_rules: definitionData.validation_rules || null,
       select_options: definitionData.select_options || null,
+      allow_multiple: definitionData.allow_multiple || false,
       help_text: definitionData.help_text || null,
       display_order: definitionData.display_order || 0,
       is_active: definitionData.is_active !== undefined ? definitionData.is_active : true,
@@ -353,6 +354,7 @@ async function updateDefinition(user, definitionId, updateData, requestMetadata 
     if (updateData.is_required !== undefined) definition.is_required = updateData.is_required;
     if (updateData.validation_rules !== undefined) definition.validation_rules = updateData.validation_rules;
     if (updateData.select_options !== undefined) definition.select_options = updateData.select_options;
+    if (updateData.allow_multiple !== undefined) definition.allow_multiple = updateData.allow_multiple;
     if (updateData.help_text !== undefined) definition.help_text = updateData.help_text;
     if (updateData.display_order !== undefined) definition.display_order = updateData.display_order;
     if (updateData.is_active !== undefined) definition.is_active = updateData.is_active;
