@@ -111,9 +111,20 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
             return displayLabel;
           });
 
-        // Display as comma-separated list
-        const displayText = displayLabels.join(', ');
-        return displayText ? <Badge bg="primary">{displayText}</Badge> : <span className="text-muted">—</span>;
+        // Display each value in its own badge
+        const badges = displayLabels.map((label, index) => (
+          <Badge key={index} bg="primary" className="me-1 mb-1">
+            {label}
+          </Badge>
+        ));
+
+        return badges.length > 0 ? (
+          <div className="d-flex flex-wrap">
+            {badges}
+          </div>
+        ) : (
+          <span className="text-muted">—</span>
+        );
       }
 
       case 'number':
