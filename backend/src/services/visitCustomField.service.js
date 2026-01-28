@@ -209,12 +209,13 @@ async function getVisitCustomFields(user, visitId, language = 'fr', requestMetad
           field_label: translatedDefinition.field_label,
           field_type: translatedDefinition.field_type,
           is_required: translatedDefinition.is_required,
+          allow_multiple: translatedDefinition.allow_multiple || false,
           validation_rules: validationRules,
           select_options: selectOptions,
           help_text: translatedDefinition.help_text,
           display_order: translatedDefinition.display_order,
           show_in_basic_info: translatedDefinition.show_in_basic_info || false,
-          value: value ? value.getValue(translatedDefinition.field_type) : null,
+          value: value ? value.getValue(translatedDefinition.field_type, translatedDefinition.allow_multiple) : null,
           value_id: value ? value.id : null,
           updated_at: value ? value.updated_at : null
         };
@@ -285,7 +286,7 @@ async function recalculateDependentFields(visitId, changedFieldName, user) {
     const valueMap = {};
     allValues.forEach(v => {
       if (v.field_definition) {
-        valueMap[v.field_definition.field_name] = v.getValue(v.field_definition.field_type);
+        valueMap[v.field_definition.field_name] = v.getValue(v.field_definition.field_type, v.field_definition.allow_multiple);
       }
     });
 
@@ -455,7 +456,7 @@ async function setVisitCustomField(user, visitId, definitionId, value, requestMe
     }
 
     // Set the value based on field type
-    fieldValue.setValue(value, definition.field_type);
+    fieldValue.setValue(value, definition.field_type, definition.allow_multiple);
     fieldValue.updated_by = user.id;
     await fieldValue.save();
 
@@ -589,7 +590,7 @@ async function bulkUpdateVisitFields(user, visitId, fields, requestMetadata = {}
         }
 
         // Set the value based on field type
-        fieldValue.setValue(field.value, definition.field_type);
+        fieldValue.setValue(field.value, definition.field_type, definition.allow_multiple);
         fieldValue.updated_by = user.id;
         await fieldValue.save({ transaction });
 

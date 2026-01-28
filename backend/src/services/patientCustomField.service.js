@@ -182,7 +182,7 @@ async function getPatientCustomFields(user, patientId, language = 'fr', requestM
       const valueMapByName = {};
       patientValues.forEach(v => {
         if (v.field_definition) {
-          valueMapByName[v.field_definition.field_name] = v.getValue(v.field_definition.field_type);
+          valueMapByName[v.field_definition.field_name] = v.getValue(v.field_definition.field_type, v.field_definition.allow_multiple);
         }
       });
 
@@ -343,6 +343,7 @@ async function getPatientCustomFields(user, patientId, language = 'fr', requestM
           field_type: translatedDefinition.field_type,
           is_required: translatedDefinition.is_required,
           is_calculated: translatedDefinition.is_calculated || false,
+          allow_multiple: translatedDefinition.allow_multiple || false,
           decimal_places: translatedDefinition.decimal_places,
           formula: translatedDefinition.formula,
           validation_rules: validationRules,
@@ -350,7 +351,7 @@ async function getPatientCustomFields(user, patientId, language = 'fr', requestM
           help_text: translatedDefinition.help_text,
           display_order: translatedDefinition.display_order,
           show_in_basic_info: translatedDefinition.show_in_basic_info || false,
-          value: value ? value.getValue(translatedDefinition.field_type) : null,
+          value: value ? value.getValue(translatedDefinition.field_type, translatedDefinition.allow_multiple) : null,
           value_id: value ? value.id : null,
           updated_at: value ? value.updated_at : null
         };
@@ -685,7 +686,7 @@ async function setPatientCustomField(user, patientId, definitionId, value, reque
     }
 
     // Set the value based on field type
-    fieldValue.setValue(value, definition.field_type);
+    fieldValue.setValue(value, definition.field_type, definition.allow_multiple);
     fieldValue.updated_by = user.id;
     await fieldValue.save();
 
@@ -776,7 +777,7 @@ async function bulkUpdatePatientFields(user, patientId, fields, requestMetadata 
         }
 
         // Set the value based on field type
-        fieldValue.setValue(field.value, definition.field_type);
+        fieldValue.setValue(field.value, definition.field_type, definition.allow_multiple);
         fieldValue.updated_by = user.id;
         await fieldValue.save({ transaction });
 

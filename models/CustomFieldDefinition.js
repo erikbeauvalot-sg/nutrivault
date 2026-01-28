@@ -291,8 +291,23 @@ module.exports = (sequelize, DataTypes) => {
         const validValues = selectOptions.map(opt =>
           typeof opt === 'object' && opt !== null ? opt.value : opt
         );
-        if (!validValues.includes(value)) {
-          return { isValid: false, error: 'Invalid option selected' };
+
+        // Handle multi-select (array values)
+        if (this.allow_multiple) {
+          if (!Array.isArray(value)) {
+            return { isValid: false, error: 'Multi-select field requires an array value' };
+          }
+          // Check that all selected values are valid
+          for (const selectedValue of value) {
+            if (!validValues.includes(selectedValue)) {
+              return { isValid: false, error: 'Invalid option selected' };
+            }
+          }
+        } else {
+          // Single select validation
+          if (!validValues.includes(value)) {
+            return { isValid: false, error: 'Invalid option selected' };
+          }
         }
         break;
 

@@ -13,6 +13,7 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
     field_label,
     field_type,
     is_required,
+    allow_multiple,
     validation_rules,
     select_options,
     help_text
@@ -182,9 +183,6 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
 
           return (
             <div>
-              <Form.Label htmlFor={`${field_name}_container`} className="form-label">
-                {field_label}
-              </Form.Label>
               <div id={`${field_name}_container`} className="border rounded p-2" style={{ maxHeight: '200px', overflowY: 'auto' }}>
                 {normalizedOptions.map((option, index) => (
                   <Form.Check
@@ -244,9 +242,6 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
 
         return (
           <div>
-            <Form.Label htmlFor={field_name} className="form-label">
-              🧮 {field_label}
-            </Form.Label>
             <div className="position-relative">
               <Form.Control
                 type="text"

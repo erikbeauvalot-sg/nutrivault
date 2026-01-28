@@ -56,14 +56,30 @@ module.exports = (sequelize, DataTypes) => {
   /**
    * Gets the value in the correct format based on field type
    * @param {string} fieldType - The field type from the definition
+   * @param {boolean} allowMultiple - Whether the field allows multiple values (for select fields)
    * @returns {any} - The formatted value
    */
-  VisitCustomFieldValue.prototype.getValue = function(fieldType) {
+  VisitCustomFieldValue.prototype.getValue = function(fieldType, allowMultiple = false) {
     switch (fieldType) {
       case 'text':
       case 'textarea':
       case 'date':
+        return this.value_text;
+
       case 'select':
+        // For multi-select fields, return array from JSON
+        if (allowMultiple) {
+          if (this.value_json) {
+            try {
+              const parsed = JSON.parse(this.value_json);
+              return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+              return [];
+            }
+          }
+          return [];
+        }
+        // For single-select, return text value
         return this.value_text;
 
       case 'number':
@@ -82,8 +98,9 @@ module.exports = (sequelize, DataTypes) => {
    * Sets the value in the correct column based on field type
    * @param {any} value - The value to set
    * @param {string} fieldType - The field type from the definition
+   * @param {boolean} allowMultiple - Whether the field allows multiple values (for select fields)
    */
-  VisitCustomFieldValue.prototype.setValue = function(value, fieldType) {
+  VisitCustomFieldValue.prototype.setValue = function(value, fieldType, allowMultiple = false) {
     // Clear all value columns first
     this.value_text = null;
     this.value_number = null;
@@ -94,8 +111,24 @@ module.exports = (sequelize, DataTypes) => {
     switch (fieldType) {
       case 'text':
       case 'textarea':
-      case 'select':
         this.value_text = value !== null && value !== undefined ? String(value) : null;
+        break;
+
+      case 'select':
+        // For multi-select fields, store array as JSON
+        if (allowMultiple) {
+          if (Array.isArray(value)) {
+            this.value_json = JSON.stringify(value);
+          } else if (value !== null && value !== undefined) {
+            // If single value provided for multi-select, convert to array
+            this.value_json = JSON.stringify([value]);
+          } else {
+            this.value_json = JSON.stringify([]);
+          }
+        } else {
+          // For single-select, store as text
+          this.value_text = value !== null && value !== undefined ? String(value) : null;
+        }
         break;
 
       case 'date':
