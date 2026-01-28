@@ -28,10 +28,10 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     field_type: {
-      type: DataTypes.ENUM('text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator'),
+      type: DataTypes.ENUM('text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator', 'blank'),
       allowNull: false,
       validate: {
-        isIn: [['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator']]
+        isIn: [['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator', 'blank']]
       }
     },
     is_required: {

@@ -1,0 +1,14 @@
+Add separator custom field type for visual organization in Patient and Visit forms.
+
+## New Features
+- Separator Custom Field Type: Horizontal line separators for form sections
+- Full-width layout for separators in both view and edit modes
+- No data input required - purely visual elements
+
+## Technical Changes
+- Database migration to add 'separator' and 'calculated' field types
+- Updated frontend components for separator display
+- Improved form layouts and responsive design
+
+## Deployment
+Run ./deploy-v5.3.0.sh on production server

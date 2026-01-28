@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - No data input required - purely visual elements
   - Perfect for creating section breaks in Patient and Visit forms
   - Available in custom field creation interface
+- **Blank Custom Field Type**: New field type for creating empty space in forms
+  - Invisible spacing elements for better form organization
+  - No label or input displayed - creates clean visual breaks
+  - Full-width layout like separators but without visible content
+  - Useful for spacing and layout control in complex forms
 
 ### Changed
 - **Form Layout Improvements**: Enhanced layout handling for different field types
