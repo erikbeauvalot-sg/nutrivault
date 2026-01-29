@@ -179,9 +179,15 @@ deploy() {
         return 1
     fi
 
-    log_info "Creation of admin user and seeding database..."
-    docker exec nutrivault-backend node /app/scripts/create-admin.js
-    docker exec -it nutrivault-backend npm run db:seed
+    # Only create admin and seed on first deployment (when database is empty)
+    log_info "Checking if admin user exists..."
+    if ! docker exec nutrivault-backend node -e "require('/app/models').User.findOne({where:{role:'admin'}}).then(u=>process.exit(u?0:1))" 2>/dev/null; then
+        log_info "First deployment detected - creating admin user and seeding database..."
+        docker exec nutrivault-backend node /app/scripts/create-admin.js
+        docker exec nutrivault-backend npm run db:seed
+    else
+        log_info "Admin user already exists - skipping seed"
+    fi
 
     # Show deployment status
     log_info "=========================================="
