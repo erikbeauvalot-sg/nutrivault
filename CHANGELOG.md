@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.4.1] - 2026-01-29
+
+### Fixed
+- **Production Deployment Error**: Critical fix for SQLite timezone configuration
+  - Removed timezone configuration for SQLite databases (not supported)
+  - Timezone config now only applies when using PostgreSQL dialect
+  - Resolves Sequelize error: "Setting a custom timezone is not supported by SQLite"
+  - Fixes blocking production deployment issue with v5.4.0
+
+### Technical Details
+- **Database Configuration**:
+  - Modified `config/database.js` to conditionally apply timezone only for PostgreSQL
+  - SQLite databases now use default UTC timezone behavior
+  - No breaking changes for existing deployments
+
 ## [5.4.0] - 2026-01-29
 
 ### Fixed
