@@ -49,7 +49,7 @@ const DocumentUploadPage = () => {
   const loadPatients = async () => {
     try {
       setLoadingResources(true);
-      const response = await api.get('/api/patients?limit=1000'); // Get all patients
+      const response = await api.get('/patients?limit=1000'); // Get all patients
       const data = response.data?.data || response.data;
       setPatients(Array.isArray(data) ? data : []);
       console.log('Loaded patients:', data);
@@ -64,7 +64,7 @@ const DocumentUploadPage = () => {
   const loadUsers = async () => {
     try {
       setLoadingResources(true);
-      const response = await api.get('/api/users?limit=1000'); // Get all users
+      const response = await api.get('/users?limit=1000'); // Get all users
       const data = response.data?.data || response.data;
       setUsers(Array.isArray(data) ? data : []);
       console.log('Loaded users:', data);
@@ -79,7 +79,7 @@ const DocumentUploadPage = () => {
   const loadVisits = async () => {
     try {
       setLoadingResources(true);
-      const response = await api.get('/api/visits?limit=1000'); // Get all visits
+      const response = await api.get('/visits?limit=1000'); // Get all visits
       const data = response.data?.data || response.data;
       setVisits(Array.isArray(data) ? data : []);
       console.log('Loaded visits:', data);
