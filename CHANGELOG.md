@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.4.0] - 2026-01-29
+
+### Fixed
+- **Patient Visits Display Bug**: Critical fix for patient visits not showing in detail page
+  - Resolved authentication issue preventing visits from displaying in patient detail tabs
+  - Fixed API response parsing in `PatientDetailPage.jsx` fetchPatientDetails function
+  - Added safety checks for visits array rendering to prevent undefined errors
+  - Improved data handling for nested API response structures
+  - Cleaned up temporary debug logging and test code
+
+### Technical Details
+- **Backend Changes**:
+  - No backend API changes required - API was working correctly
+  - Authentication middleware properly configured for patient details endpoint
+- **Frontend Changes**:
+  - Enhanced `PatientDetailPage.jsx` data fetching and error handling
+  - Improved visits array validation and rendering logic
+  - Updated API response parsing to handle nested data structures
+  - Added defensive programming for array operations
+
+### Files Modified
+- `frontend/src/pages/PatientDetailPage.jsx` - Fixed visits display and data handling
+- `backend/src/controllers/patientController.js` - Ensured proper user authentication
+- `backend/src/routes/patients.js` - Confirmed authentication middleware setup
+
 ## [5.3.0] - 2026-01-28
 
 ### Added
