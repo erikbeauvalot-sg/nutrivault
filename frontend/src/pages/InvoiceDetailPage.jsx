@@ -61,7 +61,7 @@ const InvoiceDetailPage = () => {
   const handleViewPDF = async () => {
     try {
       // Call backend API to generate customized PDF
-      const response = await billingService.downloadInvoicePDF(id);
+      const response = await billingService.downloadInvoicePDF(id, i18n.language);
 
       // Create blob from response
       const blob = new Blob([response.data], { type: 'application/pdf' });
@@ -81,7 +81,7 @@ const InvoiceDetailPage = () => {
   const handleDownloadPDF = async () => {
     try {
       // Call backend API to generate customized PDF
-      const response = await billingService.downloadInvoicePDF(id);
+      const response = await billingService.downloadInvoicePDF(id, i18n.language);
 
       // Create blob from response
       const blob = new Blob([response.data], { type: 'application/pdf' });
@@ -106,7 +106,7 @@ const InvoiceDetailPage = () => {
   const handlePrintPDF = async () => {
     try {
       // Call backend API to generate customized PDF
-      const response = await billingService.downloadInvoicePDF(id);
+      const response = await billingService.downloadInvoicePDF(id, i18n.language);
 
       // Create blob from response
       const blob = new Blob([response.data], { type: 'application/pdf' });

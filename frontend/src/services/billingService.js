@@ -174,10 +174,11 @@ export const changePaymentStatus = async (paymentId, status) => {
  * Download invoice as customized PDF
  * Generates PDF with user's branding customization (logo, colors, contact info)
  * @param {string} id - Invoice UUID
+ * @param {string} language - Language code ('fr' or 'en'), defaults to 'fr'
  * @returns {Promise<Blob>} PDF file as blob
  */
-export const downloadInvoicePDF = async (id) => {
-  const response = await api.get(`/billing/${id}/pdf`, {
+export const downloadInvoicePDF = async (id, language = 'fr') => {
+  const response = await api.get(`/billing/${id}/pdf?lang=${language}`, {
     responseType: 'blob'
   });
   return response;

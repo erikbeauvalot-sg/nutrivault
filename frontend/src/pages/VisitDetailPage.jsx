@@ -179,7 +179,7 @@ const VisitDetailPage = () => {
   const handleDownloadPdf = async (invoiceId) => {
     try {
       setDownloadingPdf(invoiceId);
-      const response = await downloadInvoicePDF(invoiceId);
+      const response = await downloadInvoicePDF(invoiceId, i18n.language);
 
       // Create blob URL and trigger download
       const blob = new Blob([response.data], { type: 'application/pdf' });
