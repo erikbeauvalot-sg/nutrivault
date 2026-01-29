@@ -37,7 +37,9 @@ module.exports = {
     username: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD,
     logging: false,
-    timezone: process.env.DB_TIMEZONE || '+01:00', // Only for PostgreSQL
+    ...(process.env.DB_DIALECT === 'postgres' && {
+      timezone: process.env.DB_TIMEZONE || '+01:00'
+    }),
     dialectOptions: process.env.DB_DIALECT === 'postgres' ? {
       ssl: process.env.DB_SSL === 'true' ? {
         require: true,
