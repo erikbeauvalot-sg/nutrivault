@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.4.2] - 2026-01-29
+
+### Fixed
+- **Production API Routing**: Fixed frontend API calls not reaching backend in Docker
+  - Corrected `baseURL` in `api.js` to use `/api` prefix in production
+  - Nginx properly proxies `/api/*` requests to backend
+- **Deployment Script**: Prevent data loss on redeployment
+  - `db:seed` now only runs on first deployment (when no admin exists)
+  - Removed interactive flag from docker exec commands
+
+### Added
+- **Test Coverage**: Comprehensive test suite improvements
+  - Added `authService` unit tests (login, logout, refresh, authentication)
+  - Added `VisitsPage` integration tests
+  - Fixed MSW handlers to match production API routing
+  - Updated tests for ConfirmModal (replaces window.confirm)
+  - **Total: 624 tests** (470 backend + 154 frontend)
+
+### Technical Details
+- `frontend/src/services/api.js` - Fixed baseURL configuration
+- `scripts/deploy.sh` - Added admin user check before seeding
+- `frontend/tests/` - Multiple test files updated and added
+
+---
+
 ## [5.4.1] - 2026-01-29
 
 ### Fixed
