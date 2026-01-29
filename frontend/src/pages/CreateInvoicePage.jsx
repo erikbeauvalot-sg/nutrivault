@@ -241,7 +241,7 @@ const CreateInvoicePage = () => {
                       <Form.Group className="mb-3">
                         <Form.Label>{t('billing.amount', 'Amount')} *</Form.Label>
                         <InputGroup>
-                          <InputGroup.Text>$</InputGroup.Text>
+                          <InputGroup.Text>€</InputGroup.Text>
                           <Form.Control
                             type="number"
                             step="0.01"
