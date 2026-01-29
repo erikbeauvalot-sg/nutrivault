@@ -58,7 +58,8 @@
     "noFieldsMatch": "Aucun champ ne correspond à votre recherche",
     "add": "Ajouter",
     "confirm": "Confirmer",
-    "confirmation": "Confirmation"
+    "confirmation": "Confirmation",
+    "help": "Aide"
   },
   "navigation": {
     "dashboard": "Tableau de bord",
@@ -699,7 +700,12 @@
     "failedToChangePaymentStatus": "Échec de la modification du statut du paiement",
     "invalidPaymentStatus": "Statut de paiement invalide",
     "selectNewPaymentStatus": "Sélectionnez le nouveau statut pour ce paiement",
-    "notCounted": "non comptabilisé"
+    "notCounted": "non comptabilisé",
+    "editInvoiceDescription": "Mettre à jour les détails de la facture",
+    "editInvoiceHelp": "Mettre à jour les informations de la facture. Vous pouvez modifier le patient, l'association de visite, la description, le montant et la date d'échéance.",
+    "patientRequired": "La sélection du patient est obligatoire",
+    "descriptionRequired": "La description et le montant sont obligatoires",
+    "visitOptional": "L'association de visite est optionnelle"
   },
   "users": {
     "title": "Gestion des utilisateurs",
