@@ -58,6 +58,11 @@ const InvoiceDetailPage = () => {
     }
   };
 
+  const getInvoiceStatusText = (status) => {
+    const statusKey = status?.toLowerCase();
+    return t(`billing.status.${statusKey}`, status);
+  };
+
   const handleViewPDF = async () => {
     try {
       // Call backend API to generate customized PDF
@@ -353,7 +358,7 @@ const InvoiceDetailPage = () => {
             </Button>
             <h1 className="mb-2">{t('billing.invoiceDetails')}</h1>
             <div className="d-flex align-items-center gap-2">
-              <Badge bg={getStatusBadgeVariant(invoice.status)}>{invoice.status}</Badge>
+              <Badge bg={getStatusBadgeVariant(invoice.status)}>{getInvoiceStatusText(invoice.status)}</Badge>
               <span className="text-muted">#{invoice.id}</span>
             </div>
           </Col>
@@ -703,7 +708,7 @@ const InvoiceDetailPage = () => {
 
             <Form.Group>
               <Form.Label>
-                {t('billing.currentStatus', 'Current Status')}: <Badge bg={getStatusBadgeVariant(invoice.status)}>{invoice.status}</Badge>
+                {t('billing.currentStatus', 'Current Status')}: <Badge bg={getStatusBadgeVariant(invoice.status)}>{getInvoiceStatusText(invoice.status)}</Badge>
               </Form.Label>
             </Form.Group>
 
