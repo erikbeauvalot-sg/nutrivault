@@ -705,7 +705,8 @@
     "editInvoiceHelp": "Mettre à jour les informations de la facture. Vous pouvez modifier le patient, l'association de visite, la description, le montant et la date d'échéance.",
     "patientRequired": "La sélection du patient est obligatoire",
     "descriptionRequired": "La description et le montant sont obligatoires",
-    "visitOptional": "L'association de visite est optionnelle"
+    "visitOptional": "L'association de visite est optionnelle",
+    "updateInvoice": "Mettre à jour la facture"
   },
   "users": {
     "title": "Gestion des utilisateurs",
