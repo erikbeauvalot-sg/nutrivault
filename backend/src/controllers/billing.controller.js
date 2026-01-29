@@ -355,8 +355,12 @@ exports.downloadInvoicePDF = async (req, res, next) => {
     const user = req.user;
     const { id } = req.params;
 
+    // Get language from query param or Accept-Language header, default to 'fr'
+    const language = req.query.lang ||
+                     (req.headers['accept-language']?.startsWith('en') ? 'en' : 'fr');
+
     // Generate PDF with user's customization
-    const pdfDoc = await invoicePDFService.generateInvoicePDF(id, user.id);
+    const pdfDoc = await invoicePDFService.generateInvoicePDF(id, user.id, language);
 
     // Set headers for PDF download
     res.setHeader('Content-Type', 'application/pdf');

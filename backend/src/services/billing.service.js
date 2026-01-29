@@ -625,9 +625,9 @@ async function sendInvoiceEmail(invoiceId, user, requestMetadata = {}) {
     let errorMessage = null;
 
     try {
-      // Generate PDF as attachment
+      // Generate PDF as attachment (default to French)
       console.log('📄 Generating invoice PDF attachment...');
-      const pdfDoc = await generateInvoicePDF(invoiceId, user.id);
+      const pdfDoc = await generateInvoicePDF(invoiceId, user.id, 'fr');
 
       // Collect PDF stream into buffer
       const pdfBuffer = await new Promise((resolve, reject) => {

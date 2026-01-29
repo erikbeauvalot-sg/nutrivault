@@ -17,10 +17,64 @@ const MARGIN = 50;
 const FOOTER_HEIGHT = 70; // Reserved space for footer at bottom
 const CONTENT_HEIGHT = PAGE_HEIGHT - (MARGIN * 2) - FOOTER_HEIGHT;
 
+// Translations for invoice PDF
+const translations = {
+  fr: {
+    invoice: 'FACTURE',
+    billTo: 'FACTURER À :',
+    invoiceNumber: 'Facture N° :',
+    date: 'Date :',
+    dueDate: 'Échéance :',
+    status: 'Statut :',
+    description: 'Description',
+    quantity: 'Qté',
+    unitPrice: 'Prix unit.',
+    total: 'Total',
+    subtotal: 'Sous-total :',
+    paid: 'Payé :',
+    totalDue: 'Total dû :',
+    // Status translations
+    DRAFT: 'Brouillon',
+    SENT: 'Envoyée',
+    PAID: 'Payée',
+    CANCELLED: 'Annulée',
+    OVERDUE: 'En retard',
+    PARTIAL: 'Partielle'
+  },
+  en: {
+    invoice: 'INVOICE',
+    billTo: 'BILL TO:',
+    invoiceNumber: 'Invoice #:',
+    date: 'Date:',
+    dueDate: 'Due Date:',
+    status: 'Status:',
+    description: 'Description',
+    quantity: 'Qty',
+    unitPrice: 'Unit Price',
+    total: 'Total',
+    subtotal: 'Subtotal:',
+    paid: 'Paid:',
+    totalDue: 'Total Due:',
+    // Status translations
+    DRAFT: 'Draft',
+    SENT: 'Sent',
+    PAID: 'Paid',
+    CANCELLED: 'Cancelled',
+    OVERDUE: 'Overdue',
+    PARTIAL: 'Partial'
+  }
+};
+
+// Get translation helper
+const getTranslations = (lang = 'fr') => translations[lang] || translations.fr;
+
 /**
  * Generate invoice PDF with user customization
+ * @param {string} invoiceId - Invoice ID
+ * @param {string} userId - User ID for customization
+ * @param {string} language - Language code ('fr' or 'en'), defaults to 'fr'
  */
-const generateInvoicePDF = async (invoiceId, userId) => {
+const generateInvoicePDF = async (invoiceId, userId, language = 'fr') => {
   try {
     // Fetch invoice with all related data
     const invoice = await db.Billing.findByPk(invoiceId, {
@@ -44,6 +98,9 @@ const generateInvoicePDF = async (invoiceId, userId) => {
 
     // Get user customization
     const customization = await invoiceCustomizationService.getCustomizationForInvoice(userId);
+
+    // Get translations
+    const t = getTranslations(language);
 
     // Create PDF document with fixed margins
     const doc = new PDFDocument({
@@ -82,16 +139,16 @@ const generateInvoicePDF = async (invoiceId, userId) => {
     }
 
     // Draw header
-    drawHeader(doc, customization, invoice);
+    drawHeader(doc, customization, invoice, t);
 
     // Draw invoice + patient info (side by side)
-    drawInvoiceAndPatientInfo(doc, invoice, invoice.patient, customization);
+    drawInvoiceAndPatientInfo(doc, invoice, invoice.patient, customization, t, language);
 
     // Draw line items table
-    drawLineItems(doc, items, customization);
+    drawLineItems(doc, items, customization, t);
 
     // Draw totals
-    drawTotals(doc, invoice, customization);
+    drawTotals(doc, invoice, customization, t);
 
     // Draw signature (after totals)
     drawSignature(doc, customization);
@@ -112,7 +169,7 @@ const generateInvoicePDF = async (invoiceId, userId) => {
 /**
  * Draw header - logo left, contact right
  */
-function drawHeader(doc, customization, invoice) {
+function drawHeader(doc, customization, invoice, t) {
   const primaryColor = customization.primary_color || '#3498db';
   let y = MARGIN;
 
@@ -132,7 +189,7 @@ function drawHeader(doc, customization, invoice) {
   doc.fontSize(22)
      .fillColor(primaryColor)
      .font('Helvetica-Bold')
-     .text('INVOICE', MARGIN, y + 45);
+     .text(t.invoice, MARGIN, y + 45);
 
   // RIGHT: Contact info
   if (customization.show_contact_info) {
@@ -172,14 +229,15 @@ function drawHeader(doc, customization, invoice) {
 /**
  * Draw invoice details + patient info in TWO COLUMNS side by side
  */
-function drawInvoiceAndPatientInfo(doc, invoice, patient, customization) {
+function drawInvoiceAndPatientInfo(doc, invoice, patient, customization, t, language) {
   const y = doc.y + 20; // Add spacing
   const leftCol = MARGIN;
   const rightCol = 370; // Pushed further right, almost to the edge
+  const dateLocale = language === 'fr' ? 'fr-FR' : 'en-US';
 
   // LEFT COLUMN: Patient info
   doc.fontSize(11).fillColor('#3498db').font('Helvetica-Bold');
-  doc.text('BILL TO:', leftCol, y);
+  doc.text(t.billTo, leftCol, y);
 
   doc.fontSize(10).fillColor('#000').font('Helvetica');
   doc.text(`${patient.first_name} ${patient.last_name}`, leftCol, y + 18);
@@ -188,12 +246,14 @@ function drawInvoiceAndPatientInfo(doc, invoice, patient, customization) {
 
   // RIGHT COLUMN: Invoice details
   doc.fontSize(10).fillColor('#333').font('Helvetica');
-  doc.text(`Invoice #: ${invoice.invoice_number}`, rightCol, y);
-  doc.text(`Date: ${new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}`, rightCol, y + 14);
-  doc.text(`Due Date: ${new Date(invoice.due_date).toLocaleDateString('fr-FR')}`, rightCol, y + 28);
+  doc.text(`${t.invoiceNumber} ${invoice.invoice_number}`, rightCol, y);
+  doc.text(`${t.date} ${new Date(invoice.invoice_date).toLocaleDateString(dateLocale)}`, rightCol, y + 14);
+  doc.text(`${t.dueDate} ${new Date(invoice.due_date).toLocaleDateString(dateLocale)}`, rightCol, y + 28);
 
+  // Translate status
+  const translatedStatus = t[invoice.status] || invoice.status;
   doc.fontSize(11).fillColor('#e74c3c').font('Helvetica-Bold');
-  doc.text(`Status: ${invoice.status}`, rightCol, y + 46);
+  doc.text(`${t.status} ${translatedStatus}`, rightCol, y + 46);
 
   doc.y = y + 80; // Increased spacing
 }
@@ -201,7 +261,7 @@ function drawInvoiceAndPatientInfo(doc, invoice, patient, customization) {
 /**
  * Draw line items table
  */
-function drawLineItems(doc, items, customization) {
+function drawLineItems(doc, items, customization, t) {
   const primaryColor = customization.primary_color || '#3498db';
   const y = doc.y + 15; // Add spacing
   const width = PAGE_WIDTH - (MARGIN * 2);
@@ -214,10 +274,10 @@ function drawLineItems(doc, items, customization) {
      .fill(primaryColor);
 
   doc.fillColor('#ffffff')
-     .text('Description', MARGIN + 5, y + 7)
-     .text('Qty', MARGIN + width - 170, y + 7, { width: 40, align: 'right' })
-     .text('Unit Price', MARGIN + width - 120, y + 7, { width: 60, align: 'right' })
-     .text('Total', MARGIN + width - 50, y + 7, { width: 45, align: 'right' });
+     .text(t.description, MARGIN + 5, y + 7)
+     .text(t.quantity, MARGIN + width - 170, y + 7, { width: 40, align: 'right' })
+     .text(t.unitPrice, MARGIN + width - 120, y + 7, { width: 60, align: 'right' })
+     .text(t.total, MARGIN + width - 50, y + 7, { width: 45, align: 'right' });
 
   // Table rows
   let rowY = y + 25;
@@ -247,22 +307,22 @@ function drawLineItems(doc, items, customization) {
 /**
  * Draw totals
  */
-function drawTotals(doc, invoice, customization) {
+function drawTotals(doc, invoice, customization, t) {
   const y = doc.y + 10;
   const width = PAGE_WIDTH - (MARGIN * 2);
 
   doc.fontSize(10).font('Helvetica').fillColor('#000');
-  doc.text('Subtotal:', MARGIN + width - 160, y, { width: 100, align: 'right' });
+  doc.text(t.subtotal, MARGIN + width - 160, y, { width: 100, align: 'right' });
   doc.text(`€${parseFloat(invoice.amount_total).toFixed(2)}`, MARGIN + width - 50, y, { width: 45, align: 'right' });
 
   if (invoice.amount_paid > 0) {
-    doc.text('Paid:', MARGIN + width - 160, y + 16, { width: 100, align: 'right' });
+    doc.text(t.paid, MARGIN + width - 160, y + 16, { width: 100, align: 'right' });
     doc.text(`-€${parseFloat(invoice.amount_paid).toFixed(2)}`, MARGIN + width - 50, y + 16, { width: 45, align: 'right' });
   }
 
   const totalDue = parseFloat(invoice.amount_total) - parseFloat(invoice.amount_paid || 0);
   doc.fontSize(12).font('Helvetica-Bold').fillColor('#3498db');
-  doc.text('Total Due:', MARGIN + width - 160, y + 36, { width: 100, align: 'right' });
+  doc.text(t.totalDue, MARGIN + width - 160, y + 36, { width: 100, align: 'right' });
   doc.text(`€${totalDue.toFixed(2)}`, MARGIN + width - 50, y + 36, { width: 45, align: 'right' });
 
   doc.y = y + 60;
