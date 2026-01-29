@@ -5,7 +5,8 @@
 
 import { http, HttpResponse } from 'msw';
 
-const API_URL = 'http://localhost:3001/api';
+// Use relative URL to match requests from api.js (baseURL: '/api')
+const API_URL = '/api';
 
 // Mock data
 export const mockPatients = [

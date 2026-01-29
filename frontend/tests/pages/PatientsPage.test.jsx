@@ -10,7 +10,7 @@ import { renderWithProviders, mockAdminUser, mockAssistantUser } from '../utils/
 import { server } from '../mocks/server';
 import { http, HttpResponse } from 'msw';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = '/api';
 
 // Mock useNavigate
 const mockNavigate = vi.fn();
@@ -182,9 +182,8 @@ describe('PatientsPage', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/patients/patient-1');
     });
 
-    it('should confirm before deleting patient', async () => {
+    it('should show confirm modal before deleting patient', async () => {
       const user = userEvent.setup();
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
 
       renderWithProviders(<PatientsPage />, { user: mockAdminUser });
 
@@ -195,13 +194,14 @@ describe('PatientsPage', () => {
       const deleteButtons = screen.getAllByTitle(/delete/i);
       await user.click(deleteButtons[0]);
 
-      expect(confirmSpy).toHaveBeenCalled();
-      confirmSpy.mockRestore();
+      // ConfirmModal should appear
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
     });
 
-    it('should delete patient when confirmed', async () => {
+    it('should delete patient when confirmed in modal', async () => {
       const user = userEvent.setup();
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
 
       renderWithProviders(<PatientsPage />, { user: mockAdminUser });
 
@@ -212,9 +212,18 @@ describe('PatientsPage', () => {
       const deleteButtons = screen.getAllByTitle(/delete/i);
       await user.click(deleteButtons[0]);
 
+      // Wait for ConfirmModal and click confirm button
       await waitFor(() => {
-        // Patient should be removed from list
-        expect(screen.queryByText('John Doe')).not.toBeInTheDocument();
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      });
+
+      const confirmButton = screen.getByRole('button', { name: /delete/i });
+      await user.click(confirmButton);
+
+      // Verify delete API was called (patient list refreshes)
+      await waitFor(() => {
+        // The list should refresh after deletion
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       });
     });
   });

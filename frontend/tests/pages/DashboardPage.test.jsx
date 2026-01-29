@@ -10,7 +10,7 @@ import { renderWithProviders, mockAdminUser, mockDietitianUser } from '../utils/
 import { server } from '../mocks/server';
 import { http, HttpResponse } from 'msw';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = '/api';
 
 // Mock useNavigate
 const mockNavigate = vi.fn();
