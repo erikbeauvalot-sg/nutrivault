@@ -7,11 +7,9 @@ import axios from 'axios';
 import * as tokenStorage from '../utils/tokenStorage';
 
 // Create axios instance with base configuration
-// In production (Docker), use empty baseURL since services already include '/api' prefix
-// Nginx will proxy all '/*' requests to backend:3001
-// In development, use VITE_API_URL or fallback to '/api' to use Vite proxy
+// Nginx proxies /api/* requests to backend:3001
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? '' : '/api'),
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -105,7 +103,7 @@ api.interceptors.response.use(
 
     try {
       // Attempt to refresh token
-      const baseURL = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? '' : '/api');
+      const baseURL = import.meta.env.VITE_API_URL || '/api';
       const { data } = await axios.post(
         `${baseURL}/auth/refresh`,
         { refreshToken }
