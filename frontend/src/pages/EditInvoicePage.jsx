@@ -25,7 +25,7 @@ const EditInvoicePage = () => {
     return new Date(dateString).toLocaleDateString(locale);
   };
 
-  const getStatusText = (status) => {
+  const getVisitStatusText = (status) => {
     const statusMap = {
       SCHEDULED: t('visits.scheduled'),
       COMPLETED: t('visits.completed'),
@@ -33,6 +33,11 @@ const EditInvoicePage = () => {
       NO_SHOW: t('visits.noShow')
     };
     return statusMap[status] || status;
+  };
+
+  const getInvoiceStatusText = (status) => {
+    const statusKey = status?.toLowerCase();
+    return t(`billing.status.${statusKey}`, status);
   };
 
   const [loading, setLoading] = useState(true);
@@ -274,7 +279,7 @@ const EditInvoicePage = () => {
                           {visits.map(visit => (
                             <option key={visit.id} value={visit.id}>
                               {formatDate(visit.visit_date)} - {visit.visit_type}
-                              {visit.status && ` (${getStatusText(visit.status)})`}
+                              {visit.status && ` (${getVisitStatusText(visit.status)})`}
                             </option>
                           ))}
                         </Form.Select>
@@ -374,7 +379,7 @@ const EditInvoicePage = () => {
                   <div><strong>{t('billing.invoiceNumber', 'Invoice #')}:</strong> {invoice.invoice_number}</div>
                   <div><strong>{t('billing.statusLabel', 'Status')}:</strong>
                     <Badge bg={invoice.status === 'PAID' ? 'success' : invoice.status === 'OVERDUE' ? 'danger' : 'warning'} className="ms-2">
-                      {invoice.status}
+                      {getInvoiceStatusText(invoice.status)}
                     </Badge>
                   </div>
                   <div><strong>{t('billing.created', 'Created')}:</strong> {formatDate(invoice.created_at)}</div>
