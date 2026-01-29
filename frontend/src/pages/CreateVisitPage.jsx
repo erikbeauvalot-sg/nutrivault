@@ -359,9 +359,9 @@ const CreateVisitPage = () => {
     try {
       const submitData = {
         ...formData,
-        visit_date: new Date(formData.visit_date).toISOString(),
+        visit_date: formData.visit_date + ':00.000Z', // Preserve local time as UTC
         next_visit_date: formData.next_visit_date && formData.next_visit_date.trim()
-          ? new Date(formData.next_visit_date).toISOString()
+          ? formData.next_visit_date + ':00.000Z' // Preserve local time as UTC
           : null,
         duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null,
         status: completeImmediately ? 'COMPLETED' : formData.status

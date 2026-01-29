@@ -42,6 +42,11 @@ exports.getAllVisits = async (req, res, next) => {
 
     const result = await visitService.getVisits(user, filters, requestMetadata);
 
+    // Auto-sync to Google Calendar when accessing visits/agenda
+    setImmediate(() => {
+      autoSyncService.autoSyncOnAgendaAccess(user);
+    });
+
     res.json({
       success: true,
       data: result.visits,
@@ -72,6 +77,11 @@ exports.getVisitById = async (req, res, next) => {
 
     console.log('📅 VISIT FOUND:', { visitId, patientId: visit.patient_id });
 
+    // Auto-sync to Google Calendar when viewing visit details
+    setImmediate(() => {
+      autoSyncService.autoSyncOnAgendaAccess(user);
+    });
+
     res.json({
       success: true,
       data: visit
@@ -92,6 +102,11 @@ exports.createVisit = async (req, res, next) => {
     const requestMetadata = getRequestMetadata(req);
 
     const visit = await visitService.createVisit(user, visitData, requestMetadata);
+
+    // Auto-sync to Google Calendar after visit creation
+    setImmediate(() => {
+      autoSyncService.autoSyncAfterVisitChange(user, visit, 'create');
+    });
 
     res.status(201).json({
       success: true,
@@ -114,6 +129,11 @@ exports.updateVisit = async (req, res, next) => {
     const requestMetadata = getRequestMetadata(req);
 
     const visit = await visitService.updateVisit(user, visitId, updateData, requestMetadata);
+
+    // Auto-sync to Google Calendar after visit update
+    setImmediate(() => {
+      autoSyncService.autoSyncAfterVisitChange(user, visit, 'update');
+    });
 
     res.json({
       success: true,

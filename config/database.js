@@ -6,6 +6,7 @@ module.exports = {
     dialect: 'sqlite',
     storage: path.join(__dirname, '..', 'backend', 'data', 'nutrivault.db'),
     logging: console.log,
+    // timezone: '+01:00', // SQLite doesn't support custom timezones
     define: {
       timestamps: true,
       underscored: true,
@@ -17,6 +18,7 @@ module.exports = {
     dialect: 'sqlite',
     storage: ':memory:',
     logging: false,
+    // timezone: '+01:00', // SQLite doesn't support custom timezones
     define: {
       timestamps: true,
       underscored: true,
@@ -35,6 +37,7 @@ module.exports = {
     username: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD,
     logging: false,
+    timezone: process.env.DB_TIMEZONE || '+01:00', // Only for PostgreSQL
     dialectOptions: process.env.DB_DIALECT === 'postgres' ? {
       ssl: process.env.DB_SSL === 'true' ? {
         require: true,

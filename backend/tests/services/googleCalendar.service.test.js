@@ -6,6 +6,7 @@
 
 const googleCalendarService = require('../../src/services/googleCalendar.service');
 const { User, Visit, Patient } = require('../../../models');
+const { google } = require('googleapis');
 
 // Mock Google APIs
 jest.mock('googleapis', () => ({
@@ -38,6 +39,14 @@ jest.mock('googleapis', () => ({
                 end: { dateTime: '2024-01-01T11:00:00Z' }
               }
             ]
+          }
+        })
+      },
+      calendars: {
+        get: jest.fn().mockResolvedValue({
+          data: {
+            id: 'primary',
+            summary: 'Primary Calendar'
           }
         })
       },
@@ -193,6 +202,7 @@ describe('Google Calendar Service', () => {
 
       expect(result).toEqual({
         synced: 1,
+        skipped: 0,
         errors: 0,
         events: expect.any(Array)
       });
@@ -207,6 +217,7 @@ describe('Google Calendar Service', () => {
 
       expect(result).toEqual({
         synced: 0,
+        skipped: 0,
         errors: 1,
         events: expect.any(Array)
       });
@@ -221,6 +232,7 @@ describe('Google Calendar Service', () => {
         synced: 0,
         created: 0,
         updated: 0,
+        skipped: 0,
         errors: 0,
         events: []
       });
@@ -247,6 +259,39 @@ describe('Google Calendar Service', () => {
         google_calendar_sync_enabled: false,
         google_calendar_id: 'primary'
       });
+    });
+  });
+
+  describe('validateCalendarAccess', () => {
+    it('should validate calendar access successfully', async () => {
+      const result = await googleCalendarService.validateCalendarAccess('user-123', 'primary');
+
+      expect(result).toBe(true);
+      expect(jest.mocked(google).calendar().calendars.get).toHaveBeenCalledWith({
+        calendarId: 'primary'
+      });
+    });
+
+    it('should return false when calendar access fails', async () => {
+      jest.mocked(google).calendar().calendars.get.mockRejectedValueOnce(new Error('Access denied'));
+
+      const result = await googleCalendarService.validateCalendarAccess('user-123', 'primary');
+
+      expect(result).toBe(false);
+      expect(jest.mocked(google).calendar().calendars.get).toHaveBeenCalledWith({
+        calendarId: 'primary'
+      });
+    });
+
+    it('should handle missing calendar gracefully', async () => {
+      jest.mocked(google).calendar().calendars.get.mockRejectedValueOnce({
+        code: 404,
+        message: 'Calendar not found'
+      });
+
+      const result = await googleCalendarService.validateCalendarAccess('user-123', 'invalid-calendar');
+
+      expect(result).toBe(false);
     });
   });
 });

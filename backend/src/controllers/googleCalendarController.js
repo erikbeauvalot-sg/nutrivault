@@ -6,6 +6,7 @@
  */
 
 const googleCalendarService = require('../services/googleCalendar.service');
+const autoSyncService = require('../services/autoSync.service');
 const auditService = require('../services/audit.service');
 
 /**
@@ -127,7 +128,7 @@ exports.syncToCalendar = async (req, res) => {
       });
     }
 
-    const results = await googleCalendarService.syncVisitsToCalendar(user.id, {
+    const results = await autoSyncService.forceSyncVisitsToCalendar(user, {
       since: since ? new Date(since) : undefined,
       calendarId,
       syncAllDietitians: syncAllDietitians && user.role.name === 'ADMIN'

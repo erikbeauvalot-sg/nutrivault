@@ -1717,6 +1717,8 @@
     "autoSyncDescription": "Automatically sync visits to Google Calendar when created, updated, or cancelled",
     "syncAllDietitians": "Sync all dietitians' visits (Admin only)",
     "syncAllDietitiansDescription": "Sync visits from all dietitians in the system, not just your own",
+    "autoSyncEnabled": "Automatic synchronization is enabled",
+    "autoSyncDisabled": "Automatic synchronization is disabled",
     "updateSettings": "Update Settings",
     "syncToCalendar": "Sync to Calendar",
     "syncFromCalendar": "Sync from Calendar",

@@ -27,6 +27,13 @@ const GoogleCalendarSettings = () => {
     loadSyncStatus();
   }, []);
 
+  // Load calendars when user becomes connected
+  useEffect(() => {
+    if (isConnected) {
+      loadCalendars();
+    }
+  }, [isConnected]);
+
   const loadSyncStatus = async () => {
     try {
       const response = await api.get('/calendar/sync-status');
@@ -259,6 +266,18 @@ const GoogleCalendarSettings = () => {
               </div>
               <small className="form-text text-muted">
                 {t('googleCalendar.syncAllDietitiansDescription')}
+              </small>
+            </div>
+          )}
+
+          {isConnected && (
+            <div className="alert alert-info">
+              <small>
+                <i className="bi bi-info-circle me-2"></i>
+                {syncEnabled
+                  ? t('googleCalendar.autoSyncEnabled')
+                  : t('googleCalendar.autoSyncDisabled')
+                }
               </small>
             </div>
           )}

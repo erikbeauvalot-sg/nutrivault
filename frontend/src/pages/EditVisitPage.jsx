@@ -88,11 +88,24 @@ const EditVisitPage = () => {
       setVisit(visitData);
 
       // Pre-populate form with visit data
+      // Convert UTC dates to local time for display
+      const formatDateForLocalDisplay = (dateStr) => {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        // Convert to local time and format as YYYY-MM-DDTHH:mm
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      };
+
       const formattedVisitDate = visitData.visit_date
-        ? new Date(visitData.visit_date).toISOString().slice(0, 16)
+        ? formatDateForLocalDisplay(visitData.visit_date)
         : '';
       const formattedNextVisitDate = visitData.next_visit_date
-        ? new Date(visitData.next_visit_date).toISOString().slice(0, 16)
+        ? formatDateForLocalDisplay(visitData.next_visit_date)
         : '';
 
       setFormData({
@@ -373,14 +386,21 @@ const EditVisitPage = () => {
       // Generate the change summary
       const visitSummary = generateChangeSummary();
 
+      // Create ISO string that preserves local time as intended
+      const createLocalISOString = (dateTimeStr) => {
+        if (!dateTimeStr) return null;
+        // Add seconds and milliseconds if not present, treat as local time
+        return dateTimeStr.length === 16 ? dateTimeStr + ':00.000Z' : dateTimeStr + '.000Z';
+      };
+
       // Step 1: Update visit data with COMPLETED status and summary
       const submitData = {
         ...formData,
         status: 'COMPLETED',
         visit_summary: visitSummary,
-        visit_date: new Date(formData.visit_date).toISOString(),
+        visit_date: createLocalISOString(formData.visit_date),
         next_visit_date: formData.next_visit_date && formData.next_visit_date.trim()
-          ? new Date(formData.next_visit_date).toISOString()
+          ? createLocalISOString(formData.next_visit_date)
           : null,
         duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null
       };
@@ -498,9 +518,9 @@ const EditVisitPage = () => {
       // Step 1: Update visit data
       const submitData = {
         ...formData,
-        visit_date: new Date(formData.visit_date).toISOString(),
+        visit_date: createLocalISOString(formData.visit_date),
         next_visit_date: formData.next_visit_date && formData.next_visit_date.trim()
-          ? new Date(formData.next_visit_date).toISOString()
+          ? createLocalISOString(formData.next_visit_date)
           : null,
         duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null
       };

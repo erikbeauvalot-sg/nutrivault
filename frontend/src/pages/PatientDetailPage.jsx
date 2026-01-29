@@ -91,24 +91,12 @@ const PatientDetailPage = () => {
     }
   }, [id, i18n.resolvedLanguage, i18n.language]);
 
-  // Re-apply measure translations when language changes
-  useEffect(() => {
-    if (patientMeasures.length > 0 && Object.keys(measureTranslations).length > 0) {
-      const currentLanguage = i18n.resolvedLanguage || i18n.language || 'en';
-      const translatedMeasures = applyTranslationsToMeasures(
-        patientMeasures,
-        measureTranslations,
-        currentLanguage
-      );
-      setPatientMeasures(translatedMeasures);
-    }
-  }, [i18n.resolvedLanguage, i18n.language]);
-
   const fetchPatientDetails = async () => {
     try {
       setLoading(true);
       const response = await patientService.getPatientDetails(id);
-      const patientData = response.data || response;
+      // Handle nested data structure from API
+      const patientData = response.data?.data || response.data || response;
       setPatient(patientData);
       setVisits(patientData.visits || []);
       setError(null);
@@ -815,13 +803,13 @@ const PatientDetailPage = () => {
               </Tab>
 
               {/* 5. Visits Tab */}
-              <Tab eventKey="visits" title={`${t('patients.visitsTab', 'Visits')} (${visits.length})`}>
+              <Tab eventKey="visits" title={`${t('patients.visitsTab', 'Visits')} (${visits?.length || 0})`}>
                 <Card>
                   <Card.Header>
                     <h5 className="mb-0">{t('visits.visitHistory', 'Visit History')}</h5>
                   </Card.Header>
                   <Card.Body>
-                    {visits.length === 0 ? (
+                    {(!visits || visits.length === 0) ? (
                       <p className="text-muted">{t('visits.noVisits', 'No visits recorded yet.')}</p>
                     ) : (
                       <>

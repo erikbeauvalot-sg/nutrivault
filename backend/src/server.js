@@ -6,7 +6,7 @@ const db = require('../../models');
 const schedulerService = require('./services/scheduler.service');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 // CORS Configuration
 const corsOptions = {
@@ -205,14 +205,18 @@ app.use((req, res) => {
 });
 
 // Sync database and start server
+console.log('Starting database sync...');
 db.sequelize.sync()
   .then(async () => {
-    console.log('Database synchronized');
+    console.log('Database synchronized successfully');
 
     // Initialize scheduled jobs
+    console.log('Initializing scheduled jobs...');
     await schedulerService.initializeScheduledJobs();
+    console.log('Scheduled jobs initialized');
 
     const appVersion = process.env.APP_VERSION || require('../../package.json').version || 'dev';
+    console.log(`Starting server on port ${PORT}...`);
     app.listen(PORT, '0.0.0.0', () => {
       console.log('');
       console.log('═══════════════════════════════════════════════════════');
@@ -231,6 +235,8 @@ db.sequelize.sync()
   })
   .catch(err => {
     console.error('Unable to sync database:', err);
+    console.error('Error details:', err.message);
+    console.error('Stack trace:', err.stack);
     process.exit(1);
   });
 

@@ -1824,6 +1824,8 @@
     "autoSyncDescription": "Synchroniser automatiquement les visites vers Google Calendar lors de la création, modification ou annulation",
     "syncAllDietitians": "Synchroniser les visites de tous les diététiciens (Admin uniquement)",
     "syncAllDietitiansDescription": "Synchroniser les visites de tous les diététiciens du système, pas seulement les vôtres",
+    "autoSyncEnabled": "La synchronisation automatique est activée",
+    "autoSyncDisabled": "La synchronisation automatique est désactivée",
     "updateSettings": "Mettre à jour les paramètres",
     "syncToCalendar": "Synchroniser vers le calendrier",
     "syncFromCalendar": "Synchroniser depuis le calendrier",

@@ -269,28 +269,7 @@ async function getPatientDetails(patientId, user, requestMetadata = {}) {
           model: User,
           as: 'assigned_dietitian',
           attributes: ['id', 'username', 'first_name', 'last_name']
-        },
-        {
-          model: db.Visit,
-          as: 'visits',
-          required: false,
-          include: [
-            {
-              model: db.PatientMeasure,
-              as: 'measures',
-              required: false
-            },
-            {
-              model: User,
-              as: 'dietitian',
-              attributes: ['id', 'username', 'first_name', 'last_name']
-            }
-          ]
         }
-      ],
-      order: [
-        [{ model: db.Visit, as: 'visits' }, 'visit_date', 'ASC'],
-        [{ model: db.Visit, as: 'visits' }, { model: db.PatientMeasure, as: 'measures' }, 'created_at', 'ASC']
       ]
     });
 
@@ -307,6 +286,30 @@ async function getPatientDetails(patientId, user, requestMetadata = {}) {
     //   error.statusCode = 403;
     //   throw error;
     // }
+
+    // Fetch visits separately to ensure all visits are included
+    const visits = await db.Visit.findAll({
+      where: {
+        patient_id: patientId
+      },
+      include: [
+        {
+          model: db.PatientMeasure,
+          as: 'measures',
+          required: false
+        },
+        {
+          model: User,
+          as: 'dietitian',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        }
+      ],
+      order: [['visit_date', 'ASC']]
+    });
+
+    // Add visits to patient object
+    patient.dataValues.visits = visits;
+    console.log(`Patient ${patientId} has ${visits.length} visits:`, visits.map(v => ({ id: v.id, date: v.visit_date, status: v.status })));
 
     // Audit log
     await auditService.log({

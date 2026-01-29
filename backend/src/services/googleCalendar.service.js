@@ -116,6 +116,8 @@ async function saveUserTokens(userId, tokens) {
  * @returns {Promise<Object>} Google Calendar event
  */
 async function createOrUpdateCalendarEvent(visit, user, calendarId = 'primary', includeDietitianName = false) {
+  console.log(`📤 [SOURCE: NutriVault] Syncing visit ${visit.id} to Google Calendar for user ${user.username} (calendar: ${calendarId})`);
+
   const oauth2Client = getOAuth2Client(user);
   const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
@@ -170,14 +172,33 @@ async function createOrUpdateCalendarEvent(visit, user, calendarId = 'primary', 
 
   let event;
   if (visit.google_event_id) {
-    // Update existing event
-    event = await calendar.events.update({
-      calendarId,
-      eventId: visit.google_event_id,
-      resource: eventData
-    });
+    try {
+      // Try to update existing event
+      console.log(`🔄 [SOURCE: NutriVault] Updating existing Google Calendar event ${visit.google_event_id} for visit ${visit.id}`);
+      event = await calendar.events.update({
+        calendarId,
+        eventId: visit.google_event_id,
+        resource: eventData
+      });
+    } catch (updateError) {
+      // If the event doesn't exist anymore (404 Not Found), create a new one
+      if (updateError.code === 404 || updateError.message.includes('Not Found')) {
+        console.log(`⚠️ [SOURCE: NutriVault] Event ${visit.google_event_id} not found, creating new event for visit ${visit.id}`);
+        event = await calendar.events.insert({
+          calendarId,
+          resource: eventData
+        });
+
+        // Update visit with new Google event ID
+        await visit.update({ google_event_id: event.data.id });
+      } else {
+        // Re-throw other errors (permissions, API errors, etc.)
+        throw updateError;
+      }
+    }
   } else {
     // Create new event
+    console.log(`➕ [SOURCE: NutriVault] Creating new Google Calendar event for visit ${visit.id} (${patient.first_name} ${patient.last_name})`);
     event = await calendar.events.insert({
       calendarId,
       resource: eventData
@@ -187,6 +208,7 @@ async function createOrUpdateCalendarEvent(visit, user, calendarId = 'primary', 
     await visit.update({ google_event_id: event.data.id });
   }
 
+  console.log(`✅ [SOURCE: NutriVault] Successfully synced visit ${visit.id} to Google Calendar event ${event.data.id}`);
   return event.data;
 }
 
@@ -206,6 +228,30 @@ async function deleteCalendarEvent(eventId, user, calendarId = 'primary') {
     calendarId,
     eventId
   });
+}
+
+/**
+ * Validate that user has access to the specified calendar
+ *
+ * @param {Object} user - User object
+ * @param {string} calendarId - Google Calendar ID to validate
+ * @returns {Promise<boolean>} True if calendar is accessible
+ */
+async function validateCalendarAccess(user, calendarId) {
+  try {
+    const oauth2Client = getOAuth2Client(user);
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    // Try to get calendar info - this will fail if calendar doesn't exist or user doesn't have access
+    await calendar.calendars.get({
+      calendarId
+    });
+
+    return true;
+  } catch (error) {
+    console.error(`❌ [VALIDATION] Calendar ${calendarId} not accessible for user ${user.username}:`, error.message);
+    return false;
+  }
 }
 
 /**
@@ -233,6 +279,12 @@ async function syncVisitsToCalendar(userId, options = {}) {
   const calendarId = options.calendarId || user.google_calendar_id || 'primary';
   const isAdmin = user.role && user.role.name === 'ADMIN';
   const syncAllDietitians = options.syncAllDietitians && isAdmin;
+
+  // Validate calendar access before proceeding
+  const calendarAccessible = await validateCalendarAccess(user, calendarId);
+  if (!calendarAccessible) {
+    throw new Error(`Calendar ${calendarId} is not accessible. Please check that the calendar exists and you have write access to it.`);
+  }
 
   // Build where clause for visits
   const whereClause = {
@@ -265,12 +317,15 @@ async function syncVisitsToCalendar(userId, options = {}) {
 
   const results = {
     synced: 0,
+    skipped: 0,
     errors: 0,
     events: []
   };
 
   for (const visit of visits) {
     try {
+      console.log(`🔄 [SOURCE: NutriVault] Processing visit ${visit.id} (${visit.patient?.first_name} ${visit.patient?.last_name}) for sync to Google Calendar`);
+
       // For admin syncing all dietitians, use the admin's Google Calendar
       // For regular sync, use the current user's calendar
       const calendarUser = syncAllDietitians ? user : user;
@@ -284,6 +339,39 @@ async function syncVisitsToCalendar(userId, options = {}) {
           status: 'skipped'
         });
         continue;
+      }
+
+      // Check for conflicts: if Google Calendar event exists and was modified more recently than the visit, skip sync
+      if (visit.google_event_id) {
+        try {
+          const oauth2Client = getOAuth2Client(calendarUser);
+          const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+          const existingEvent = await calendar.events.get({
+            calendarId: eventCalendarId,
+            eventId: visit.google_event_id
+          });
+
+          const eventLastModified = new Date(existingEvent.data.updated);
+          const visitLastModified = visit.updatedAt;
+
+          // If the calendar event was modified more recently than the visit, don't overwrite it
+          if (eventLastModified > visitLastModified) {
+            console.log(`⏭️ [CONFLICT DETECTED] Skipping sync of visit ${visit.id} to Google Calendar - calendar event "${existingEvent.data.summary}" was modified more recently (${eventLastModified.toISOString()} > ${visitLastModified.toISOString()})`);
+            results.events.push({
+              visitId: visit.id,
+              eventId: visit.google_event_id,
+              status: 'skipped_calendar_newer',
+              conflictResolved: true,
+              source: 'google_calendar'
+            });
+            results.skipped++;
+            continue; // Skip this visit
+          }
+        } catch (error) {
+          // If we can't fetch the event, it might have been deleted, so we'll recreate it
+          console.log(`⚠️ Could not fetch existing Google Calendar event ${visit.google_event_id} for visit ${visit.id}, will recreate: ${error.message}`);
+        }
       }
 
       const event = await createOrUpdateCalendarEvent(visit, calendarUser, eventCalendarId, syncAllDietitians);
@@ -310,12 +398,15 @@ async function syncVisitsToCalendar(userId, options = {}) {
         }
       });
     } catch (error) {
-      console.error(`Failed to sync visit ${visit.id}:`, error.message);
+      console.error(`❌ [ERROR] Failed to sync visit ${visit.id} (${visit.patient?.first_name} ${visit.patient?.last_name}) to Google Calendar for user ${user.username}:`, error.message);
+      console.error(`   Stack:`, error.stack);
       results.errors++;
       results.events.push({
         visitId: visit.id,
         error: error.message,
-        status: 'error'
+        status: 'error',
+        patientName: `${visit.patient?.first_name} ${visit.patient?.last_name}`,
+        userId: user.id
       });
     }
   }
@@ -356,32 +447,67 @@ async function syncCalendarToVisits(userId, options = {}) {
     synced: 0,
     created: 0,
     updated: 0,
+    skipped: 0,
     errors: 0,
     events: []
   };
 
   for (const event of response.data.items) {
     try {
+      console.log(`📥 [SOURCE: Google Calendar] Processing calendar event "${event.summary}" (${event.id}) for sync to NutriVault`);
+
       // Check if this is a NutriVault event
       const nutrivaultVisitId = event.extendedProperties?.private?.nutrivault_visit_id;
 
       if (nutrivaultVisitId) {
-        // Update existing visit
+        // Update existing visit with conflict resolution
         const visit = await Visit.findByPk(nutrivaultVisitId);
         if (visit) {
           const startDateTime = new Date(event.start.dateTime || event.start.date);
           const endDateTime = new Date(event.end.dateTime || event.end.date);
 
-          await visit.update({
-            visit_date: startDateTime,
-            duration_minutes: Math.round((endDateTime - startDateTime) / 60000)
-          });
+          // Check for conflicts using timestamps
+          const eventLastModified = new Date(event.updated);
+          const visitLastModified = visit.updatedAt;
 
-          results.updated++;
+          // If the calendar event was modified more recently than the visit, update the visit
+          if (eventLastModified > visitLastModified) {
+            console.log(`🔄 [SOURCE: Google Calendar] Updating visit ${visit.id} from Google Calendar event "${event.summary}" (calendar modified: ${eventLastModified.toISOString()}, visit modified: ${visitLastModified.toISOString()})`);
+
+            await visit.update({
+              visit_date: startDateTime,
+              duration_minutes: Math.round((endDateTime - startDateTime) / 60000)
+            });
+
+            results.updated++;
+            results.events.push({
+              eventId: event.id,
+              visitId: visit.id,
+              status: 'updated_from_calendar',
+              conflictResolved: true,
+              source: 'google_calendar'
+            });
+          } else {
+            // Visit is more recent, keep NutriVault data
+            console.log(`⏭️ [SOURCE: NutriVault] Skipping update of visit ${visit.id} from Google Calendar event "${event.summary}" (visit is more recent: ${visitLastModified.toISOString()} > ${eventLastModified.toISOString()})`);
+            results.events.push({
+              eventId: event.id,
+              visitId: visit.id,
+              status: 'skipped_visit_newer',
+              conflictResolved: true,
+              source: 'nutrivault'
+            });
+            results.skipped++;
+          }
+        } else {
+          console.warn(`⚠️ [WARNING] Visit ${nutrivaultVisitId} not found for calendar event ${event.id} (${event.summary || 'Unknown title'}) - event may have been deleted from NutriVault`);
           results.events.push({
             eventId: event.id,
-            visitId: visit.id,
-            status: 'updated'
+            visitId: nutrivaultVisitId,
+            status: 'visit_not_found',
+            error: 'Visit not found in database',
+            eventTitle: event.summary,
+            userId: user.id
           });
         }
       } else {
@@ -392,12 +518,15 @@ async function syncCalendarToVisits(userId, options = {}) {
 
       results.synced++;
     } catch (error) {
-      console.error(`Failed to sync calendar event ${event.id}:`, error.message);
+      console.error(`❌ [ERROR] Failed to sync calendar event ${event.id} (${event.summary || 'Unknown title'}) for user ${user.username}:`, error.message);
+      console.error(`   Stack:`, error.stack);
       results.errors++;
       results.events.push({
         eventId: event.id,
         error: error.message,
-        status: 'error'
+        status: 'error',
+        eventTitle: event.summary,
+        userId: user.id
       });
     }
   }
@@ -467,6 +596,7 @@ module.exports = {
   saveUserTokens,
   createOrUpdateCalendarEvent,
   deleteCalendarEvent,
+  validateCalendarAccess,
   syncVisitsToCalendar,
   syncCalendarToVisits,
   disconnectCalendar,
