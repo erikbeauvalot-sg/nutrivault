@@ -98,7 +98,7 @@ describe('billingService', () => {
 
       const result = await downloadInvoicePDF('inv-123');
 
-      expect(api.get).toHaveBeenCalledWith('/billing/inv-123/pdf', { responseType: 'blob' });
+      expect(api.get).toHaveBeenCalledWith('/billing/inv-123/pdf?lang=fr', { responseType: 'blob' });
       expect(result.data).toBe(mockBlob);
     });
   });
