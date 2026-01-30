@@ -165,6 +165,15 @@ async function getVisitCustomFields(user, visitId, language = 'fr', requestMetad
     const result = await Promise.all(visitCategories.map(async (category) => {
       // Apply translations to category if language is not French
       let translatedCategory = category.toJSON ? category.toJSON() : category;
+
+      // Debug logging
+      console.log(`[DEBUG] Category "${category.name}":`, {
+        visit_types: translatedCategory.visit_types,
+        display_layout: translatedCategory.display_layout,
+        raw_visit_types: category.getDataValue('visit_types'),
+        raw_display_layout: category.getDataValue('display_layout')
+      });
+
       if (language && language !== 'fr') {
         translatedCategory = await translationService.applyTranslations(
           category,
@@ -227,6 +236,8 @@ async function getVisitCustomFields(user, visitId, language = 'fr', requestMetad
         description: translatedCategory.description,
         display_order: translatedCategory.display_order,
         color: translatedCategory.color || '#3498db',
+        visit_types: translatedCategory.visit_types || null,
+        display_layout: translatedCategory.display_layout || { type: 'columns', columns: 1 },
         fields
       };
     }));

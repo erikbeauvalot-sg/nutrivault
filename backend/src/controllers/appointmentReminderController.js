@@ -11,7 +11,7 @@ const { Patient } = db;
 
 /**
  * POST /api/appointment-reminders/send/:visitId
- * Manual send reminder for specific visit
+ * Manual send reminder for specific visit (email without calendar invitation)
  */
 const sendReminderManually = async (req, res) => {
   try {
@@ -34,6 +34,34 @@ const sendReminderManually = async (req, res) => {
     res.status(400).json({
       success: false,
       error: error.message || 'Failed to send appointment reminder'
+    });
+  }
+};
+
+/**
+ * POST /api/appointment-reminders/invite/:visitId
+ * Send calendar invitation for specific visit (email with ICS as MIME - recognized by Gmail)
+ */
+const sendInvitationManually = async (req, res) => {
+  try {
+    const { visitId } = req.params;
+    const userId = req.user.id;
+
+    const result = await appointmentReminderService.sendVisitInvitation(
+      visitId,
+      userId
+    );
+
+    res.json({
+      success: true,
+      message: 'Calendar invitation sent successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('[AppointmentReminderController] Error sending calendar invitation:', error);
+    res.status(400).json({
+      success: false,
+      error: error.message || 'Failed to send calendar invitation'
     });
   }
 };
@@ -183,6 +211,7 @@ const resubscribeToReminders = async (req, res) => {
 
 module.exports = {
   sendReminderManually,
+  sendInvitationManually,
   sendBatchReminders,
   getReminderStats,
   unsubscribeFromReminders,

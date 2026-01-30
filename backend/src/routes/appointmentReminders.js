@@ -10,7 +10,7 @@ const { requirePermission } = require('../middleware/rbac');
 
 /**
  * POST /api/appointment-reminders/send/:visitId
- * Manual send reminder for specific visit
+ * Manual send reminder for specific visit (simple email)
  * Requires: authentication + visits.update permission
  */
 router.post(
@@ -18,6 +18,18 @@ router.post(
   authenticate,
   requirePermission('visits.update'),
   appointmentReminderController.sendReminderManually
+);
+
+/**
+ * POST /api/appointment-reminders/invite/:visitId
+ * Send calendar invitation for specific visit (email with ICS - recognized by Gmail)
+ * Requires: authentication + visits.update permission
+ */
+router.post(
+  '/invite/:visitId',
+  authenticate,
+  requirePermission('visits.update'),
+  appointmentReminderController.sendInvitationManually
 );
 
 /**

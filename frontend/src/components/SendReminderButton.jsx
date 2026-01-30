@@ -1,12 +1,12 @@
 /**
  * Send Reminder Button Component
- * Displays a button to manually send appointment reminders
+ * Displays buttons to manually send appointment reminders or calendar invitations
  * Shows on visit detail pages for scheduled appointments
  */
 
 import { useState } from 'react';
 import { Button, Spinner, OverlayTrigger, Tooltip, Alert } from 'react-bootstrap';
-import { FaEnvelope, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import { FaEnvelope, FaCheckCircle, FaTimesCircle, FaCalendarPlus } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
 import appointmentReminderService from '../services/appointmentReminderService';
 import ConfirmModal from './ConfirmModal';
@@ -14,8 +14,10 @@ import ConfirmModal from './ConfirmModal';
 const SendReminderButton = ({ visit, onReminderSent }) => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
+  const [loadingType, setLoadingType] = useState(null); // 'reminder' | 'invitation'
   const [message, setMessage] = useState(null); // { type: 'success' | 'danger', text: string }
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [actionType, setActionType] = useState(null); // 'reminder' | 'invitation'
 
   // Determine if reminder can be sent
   const canSendReminder =
@@ -40,23 +42,36 @@ const SendReminderButton = ({ visit, onReminderSent }) => {
   };
 
   /**
-   * Handle send reminder button click
+   * Handle button click - show confirmation modal
    */
-  const handleSendReminder = () => {
+  const handleAction = (type) => {
+    setActionType(type);
     setShowConfirmModal(true);
   };
 
-  const confirmSendReminder = async () => {
+  /**
+   * Confirm and execute the action
+   */
+  const confirmAction = async () => {
     setLoading(true);
+    setLoadingType(actionType);
     setMessage(null);
-    try {
-      const response = await appointmentReminderService.sendReminderManually(visit.id);
+    setShowConfirmModal(false);
 
-      // Show success message
-      setMessage({
-        type: 'success',
-        text: t('appointmentReminders.successMessage', { email: visit.patient.email })
-      });
+    try {
+      if (actionType === 'reminder') {
+        await appointmentReminderService.sendReminderManually(visit.id);
+        setMessage({
+          type: 'success',
+          text: t('appointmentReminders.successMessage', { email: visit.patient.email })
+        });
+      } else if (actionType === 'invitation') {
+        await appointmentReminderService.sendInvitationManually(visit.id);
+        setMessage({
+          type: 'success',
+          text: t('appointmentReminders.invitationSuccessMessage', { email: visit.patient.email })
+        });
+      }
 
       // Auto-hide after 5 seconds
       setTimeout(() => setMessage(null), 5000);
@@ -66,7 +81,7 @@ const SendReminderButton = ({ visit, onReminderSent }) => {
         onReminderSent();
       }
     } catch (error) {
-      console.error('Error sending reminder:', error);
+      console.error(`Error sending ${actionType}:`, error);
 
       // Show error message
       const errorMessage = error.response?.data?.error || t('appointmentReminders.errorMessage');
@@ -79,17 +94,37 @@ const SendReminderButton = ({ visit, onReminderSent }) => {
       setTimeout(() => setMessage(null), 8000);
     } finally {
       setLoading(false);
+      setLoadingType(null);
+      setActionType(null);
     }
   };
 
+  const getConfirmMessage = () => {
+    if (actionType === 'invitation') {
+      return t('appointmentReminders.confirmSendInvitation', {
+        patientName: `${visit?.patient?.first_name} ${visit?.patient?.last_name}`
+      });
+    }
+    return t('appointmentReminders.confirmSend', {
+      patientName: `${visit?.patient?.first_name} ${visit?.patient?.last_name}`
+    });
+  };
+
+  const getConfirmTitle = () => {
+    if (actionType === 'invitation') {
+      return t('appointmentReminders.sendInvitation', 'Send Invitation');
+    }
+    return t('appointmentReminders.sendReminder', 'Send Reminder');
+  };
+
   return (
-    <div className="d-inline-block">
+    <>
       {message && (
         <Alert
           variant={message.type}
           dismissible
           onClose={() => setMessage(null)}
-          className="mb-2 py-2 px-3"
+          className="mb-2 py-2 px-3 w-100"
           style={{ fontSize: '0.9rem' }}
         >
           {message.type === 'success' ? (
@@ -100,18 +135,54 @@ const SendReminderButton = ({ visit, onReminderSent }) => {
           {message.text}
         </Alert>
       )}
+
+      {/* Button 1: Send Invitation (calendar) */}
+      <OverlayTrigger
+        placement="top"
+        overlay={<Tooltip id={`invitation-tooltip-${visit?.id}`}>{getTooltipMessage()}</Tooltip>}
+      >
+        <span className="d-inline-block">
+          <Button
+            variant="info"
+            onClick={() => handleAction('invitation')}
+            disabled={!canSendReminder || loading}
+            style={{ pointerEvents: !canSendReminder || loading ? 'none' : 'auto' }}
+          >
+            {loadingType === 'invitation' ? (
+              <>
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  role="status"
+                  aria-hidden="true"
+                  className="me-1"
+                />
+                {t('appointmentReminders.sending')}
+              </>
+            ) : (
+              <>
+                <FaCalendarPlus className="me-1" />
+                {t('appointmentReminders.sendInvitation', 'Invitation')}
+              </>
+            )}
+          </Button>
+        </span>
+      </OverlayTrigger>
+
+      {/* Button 2: Send Reminder (simple email) */}
       <OverlayTrigger
         placement="top"
         overlay={<Tooltip id={`reminder-tooltip-${visit?.id}`}>{getTooltipMessage()}</Tooltip>}
       >
         <span className="d-inline-block">
           <Button
-            variant="warning"
-            onClick={handleSendReminder}
+            variant="light"
+            onClick={() => handleAction('reminder')}
             disabled={!canSendReminder || loading}
-            style={{ pointerEvents: canSendReminder && !loading ? 'auto' : 'none', whiteSpace: 'nowrap' }}
+            style={{ pointerEvents: !canSendReminder || loading ? 'none' : 'auto' }}
           >
-            {loading ? (
+            {loadingType === 'reminder' ? (
               <>
                 <Spinner
                   as="span"
@@ -126,7 +197,7 @@ const SendReminderButton = ({ visit, onReminderSent }) => {
             ) : (
               <>
                 <FaEnvelope className="me-1" />
-                {t('appointmentReminders.sendReminder')}
+                {t('appointmentReminders.sendReminder', 'Rappel')}
                 {visit?.reminders_sent > 0 && ` (${visit.reminders_sent})`}
               </>
             )}
@@ -136,14 +207,14 @@ const SendReminderButton = ({ visit, onReminderSent }) => {
 
       <ConfirmModal
         show={showConfirmModal}
-        onHide={() => setShowConfirmModal(false)}
-        onConfirm={confirmSendReminder}
+        onHide={() => { setShowConfirmModal(false); setActionType(null); }}
+        onConfirm={confirmAction}
         title={t('common.confirmation', 'Confirmation')}
-        message={t('appointmentReminders.confirmSend', { patientName: `${visit?.patient?.first_name} ${visit?.patient?.last_name}` })}
-        confirmLabel={t('appointmentReminders.sendReminder', 'Send Reminder')}
-        variant="warning"
+        message={getConfirmMessage()}
+        confirmLabel={getConfirmTitle()}
+        variant={actionType === 'invitation' ? 'info' : 'secondary'}
       />
-    </div>
+    </>
   );
 };
 

@@ -61,9 +61,10 @@ const createTransporter = () => {
  * @param {string} options.html - HTML content
  * @param {string} options.from - Sender email (optional)
  * @param {Array} options.attachments - Email attachments (optional)
+ * @param {Object} options.icalEvent - iCalendar event for calendar invitations (optional)
  * @returns {Promise<Object>} Email send result
  */
-async function sendEmail({ to, subject, text, html, from, attachments }) {
+async function sendEmail({ to, subject, text, html, from, attachments, icalEvent }) {
   try {
     const transporter = createTransporter();
 
@@ -87,6 +88,11 @@ async function sendEmail({ to, subject, text, html, from, attachments }) {
     // Add attachments if provided
     if (attachments && attachments.length > 0) {
       mailOptions.attachments = attachments;
+    }
+
+    // Add iCalendar event for calendar invitations (Gmail will recognize this)
+    if (icalEvent) {
+      mailOptions.icalEvent = icalEvent;
     }
 
     const info = await transporter.sendMail(mailOptions);

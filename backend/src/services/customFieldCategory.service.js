@@ -167,6 +167,8 @@ async function createCategory(user, categoryData, requestMetadata = {}) {
       is_active: categoryData.is_active !== undefined ? categoryData.is_active : true,
       color: categoryData.color || '#3498db',
       entity_types: categoryData.entity_types || ['patient'],
+      visit_types: categoryData.visit_types || null,
+      display_layout: categoryData.display_layout || { type: 'columns', columns: 1 },
       created_by: user.id
     });
 
@@ -217,6 +219,8 @@ async function updateCategory(user, categoryId, updateData, requestMetadata = {}
     if (updateData.is_active !== undefined) category.is_active = updateData.is_active;
     if (updateData.color !== undefined) category.color = updateData.color;
     if (updateData.entity_types !== undefined) category.entity_types = updateData.entity_types;
+    if (updateData.visit_types !== undefined) category.visit_types = updateData.visit_types;
+    if (updateData.display_layout !== undefined) category.display_layout = updateData.display_layout;
 
     console.log('Color after assignment:', category.color);
 
@@ -365,6 +369,8 @@ async function duplicateCategory(user, categoryId, overrides = {}, requestMetada
       color: overrides.color || originalCategory.color,
       display_order: overrides.display_order !== undefined ? overrides.display_order : originalCategory.display_order + 1,
       entity_types: overrides.entity_types || originalCategory.entity_types,
+      visit_types: overrides.visit_types !== undefined ? overrides.visit_types : originalCategory.visit_types,
+      display_layout: overrides.display_layout !== undefined ? overrides.display_layout : originalCategory.display_layout,
       is_active: overrides.is_active !== undefined ? overrides.is_active : true
     };
 

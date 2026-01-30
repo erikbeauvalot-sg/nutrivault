@@ -6,12 +6,22 @@
 import api from './api';
 
 /**
- * Send appointment reminder manually for a specific visit
+ * Send appointment reminder manually for a specific visit (simple email)
  * @param {string} visitId - Visit ID
  * @returns {Promise<Object>} API response
  */
 export const sendReminderManually = async (visitId) => {
   const response = await api.post(`/appointment-reminders/send/${visitId}`);
+  return response.data;
+};
+
+/**
+ * Send calendar invitation for a specific visit (email with ICS - recognized by Gmail)
+ * @param {string} visitId - Visit ID
+ * @returns {Promise<Object>} API response
+ */
+export const sendInvitationManually = async (visitId) => {
+  const response = await api.post(`/appointment-reminders/invite/${visitId}`);
   return response.data;
 };
 
@@ -57,6 +67,7 @@ export const triggerBatchReminders = async () => {
 
 export default {
   sendReminderManually,
+  sendInvitationManually,
   getReminderStats,
   unsubscribeFromReminders,
   resubscribeToReminders,

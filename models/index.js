@@ -44,6 +44,7 @@ db.BillingTemplateItem = require('./BillingTemplateItem')(sequelize, DataTypes);
 db.InvoiceCustomization = require('./InvoiceCustomization')(sequelize, DataTypes);
 db.AIPrompt = require('./AIPrompt')(sequelize, DataTypes);
 db.MeasureAnnotation = require('./MeasureAnnotation')(sequelize, DataTypes);
+db.VisitType = require('./VisitType')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship

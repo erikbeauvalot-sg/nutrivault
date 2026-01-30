@@ -11,6 +11,7 @@ import * as yup from 'yup';
 import { HexColorPicker } from 'react-colorful';
 import { useTranslation } from 'react-i18next';
 import customFieldService from '../services/customFieldService';
+import visitTypeService from '../services/visitTypeService';
 import TranslationEditor from './TranslationEditor';
 
 // Validation schema
@@ -40,8 +41,24 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
   const [color, setColor] = useState('#3498db');
   const [entityTypes, setEntityTypes] = useState(['patient']);
   const [activeTab, setActiveTab] = useState('general');
+  const [visitTypes, setVisitTypes] = useState([]);
+  const [selectedVisitTypes, setSelectedVisitTypes] = useState(null); // null = all types
+  const [displayLayout, setDisplayLayout] = useState({ type: 'columns', columns: 1 });
 
   const isEditing = !!category;
+
+  // Fetch visit types on mount
+  useEffect(() => {
+    const fetchVisitTypes = async () => {
+      try {
+        const response = await visitTypeService.getAllVisitTypes({ is_active: true });
+        setVisitTypes(response?.data || []);
+      } catch (err) {
+        console.error('Error fetching visit types:', err);
+      }
+    };
+    fetchVisitTypes();
+  }, []);
 
   const {
     register,
@@ -65,8 +82,12 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
     if (category) {
       const categoryColor = category.color || '#3498db';
       const categoryEntityTypes = category.entity_types || ['patient'];
+      const categoryVisitTypes = category.visit_types || null;
+      const categoryDisplayLayout = category.display_layout || { type: 'columns', columns: 1 };
       setColor(categoryColor);
       setEntityTypes(categoryEntityTypes);
+      setSelectedVisitTypes(categoryVisitTypes);
+      setDisplayLayout(categoryDisplayLayout);
       reset({
         name: category.name || '',
         description: category.description || '',
@@ -77,6 +98,8 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
     } else {
       setColor('#3498db');
       setEntityTypes(['patient']);
+      setSelectedVisitTypes(null);
+      setDisplayLayout({ type: 'columns', columns: 1 });
       reset({
         name: '',
         description: '',
@@ -100,10 +123,12 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
         return;
       }
 
-      // Add entity_types manually since it's not in the form
+      // Add entity_types, visit_types, and display_layout manually since they're not in the form
       const submitData = {
         ...data,
-        entity_types: entityTypes
+        entity_types: entityTypes,
+        visit_types: selectedVisitTypes,
+        display_layout: displayLayout
       };
 
       if (isEditing) {
@@ -132,6 +157,8 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
     setError(null);
     setSuccess(false);
     setEntityTypes(['patient']);
+    setSelectedVisitTypes(null);
+    setDisplayLayout({ type: 'columns', columns: 1 });
     onHide();
   };
 
@@ -269,6 +296,145 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
               <strong>Both:</strong> Common fields needed in both contexts (notes, observations)
             </Form.Text>
           </Form.Group>
+
+          {/* Visit Types Filter - Only show if visit is selected */}
+          {entityTypes.includes('visit') && (
+            <Form.Group className="mb-3">
+              <Form.Label>{t('customFields.visitTypesFilter', 'Visible for Visit Types')}</Form.Label>
+              <div className="mb-2">
+                <Form.Check
+                  type="radio"
+                  id="visit-types-all"
+                  name="visitTypesMode"
+                  label={t('customFields.allVisitTypes', 'All visit types')}
+                  checked={selectedVisitTypes === null}
+                  onChange={() => setSelectedVisitTypes(null)}
+                />
+                <Form.Check
+                  type="radio"
+                  id="visit-types-specific"
+                  name="visitTypesMode"
+                  label={t('customFields.specificVisitTypes', 'Specific visit types only')}
+                  checked={selectedVisitTypes !== null}
+                  onChange={() => setSelectedVisitTypes([])}
+                />
+              </div>
+              {selectedVisitTypes !== null && (
+                <div className="ps-4 border-start">
+                  {visitTypes.length === 0 ? (
+                    <Alert variant="info" className="py-2 mb-0">
+                      {t('customFields.noVisitTypesAvailable', 'No visit types available. Create visit types first.')}
+                    </Alert>
+                  ) : (
+                    <div className="d-flex flex-column gap-1">
+                      {visitTypes.map((vt) => (
+                        <Form.Check
+                          key={vt.id}
+                          type="checkbox"
+                          id={`visit-type-${vt.id}`}
+                          label={
+                            <span>
+                              {vt.color && (
+                                <span
+                                  style={{
+                                    display: 'inline-block',
+                                    width: '10px',
+                                    height: '10px',
+                                    borderRadius: '50%',
+                                    backgroundColor: vt.color,
+                                    marginRight: '6px'
+                                  }}
+                                />
+                              )}
+                              {vt.name}
+                            </span>
+                          }
+                          checked={selectedVisitTypes?.includes(vt.id) || false}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedVisitTypes([...(selectedVisitTypes || []), vt.id]);
+                            } else {
+                              setSelectedVisitTypes((selectedVisitTypes || []).filter(id => id !== vt.id));
+                            }
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <Form.Text className="text-muted d-block mt-2">
+                {t('customFields.visitTypesHelp', 'Choose which visit types should display this category. If "All visit types" is selected, this category appears on every visit.')}
+              </Form.Text>
+            </Form.Group>
+          )}
+
+          {/* Display Layout Options - Only show if visit is selected */}
+          {entityTypes.includes('visit') && (
+            <Form.Group className="mb-3">
+              <Form.Label>{t('customFields.displayLayout', 'Display Layout')}</Form.Label>
+              <Row>
+                <Col xs={12} md={6}>
+                  <Form.Select
+                    value={displayLayout.type}
+                    onChange={(e) => setDisplayLayout({
+                      ...displayLayout,
+                      type: e.target.value,
+                      columns: e.target.value === 'columns' ? (displayLayout.columns || 1) : undefined
+                    })}
+                  >
+                    <option value="columns">{t('customFields.layoutColumns', 'Columns')}</option>
+                    <option value="list">{t('customFields.layoutList', 'List')}</option>
+                    <option value="radar">{t('customFields.layoutRadar', 'Radar Chart')}</option>
+                  </Form.Select>
+                </Col>
+                {displayLayout.type === 'columns' && (
+                  <Col xs={12} md={6} className="mt-2 mt-md-0">
+                    <div className="d-flex align-items-center gap-2">
+                      <Form.Label className="mb-0 text-nowrap">
+                        {t('customFields.numberOfColumns', 'Columns:')}
+                      </Form.Label>
+                      <Form.Range
+                        min={1}
+                        max={6}
+                        value={displayLayout.columns || 1}
+                        onChange={(e) => setDisplayLayout({
+                          ...displayLayout,
+                          columns: parseInt(e.target.value, 10)
+                        })}
+                        style={{ flex: 1 }}
+                      />
+                      <Badge bg="primary" style={{ minWidth: '30px' }}>
+                        {displayLayout.columns || 1}
+                      </Badge>
+                    </div>
+                  </Col>
+                )}
+              </Row>
+              <Form.Text className="text-muted d-block mt-2">
+                {displayLayout.type === 'columns'
+                  ? t('customFields.columnsLayoutHelp', 'Fields will be displayed in {{count}} column(s). More columns work better on larger screens.', { count: displayLayout.columns || 1 })
+                  : displayLayout.type === 'radar'
+                  ? t('customFields.radarLayoutHelp', 'Fields will be displayed as a radar chart in view mode. In edit mode, a standard form will be displayed.')
+                  : t('customFields.listLayoutHelp', 'Fields will be displayed as a vertical list.')}
+              </Form.Text>
+              {/* Preview */}
+              {displayLayout.type === 'columns' && (
+                <div className="mt-2 p-2 border rounded bg-light">
+                  <small className="text-muted d-block mb-1">{t('customFields.layoutPreview', 'Preview:')}</small>
+                  <Row>
+                    {[...Array(displayLayout.columns || 1)].map((_, i) => (
+                      <Col key={i} md={12 / (displayLayout.columns || 1)}>
+                        <div className="border rounded p-2 mb-1 bg-white text-center text-muted" style={{ fontSize: '12px' }}>
+                          {t('customFields.columnN', 'Column {{n}}', { n: i + 1 })}
+                        </div>
+                      </Col>
+                    ))}
+                  </Row>
+                </div>
+              )}
+            </Form.Group>
+          )}
 
           <Form.Group className="mb-3">
             <Form.Label>Category Color</Form.Label>
