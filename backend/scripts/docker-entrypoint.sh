@@ -7,12 +7,17 @@
 
 echo "🚀 Starting NutriVault Backend..."
 
-# Wait for database file to be accessible (if using shared volume)
-echo "📁 Checking data directories..."
+# Create directories as root (volumes may be root-owned)
+echo "📁 Setting up data directories..."
 mkdir -p /app/data
 mkdir -p /app/uploads/invoice-customizations
 mkdir -p /app/uploads/documents
 mkdir -p /app/temp_uploads
+mkdir -p /app/logs
+
+# Set permissions for nodejs user
+chown -R nodejs:nodejs /app/data /app/uploads /app/temp_uploads /app/logs 2>/dev/null || true
+chmod -R 755 /app/data /app/uploads /app/temp_uploads /app/logs 2>/dev/null || true
 
 # Debug: Show current working directory
 echo "   Working directory: $(pwd)"
@@ -54,5 +59,5 @@ fi
 
 # Note: Admin user creation must be done manually via backend seed script or API
 
-echo "🎯 Starting application server..."
-exec "$@"
+echo "🎯 Starting application server as nodejs user..."
+exec su-exec nodejs "$@"

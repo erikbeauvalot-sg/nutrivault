@@ -85,8 +85,11 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 && \
     chown -R nodejs:nodejs /app
 
-# Switch to non-root user
-USER nodejs
+# Install su-exec for dropping privileges
+RUN apk add --no-cache su-exec
+
+# Keep running as root - entrypoint will drop to nodejs after setup
+# USER nodejs
 
 # Expose port
 EXPOSE 3001
