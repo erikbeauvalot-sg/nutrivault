@@ -59,6 +59,17 @@ const EditVisitPage = () => {
   // Finish visit confirm modal
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
 
+  /**
+   * Create ISO string that preserves local time as intended
+   * @param {string} dateTimeStr - Date string in format 'YYYY-MM-DDTHH:mm'
+   * @returns {string|null} ISO string with seconds added
+   */
+  const createLocalISOString = (dateTimeStr) => {
+    if (!dateTimeStr) return null;
+    // Add seconds and milliseconds if not present, treat as local time
+    return dateTimeStr.length === 16 ? dateTimeStr + ':00.000Z' : dateTimeStr + '.000Z';
+  };
+
   useEffect(() => {
     if (i18n.resolvedLanguage) {
       fetchVisitData();
@@ -378,13 +389,6 @@ const EditVisitPage = () => {
     try {
       // Generate the change summary
       const visitSummary = generateChangeSummary();
-
-      // Create ISO string that preserves local time as intended
-      const createLocalISOString = (dateTimeStr) => {
-        if (!dateTimeStr) return null;
-        // Add seconds and milliseconds if not present, treat as local time
-        return dateTimeStr.length === 16 ? dateTimeStr + ':00.000Z' : dateTimeStr + '.000Z';
-      };
 
       // Step 1: Update visit data with COMPLETED status and summary
       const submitData = {
