@@ -10,6 +10,18 @@ const path = require('path');
 const db = require('../../../models');
 const invoiceCustomizationService = require('./invoiceCustomization.service');
 
+/**
+ * Get the base path for uploads directory
+ * In production (Docker): /app
+ * In development: process.cwd() (backend directory)
+ */
+const getUploadsBasePath = () => {
+  if (process.env.NODE_ENV === 'production') {
+    return '/app';
+  }
+  return process.cwd();
+};
+
 // A4 page dimensions
 const PAGE_WIDTH = 595.28;  // A4 width in points
 const PAGE_HEIGHT = 841.89; // A4 height in points
@@ -176,7 +188,8 @@ function drawHeader(doc, customization, invoice, t) {
   // LEFT: Logo + Business name
   if (customization.show_logo && customization.logo_file_path) {
     try {
-      const logoPath = path.join(__dirname, '../../..', customization.logo_file_path);
+      const logoPath = path.join(getUploadsBasePath(), customization.logo_file_path);
+      console.log('📷 Logo path:', logoPath, '- exists:', fs.existsSync(logoPath));
       if (fs.existsSync(logoPath)) {
         doc.image(logoPath, MARGIN, y, { width: 80, height: 40 });
       }
@@ -354,7 +367,8 @@ function drawSignature(doc, customization) {
   // Signature image BELOW text
   if (customization.signature_file_path) {
     try {
-      const signaturePath = path.join(__dirname, '../../..', customization.signature_file_path);
+      const signaturePath = path.join(getUploadsBasePath(), customization.signature_file_path);
+      console.log('✍️ Signature path:', signaturePath, '- exists:', fs.existsSync(signaturePath));
       if (fs.existsSync(signaturePath)) {
         doc.image(signaturePath, signatureX + 10, currentY, { width: 100, height: 30 });
         currentY += 32;

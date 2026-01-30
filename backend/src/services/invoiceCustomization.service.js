@@ -109,7 +109,11 @@ const uploadLogo = async (userId, file) => {
 
     // Create upload directory if it doesn't exist
     const uploadDir = path.join(UPLOAD_BASE, userId);
+    console.log('📁 Upload directory:', uploadDir);
+    console.log('📁 UPLOAD_BASE:', UPLOAD_BASE);
+    console.log('📁 NODE_ENV:', process.env.NODE_ENV);
     await fs.mkdir(uploadDir, { recursive: true });
+    console.log('✅ Directory created/exists');
 
     // Delete old logo if exists
     if (customization.logo_file_path) {
