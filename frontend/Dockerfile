@@ -9,6 +9,10 @@ ARG GIT_COMMIT
 # Build stage
 FROM node:20-alpine AS build
 
+# Update npm to latest version and disable update notifier
+RUN npm install -g npm@latest && \
+    npm config set update-notifier false
+
 WORKDIR /app
 
 # Copy package files from frontend directory
