@@ -534,15 +534,11 @@ async function finishAndInvoice(user, visitId, options = {}, requestMetadata = {
         status: 'COMPLETED'
       }, requestMetadata);
       messages.push('Visit marked as completed');
-
-      // Wait a moment for auto-invoice hook to complete (if generateInvoice is also requested)
-      if (generateInvoice) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
     }
 
-    // Step 2: Find or wait for the generated invoice (if requested)
+    // Step 2: Generate invoice (if requested)
     if (generateInvoice) {
+      // First check if an invoice already exists for this visit
       invoice = await db.Billing.findOne({
         where: {
           visit_id: visitId,
@@ -559,10 +555,59 @@ async function finishAndInvoice(user, visitId, options = {}, requestMetadata = {
       });
 
       if (invoice) {
-        messages.push('Invoice generated');
+        messages.push('Invoice already exists');
       } else {
-        console.warn('⚠️  No invoice found after completing visit');
-        messages.push('Invoice not found');
+        // Create new invoice - get amount from visit type's default_price
+        let invoiceAmount = 0;
+        let invoiceDescription = visit.visit_type || 'Consultation';
+
+        // Try to get default_price from VisitType
+        if (visit.visit_type) {
+          const visitType = await db.VisitType.findOne({
+            where: { name: visit.visit_type, is_active: true }
+          });
+          if (visitType && visitType.default_price) {
+            invoiceAmount = parseFloat(visitType.default_price);
+            console.log(`💰 Using visit type default_price: ${invoiceAmount} for ${visit.visit_type}`);
+          }
+        }
+
+        // If no amount from visit type, use fallback calculation
+        if (invoiceAmount <= 0) {
+          invoiceAmount = calculateVisitAmount(visit);
+          console.log(`💰 Using calculated amount: ${invoiceAmount}`);
+        }
+
+        // Format visit date for description
+        const visitDate = new Date(visit.visit_date).toLocaleDateString('fr-FR');
+        invoiceDescription = `${visit.visit_type || 'Consultation'} - ${visitDate}`;
+
+        try {
+          // Create the invoice
+          invoice = await billingService.createInvoice({
+            patient_id: visit.patient_id,
+            visit_id: visitId,
+            service_description: invoiceDescription,
+            amount_total: invoiceAmount
+          }, user, requestMetadata);
+
+          // Reload invoice with patient info
+          invoice = await db.Billing.findByPk(invoice.id, {
+            include: [
+              {
+                model: Patient,
+                as: 'patient',
+                attributes: ['id', 'first_name', 'last_name', 'email']
+              }
+            ]
+          });
+
+          messages.push('Invoice generated');
+          console.log(`✅ Invoice ${invoice.invoice_number} created with amount ${invoiceAmount}`);
+        } catch (invoiceError) {
+          console.error('❌ Failed to create invoice:', invoiceError);
+          messages.push('Failed to create invoice: ' + invoiceError.message);
+        }
       }
     }
 
