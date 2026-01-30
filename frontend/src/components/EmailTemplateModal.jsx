@@ -25,36 +25,36 @@ import { useTranslation } from 'react-i18next';
 import emailTemplateService from '../services/emailTemplateService';
 
 // Category options with available variables
-const CATEGORIES = [
-  { value: 'invoice', label: 'Invoice', icon: '💰' },
-  { value: 'document_share', label: 'Document Share', icon: '📄' },
-  { value: 'payment_reminder', label: 'Payment Reminder', icon: '🔔' },
-  { value: 'appointment_reminder', label: 'Appointment Reminder', icon: '📅' },
-  { value: 'follow_up', label: 'Follow-up', icon: '📋' },
-  { value: 'general', label: 'General', icon: '✉️' }
+const getCategories = (t) => [
+  { value: 'invoice', label: t('emailTemplates.categories.invoice', 'Invoice'), icon: '💰' },
+  { value: 'document_share', label: t('emailTemplates.categories.documentShare', 'Document Share'), icon: '📄' },
+  { value: 'payment_reminder', label: t('emailTemplates.categories.paymentReminder', 'Payment Reminder'), icon: '🔔' },
+  { value: 'appointment_reminder', label: t('emailTemplates.categories.appointmentReminder', 'Appointment Reminder'), icon: '📅' },
+  { value: 'follow_up', label: t('emailTemplates.categories.followUp', 'Follow-up'), icon: '📋' },
+  { value: 'general', label: t('emailTemplates.categories.general', 'General'), icon: '✉️' }
 ];
 
 // Validation schema
 const templateSchema = (t) => yup.object().shape({
   name: yup.string()
-    .required('Template name is required')
-    .min(3, 'Name must be at least 3 characters')
-    .max(200, 'Name must be at most 200 characters'),
+    .required(t('emailTemplates.validation.nameRequired', 'Template name is required'))
+    .min(3, t('emailTemplates.validation.nameMin', 'Name must be at least 3 characters'))
+    .max(200, t('emailTemplates.validation.nameMax', 'Name must be at most 200 characters')),
   slug: yup.string()
-    .matches(/^[a-z0-9_-]+$/i, 'Slug can only contain letters, numbers, underscores, and dashes')
-    .min(3, 'Slug must be at least 3 characters')
-    .max(100, 'Slug must be at most 100 characters'),
+    .matches(/^[a-z0-9_-]+$/i, t('emailTemplates.validation.slugFormat', 'Slug can only contain letters, numbers, underscores, and dashes'))
+    .min(3, t('emailTemplates.validation.slugMin', 'Slug must be at least 3 characters'))
+    .max(100, t('emailTemplates.validation.slugMax', 'Slug must be at most 100 characters')),
   category: yup.string()
-    .required('Category is required')
+    .required(t('emailTemplates.validation.categoryRequired', 'Category is required'))
     .oneOf(['invoice', 'document_share', 'payment_reminder', 'appointment_reminder', 'follow_up', 'general']),
   description: yup.string()
-    .max(500, 'Description must be at most 500 characters'),
+    .max(500, t('emailTemplates.validation.descriptionMax', 'Description must be at most 500 characters')),
   subject: yup.string()
-    .required('Subject is required')
-    .min(5, 'Subject must be at least 5 characters')
-    .max(500, 'Subject must be at most 500 characters'),
+    .required(t('emailTemplates.validation.subjectRequired', 'Subject is required'))
+    .min(5, t('emailTemplates.validation.subjectMin', 'Subject must be at least 5 characters'))
+    .max(500, t('emailTemplates.validation.subjectMax', 'Subject must be at most 500 characters')),
   body_html: yup.string()
-    .required('HTML body is required'),
+    .required(t('emailTemplates.validation.bodyRequired', 'HTML body is required')),
   body_text: yup.string(),
   is_active: yup.boolean()
 });
@@ -191,22 +191,22 @@ const EmailTemplateModal = ({ show, onHide, template }) => {
     <Modal show={show} onHide={() => onHide(false)} size="xl" fullscreen="md-down" backdrop="static" scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
-          {isEditing ? 'Edit Email Template' : 'Create Email Template'}
+          {isEditing ? t('emailTemplates.editTemplate', 'Edit Email Template') : t('emailTemplates.createTemplate', 'Create Email Template')}
         </Modal.Title>
       </Modal.Header>
 
       <Form onSubmit={handleSubmit(onSubmit)}>
         <Modal.Body>
           {error && <Alert variant="danger">{error}</Alert>}
-          {success && <Alert variant="success">Template saved successfully!</Alert>}
+          {success && <Alert variant="success">{t('emailTemplates.templateSaved', 'Template saved successfully!')}</Alert>}
 
           <Tabs activeKey={activeTab} onSelect={(k) => setActiveTab(k)} className="mb-3">
             {/* General Tab */}
-            <Tab eventKey="general" title="General">
+            <Tab eventKey="general" title={t('emailTemplates.tabs.general', 'General')}>
               <Row>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Name *</Form.Label>
+                    <Form.Label>{t('emailTemplates.name', 'Name')} *</Form.Label>
                     <Form.Control
                       type="text"
                       {...register('name')}
@@ -221,7 +221,7 @@ const EmailTemplateModal = ({ show, onHide, template }) => {
 
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Slug</Form.Label>
+                    <Form.Label>{t('emailTemplates.slug', 'Slug')}</Form.Label>
                     <Form.Control
                       type="text"
                       {...register('slug')}
@@ -229,7 +229,7 @@ const EmailTemplateModal = ({ show, onHide, template }) => {
                       disabled={isEditing && template?.is_system}
                     />
                     <Form.Text className="text-muted">
-                      Unique identifier (lowercase, numbers, dashes, underscores)
+                      {t('emailTemplates.slugHelp', 'Unique identifier (lowercase, numbers, dashes, underscores)')}
                     </Form.Text>
                     <Form.Control.Feedback type="invalid">
                       {errors.slug?.message}
@@ -241,12 +241,12 @@ const EmailTemplateModal = ({ show, onHide, template }) => {
               <Row>
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Category *</Form.Label>
+                    <Form.Label>{t('emailTemplates.category', 'Category')} *</Form.Label>
                     <Form.Select
                       {...register('category')}
                       isInvalid={!!errors.category}
                     >
-                      {CATEGORIES.map(cat => (
+                      {getCategories(t).map(cat => (
                         <option key={cat.value} value={cat.value}>
                           {cat.icon} {cat.label}
                         </option>
@@ -260,11 +260,11 @@ const EmailTemplateModal = ({ show, onHide, template }) => {
 
                 <Col md={6}>
                   <Form.Group className="mb-3">
-                    <Form.Label>Status</Form.Label>
+                    <Form.Label>{t('emailTemplates.status', 'Status')}</Form.Label>
                     <Form.Check
                       type="switch"
                       id="is_active"
-                      label="Active"
+                      label={t('emailTemplates.active', 'Active')}
                       {...register('is_active')}
                     />
                   </Form.Group>
@@ -272,7 +272,7 @@ const EmailTemplateModal = ({ show, onHide, template }) => {
               </Row>
 
               <Form.Group className="mb-3">
-                <Form.Label>Description</Form.Label>
+                <Form.Label>{t('emailTemplates.description', 'Description')}</Form.Label>
                 <Form.Control
                   as="textarea"
                   rows={2}
@@ -286,31 +286,31 @@ const EmailTemplateModal = ({ show, onHide, template }) => {
             </Tab>
 
             {/* Content Tab */}
-            <Tab eventKey="content" title="Content">
+            <Tab eventKey="content" title={t('emailTemplates.tabs.content', 'Content')}>
               {/* Variable Picker */}
               <div className="mb-3">
-                <Form.Label>Available Variables</Form.Label>
+                <Form.Label>{t('emailTemplates.availableVariables', 'Available Variables')}</Form.Label>
                 <div className="d-flex flex-wrap gap-2">
                   {availableVariables.map(variable => (
                     <ButtonGroup key={variable} size="sm">
                       <Button
                         variant="outline-secondary"
                         onClick={() => insertVariable(variable, 'subject')}
-                        title="Insert into subject"
+                        title={t('emailTemplates.insertIntoSubject', 'Insert into subject')}
                       >
                         {variable}
                       </Button>
                       <Button
                         variant="outline-primary"
                         onClick={() => insertVariable(variable, 'body_html')}
-                        title="Insert into HTML body"
+                        title={t('emailTemplates.insertIntoHtml', 'Insert into HTML body')}
                       >
                         📄
                       </Button>
                       <Button
                         variant="outline-info"
                         onClick={() => insertVariable(variable, 'body_text')}
-                        title="Insert into text body"
+                        title={t('emailTemplates.insertIntoText', 'Insert into text body')}
                       >
                         📝
                       </Button>
@@ -318,12 +318,12 @@ const EmailTemplateModal = ({ show, onHide, template }) => {
                   ))}
                 </div>
                 <Form.Text className="text-muted">
-                  Click a variable name to insert into subject, or use the icons to insert into HTML/text body
+                  {t('emailTemplates.variablesHelp', 'Click a variable name to insert into subject, or use the icons to insert into HTML/text body')}
                 </Form.Text>
               </div>
 
               <Form.Group className="mb-3">
-                <Form.Label>Subject Line *</Form.Label>
+                <Form.Label>{t('emailTemplates.subjectLine', 'Subject Line')} *</Form.Label>
                 <Form.Control
                   id="subject"
                   type="text"
@@ -337,14 +337,14 @@ const EmailTemplateModal = ({ show, onHide, template }) => {
               </Form.Group>
 
               <Form.Group className="mb-3">
-                <Form.Label>HTML Body *</Form.Label>
+                <Form.Label>{t('emailTemplates.htmlBody', 'HTML Body')} *</Form.Label>
                 <Form.Control
                   id="body_html"
                   as="textarea"
                   rows={12}
                   {...register('body_html')}
                   isInvalid={!!errors.body_html}
-                  placeholder="HTML email content with {{variables}}"
+                  placeholder={t('emailTemplates.htmlBodyPlaceholder', 'HTML email content with {{variables}}')}
                   style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
                 />
                 <Form.Control.Feedback type="invalid">
@@ -353,18 +353,18 @@ const EmailTemplateModal = ({ show, onHide, template }) => {
               </Form.Group>
 
               <Form.Group className="mb-3">
-                <Form.Label>Plain Text Body</Form.Label>
+                <Form.Label>{t('emailTemplates.plainTextBody', 'Plain Text Body')}</Form.Label>
                 <Form.Control
                   id="body_text"
                   as="textarea"
                   rows={8}
                   {...register('body_text')}
                   isInvalid={!!errors.body_text}
-                  placeholder="Plain text version (optional - auto-generated from HTML if empty)"
+                  placeholder={t('emailTemplates.plainTextPlaceholder', 'Plain text version (optional - auto-generated from HTML if empty)')}
                   style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}
                 />
                 <Form.Text className="text-muted">
-                  Leave empty to auto-generate from HTML
+                  {t('emailTemplates.plainTextHelp', 'Leave empty to auto-generate from HTML')}
                 </Form.Text>
               </Form.Group>
             </Tab>
@@ -373,16 +373,16 @@ const EmailTemplateModal = ({ show, onHide, template }) => {
 
         <Modal.Footer>
           <Button variant="secondary" onClick={() => onHide(false)} disabled={loading}>
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button variant="primary" type="submit" disabled={loading}>
             {loading ? (
               <>
                 <Spinner animation="border" size="sm" className="me-2" />
-                Saving...
+                {t('common.saving', 'Saving...')}
               </>
             ) : (
-              isEditing ? 'Update Template' : 'Create Template'
+              isEditing ? t('emailTemplates.updateTemplate', 'Update Template') : t('emailTemplates.createTemplate', 'Create Template')
             )}
           </Button>
         </Modal.Footer>
