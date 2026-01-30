@@ -174,9 +174,11 @@ module.exports = (sequelize, DataTypes) => {
 
   // Hooks for Google Calendar synchronization
   Visit.addHook('afterCreate', async (visit, options) => {
+    console.log(`📅 [afterCreate] Visit ${visit.id} created, checking Google Calendar sync...`);
     try {
       // Skip if this is a sync operation
       if (options.fromSync) {
+        console.log(`📅 [afterCreate] Skipping - fromSync flag set`);
         return;
       }
 
@@ -188,13 +190,19 @@ module.exports = (sequelize, DataTypes) => {
 
       // Only sync if dietitian has Google Calendar enabled
       const dietitian = await sequelize.models.User.findByPk(visit.dietitian_id);
-      if (dietitian && dietitian.google_calendar_sync_enabled) {
+      console.log(`📅 [afterCreate] Dietitian ${dietitian?.username}: google_calendar_sync_enabled=${dietitian?.google_calendar_sync_enabled}, has_token=${!!dietitian?.google_access_token}`);
+
+      if (dietitian && dietitian.google_calendar_sync_enabled && dietitian.google_access_token) {
         const googleCalendarService = require('../backend/src/services/googleCalendar.service');
         const calendarId = dietitian.google_calendar_id || 'primary';
+        console.log(`📅 [afterCreate] Syncing to Google Calendar (${calendarId})...`);
         await googleCalendarService.createOrUpdateCalendarEvent(visit, dietitian, calendarId);
+        console.log(`📅 [afterCreate] ✅ Sync complete`);
+      } else {
+        console.log(`📅 [afterCreate] Skipping sync - Google Calendar not enabled or no token`);
       }
     } catch (error) {
-      console.error('Error syncing visit creation to Google Calendar:', error);
+      console.error('❌ [afterCreate] Error syncing visit creation to Google Calendar:', error.message);
       // Update sync status to error
       await visit.update({
         sync_status: 'error',
