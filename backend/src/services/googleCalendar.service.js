@@ -51,10 +51,20 @@ function getOAuth2Client(user) {
  * @returns {string} Authorization URL
  */
 function getAuthUrl(userId) {
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${process.env.FRONTEND_URL}/settings/calendar-sync`;
+
+  // Debug logging for OAuth configuration
+  console.log('[Google OAuth] Generating auth URL with config:', {
+    clientId: process.env.GOOGLE_CLIENT_ID ? `${process.env.GOOGLE_CLIENT_ID.substring(0, 20)}...` : 'NOT SET',
+    redirectUri,
+    GOOGLE_REDIRECT_URI_ENV: process.env.GOOGLE_REDIRECT_URI || 'NOT SET',
+    FRONTEND_URL_ENV: process.env.FRONTEND_URL || 'NOT SET'
+  });
+
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI || `${process.env.FRONTEND_URL}/settings/calendar-sync`
+    redirectUri
   );
 
   const authUrl = oauth2Client.generateAuthUrl({
@@ -64,6 +74,7 @@ function getAuthUrl(userId) {
     prompt: 'consent' // Force consent screen to get refresh token
   });
 
+  console.log('[Google OAuth] Generated auth URL:', authUrl);
   return authUrl;
 }
 
@@ -74,13 +85,23 @@ function getAuthUrl(userId) {
  * @returns {Promise<Object>} Token object
  */
 async function getTokensFromCode(code) {
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${process.env.FRONTEND_URL}/settings/calendar-sync`;
+
+  // Debug logging for token exchange
+  console.log('[Google OAuth] Exchanging code for tokens with config:', {
+    redirectUri,
+    GOOGLE_REDIRECT_URI_ENV: process.env.GOOGLE_REDIRECT_URI || 'NOT SET',
+    codeLength: code ? code.length : 0
+  });
+
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI || `${process.env.FRONTEND_URL}/settings/calendar-sync`
+    redirectUri
   );
 
   const { tokens } = await oauth2Client.getToken(code);
+  console.log('[Google OAuth] Successfully obtained tokens');
   return tokens;
 }
 
