@@ -7,6 +7,21 @@
  */
 
 /**
+ * Translate invoice/payment status to French
+ */
+const translateStatus = (status) => {
+  const statusMap = {
+    'DRAFT': 'Brouillon',
+    'SENT': 'Envoyée',
+    'PAID': 'Payée',
+    'OVERDUE': 'En retard',
+    'CANCELLED': 'Annulée',
+    'PARTIAL': 'Partielle'
+  };
+  return statusMap[status] || status;
+};
+
+/**
  * Available variables by template category
  */
 const CATEGORY_VARIABLES = {
@@ -161,7 +176,7 @@ function buildVariableContext(data = {}) {
     context.amount_paid = invoice.amount_paid
       ? `${parseFloat(invoice.amount_paid).toFixed(2)} €`
       : '0.00 €';
-    context.payment_status = invoice.status || '';
+    context.payment_status = translateStatus(invoice.status) || '';
 
     // Calculate days overdue
     if (invoice.due_date) {
