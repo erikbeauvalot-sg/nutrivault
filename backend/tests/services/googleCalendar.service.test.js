@@ -294,4 +294,191 @@ describe('Google Calendar Service', () => {
       expect(result).toBe(false);
     });
   });
+
+  // ===== NEW TESTS FOR v5.5.1 SYNC FEATURES =====
+
+  describe('detectConflict', () => {
+    it('should return false when no last_sync_at', () => {
+      const visit = {
+        last_sync_at: null,
+        local_modified_at: new Date()
+      };
+      const googleEvent = { updated: new Date().toISOString() };
+
+      const result = googleCalendarService.detectConflict(visit, googleEvent);
+      expect(result).toBe(false);
+    });
+
+    it('should return false when only local was modified', () => {
+      const lastSync = new Date('2024-01-01T10:00:00Z');
+      const visit = {
+        last_sync_at: lastSync,
+        local_modified_at: new Date('2024-01-01T12:00:00Z')
+      };
+      const googleEvent = { updated: '2024-01-01T09:00:00Z' }; // Before last sync
+
+      const result = googleCalendarService.detectConflict(visit, googleEvent);
+      expect(result).toBe(false);
+    });
+
+    it('should return false when only remote was modified', () => {
+      const lastSync = new Date('2024-01-01T10:00:00Z');
+      const visit = {
+        last_sync_at: lastSync,
+        local_modified_at: new Date('2024-01-01T09:00:00Z') // Before last sync
+      };
+      const googleEvent = { updated: '2024-01-01T12:00:00Z' };
+
+      const result = googleCalendarService.detectConflict(visit, googleEvent);
+      expect(result).toBe(false);
+    });
+
+    it('should return true when both local and remote were modified after last sync', () => {
+      const lastSync = new Date('2024-01-01T10:00:00Z');
+      const visit = {
+        last_sync_at: lastSync,
+        local_modified_at: new Date('2024-01-01T12:00:00Z')
+      };
+      const googleEvent = { updated: '2024-01-01T11:00:00Z' };
+
+      const result = googleCalendarService.detectConflict(visit, googleEvent);
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('parseGoogleEvent', () => {
+    it('should parse visit date from Google event', () => {
+      const event = {
+        start: { dateTime: '2024-01-15T14:00:00Z' },
+        end: { dateTime: '2024-01-15T15:00:00Z' },
+        updated: '2024-01-14T10:00:00Z'
+      };
+
+      const result = googleCalendarService.parseGoogleEvent(event);
+
+      expect(result.visit_date).toEqual(new Date('2024-01-15T14:00:00Z'));
+      expect(result.duration_minutes).toBe(60);
+      expect(result.remote_modified_at).toEqual(new Date('2024-01-14T10:00:00Z'));
+    });
+
+    it('should parse visit type from event summary', () => {
+      const event = {
+        summary: 'Consultation - John Doe (Follow-up)',
+        start: { dateTime: '2024-01-15T14:00:00Z' },
+        end: { dateTime: '2024-01-15T14:30:00Z' },
+        updated: '2024-01-14T10:00:00Z'
+      };
+
+      const result = googleCalendarService.parseGoogleEvent(event);
+
+      expect(result.visit_type).toBe('Follow-up');
+      expect(result.duration_minutes).toBe(30);
+    });
+
+    it('should parse status from event description', () => {
+      const event = {
+        start: { dateTime: '2024-01-15T14:00:00Z' },
+        end: { dateTime: '2024-01-15T15:00:00Z' },
+        description: 'Statut: COMPLETED\nOther info',
+        updated: '2024-01-14T10:00:00Z'
+      };
+
+      const result = googleCalendarService.parseGoogleEvent(event);
+
+      expect(result.status).toBe('COMPLETED');
+    });
+
+    it('should handle French status in description', () => {
+      const event = {
+        start: { dateTime: '2024-01-15T14:00:00Z' },
+        end: { dateTime: '2024-01-15T15:00:00Z' },
+        description: 'Statut: termine',  // Using ASCII version that the service can parse
+        updated: '2024-01-14T10:00:00Z'
+      };
+
+      const result = googleCalendarService.parseGoogleEvent(event);
+
+      expect(result.status).toBe('COMPLETED');
+    });
+  });
+
+  describe('getSyncIssues', () => {
+    it('should return conflicts and errors for user', async () => {
+      const mockVisitsWithIssues = [
+        {
+          id: 'visit-1',
+          sync_status: 'conflict',
+          patient: { first_name: 'John', last_name: 'Doe' },
+          visit_date: new Date(),
+          status: 'SCHEDULED',
+          sync_error_message: null
+        },
+        {
+          id: 'visit-2',
+          sync_status: 'error',
+          patient: { first_name: 'Jane', last_name: 'Smith' },
+          visit_date: new Date(),
+          status: 'SCHEDULED',
+          sync_error_message: 'API Error'
+        }
+      ];
+
+      Visit.findAll.mockResolvedValue(mockVisitsWithIssues);
+
+      const result = await googleCalendarService.getSyncIssues('user-123');
+
+      expect(result.total).toBe(2);
+      expect(result.conflicts).toBe(1);
+      expect(result.errors).toBe(1);
+      expect(result.visits).toHaveLength(2);
+    });
+
+    it('should return empty results when no issues', async () => {
+      Visit.findAll.mockResolvedValue([]);
+
+      const result = await googleCalendarService.getSyncIssues('user-123');
+
+      expect(result.total).toBe(0);
+      expect(result.conflicts).toBe(0);
+      expect(result.errors).toBe(0);
+    });
+  });
+
+  describe('getSyncStats', () => {
+    beforeEach(() => {
+      // Set up count and findOne mocks
+      Visit.count = jest.fn();
+      Visit.findOne = jest.fn();
+    });
+
+    it('should return sync statistics for user', async () => {
+      Visit.findAll.mockResolvedValue([
+        { sync_status: 'synced', count: '10' },
+        { sync_status: 'pending_to_google', count: '2' },
+        { sync_status: 'conflict', count: '1' }
+      ]);
+      Visit.count.mockResolvedValue(15);
+      Visit.findOne.mockResolvedValue({ last_sync_at: new Date() });
+
+      const result = await googleCalendarService.getSyncStats('user-123');
+
+      expect(result).toHaveProperty('totalVisits');
+      expect(result).toHaveProperty('totalWithGoogle');
+      expect(result).toHaveProperty('lastSyncAt');
+      expect(result).toHaveProperty('byStatus');
+    });
+  });
+
+  describe('Constants', () => {
+    it('should export CALENDAR_RELEVANT_FIELDS', () => {
+      expect(googleCalendarService.CALENDAR_RELEVANT_FIELDS).toBeDefined();
+      expect(googleCalendarService.CALENDAR_RELEVANT_FIELDS).toContain('visit_date');
+      expect(googleCalendarService.CALENDAR_RELEVANT_FIELDS).toContain('status');
+    });
+
+    it('should export MAX_SYNC_ERROR_COUNT', () => {
+      expect(googleCalendarService.MAX_SYNC_ERROR_COUNT).toBeDefined();
+      expect(googleCalendarService.MAX_SYNC_ERROR_COUNT).toBe(3);
+    });
+  });
 });

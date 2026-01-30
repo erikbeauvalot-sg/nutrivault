@@ -71,11 +71,9 @@ const EditVisitPage = () => {
 
   const fetchDietitians = async () => {
     try {
-      const response = await userService.getDietitians();
-      const data = response.data?.data || response.data || [];
+      const data = await userService.getDietitians();
       setDietitians(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error fetching dietitians:', err);
       setDietitians([]);
     }
   };
@@ -83,8 +81,7 @@ const EditVisitPage = () => {
   const fetchVisitData = async () => {
     try {
       setLoading(true);
-      const response = await visitService.getVisitById(id);
-      const visitData = response.data.data || response.data;
+      const visitData = await visitService.getVisitById(id);
       setVisit(visitData);
 
       // Pre-populate form with visit data
@@ -235,7 +232,6 @@ const EditVisitPage = () => {
   const fetchExistingMeasures = async () => {
     try {
       const measures = await getMeasuresByVisit(id);
-      console.log('[EditVisit] Fetched measures for visit:', measures);
       // Build a map of definition_id -> value and track existing measure IDs
       const values = {};
       const existingIds = {};
@@ -243,7 +239,6 @@ const EditVisitPage = () => {
         // Backend returns measure_definition.id, not measure_definition_id
         const defId = m.measure_definition?.id || m.measure_definition_id;
         if (!defId) {
-          console.warn('[EditVisit] Measure missing definition ID:', m);
           return;
         }
         // Backend returns 'value' which is already extracted based on type
@@ -252,13 +247,11 @@ const EditVisitPage = () => {
         }
         existingIds[defId] = m.id;
       });
-      console.log('[EditVisit] Parsed measure values:', values);
-      console.log('[EditVisit] Existing measure IDs:', existingIds);
       setMeasureValues(values);
       setOriginalMeasureValues({ ...values }); // Store original values for change detection
       setExistingMeasureIds(existingIds);
     } catch (err) {
-      console.error('Error fetching existing measures:', err);
+      // Error fetching measures - silently ignore
     }
   };
 
@@ -548,10 +541,8 @@ const EditVisitPage = () => {
       if (customFieldsToSave.length > 0) {
         try {
           await visitCustomFieldService.updateVisitCustomFields(id, customFieldsToSave);
-          console.log('✅ Custom fields saved successfully');
         } catch (customFieldError) {
-          console.error('❌ Error saving custom fields:', customFieldError);
-          // Don't throw error, just log it
+          // Error saving custom fields - continue with visit save
         }
       }
 
@@ -559,9 +550,6 @@ const EditVisitPage = () => {
       if (visit?.patient_id && Object.keys(measureValues).length > 0) {
         const measuresToSave = Object.entries(measureValues)
           .filter(([_, value]) => value !== null && value !== undefined && value !== '');
-
-        console.log('[EditVisit] Measures to save:', measuresToSave);
-        console.log('[EditVisit] Existing measure IDs:', existingMeasureIds);
 
         for (const [definitionId, value] of measuresToSave) {
           const definition = measureDefinitions.find(d => d.id === definitionId);
@@ -589,11 +577,9 @@ const EditVisitPage = () => {
           try {
             if (existingMeasureId) {
               // UPDATE existing measure
-              console.log(`[EditVisit] Updating existing measure ${existingMeasureId}`);
               await updatePatientMeasure(existingMeasureId, payload);
             } else {
               // CREATE new measure
-              console.log(`[EditVisit] Creating new measure for definition ${definitionId}`);
               const createPayload = {
                 measure_definition_id: definitionId,
                 visit_id: id,
@@ -603,8 +589,7 @@ const EditVisitPage = () => {
               await logPatientMeasure(visit.patient_id, createPayload);
             }
           } catch (measureError) {
-            console.error('❌ Error saving measure:', measureError);
-            // Don't throw, continue with other measures
+            // Error saving measure - continue with other measures
           }
         }
       }

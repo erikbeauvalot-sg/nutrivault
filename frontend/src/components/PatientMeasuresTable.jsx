@@ -184,8 +184,6 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
 
     setEditingMeasure(measure);
     setShowEditModal(true);
-    // TODO: Open LogMeasureModal in edit mode when it's created
-    console.log('Edit measure:', measure);
   };
 
   // Pagination

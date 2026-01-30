@@ -94,15 +94,12 @@ const PatientDetailPage = () => {
   const fetchPatientDetails = async () => {
     try {
       setLoading(true);
-      const response = await patientService.getPatientDetails(id);
-      // Handle nested data structure from API
-      const patientData = response.data?.data || response.data || response;
+      const patientData = await patientService.getPatientDetails(id);
       setPatient(patientData);
-      setVisits(patientData.visits || []);
+      setVisits(patientData?.visits || []);
       setError(null);
     } catch (err) {
       setError(t('patients.failedToLoad') + ': ' + (err.response?.data?.error || err.message));
-      console.error('Error fetching patient details:', err);
     } finally {
       setLoading(false);
     }
@@ -834,7 +831,7 @@ const PatientDetailPage = () => {
                                   className="visit-row"
                                 >
                                   <td>{formatDateTime(visit.visit_date)}</td>
-                                  <td>{visit.visit_type || 'General'}</td>
+                                  <td>{visit.visit_type || t('visits.generalVisit', 'General')}</td>
                                   <td>{visit.notes || '-'}</td>
                                   <td>
                                     <Badge bg={visit.status === 'completed' ? 'success' : 'warning'}>
@@ -887,7 +884,7 @@ const PatientDetailPage = () => {
                               <div className="visit-card-body">
                                 <div className="visit-card-row">
                                   <div className="visit-card-label">{t('visits.type', 'Type')}:</div>
-                                  <div className="visit-card-value">{visit.visit_type || 'General'}</div>
+                                  <div className="visit-card-value">{visit.visit_type || t('visits.generalVisit', 'General')}</div>
                                 </div>
                                 {visit.notes && (
                                   <div className="visit-card-row">

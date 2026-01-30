@@ -1,6 +1,6 @@
 {
   "name": "nutrivault-frontend",
-  "version": "5.4.3",
+  "version": "5.5.0",
   "description": "NutriVault Frontend - POC",
   "type": "module",
   "scripts": {
@@ -46,6 +46,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9.39.2",
     "eslint-plugin-i18next": "^6.1.3",
     "eslint-plugin-react": "^7.37.5",

@@ -60,8 +60,7 @@ const DashboardPage = () => {
   const fetchStats = async () => {
     try {
       // Fetch patients count
-      const patientsResponse = await patientService.getPatients({ limit: 1000 }); // Get all patients for stats
-      const patientsData = patientsResponse.data.data || patientsResponse.data;
+      const { data: patientsData } = await patientService.getPatients({ limit: 1000 }); // Get all patients for stats
       const totalPatients = Array.isArray(patientsData) ? patientsData.length : 0;
       const activePatients = Array.isArray(patientsData)
         ? patientsData.filter(p => p.is_active !== false).length
@@ -72,8 +71,7 @@ const DashboardPage = () => {
       let scheduledVisits = 0;
       let completedToday = 0;
       try {
-        const visitsResponse = await visitService.getVisits({ limit: 1000 });
-        const visitsData = visitsResponse.data.data || visitsResponse.data;
+        const { data: visitsData } = await visitService.getVisits({ limit: 1000 });
         totalVisits = Array.isArray(visitsData) ? visitsData.length : 0;
         scheduledVisits = Array.isArray(visitsData)
           ? visitsData.filter(v => v.status === 'SCHEDULED').length
@@ -82,18 +80,17 @@ const DashboardPage = () => {
           ? visitsData.filter(v => v.status === 'COMPLETED' && isToday(new Date(v.visit_date))).length
           : 0;
       } catch (err) {
-        console.warn('Error fetching visits:', err);
+        // Error fetching visits
       }
 
       // Fetch users count (Admin only)
       let totalUsers = 0;
       if (user?.role === 'ADMIN') {
         try {
-          const usersResponse = await userService.getUsers({ limit: 1000 });
-          const usersData = usersResponse.data.data || usersResponse.data;
+          const { data: usersData } = await userService.getUsers({ limit: 1000 });
           totalUsers = Array.isArray(usersData) ? usersData.length : 0;
         } catch (err) {
-          console.warn('Error fetching users:', err);
+          // Error fetching users
         }
       }
 
@@ -120,13 +117,12 @@ const DashboardPage = () => {
       const startDate = startOfDay(today).toISOString();
       const endDate = endOfDay(today).toISOString();
 
-      const response = await visitService.getVisits({
+      const { data: visitsData } = await visitService.getVisits({
         start_date: startDate,
         end_date: endDate,
         limit: 100
       });
 
-      const visitsData = response.data.data || response.data;
       const visits = Array.isArray(visitsData) ? visitsData : [];
 
       // Sort by visit time
@@ -134,7 +130,6 @@ const DashboardPage = () => {
 
       setTodaysVisits(visits);
     } catch (error) {
-      console.error('Error fetching today\'s visits:', error);
       setTodaysVisits([]);
     } finally {
       setLoadingVisits(false);

@@ -53,7 +53,6 @@ const BillingPage = () => {
   // Check if we navigated here from visit creation and refresh
   useEffect(() => {
     if (location.state?.refreshFromVisit) {
-      console.log('🔄 Refreshing billing page after visit creation');
       // Clear the state to prevent re-triggering
       window.history.replaceState({}, document.title);
       // Force refresh after a short delay to ensure invoice was created

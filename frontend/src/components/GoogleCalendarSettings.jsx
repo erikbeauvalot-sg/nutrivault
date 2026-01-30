@@ -5,6 +5,8 @@ import api from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ActionButton from './ActionButton';
 import ConfirmModal from './ConfirmModal';
+import SyncStatusBadge from './SyncStatusBadge';
+import SyncConflictModal from './SyncConflictModal';
 
 /**
  * Google Calendar Settings Component
@@ -22,15 +24,25 @@ const GoogleCalendarSettings = () => {
   const [syncAllDietitians, setSyncAllDietitians] = useState(false);
   const [showDisconnectModal, setShowDisconnectModal] = useState(false);
 
+  // Sync issues state
+  const [syncIssues, setSyncIssues] = useState({ total: 0, conflicts: 0, errors: 0, visits: [] });
+  const [syncStats, setSyncStats] = useState(null);
+  const [isLoadingIssues, setIsLoadingIssues] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [selectedConflictVisitId, setSelectedConflictVisitId] = useState(null);
+
   // Load current sync status on component mount
   useEffect(() => {
     loadSyncStatus();
   }, []);
 
-  // Load calendars when user becomes connected
+  // Load calendars and sync issues when user becomes connected
   useEffect(() => {
     if (isConnected) {
       loadCalendars();
+      loadSyncIssues();
+      loadSyncStats();
     }
   }, [isConnected]);
 
@@ -57,6 +69,63 @@ const GoogleCalendarSettings = () => {
       console.error('Error loading calendars:', error);
       toast.error(t('googleCalendar.errors.loadCalendars'));
     }
+  };
+
+  const loadSyncIssues = async () => {
+    try {
+      setIsLoadingIssues(true);
+      const response = await api.get('/calendar/sync-issues');
+      if (response.data.success) {
+        setSyncIssues(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error loading sync issues:', error);
+    } finally {
+      setIsLoadingIssues(false);
+    }
+  };
+
+  const loadSyncStats = async () => {
+    try {
+      const response = await api.get('/calendar/sync-stats');
+      if (response.data.success) {
+        setSyncStats(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error loading sync stats:', error);
+    }
+  };
+
+  const handleRetryFailed = async () => {
+    try {
+      setIsRetrying(true);
+      const response = await api.post('/calendar/retry-failed');
+
+      if (response.data.success) {
+        toast.success(t('googleCalendar.syncIssues.retrySuccess', {
+          successful: response.data.data.successful,
+          failed: response.data.data.failed
+        }));
+        // Reload issues after retry
+        await loadSyncIssues();
+        await loadSyncStats();
+      }
+    } catch (error) {
+      console.error('Error retrying failed syncs:', error);
+      toast.error(t('googleCalendar.errors.retryFailed', 'Failed to retry syncs'));
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
+  const handleResolveConflict = (visitId) => {
+    setSelectedConflictVisitId(visitId);
+    setShowConflictModal(true);
+  };
+
+  const handleConflictResolved = () => {
+    loadSyncIssues();
+    loadSyncStats();
   };
 
   const handleConnect = async () => {
@@ -322,6 +391,128 @@ const GoogleCalendarSettings = () => {
         </div>
       )}
 
+      {/* Sync Issues Section */}
+      {isConnected && (
+        <div className="sync-issues-section mt-4">
+          <h4>{t('googleCalendar.syncIssues.title', 'Sync Issues')}</h4>
+
+          {/* Sync Statistics */}
+          {syncStats && (
+            <div className="card mb-3">
+              <div className="card-body">
+                <div className="row text-center">
+                  <div className="col-3">
+                    <div className="fs-4 fw-bold text-primary">{syncStats.totalVisits}</div>
+                    <small className="text-muted">{t('googleCalendar.syncStats.totalVisits', 'Total Visits')}</small>
+                  </div>
+                  <div className="col-3">
+                    <div className="fs-4 fw-bold text-success">{syncStats.totalWithGoogle}</div>
+                    <small className="text-muted">{t('googleCalendar.syncStats.synced', 'Synced')}</small>
+                  </div>
+                  <div className="col-3">
+                    <div className="fs-4 fw-bold text-warning">{syncStats.byStatus?.pending_to_google || 0}</div>
+                    <small className="text-muted">{t('googleCalendar.syncStats.pending', 'Pending')}</small>
+                  </div>
+                  <div className="col-3">
+                    <div className="fs-4 fw-bold text-danger">{(syncStats.byStatus?.conflict || 0) + (syncStats.byStatus?.error || 0)}</div>
+                    <small className="text-muted">{t('googleCalendar.syncStats.issues', 'Issues')}</small>
+                  </div>
+                </div>
+                {syncStats.lastSyncAt && (
+                  <div className="text-center mt-2">
+                    <small className="text-muted">
+                      {t('googleCalendar.syncStats.lastSync', 'Last sync')}: {new Date(syncStats.lastSyncAt).toLocaleString()}
+                    </small>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Issues List */}
+          {isLoadingIssues ? (
+            <div className="text-center py-3">
+              <div className="spinner-border spinner-border-sm text-primary" role="status">
+                <span className="visually-hidden">{t('common.loading')}</span>
+              </div>
+            </div>
+          ) : syncIssues.total > 0 ? (
+            <>
+              <div className="alert alert-warning d-flex align-items-center">
+                <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                <span>
+                  {t('googleCalendar.syncIssues.summary', {
+                    conflicts: syncIssues.conflicts,
+                    errors: syncIssues.errors
+                  })}
+                </span>
+              </div>
+
+              <div className="list-group mb-3">
+                {syncIssues.visits.slice(0, 5).map((visit) => (
+                  <div key={visit.id} className="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                      <div className="fw-bold">{visit.patient}</div>
+                      <small className="text-muted">
+                        {new Date(visit.visit_date).toLocaleDateString()} - {visit.status}
+                      </small>
+                      {visit.sync_error_message && (
+                        <div className="text-danger small mt-1">
+                          <i className="bi bi-exclamation-circle me-1"></i>
+                          {visit.sync_error_message}
+                        </div>
+                      )}
+                    </div>
+                    <div className="d-flex align-items-center gap-2">
+                      <SyncStatusBadge status={visit.sync_status} />
+                      {visit.sync_status === 'conflict' && (
+                        <button
+                          className="btn btn-sm btn-outline-primary"
+                          onClick={() => handleResolveConflict(visit.id)}
+                        >
+                          {t('googleCalendar.syncIssues.resolve', 'Resolve')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {syncIssues.visits.length > 5 && (
+                  <div className="list-group-item text-center text-muted">
+                    {t('googleCalendar.syncIssues.more', '+{{count}} more issues', { count: syncIssues.visits.length - 5 })}
+                  </div>
+                )}
+              </div>
+
+              {syncIssues.errors > 0 && (
+                <ActionButton
+                  onClick={handleRetryFailed}
+                  disabled={isRetrying}
+                  className="btn-warning"
+                  title={t('googleCalendar.syncIssues.retryFailed', 'Retry Failed Syncs')}
+                >
+                  {isRetrying ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-1" role="status"></span>
+                      {t('googleCalendar.syncIssues.retrying', 'Retrying...')}
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-arrow-repeat me-1"></i>
+                      {t('googleCalendar.syncIssues.retryFailed', 'Retry Failed Syncs')}
+                    </>
+                  )}
+                </ActionButton>
+              )}
+            </>
+          ) : (
+            <div className="alert alert-success">
+              <i className="bi bi-check-circle-fill me-2"></i>
+              {t('googleCalendar.syncIssues.noIssues', 'No sync issues. All visits are synchronized.')}
+            </div>
+          )}
+        </div>
+      )}
+
       <ConfirmModal
         isOpen={showDisconnectModal}
         title={t('googleCalendar.disconnectConfirm.title')}
@@ -330,6 +521,16 @@ const GoogleCalendarSettings = () => {
         onCancel={() => setShowDisconnectModal(false)}
         confirmText={t('googleCalendar.disconnect')}
         cancelText={t('common.cancel')}
+      />
+
+      <SyncConflictModal
+        isOpen={showConflictModal}
+        visitId={selectedConflictVisitId}
+        onClose={() => {
+          setShowConflictModal(false);
+          setSelectedConflictVisitId(null);
+        }}
+        onResolved={handleConflictResolved}
       />
     </div>
   );

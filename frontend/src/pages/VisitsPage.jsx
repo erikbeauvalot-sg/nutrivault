@@ -4,11 +4,13 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Table, Button, Badge, Form, InputGroup, Spinner, Alert, Dropdown } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Button, Badge, Form, InputGroup } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
+import { PageHeader, PageError, LoadingSpinner, EmptyState, Pagination } from '../components/common';
+import { useIsMobile } from '../hooks';
 import visitService from '../services/visitService';
 import { getPatients } from '../services/patientService';
 import ExportModal from '../components/ExportModal';
@@ -37,16 +39,7 @@ const VisitsPage = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [visitToDelete, setVisitToDelete] = useState(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  // Handle responsive layout
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     fetchPatients();
@@ -56,13 +49,6 @@ const VisitsPage = () => {
   // Handle patient selection from navigation state (from patients page)
   useEffect(() => {
     if (location.state?.selectedPatient) {
-      console.log('🎯 VisitsPage received patient from navigation:', {
-        patientId: location.state.selectedPatient.id,
-        patientName: `${location.state.selectedPatient.first_name} ${location.state.selectedPatient.last_name}`,
-        assignedDietitian: location.state.selectedPatient.assigned_dietitian,
-        hasAssignedDietitian: !!location.state.selectedPatient.assigned_dietitian?.id
-      });
-
       // Navigate to create visit page with pre-selected patient
       navigate('/visits/create', { state: { selectedPatient: location.state.selectedPatient } });
     }
@@ -70,24 +56,21 @@ const VisitsPage = () => {
 
   const fetchPatients = async () => {
     try {
-      const response = await getPatients();
-      const patientsData = response.data.data || response.data;
-      setPatients(Array.isArray(patientsData) ? patientsData : []);
+      const { data } = await getPatients();
+      setPatients(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error fetching patients:', err);
+      // Error fetching patients - silently ignore
     }
   };
 
   const fetchVisits = async () => {
     try {
       setLoading(true);
-      const response = await visitService.getVisits(filters);
-      const data = response.data.data || response.data;
+      const { data, pagination: paginationData } = await visitService.getVisits(filters);
       setVisits(Array.isArray(data) ? data : []);
-      setPagination(response.data.pagination || { total: 0, totalPages: 0 });
+      setPagination(paginationData || { total: 0, totalPages: 0 });
       setError(null);
     } catch (err) {
-      console.error('Error fetching visits:', err);
       setError(err.response?.data?.error || t('visits.failedToLoad'));
       setVisits([]);
     } finally {
@@ -111,7 +94,6 @@ const VisitsPage = () => {
       await visitService.deleteVisit(visitToDelete);
       fetchVisits();
     } catch (err) {
-      console.error('Error deleting visit:', err);
       setError(err.response?.data?.error || t('errors.failedToDeleteVisit'));
     } finally {
       setVisitToDelete(null);
@@ -166,37 +148,39 @@ const VisitsPage = () => {
   return (
     <Layout>
       <Container fluid>
-        <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-          <h1 className="mb-0">📅 {t('visits.title')}</h1>
-          <div className="d-flex flex-wrap gap-2">
-            <Button
-              variant={viewMode === 'table' ? 'primary' : 'outline-primary'}
-              className="d-none d-md-inline-block"
-              onClick={() => setViewMode('table')}
-            >
-              📋 {t('visits.tableView')}
-            </Button>
-            <Button
-              variant={viewMode === 'timeline' ? 'primary' : 'outline-primary'}
-              className="d-none d-md-inline-block"
-              onClick={() => setViewMode('timeline')}
-            >
-              ⏱️ {t('visits.timelineView')}
-            </Button>
-            <Button
-              variant="outline-secondary"
-              onClick={() => setShowExportModal(true)}
-            >
-              <i className="bi bi-download me-1"></i>
-              {t('common.export', 'Export')}
-            </Button>
-            <Button variant="primary" onClick={handleCreateClick}>
-              {t('visits.createVisit')}
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          title={t('visits.title')}
+          actions={[
+            {
+              label: t('visits.tableView'),
+              onClick: () => setViewMode('table'),
+              variant: viewMode === 'table' ? 'primary' : 'outline-primary',
+              icon: 'bi-table',
+              className: 'd-none d-md-inline-block'
+            },
+            {
+              label: t('visits.timelineView'),
+              onClick: () => setViewMode('timeline'),
+              variant: viewMode === 'timeline' ? 'primary' : 'outline-primary',
+              icon: 'bi-clock-history',
+              className: 'd-none d-md-inline-block'
+            },
+            {
+              label: t('common.export', 'Export'),
+              onClick: () => setShowExportModal(true),
+              variant: 'outline-secondary',
+              icon: 'bi-download'
+            },
+            {
+              label: t('visits.createVisit'),
+              onClick: handleCreateClick,
+              variant: 'primary',
+              icon: 'bi-plus-circle'
+            }
+          ]}
+        />
 
-        {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
+        <PageError error={error} onDismiss={() => setError(null)} />
 
         {/* Filters */}
         <Card className="mb-4">
@@ -269,15 +253,18 @@ const VisitsPage = () => {
           <Card>
             <Card.Body>
               {loading ? (
-                <div className="text-center py-5">
-                  <Spinner animation="border" variant="primary" />
-                  <p className="mt-3">{t('visits.loadingVisits')}</p>
-                </div>
+                <LoadingSpinner message={t('visits.loadingVisits')} />
               ) : visits.length === 0 ? (
-                <div className="text-center py-5">
-                  <h3>{t('visits.noVisitsFound')}</h3>
-                  <p className="text-muted">{t('visits.adjustFilters')}</p>
-                </div>
+                <EmptyState
+                  icon="bi-calendar-x"
+                  title={t('visits.noVisitsFound')}
+                  message={t('visits.adjustFilters')}
+                  action={{
+                    label: t('visits.createVisit'),
+                    onClick: handleCreateClick,
+                    icon: 'bi-plus-circle'
+                  }}
+                />
               ) : isMobile ? (
                 /* Mobile Card View */
                 <div className="visit-cards-container">
@@ -413,33 +400,16 @@ const VisitsPage = () => {
               )}
 
               {/* Pagination (shared between mobile and desktop) */}
-              {!loading && visits.length > 0 && pagination.totalPages > 1 && (
-                <div className="visits-pagination mt-3">
-                  <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div className="text-muted small">
-                      {t('visits.showingPage', { page: filters.page, totalPages: pagination.totalPages, total: pagination.total })}
-                    </div>
-                    <div>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        className="me-2"
-                        disabled={filters.page === 1}
-                        onClick={() => handleFilterChange('page', filters.page - 1)}
-                      >
-                        {t('common.previous', 'Previous')}
-                      </Button>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        disabled={filters.page >= pagination.totalPages}
-                        onClick={() => handleFilterChange('page', filters.page + 1)}
-                      >
-                        {t('common.next', 'Next')}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+              {!loading && visits.length > 0 && (
+                <Pagination
+                  currentPage={filters.page}
+                  totalPages={pagination.totalPages}
+                  totalItems={pagination.total}
+                  itemsPerPage={filters.limit}
+                  onPageChange={(page) => handleFilterChange('page', page)}
+                  showInfo
+                  className="mt-3"
+                />
               )}
             </Card.Body>
           </Card>
@@ -448,15 +418,18 @@ const VisitsPage = () => {
           <Card>
             <Card.Body>
               {loading ? (
-                <div className="text-center py-5">
-                  <Spinner animation="border" variant="primary" />
-                  <p className="mt-3">Loading visit timeline...</p>
-                </div>
+                <LoadingSpinner message={t('visits.loadingVisits')} />
               ) : visits.length === 0 ? (
-                <div className="text-center py-5">
-                  <h3>No visits found</h3>
-                  <p className="text-muted">Try adjusting your filters or create a new visit</p>
-                </div>
+                <EmptyState
+                  icon="bi-calendar-x"
+                  title={t('visits.noVisitsFound')}
+                  message={t('visits.adjustFilters')}
+                  action={{
+                    label: t('visits.createVisit'),
+                    onClick: handleCreateClick,
+                    icon: 'bi-plus-circle'
+                  }}
+                />
               ) : (
                 <div className="visit-timeline">
                   {visits
@@ -483,19 +456,19 @@ const VisitsPage = () => {
                                     {getStatusBadge(visit.status)}
                                   </div>
                                   <div className="timeline-meta">
-                                    <strong>Patient:</strong> {visit.patient ? `${visit.patient.first_name} ${visit.patient.last_name}` : 'Unknown'} |
-                                    <strong> Dietitian:</strong> {visit.dietitian ? `${visit.dietitian.first_name} ${visit.dietitian.last_name}` : 'Unknown'} |
-                                    <strong> Type:</strong> {visit.visit_type || 'General'} |
-                                    <strong> Duration:</strong> {visit.duration_minutes ? `${visit.duration_minutes} min` : 'N/A'}
+                                    <strong>{t('visits.patient')}:</strong> {visit.patient ? `${visit.patient.first_name} ${visit.patient.last_name}` : t('visits.unknown')} |
+                                    <strong> {t('visits.dietitian')}:</strong> {visit.dietitian ? `${visit.dietitian.first_name} ${visit.dietitian.last_name}` : t('visits.unknown')} |
+                                    <strong> {t('visits.type')}:</strong> {visit.visit_type || t('visits.generalVisit')} |
+                                    <strong> {t('visits.duration')}:</strong> {visit.duration_minutes ? `${visit.duration_minutes} ${t('visits.min')}` : t('visits.na')}
                                   </div>
                                   {visit.chief_complaint && (
                                     <div className="mt-2">
-                                      <strong>Chief Complaint:</strong> {visit.chief_complaint}
+                                      <strong>{t('visits.chiefComplaint')}:</strong> {visit.chief_complaint}
                                     </div>
                                   )}
                                   {visit.assessment && (
                                     <div className="mt-2">
-                                      <strong>Assessment:</strong> {visit.assessment}
+                                      <strong>{t('visits.assessment')}:</strong> {visit.assessment}
                                     </div>
                                   )}
                                 </Col>

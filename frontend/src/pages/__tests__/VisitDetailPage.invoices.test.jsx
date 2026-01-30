@@ -99,8 +99,8 @@ describe('VisitDetailPage - Invoices Tab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Setup default mocks
-    visitService.getVisitById.mockResolvedValue({ data: { data: mockVisit } });
+    // Setup default mocks - getVisitById now returns data directly
+    visitService.getVisitById.mockResolvedValue(mockVisit);
     visitCustomFieldService.getVisitCustomFields.mockResolvedValue([]);
     getMeasuresByVisit.mockResolvedValue([]);
     getAllMeasureTranslations.mockResolvedValue({});

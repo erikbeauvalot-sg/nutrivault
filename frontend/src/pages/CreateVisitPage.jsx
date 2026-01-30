@@ -87,21 +87,18 @@ const CreateVisitPage = () => {
 
   const fetchPatients = async () => {
     try {
-      const response = await getPatients({ limit: 1000 });
-      const data = response.data?.data || response.data || response;
+      const { data } = await getPatients({ limit: 1000 });
       setPatients(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error fetching patients:', err);
+      // Error fetching patients
     }
   };
 
   const fetchDietitians = async () => {
     try {
-      const response = await userService.getDietitians();
-      const data = response.data?.data || response.data || [];
+      const data = await userService.getDietitians();
       setDietitians(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error fetching dietitians:', err);
       setDietitians([]);
     }
   };
@@ -372,12 +369,7 @@ const CreateVisitPage = () => {
         if (submitData[key] === '') submitData[key] = null;
       });
 
-      const response = await visitService.createVisit(submitData);
-      const savedVisit = response.data?.data || response.data;
-
-      console.log('[CreateVisit] Visit created:', savedVisit);
-      console.log('[CreateVisit] Field values to save:', fieldValues);
-      console.log('[CreateVisit] Measure values to save:', measureValues);
+      const savedVisit = await visitService.createVisit(submitData);
 
       // Save custom field values if any were filled
       if (savedVisit && savedVisit.id && Object.keys(fieldValues).length > 0) {
@@ -389,14 +381,10 @@ const CreateVisitPage = () => {
               value
             }));
 
-          console.log('[CreateVisit] Fields to save:', fieldsToSave);
-
           if (fieldsToSave.length > 0) {
-            const cfResult = await visitCustomFieldService.updateVisitCustomFields(savedVisit.id, fieldsToSave);
-            console.log('[CreateVisit] Custom fields saved:', cfResult);
+            await visitCustomFieldService.updateVisitCustomFields(savedVisit.id, fieldsToSave);
           }
         } catch (cfErr) {
-          console.error('[CreateVisit] Error saving custom fields:', cfErr);
           // Don't block navigation, custom fields are not critical
         }
       }
@@ -406,8 +394,6 @@ const CreateVisitPage = () => {
         try {
           const measuresToSave = Object.entries(measureValues)
             .filter(([_, value]) => value !== null && value !== undefined && value !== '');
-
-          console.log('[CreateVisit] Measures to save:', measuresToSave);
 
           for (const [definitionId, value] of measuresToSave) {
             const definition = measureDefinitions.find(d => d.id === definitionId);
@@ -435,11 +421,9 @@ const CreateVisitPage = () => {
                 payload.numeric_value = parseFloat(value);
             }
 
-            const measureResult = await logPatientMeasure(formData.patient_id, payload);
-            console.log('[CreateVisit] Measure saved:', measureResult);
+            await logPatientMeasure(formData.patient_id, payload);
           }
         } catch (measureErr) {
-          console.error('[CreateVisit] Error saving measures:', measureErr);
           // Don't block navigation, measures are not critical
         }
       }

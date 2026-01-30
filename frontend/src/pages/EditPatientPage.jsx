@@ -109,11 +109,9 @@ const EditPatientPage = () => {
 
   const fetchDietitians = async () => {
     try {
-      const response = await userService.getDietitians();
-      const data = response.data?.data || response.data || [];
+      const data = await userService.getDietitians();
       setDietitians(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Failed to fetch dietitians:', err);
       setDietitians([]);
     }
   };

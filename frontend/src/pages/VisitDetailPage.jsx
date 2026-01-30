@@ -89,13 +89,11 @@ const VisitDetailPage = () => {
   const fetchVisitDetails = async () => {
     try {
       setLoading(true);
-      const response = await visitService.getVisitById(id);
-      const visitData = response.data.data || response.data;
+      const visitData = await visitService.getVisitById(id);
       setVisit(visitData);
       setError(null);
     } catch (err) {
       setError(t('errors.failedToLoadVisit', { error: err.response?.data?.error || err.message }));
-      console.error('Error fetching visit details:', err);
     } finally {
       setLoading(false);
     }

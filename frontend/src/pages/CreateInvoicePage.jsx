@@ -60,11 +60,9 @@ const CreateInvoicePage = () => {
   const fetchPatients = async () => {
     try {
       setLoading(true);
-      const response = await getPatients({ is_active: true, limit: 1000 });
-      const data = response.data?.data || response.data || response;
+      const { data } = await getPatients({ is_active: true, limit: 1000 });
       setPatients(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error fetching patients:', err);
       setError(t('errors.failedToLoadPatients'));
     } finally {
       setLoading(false);
@@ -77,11 +75,9 @@ const CreateInvoicePage = () => {
       return;
     }
     try {
-      const response = await visitService.getVisits({ patient_id: patientId, limit: 100 });
-      const data = response.data?.data || response.data || response;
+      const { data } = await visitService.getVisits({ patient_id: patientId, limit: 100 });
       setVisits(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error fetching visits:', err);
       setVisits([]);
     }
   };

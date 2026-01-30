@@ -20,6 +20,12 @@ const SCOPES = [
   'https://www.googleapis.com/auth/calendar.events'
 ];
 
+// Calendar-relevant fields for sync
+const CALENDAR_RELEVANT_FIELDS = ['visit_date', 'visit_type', 'status', 'duration_minutes'];
+
+// Max sync error count before giving up
+const MAX_SYNC_ERROR_COUNT = 3;
+
 /**
  * Get Google OAuth2 client for a user
  *
@@ -51,10 +57,20 @@ function getOAuth2Client(user) {
  * @returns {string} Authorization URL
  */
 function getAuthUrl(userId) {
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${process.env.FRONTEND_URL}/settings/calendar-sync`;
+
+  // Debug logging for OAuth configuration
+  console.log('[Google OAuth] Generating auth URL with config:', {
+    clientId: process.env.GOOGLE_CLIENT_ID ? `${process.env.GOOGLE_CLIENT_ID.substring(0, 20)}...` : 'NOT SET',
+    redirectUri,
+    GOOGLE_REDIRECT_URI_ENV: process.env.GOOGLE_REDIRECT_URI || 'NOT SET',
+    FRONTEND_URL_ENV: process.env.FRONTEND_URL || 'NOT SET'
+  });
+
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI || `${process.env.FRONTEND_URL}/settings/calendar-sync`
+    redirectUri
   );
 
   const authUrl = oauth2Client.generateAuthUrl({
@@ -64,6 +80,7 @@ function getAuthUrl(userId) {
     prompt: 'consent' // Force consent screen to get refresh token
   });
 
+  console.log('[Google OAuth] Generated auth URL:', authUrl);
   return authUrl;
 }
 
@@ -74,13 +91,23 @@ function getAuthUrl(userId) {
  * @returns {Promise<Object>} Token object
  */
 async function getTokensFromCode(code) {
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${process.env.FRONTEND_URL}/settings/calendar-sync`;
+
+  // Debug logging for token exchange
+  console.log('[Google OAuth] Exchanging code for tokens with config:', {
+    redirectUri,
+    GOOGLE_REDIRECT_URI_ENV: process.env.GOOGLE_REDIRECT_URI || 'NOT SET',
+    codeLength: code ? code.length : 0
+  });
+
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI || `${process.env.FRONTEND_URL}/settings/calendar-sync`
+    redirectUri
   );
 
   const { tokens } = await oauth2Client.getToken(code);
+  console.log('[Google OAuth] Successfully obtained tokens');
   return tokens;
 }
 
@@ -209,7 +236,580 @@ async function createOrUpdateCalendarEvent(visit, user, calendarId = 'primary', 
   }
 
   console.log(`✅ [SOURCE: NutriVault] Successfully synced visit ${visit.id} to Google Calendar event ${event.data.id}`);
+
+  // Update visit with sync tracking info
+  await visit.update({
+    google_event_etag: event.data.etag,
+    sync_status: 'synced',
+    last_sync_at: new Date(),
+    last_sync_source: 'nutrivault',
+    sync_error_count: 0,
+    sync_error_message: null
+  }, { hooks: false, fromSync: true });
+
   return event.data;
+}
+
+/**
+ * Check if a Google Calendar event has changed since last sync
+ *
+ * @param {Object} visit - Visit object with google_event_id and google_event_etag
+ * @param {OAuth2Client} calendar - Google Calendar API client
+ * @param {string} calendarId - Google Calendar ID
+ * @returns {Promise<Object|null>} Changed event data or null if unchanged/not found
+ */
+async function checkGoogleEventChanged(visit, calendar, calendarId) {
+  if (!visit.google_event_id) {
+    return null;
+  }
+
+  try {
+    const response = await calendar.events.get({
+      calendarId,
+      eventId: visit.google_event_id
+    });
+
+    const event = response.data;
+
+    // If ETag matches, event hasn't changed
+    if (visit.google_event_etag && event.etag === visit.google_event_etag) {
+      return null;
+    }
+
+    // Event has changed or we don't have an ETag to compare
+    return event;
+  } catch (error) {
+    if (error.code === 404) {
+      // Event was deleted in Google Calendar
+      return { deleted: true, id: visit.google_event_id };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Detect if there's a conflict between local and remote changes
+ *
+ * @param {Object} visit - Visit object with sync timestamps
+ * @param {Object} googleEvent - Google Calendar event data
+ * @returns {boolean} True if there's a conflict
+ */
+function detectConflict(visit, googleEvent) {
+  // No conflict if this is the first sync
+  if (!visit.last_sync_at) {
+    return false;
+  }
+
+  const lastSyncAt = new Date(visit.last_sync_at);
+  const googleModified = new Date(googleEvent.updated);
+  const localModifiedAt = visit.local_modified_at ? new Date(visit.local_modified_at) : null;
+
+  // Check if both sides modified after last sync
+  const localModified = localModifiedAt && localModifiedAt > lastSyncAt;
+  const remoteModified = googleModified > lastSyncAt;
+
+  return localModified && remoteModified;
+}
+
+/**
+ * Parse Google Calendar event to extract NutriVault visit fields
+ *
+ * @param {Object} event - Google Calendar event
+ * @returns {Object} Parsed visit fields
+ */
+function parseGoogleEvent(event) {
+  const result = {
+    visit_date: new Date(event.start.dateTime || event.start.date),
+    remote_modified_at: new Date(event.updated)
+  };
+
+  // Calculate duration from start/end times
+  if (event.end && event.end.dateTime) {
+    const start = new Date(event.start.dateTime);
+    const end = new Date(event.end.dateTime);
+    result.duration_minutes = Math.round((end - start) / 60000);
+  }
+
+  // Parse visit_type from title: "Consultation - Patient Name (Type)"
+  const typeMatch = event.summary?.match(/\(([^)]+)\)$/);
+  if (typeMatch) {
+    result.visit_type = typeMatch[1];
+  }
+
+  // Parse status from description: "Statut: STATUS" or "Status: STATUS"
+  const statusMatch = event.description?.match(/Statut?\s*:\s*(\w+)/i);
+  if (statusMatch) {
+    result.status = mapGoogleStatusToVisit(statusMatch[1]);
+  }
+
+  return result;
+}
+
+/**
+ * Map Google Calendar status string to Visit status
+ *
+ * @param {string} googleStatus - Status string from Google Calendar
+ * @returns {string} Visit status
+ */
+function mapGoogleStatusToVisit(googleStatus) {
+  const statusMap = {
+    'scheduled': 'SCHEDULED',
+    'planifie': 'SCHEDULED',
+    'planifié': 'SCHEDULED',
+    'completed': 'COMPLETED',
+    'termine': 'COMPLETED',
+    'terminé': 'COMPLETED',
+    'cancelled': 'CANCELLED',
+    'annule': 'CANCELLED',
+    'annulé': 'CANCELLED',
+    'noshow': 'NO_SHOW',
+    'no_show': 'NO_SHOW',
+    'absent': 'NO_SHOW'
+  };
+
+  const normalized = googleStatus.toLowerCase().replace(/[éè]/g, 'e');
+  return statusMap[normalized] || 'SCHEDULED';
+}
+
+/**
+ * Handle a Google Calendar event deletion
+ *
+ * @param {Object} visit - Visit object
+ * @returns {Promise<Object>} Updated visit
+ */
+async function handleGoogleDeletion(visit) {
+  console.log(`🗑️ [SOURCE: Google Calendar] Event ${visit.google_event_id} was deleted, cancelling visit ${visit.id}`);
+
+  await visit.update({
+    status: 'CANCELLED',
+    google_event_deleted: true,
+    sync_status: 'synced',
+    last_sync_at: new Date(),
+    last_sync_source: 'google'
+  }, { hooks: false, fromSync: true });
+
+  return visit;
+}
+
+/**
+ * Mark a visit as having a sync conflict
+ *
+ * @param {Object} visit - Visit object
+ * @param {Object} googleEvent - Google Calendar event data
+ * @returns {Promise<Object>} Updated visit
+ */
+async function markAsConflict(visit, googleEvent) {
+  const googleData = parseGoogleEvent(googleEvent);
+
+  console.log(`⚠️ [CONFLICT] Visit ${visit.id} has conflicting changes:`);
+  console.log(`   Local: date=${visit.visit_date}, modified=${visit.local_modified_at}`);
+  console.log(`   Google: date=${googleData.visit_date}, modified=${googleData.remote_modified_at}`);
+
+  await visit.update({
+    sync_status: 'conflict',
+    remote_modified_at: googleData.remote_modified_at,
+    google_event_etag: googleEvent.etag
+  }, { hooks: false, fromSync: true });
+
+  return { conflict: true, visit, googleData, googleEvent };
+}
+
+/**
+ * Pull changes from Google Calendar to a visit
+ *
+ * @param {Object} visit - Visit object
+ * @param {Object} googleEvent - Google Calendar event data
+ * @returns {Promise<Object>} Updated visit
+ */
+async function pullFromGoogle(visit, googleEvent) {
+  const googleData = parseGoogleEvent(googleEvent);
+
+  console.log(`📥 [SOURCE: Google Calendar] Pulling changes for visit ${visit.id}`);
+
+  await visit.update({
+    ...googleData,
+    google_event_etag: googleEvent.etag,
+    sync_status: 'synced',
+    last_sync_at: new Date(),
+    last_sync_source: 'google',
+    sync_error_count: 0,
+    sync_error_message: null
+  }, { hooks: false, fromSync: true });
+
+  return visit;
+}
+
+/**
+ * Perform smart bidirectional sync for a visit
+ *
+ * @param {Object} visit - Visit object
+ * @param {Object} user - User object with Google tokens
+ * @param {string} calendarId - Google Calendar ID
+ * @returns {Promise<Object>} Sync result
+ */
+async function smartSync(visit, user, calendarId) {
+  const oauth2Client = getOAuth2Client(user);
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+  // Skip if in conflict state (needs manual resolution)
+  if (visit.sync_status === 'conflict') {
+    return { status: 'skipped', reason: 'conflict', visit };
+  }
+
+  // Skip if too many errors
+  if (visit.sync_error_count >= MAX_SYNC_ERROR_COUNT) {
+    return { status: 'skipped', reason: 'max_errors', visit };
+  }
+
+  try {
+    // 1. Check if Google event has changed
+    const googleEvent = await checkGoogleEventChanged(visit, calendar, calendarId);
+
+    if (googleEvent) {
+      // Handle deletion
+      if (googleEvent.deleted) {
+        await handleGoogleDeletion(visit);
+        return { status: 'deleted_from_google', visit };
+      }
+
+      // 2. Detect conflict
+      if (detectConflict(visit, googleEvent)) {
+        const result = await markAsConflict(visit, googleEvent);
+        return { status: 'conflict', ...result };
+      }
+
+      // 3. If Google is more recent, pull changes
+      const googleModified = new Date(googleEvent.updated);
+      const localModified = visit.local_modified_at ? new Date(visit.local_modified_at) : new Date(0);
+
+      if (googleModified > localModified) {
+        await pullFromGoogle(visit, googleEvent);
+        return { status: 'pulled_from_google', visit };
+      }
+    }
+
+    // 4. Push to Google if local changes pending
+    if (!visit.google_event_id || visit.sync_status === 'pending_to_google') {
+      await createOrUpdateCalendarEvent(visit, user, calendarId);
+      return { status: 'pushed_to_google', visit };
+    }
+
+    return { status: 'unchanged', visit };
+  } catch (error) {
+    console.error(`❌ Smart sync error for visit ${visit.id}:`, error.message);
+
+    await visit.update({
+      sync_status: 'error',
+      sync_error_message: error.message,
+      sync_error_count: (visit.sync_error_count || 0) + 1
+    }, { hooks: false, fromSync: true });
+
+    return { status: 'error', error: error.message, visit };
+  }
+}
+
+/**
+ * Get all visits with sync issues (conflicts or errors)
+ *
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} Visits with issues
+ */
+async function getSyncIssues(userId) {
+  const user = await User.findByPk(userId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const { Op } = require('sequelize');
+
+  const whereClause = {
+    dietitian_id: userId,
+    sync_status: {
+      [Op.in]: ['conflict', 'error']
+    }
+  };
+
+  const visits = await Visit.findAll({
+    where: whereClause,
+    include: [{
+      model: Patient,
+      as: 'patient',
+      attributes: ['first_name', 'last_name']
+    }],
+    order: [['updatedAt', 'DESC']]
+  });
+
+  const conflicts = visits.filter(v => v.sync_status === 'conflict');
+  const errors = visits.filter(v => v.sync_status === 'error');
+
+  return {
+    total: visits.length,
+    conflicts: conflicts.length,
+    errors: errors.length,
+    visits: visits.map(v => ({
+      id: v.id,
+      patient: v.patient ? `${v.patient.first_name} ${v.patient.last_name}` : 'Unknown',
+      visit_date: v.visit_date,
+      status: v.status,
+      sync_status: v.sync_status,
+      sync_error_message: v.sync_error_message,
+      sync_error_count: v.sync_error_count,
+      local_modified_at: v.local_modified_at,
+      remote_modified_at: v.remote_modified_at,
+      google_event_id: v.google_event_id
+    }))
+  };
+}
+
+/**
+ * Resolve a sync conflict
+ *
+ * @param {string} visitId - Visit ID
+ * @param {string} userId - User ID
+ * @param {string} resolution - 'keep_local' | 'keep_remote' | 'merge'
+ * @param {Object} mergedData - Merged data if resolution is 'merge'
+ * @returns {Promise<Object>} Resolved visit
+ */
+async function resolveConflict(visitId, userId, resolution, mergedData = null) {
+  const user = await User.findByPk(userId);
+  if (!user || !user.google_access_token) {
+    throw new Error('User not connected to Google Calendar');
+  }
+
+  const visit = await Visit.findOne({
+    where: {
+      id: visitId,
+      dietitian_id: userId,
+      sync_status: 'conflict'
+    }
+  });
+
+  if (!visit) {
+    throw new Error('Visit not found or not in conflict state');
+  }
+
+  const oauth2Client = getOAuth2Client(user);
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+  const calendarId = user.google_calendar_id || 'primary';
+
+  try {
+    if (resolution === 'keep_local') {
+      // Push local changes to Google
+      await createOrUpdateCalendarEvent(visit, user, calendarId);
+      console.log(`✅ Conflict resolved: kept local changes for visit ${visitId}`);
+      return { status: 'resolved', resolution: 'keep_local', visit };
+    }
+
+    if (resolution === 'keep_remote') {
+      // Pull Google changes
+      const googleEvent = await calendar.events.get({
+        calendarId,
+        eventId: visit.google_event_id
+      });
+      await pullFromGoogle(visit, googleEvent.data);
+      console.log(`✅ Conflict resolved: kept remote changes for visit ${visitId}`);
+      return { status: 'resolved', resolution: 'keep_remote', visit };
+    }
+
+    if (resolution === 'merge' && mergedData) {
+      // Apply merged data
+      await visit.update({
+        ...mergedData,
+        sync_status: 'pending_to_google',
+        local_modified_at: new Date()
+      }, { hooks: false, fromSync: true });
+
+      // Push to Google
+      await createOrUpdateCalendarEvent(visit, user, calendarId);
+      console.log(`✅ Conflict resolved: merged changes for visit ${visitId}`);
+      return { status: 'resolved', resolution: 'merge', visit };
+    }
+
+    throw new Error('Invalid resolution type');
+  } catch (error) {
+    console.error(`❌ Error resolving conflict for visit ${visitId}:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Retry failed syncs for a user
+ *
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} Retry results
+ */
+async function retryFailedSyncs(userId) {
+  const user = await User.findByPk(userId);
+  if (!user || !user.google_access_token) {
+    throw new Error('User not connected to Google Calendar');
+  }
+
+  const { Op } = require('sequelize');
+
+  const failedVisits = await Visit.findAll({
+    where: {
+      dietitian_id: userId,
+      sync_status: 'error',
+      sync_error_count: {
+        [Op.lt]: MAX_SYNC_ERROR_COUNT
+      }
+    }
+  });
+
+  const calendarId = user.google_calendar_id || 'primary';
+  const results = {
+    total: failedVisits.length,
+    successful: 0,
+    failed: 0,
+    details: []
+  };
+
+  for (const visit of failedVisits) {
+    try {
+      const result = await smartSync(visit, user, calendarId);
+      if (result.status === 'error') {
+        results.failed++;
+      } else {
+        results.successful++;
+      }
+      results.details.push({
+        visitId: visit.id,
+        ...result
+      });
+    } catch (error) {
+      results.failed++;
+      results.details.push({
+        visitId: visit.id,
+        status: 'error',
+        error: error.message
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Get sync statistics for a user
+ *
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} Sync statistics
+ */
+async function getSyncStats(userId) {
+  const user = await User.findByPk(userId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const { Op, fn, col } = require('sequelize');
+
+  const stats = await Visit.findAll({
+    where: {
+      dietitian_id: userId,
+      google_event_id: {
+        [Op.ne]: null
+      }
+    },
+    attributes: [
+      'sync_status',
+      [fn('COUNT', col('id')), 'count']
+    ],
+    group: ['sync_status'],
+    raw: true
+  });
+
+  const totalWithGoogle = await Visit.count({
+    where: {
+      dietitian_id: userId,
+      google_event_id: {
+        [Op.ne]: null
+      }
+    }
+  });
+
+  const totalVisits = await Visit.count({
+    where: {
+      dietitian_id: userId
+    }
+  });
+
+  const lastSyncedVisit = await Visit.findOne({
+    where: {
+      dietitian_id: userId,
+      last_sync_at: {
+        [Op.ne]: null
+      }
+    },
+    order: [['last_sync_at', 'DESC']],
+    attributes: ['last_sync_at']
+  });
+
+  return {
+    totalVisits,
+    totalWithGoogle,
+    lastSyncAt: lastSyncedVisit?.last_sync_at || null,
+    byStatus: stats.reduce((acc, s) => {
+      acc[s.sync_status || 'none'] = parseInt(s.count);
+      return acc;
+    }, {})
+  };
+}
+
+/**
+ * Check for deleted Google events and update visits
+ *
+ * @param {string} userId - User ID
+ * @param {Object} options - Options
+ * @returns {Promise<Object>} Results
+ */
+async function syncDeletedEvents(userId, options = {}) {
+  const user = await User.findByPk(userId);
+  if (!user || !user.google_access_token) {
+    throw new Error('User not connected to Google Calendar');
+  }
+
+  const oauth2Client = getOAuth2Client(user);
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+  const calendarId = user.google_calendar_id || 'primary';
+
+  const since = options.since || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  // Get deleted events from Google
+  const response = await calendar.events.list({
+    calendarId,
+    showDeleted: true,
+    updatedMin: since.toISOString(),
+    singleEvents: true
+  });
+
+  const deletedEvents = response.data.items.filter(e => e.status === 'cancelled');
+  const results = {
+    total: deletedEvents.length,
+    processed: 0,
+    cancelled: 0
+  };
+
+  const { Op } = require('sequelize');
+
+  for (const event of deletedEvents) {
+    const visit = await Visit.findOne({
+      where: {
+        google_event_id: event.id,
+        google_event_deleted: false,
+        status: {
+          [Op.ne]: 'CANCELLED'
+        }
+      }
+    });
+
+    if (visit) {
+      await handleGoogleDeletion(visit);
+      results.cancelled++;
+    }
+    results.processed++;
+  }
+
+  return results;
 }
 
 /**
@@ -601,5 +1201,21 @@ module.exports = {
   syncCalendarToVisits,
   disconnectCalendar,
   getUserCalendars,
-  getOAuth2Client
+  getOAuth2Client,
+  // New smart sync functions
+  checkGoogleEventChanged,
+  detectConflict,
+  parseGoogleEvent,
+  handleGoogleDeletion,
+  markAsConflict,
+  pullFromGoogle,
+  smartSync,
+  getSyncIssues,
+  resolveConflict,
+  retryFailedSyncs,
+  getSyncStats,
+  syncDeletedEvents,
+  // Constants
+  CALENDAR_RELEVANT_FIELDS,
+  MAX_SYNC_ERROR_COUNT
 };

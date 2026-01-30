@@ -62,6 +62,54 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(255),
       allowNull: true,
       comment: 'Google Calendar event ID for this visit'
+    },
+    google_event_etag: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment: 'Google Calendar event ETag for change detection'
+    },
+    sync_status: {
+      type: DataTypes.ENUM('synced', 'pending_to_google', 'pending_from_google', 'conflict', 'error'),
+      allowNull: true,
+      defaultValue: null,
+      comment: 'Current synchronization status'
+    },
+    last_sync_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Timestamp of last successful synchronization'
+    },
+    last_sync_source: {
+      type: DataTypes.ENUM('nutrivault', 'google', 'manual'),
+      allowNull: true,
+      comment: 'Source of the last synchronization'
+    },
+    local_modified_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Timestamp of last local modification in NutriVault'
+    },
+    remote_modified_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Timestamp of last modification in Google Calendar'
+    },
+    sync_error_message: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Error message from last failed sync attempt'
+    },
+    sync_error_count: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      comment: 'Number of consecutive sync failures'
+    },
+    google_event_deleted: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: 'Whether the Google Calendar event has been deleted'
     }
   }, {
     tableName: 'visits',
@@ -79,6 +127,9 @@ module.exports = (sequelize, DataTypes) => {
       },
       {
         fields: ['status']
+      },
+      {
+        fields: ['sync_status']
       }
     ]
   });
@@ -99,9 +150,42 @@ module.exports = (sequelize, DataTypes) => {
     });
   };
 
+  // Calendar-relevant fields for tracking changes
+  const CALENDAR_RELEVANT_FIELDS = ['visit_date', 'visit_type', 'status', 'duration_minutes'];
+
+  // Hook to track local modifications (before update)
+  Visit.addHook('beforeUpdate', async (visit, options) => {
+    // Skip if this update is coming from a sync operation
+    if (options.fromSync) {
+      return;
+    }
+
+    const changedFields = visit.changed();
+    if (changedFields && changedFields.some(field => CALENDAR_RELEVANT_FIELDS.includes(field))) {
+      // Track local modification time
+      visit.local_modified_at = new Date();
+
+      // Mark as pending sync to Google if we have an event and it was synced before
+      if (visit.google_event_id && visit.sync_status !== 'conflict') {
+        visit.sync_status = 'pending_to_google';
+      }
+    }
+  });
+
   // Hooks for Google Calendar synchronization
   Visit.addHook('afterCreate', async (visit, options) => {
     try {
+      // Skip if this is a sync operation
+      if (options.fromSync) {
+        return;
+      }
+
+      // Set initial local_modified_at
+      await visit.update({
+        local_modified_at: new Date(),
+        sync_status: 'pending_to_google'
+      }, { hooks: false });
+
       // Only sync if dietitian has Google Calendar enabled
       const dietitian = await sequelize.models.User.findByPk(visit.dietitian_id);
       if (dietitian && dietitian.google_calendar_sync_enabled) {
@@ -111,12 +195,34 @@ module.exports = (sequelize, DataTypes) => {
       }
     } catch (error) {
       console.error('Error syncing visit creation to Google Calendar:', error);
-      // Don't fail the visit creation if calendar sync fails
+      // Update sync status to error
+      await visit.update({
+        sync_status: 'error',
+        sync_error_message: error.message,
+        sync_error_count: (visit.sync_error_count || 0) + 1
+      }, { hooks: false });
     }
   });
 
   Visit.addHook('afterUpdate', async (visit, options) => {
     try {
+      // Skip if this is a sync operation or if visit is in conflict/error state
+      if (options.fromSync) {
+        return;
+      }
+
+      // Don't sync if in conflict state (needs manual resolution)
+      if (visit.sync_status === 'conflict') {
+        console.log(`⚠️ Skipping sync for visit ${visit.id} - in conflict state`);
+        return;
+      }
+
+      // Don't sync if too many errors
+      if (visit.sync_error_count >= 3) {
+        console.log(`⚠️ Skipping sync for visit ${visit.id} - too many errors (${visit.sync_error_count})`);
+        return;
+      }
+
       // Only sync if dietitian has Google Calendar enabled
       const dietitian = await sequelize.models.User.findByPk(visit.dietitian_id);
       if (dietitian && dietitian.google_calendar_sync_enabled) {
@@ -124,15 +230,23 @@ module.exports = (sequelize, DataTypes) => {
 
         // Check if relevant fields changed
         const changedFields = visit.changed();
-        const calendarRelevantFields = ['visit_date', 'visit_type', 'status', 'duration_minutes'];
 
-        if (changedFields.some(field => calendarRelevantFields.includes(field))) {
+        if (changedFields && changedFields.some(field => CALENDAR_RELEVANT_FIELDS.includes(field))) {
           const calendarId = dietitian.google_calendar_id || 'primary';
           if (visit.status === 'CANCELLED') {
             // Delete from calendar if cancelled
-            await googleCalendarService.deleteCalendarEvent(visit.google_event_id, dietitian, calendarId);
-            visit.google_event_id = null;
-            await visit.save({ hooks: false }); // Avoid infinite loop
+            if (visit.google_event_id) {
+              await googleCalendarService.deleteCalendarEvent(visit.google_event_id, dietitian, calendarId);
+              await visit.update({
+                google_event_id: null,
+                google_event_etag: null,
+                sync_status: 'synced',
+                last_sync_at: new Date(),
+                last_sync_source: 'nutrivault',
+                sync_error_count: 0,
+                sync_error_message: null
+              }, { hooks: false });
+            }
           } else {
             // Update calendar event
             await googleCalendarService.createOrUpdateCalendarEvent(visit, dietitian, calendarId);
@@ -141,7 +255,12 @@ module.exports = (sequelize, DataTypes) => {
       }
     } catch (error) {
       console.error('Error syncing visit update to Google Calendar:', error);
-      // Don't fail the visit update if calendar sync fails
+      // Update sync status to error
+      await visit.update({
+        sync_status: 'error',
+        sync_error_message: error.message,
+        sync_error_count: (visit.sync_error_count || 0) + 1
+      }, { hooks: false });
     }
   });
 

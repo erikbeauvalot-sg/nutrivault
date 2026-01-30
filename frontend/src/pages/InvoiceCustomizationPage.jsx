@@ -119,20 +119,21 @@ const InvoiceCustomizationPage = () => {
 
       // Set logo and signature previews if they exist
       if (data.logo_url) {
-        // Use API base URL from environment or default
-        const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        // Use server base URL (not API URL) for static files
+        // In production, images are served from the same origin
+        // In development, use localhost:3001 (backend port)
+        const serverURL = import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV ? 'http://localhost:3001' : '');
         // Add timestamp to prevent caching issues
-        setLogoPreview(`${baseURL}${data.logo_url}?t=${new Date().getTime()}`);
+        setLogoPreview(`${serverURL}${data.logo_url}?t=${new Date().getTime()}`);
       }
       if (data.signature_url) {
-        // Use API base URL from environment or default
-        const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        // Use server base URL (not API URL) for static files
+        const serverURL = import.meta.env.VITE_SERVER_URL || (import.meta.env.DEV ? 'http://localhost:3001' : '');
         // Add timestamp to prevent caching issues
-        setSignaturePreview(`${baseURL}${data.signature_url}?t=${new Date().getTime()}`);
+        setSignaturePreview(`${serverURL}${data.signature_url}?t=${new Date().getTime()}`);
       }
     } catch (err) {
-      console.error('Error fetching customization:', err);
-      setError(err.response?.data?.error || 'Failed to load customization');
+      setError(err.response?.data?.error || t('invoiceCustomization.loadError'));
     } finally {
       setLoading(false);
     }
@@ -168,11 +169,11 @@ const InvoiceCustomizationPage = () => {
     try {
       setSaving(true);
       await invoiceCustomizationService.uploadLogo(logoFile);
-      setSuccess('Logo uploaded successfully');
+      setSuccess(t('invoiceCustomization.logo.uploaded', 'Logo uploaded successfully'));
       setLogoFile(null);
       await fetchCustomization();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to upload logo');
+      setError(err.response?.data?.error || t('invoiceCustomization.logo.uploadError', 'Failed to upload logo'));
     } finally {
       setSaving(false);
     }
@@ -202,11 +203,11 @@ const InvoiceCustomizationPage = () => {
     try {
       setSaving(true);
       await invoiceCustomizationService.uploadSignature(signatureFile);
-      setSuccess('Signature uploaded successfully');
+      setSuccess(t('invoiceCustomization.footer.uploaded', 'Signature uploaded successfully'));
       setSignatureFile(null);
       await fetchCustomization();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to upload signature');
+      setError(err.response?.data?.error || t('invoiceCustomization.footer.uploadError', 'Failed to upload signature'));
     } finally {
       setSaving(false);
     }
@@ -235,10 +236,10 @@ const InvoiceCustomizationPage = () => {
       setSaving(true);
       setError(null);
       await invoiceCustomizationService.updateCustomization(formData);
-      setSuccess('Settings saved successfully');
+      setSuccess(t('invoiceCustomization.saved'));
       await fetchCustomization();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to save settings');
+      setError(err.response?.data?.error || t('invoiceCustomization.saveError'));
     } finally {
       setSaving(false);
     }
@@ -268,7 +269,7 @@ const InvoiceCustomizationPage = () => {
       <Layout>
         <Container className="py-5 text-center">
           <Spinner animation="border" />
-          <p className="mt-2">Loading...</p>
+          <p className="mt-2">{t('invoiceCustomization.loading')}</p>
         </Container>
       </Layout>
     );
@@ -280,16 +281,16 @@ const InvoiceCustomizationPage = () => {
         {/* Header */}
         <Row className="mb-4">
           <Col>
-            <h1 className="mb-0">Invoice Customization</h1>
-            <p className="text-muted">Customize your invoice template with branding and contact information</p>
+            <h1 className="mb-0">{t('invoiceCustomization.title')}</h1>
+            <p className="text-muted">{t('invoiceCustomization.subtitle')}</p>
           </Col>
           <Col xs="auto">
             <Button variant="outline-secondary" onClick={handleReset} disabled={saving} className="me-2">
-              Reset to Defaults
+              {t('invoiceCustomization.actions.reset')}
             </Button>
             <Button variant="primary" onClick={handleSave} disabled={saving}>
               {saving ? <Spinner size="sm" className="me-2" /> : null}
-              Save Settings
+              {t('invoiceCustomization.actions.save')}
             </Button>
           </Col>
         </Row>
@@ -309,15 +310,15 @@ const InvoiceCustomizationPage = () => {
         {/* Tabs */}
         <Tabs defaultActiveKey="branding" className="mb-3">
           {/* Branding Tab */}
-          <Tab eventKey="branding" title="Logo & Branding">
+          <Tab eventKey="branding" title={t('invoiceCustomization.tabs.logoBranding')}>
             <Card>
               <Card.Body>
-                <h5>Logo</h5>
+                <h5>{t('invoiceCustomization.logo.title')}</h5>
                 <Form.Group className="mb-3">
                   <Form.Check
                     type="checkbox"
                     name="show_logo"
-                    label="Show logo on invoices"
+                    label={t('invoiceCustomization.logo.showOnInvoices')}
                     checked={formData.show_logo}
                     onChange={handleInputChange}
                   />
@@ -326,26 +327,34 @@ const InvoiceCustomizationPage = () => {
                 <Row className="mb-3">
                   <Col md={6}>
                     <Form.Group>
-                      <Form.Label>Upload Logo</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.logo.uploadNew')}</Form.Label>
                       <Form.Control type="file" accept="image/png,image/jpeg" onChange={handleLogoSelect} />
-                      <Form.Text>Max 5MB, PNG or JPG</Form.Text>
+                      <Form.Text>{t('invoiceCustomization.logo.maxSize', 'Max 5MB, PNG ou JPG')}</Form.Text>
                     </Form.Group>
                     {logoFile && (
                       <Button size="sm" className="mt-2" onClick={handleLogoUpload} disabled={saving}>
-                        Upload
+                        {t('invoiceCustomization.logo.upload', 'Téléverser')}
                       </Button>
                     )}
                   </Col>
                   <Col md={6}>
-                    {logoPreview && (
+                    {logoPreview ? (
                       <div>
-                        <p className="mb-1"><strong>Preview:</strong></p>
-                        <img src={logoPreview} alt="Logo" style={{ maxWidth: '200px', maxHeight: '100px' }} className="border p-2" />
+                        <p className="mb-1"><strong>{t('invoiceCustomization.logo.currentLogo')}:</strong></p>
+                        <img
+                          src={logoPreview}
+                          alt="Logo"
+                          style={{ maxWidth: '200px', maxHeight: '100px' }}
+                          className="border p-2"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
                         <br />
                         <Button size="sm" variant="outline-danger" className="mt-2" onClick={handleLogoDelete}>
-                          Delete Logo
+                          {t('invoiceCustomization.logo.delete')}
                         </Button>
                       </div>
+                    ) : (
+                      <p className="text-muted">{t('invoiceCustomization.logo.noLogo')}</p>
                     )}
                   </Col>
                 </Row>
@@ -353,7 +362,7 @@ const InvoiceCustomizationPage = () => {
                 <Row>
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Logo Width (px)</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.logo.width')}</Form.Label>
                       <Form.Control
                         type="number"
                         name="logo_width"
@@ -366,7 +375,7 @@ const InvoiceCustomizationPage = () => {
                   </Col>
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Logo Height (px)</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.logo.height')}</Form.Label>
                       <Form.Control
                         type="number"
                         name="logo_height"
@@ -381,11 +390,11 @@ const InvoiceCustomizationPage = () => {
 
                 <hr />
 
-                <h5>Color Scheme</h5>
+                <h5>{t('invoiceCustomization.colors.title')}</h5>
                 <Row>
                   <Col md={4}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Primary Color</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.colors.primary')}</Form.Label>
                       <div className="d-flex align-items-center gap-2">
                         <div
                           style={{
@@ -418,7 +427,7 @@ const InvoiceCustomizationPage = () => {
 
                   <Col md={4}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Secondary Color</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.colors.secondary')}</Form.Label>
                       <div className="d-flex align-items-center gap-2">
                         <div
                           style={{
@@ -451,7 +460,7 @@ const InvoiceCustomizationPage = () => {
 
                   <Col md={4}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Accent Color</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.colors.accent')}</Form.Label>
                       <div className="d-flex align-items-center gap-2">
                         <div
                           style={{
@@ -484,13 +493,13 @@ const InvoiceCustomizationPage = () => {
                 </Row>
 
                 <Form.Group className="mb-3">
-                  <Form.Label>Business Name</Form.Label>
+                  <Form.Label>{t('invoiceCustomization.contact.businessName')}</Form.Label>
                   <Form.Control
                     type="text"
                     name="business_name"
                     value={formData.business_name}
                     onChange={handleInputChange}
-                    placeholder="e.g., NutriVault Practice"
+                    placeholder={t('invoiceCustomization.contact.businessNamePlaceholder')}
                   />
                 </Form.Group>
               </Card.Body>
@@ -498,14 +507,14 @@ const InvoiceCustomizationPage = () => {
           </Tab>
 
           {/* Contact Info Tab */}
-          <Tab eventKey="contact" title="Contact Information">
+          <Tab eventKey="contact" title={t('invoiceCustomization.tabs.contactInfo')}>
             <Card>
               <Card.Body>
                 <Form.Group className="mb-3">
                   <Form.Check
                     type="checkbox"
                     name="show_contact_info"
-                    label="Show contact information on invoices"
+                    label={t('invoiceCustomization.contact.showOnInvoices')}
                     checked={formData.show_contact_info}
                     onChange={handleInputChange}
                   />
@@ -514,7 +523,7 @@ const InvoiceCustomizationPage = () => {
                 <Row>
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Address Line 1</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.contact.addressLine1')}</Form.Label>
                       <Form.Control
                         type="text"
                         name="address_line1"
@@ -525,7 +534,7 @@ const InvoiceCustomizationPage = () => {
                   </Col>
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Address Line 2</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.contact.addressLine2')}</Form.Label>
                       <Form.Control
                         type="text"
                         name="address_line2"
@@ -539,7 +548,7 @@ const InvoiceCustomizationPage = () => {
                 <Row>
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>City</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.contact.city')}</Form.Label>
                       <Form.Control
                         type="text"
                         name="city"
@@ -550,7 +559,7 @@ const InvoiceCustomizationPage = () => {
                   </Col>
                   <Col md={3}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Postal Code</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.contact.postalCode')}</Form.Label>
                       <Form.Control
                         type="text"
                         name="postal_code"
@@ -561,7 +570,7 @@ const InvoiceCustomizationPage = () => {
                   </Col>
                   <Col md={3}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Country</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.contact.country')}</Form.Label>
                       <Form.Control
                         type="text"
                         name="country"
@@ -575,7 +584,7 @@ const InvoiceCustomizationPage = () => {
                 <Row>
                   <Col md={4}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Phone</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.contact.phone')}</Form.Label>
                       <Form.Control
                         type="tel"
                         name="phone"
@@ -586,7 +595,7 @@ const InvoiceCustomizationPage = () => {
                   </Col>
                   <Col md={4}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Email</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.contact.email')}</Form.Label>
                       <Form.Control
                         type="email"
                         name="email"
@@ -597,13 +606,13 @@ const InvoiceCustomizationPage = () => {
                   </Col>
                   <Col md={4}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Website</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.contact.website')}</Form.Label>
                       <Form.Control
                         type="url"
                         name="website"
                         value={formData.website}
                         onChange={handleInputChange}
-                        placeholder="https://"
+                        placeholder={t('invoiceCustomization.contact.websitePlaceholder')}
                       />
                     </Form.Group>
                   </Col>
@@ -612,14 +621,14 @@ const InvoiceCustomizationPage = () => {
                 <Row>
                   <Col md={12}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Divers</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.contact.miscInfo')}</Form.Label>
                       <Form.Control
                         as="textarea"
                         rows={2}
                         name="misc_info"
                         value={formData.misc_info}
                         onChange={handleInputChange}
-                        placeholder="Informations supplémentaires..."
+                        placeholder={t('invoiceCustomization.contact.miscInfoPlaceholder')}
                       />
                     </Form.Group>
                   </Col>
@@ -629,28 +638,28 @@ const InvoiceCustomizationPage = () => {
           </Tab>
 
           {/* Footer Tab */}
-          <Tab eventKey="footer" title="Footer & Signature">
+          <Tab eventKey="footer" title={t('invoiceCustomization.tabs.footerSignature')}>
             <Card>
               <Card.Body>
                 <Form.Group className="mb-3">
                   <Form.Check
                     type="checkbox"
                     name="show_footer"
-                    label="Show footer on invoices"
+                    label={t('invoiceCustomization.footer.showOnInvoices')}
                     checked={formData.show_footer}
                     onChange={handleInputChange}
                   />
                 </Form.Group>
 
                 <Form.Group className="mb-3">
-                  <Form.Label>Footer Text</Form.Label>
+                  <Form.Label>{t('invoiceCustomization.footer.closingMessage')}</Form.Label>
                   <Form.Control
                     as="textarea"
                     rows={3}
                     name="footer_text"
                     value={formData.footer_text}
                     onChange={handleInputChange}
-                    placeholder="e.g., Thank you for your business!"
+                    placeholder={t('invoiceCustomization.footer.closingMessagePlaceholder')}
                     maxLength={1000}
                   />
                   <Form.Text>{formData.footer_text.length} / 1000</Form.Text>
@@ -659,7 +668,7 @@ const InvoiceCustomizationPage = () => {
                 <Row>
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Signature Name</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.footer.signatureName')}</Form.Label>
                       <Form.Control
                         type="text"
                         name="signature_name"
@@ -670,13 +679,13 @@ const InvoiceCustomizationPage = () => {
                   </Col>
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Signature Title</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.footer.signatureTitle')}</Form.Label>
                       <Form.Control
                         type="text"
                         name="signature_title"
                         value={formData.signature_title}
                         onChange={handleInputChange}
-                        placeholder="e.g., Registered Dietitian"
+                        placeholder={t('invoiceCustomization.footer.signatureTitlePlaceholder')}
                       />
                     </Form.Group>
                   </Col>
@@ -684,43 +693,51 @@ const InvoiceCustomizationPage = () => {
 
                 <hr />
 
-                <h5>Signature Image (Optional)</h5>
+                <h5>{t('invoiceCustomization.footer.signature')}</h5>
                 <Row className="mb-3">
                   <Col md={6}>
                     <Form.Group>
-                      <Form.Label>Upload Signature</Form.Label>
+                      <Form.Label>{t('invoiceCustomization.footer.uploadNew')}</Form.Label>
                       <Form.Control type="file" accept="image/png,image/jpeg" onChange={handleSignatureSelect} />
-                      <Form.Text>Max 2MB, PNG or JPG</Form.Text>
+                      <Form.Text>{t('invoiceCustomization.footer.maxSize', 'Max 2MB, PNG ou JPG')}</Form.Text>
                     </Form.Group>
                     {signatureFile && (
                       <Button size="sm" className="mt-2" onClick={handleSignatureUpload} disabled={saving}>
-                        Upload
+                        {t('invoiceCustomization.footer.upload', 'Téléverser')}
                       </Button>
                     )}
                   </Col>
                   <Col md={6}>
-                    {signaturePreview && (
+                    {signaturePreview ? (
                       <div>
-                        <p className="mb-1"><strong>Preview:</strong></p>
-                        <img src={signaturePreview} alt="Signature" style={{ maxWidth: '200px', maxHeight: '100px' }} className="border p-2" />
+                        <p className="mb-1"><strong>{t('invoiceCustomization.footer.currentSignature')}:</strong></p>
+                        <img
+                          src={signaturePreview}
+                          alt="Signature"
+                          style={{ maxWidth: '200px', maxHeight: '100px' }}
+                          className="border p-2"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
                         <br />
                         <Button size="sm" variant="outline-danger" className="mt-2" onClick={handleSignatureDelete}>
-                          Delete Signature
+                          {t('invoiceCustomization.footer.delete')}
                         </Button>
                       </div>
+                    ) : (
+                      <p className="text-muted">{t('invoiceCustomization.footer.noSignature')}</p>
                     )}
                   </Col>
                 </Row>
 
                 <Form.Group className="mb-3">
-                  <Form.Label>Default Invoice Notes</Form.Label>
+                  <Form.Label>{t('invoiceCustomization.notes.title')}</Form.Label>
                   <Form.Control
                     as="textarea"
                     rows={3}
                     name="invoice_notes"
                     value={formData.invoice_notes}
                     onChange={handleInputChange}
-                    placeholder="Default notes to include on all invoices..."
+                    placeholder={t('invoiceCustomization.notes.placeholder')}
                     maxLength={2000}
                   />
                   <Form.Text>{formData.invoice_notes.length} / 2000</Form.Text>

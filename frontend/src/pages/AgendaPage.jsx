@@ -79,15 +79,13 @@ const AgendaPage = () => {
         limit: 1000 // Get all visits in the date range
       };
 
-      const response = await visitService.getVisits(filters);
-      const data = response.data.data || response.data;
+      const { data } = await visitService.getVisits(filters);
       const visitsArray = Array.isArray(data) ? data : [];
 
       setVisits(visitsArray);
       setEvents(transformVisitsToEvents(visitsArray));
       setError(null);
     } catch (err) {
-      console.error('Error fetching calendar visits:', err);
       setError(err.response?.data?.error || t('visits.failedToLoad'));
       setVisits([]);
       setEvents([]);
