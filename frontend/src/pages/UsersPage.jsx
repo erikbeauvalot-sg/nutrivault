@@ -4,11 +4,13 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Table, Button, Badge, Form, InputGroup, Spinner, Alert, Dropdown } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Button, Badge, Form, InputGroup } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
+import { PageHeader, PageError, LoadingSpinner, EmptyState, Pagination } from '../components/common';
+import { useIsMobile } from '../hooks';
 import userService from '../services/userService';
 import UserModal from '../components/UserModal';
 import ChangePasswordModal from '../components/ChangePasswordModal';
@@ -38,16 +40,7 @@ const UsersPage = () => {
   const [userModalMode, setUserModalMode] = useState('create');
   const [selectedUser, setSelectedUser] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  // Handle responsive layout
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const isMobile = useIsMobile();
 
   // Redirect if not admin
   useEffect(() => {
@@ -97,8 +90,7 @@ const UsersPage = () => {
       await userService.toggleUserStatus(userId);
       fetchUsers();
     } catch (err) {
-      console.error('Error toggling user status:', err);
-      alert(err.response?.data?.error || t('users.failedToToggleStatus'));
+      setError(err.response?.data?.error || t('users.failedToToggleStatus'));
     }
   };
 
@@ -127,7 +119,6 @@ const UsersPage = () => {
       await userService.deleteUser(userToDelete);
       fetchUsers();
     } catch (err) {
-      console.error('Error deleting user:', err);
       setError(err.response?.data?.error || t('users.failedToDelete'));
     } finally {
       setUserToDelete(null);
@@ -199,14 +190,19 @@ const UsersPage = () => {
   return (
     <Layout>
       <Container fluid>
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h1>👤 {t('users.title')}</h1>
-          <Button variant="primary" size="lg" onClick={handleCreateClick}>
-            {t('users.createUser')}
-          </Button>
-        </div>
+        <PageHeader
+          title={t('users.title')}
+          actions={[
+            {
+              label: t('users.createUser'),
+              onClick: handleCreateClick,
+              variant: 'primary',
+              icon: 'bi-plus-circle'
+            }
+          ]}
+        />
 
-        {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
+        <PageError error={error} onDismiss={() => setError(null)} />
 
         {/* Filters */}
         <Card className="mb-4">
@@ -273,15 +269,13 @@ const UsersPage = () => {
         <Card>
           <Card.Body>
             {loading ? (
-              <div className="text-center py-5">
-                <Spinner animation="border" variant="primary" />
-                <p className="mt-3">{t('users.loading')}</p>
-              </div>
+              <LoadingSpinner message={t('users.loading')} />
             ) : users.length === 0 ? (
-              <div className="text-center py-5">
-                <h3>{t('users.noUsersFound')}</h3>
-                <p className="text-muted">{t('users.tryAdjustingFilters')}</p>
-              </div>
+              <EmptyState
+                icon="bi-people"
+                title={t('users.noUsersFound')}
+                message={t('users.tryAdjustingFilters')}
+              />
             ) : isMobile ? (
               /* Mobile Card View */
               <div className="user-cards-container">
@@ -439,36 +433,15 @@ const UsersPage = () => {
                 </div>
 
                 {/* Pagination */}
-                {pagination.totalPages > 1 && (
-                  <div className="d-flex justify-content-between align-items-center mt-3">
-                    <div>
-                      {t('users.showingPage', { 
-                        current: filters.page, 
-                        total: pagination.totalPages, 
-                        count: pagination.total 
-                      })}
-                    </div>
-                    <div>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        className="me-2"
-                        disabled={filters.page === 1}
-                        onClick={() => handleFilterChange('page', filters.page - 1)}
-                      >
-                        {t('users.previous')}
-                      </Button>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        disabled={filters.page >= pagination.totalPages}
-                        onClick={() => handleFilterChange('page', filters.page + 1)}
-                      >
-                        {t('users.next')}
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <Pagination
+                  currentPage={filters.page}
+                  totalPages={pagination.totalPages}
+                  totalItems={pagination.total}
+                  itemsPerPage={filters.limit}
+                  onPageChange={(page) => handleFilterChange('page', page)}
+                  showInfo
+                  className="mt-3"
+                />
               </>
             )}
           </Card.Body>

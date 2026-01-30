@@ -47,15 +47,16 @@ const PageHeader = ({
           if (action.hidden) return null;
 
           const ButtonComponent = action.href ? 'a' : Button;
+          const baseClassName = action.href ? `btn btn-${action.variant || 'primary'}` : '';
           const buttonProps = action.href
-            ? { href: action.href, className: `btn btn-${action.variant || 'primary'}` }
+            ? { href: action.href }
             : { variant: action.variant || 'primary', onClick: action.onClick, disabled: action.disabled };
 
           return (
             <ButtonComponent
               key={index}
               {...buttonProps}
-              className={`d-flex align-items-center ${buttonProps.className || ''}`}
+              className={`d-flex align-items-center ${baseClassName} ${action.className || ''}`}
               title={action.tooltip}
             >
               {action.icon && <i className={`${action.icon} me-2`}></i>}

@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Table, Button, Badge, Form, InputGroup, Pagination, Card, Dropdown } from 'react-bootstrap';
+import { useState } from 'react';
+import { Table, Badge, Form, InputGroup, Card } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
+import { LoadingSpinner, Pagination } from './common';
+import { useIsMobile } from '../hooks';
 import ActionButton from './ActionButton';
 import './PatientList.css';
 
@@ -23,7 +25,7 @@ function PatientList({
   const { t, i18n } = useTranslation();
   const [sortField, setSortField] = useState('last_name');
   const [sortDirection, setSortDirection] = useState('asc');
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const isMobile = useIsMobile();
   const itemsPerPage = 10;
 
   const formatDate = (dateString) => {
@@ -31,15 +33,6 @@ function PatientList({
     const locale = i18n.language === 'fr' ? 'fr-FR' : 'en-US';
     return new Date(dateString).toLocaleDateString(locale);
   };
-
-  // Handle responsive layout
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   // Use patients directly (server-side filtering/pagination)
   const displayPatients = patients;
@@ -59,14 +52,7 @@ function PatientList({
   };
 
   if (loading) {
-    return (
-      <div className="text-center py-4">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">{t('common.loading')}</span>
-        </div>
-        <div className="mt-2">{t('common.loading')}</div>
-      </div>
-    );
+    return <LoadingSpinner message={t('common.loading')} />;
   }
 
   return (
@@ -305,44 +291,15 @@ function PatientList({
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="d-flex justify-content-center mt-3">
-          <Pagination>
-            <Pagination.First
-              onClick={() => onPageChange && onPageChange(1)}
-              disabled={currentPage === 1}
-            />
-            <Pagination.Prev
-              onClick={() => onPageChange && onPageChange(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-            />
-
-            {[...Array(Math.min(5, totalPages))].map((_, index) => {
-              const pageNumber = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + index;
-              if (pageNumber > totalPages) return null;
-
-              return (
-                <Pagination.Item
-                  key={pageNumber}
-                  active={pageNumber === currentPage}
-                  onClick={() => onPageChange && onPageChange(pageNumber)}
-                >
-                  {pageNumber}
-                </Pagination.Item>
-              );
-            })}
-
-            <Pagination.Next
-              onClick={() => onPageChange && onPageChange(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-            />
-            <Pagination.Last
-              onClick={() => onPageChange && onPageChange(totalPages)}
-              disabled={currentPage === totalPages}
-            />
-          </Pagination>
-        </div>
-      )}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalPatients}
+        itemsPerPage={itemsPerPage}
+        onPageChange={(page) => onPageChange && onPageChange(page)}
+        showInfo
+        className="mt-3"
+      />
     </div>
   );
 }

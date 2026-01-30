@@ -5,10 +5,11 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Container, Button, Row, Col } from 'react-bootstrap';
+import { Container } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
+import { PageHeader, PageError } from '../components/common';
 import PatientList from '../components/PatientList';
 import ExportModal from '../components/ExportModal';
 import QuickPatientModal from '../components/QuickPatientModal';
@@ -134,43 +135,26 @@ const PatientsPage = () => {
   return (
     <Layout>
       <Container fluid>
-        <Row className="mb-4">
-          <Col>
-            <h1 className="mb-0">{t('patients.management')}</h1>
-          </Col>
-          <Col xs="auto">
-            <Button
-              variant="outline-secondary"
-              onClick={() => setShowExportModal(true)}
-              className="d-flex align-items-center me-2"
-            >
-              <i className="bi bi-download me-2"></i>
-              {t('common.export', 'Export')}
-            </Button>
-            {canCreatePatients && (
-              <Button
-                variant="primary"
-                onClick={handleCreatePatient}
-                className="d-flex align-items-center"
-              >
-                <i className="bi bi-plus-circle me-2"></i>
-                {t('patients.createPatient')}
-              </Button>
-            )}
-          </Col>
-        </Row>
+        <PageHeader
+          title={t('patients.management')}
+          actions={[
+            {
+              label: t('common.export', 'Export'),
+              onClick: () => setShowExportModal(true),
+              variant: 'outline-secondary',
+              icon: 'bi-download'
+            },
+            {
+              label: t('patients.createPatient'),
+              onClick: handleCreatePatient,
+              variant: 'primary',
+              icon: 'bi-plus-circle',
+              hidden: !canCreatePatients
+            }
+          ]}
+        />
 
-        {error && (
-          <div className="alert alert-danger alert-dismissible fade show" role="alert">
-            <strong>{t('common.error')}:</strong> {error}
-            <button
-              type="button"
-              className="btn-close"
-              onClick={() => setError(null)}
-              aria-label="Close"
-            ></button>
-          </div>
-        )}
+        <PageError error={error} onDismiss={() => setError(null)} />
 
         <div className="bg-white p-4 rounded shadow-sm">
           <PatientList
