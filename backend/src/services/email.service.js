@@ -12,6 +12,21 @@ const db = require('../../../models');
 const EmailLog = db.EmailLog;
 
 /**
+ * Translate invoice status to French
+ */
+const translateInvoiceStatus = (status) => {
+  const statusMap = {
+    'DRAFT': 'Brouillon',
+    'SENT': 'Envoyée',
+    'PAID': 'Payée',
+    'OVERDUE': 'En retard',
+    'CANCELLED': 'Annulée',
+    'PARTIAL': 'Partielle'
+  };
+  return statusMap[status] || status;
+};
+
+/**
  * Create and configure email transporter
  * Uses Gmail SMTP with environment variables
  */
@@ -113,7 +128,7 @@ Date d'échéance : ${invoice.due_date ? new Date(invoice.due_date).toLocaleDate
 Service : ${invoice.service_description}
 Montant total : ${invoice.amount_total.toFixed(2)} €
 Montant dû : ${invoice.amount_due.toFixed(2)} €
-Statut : ${invoice.status}
+Statut : ${translateInvoiceStatus(invoice.status)}
 
 Merci de votre confiance !
 
@@ -152,7 +167,7 @@ L'équipe NutriVault
         <p><strong>Service :</strong> ${invoice.service_description}</p>
         <p><strong>Montant total :</strong> <span class="amount">${invoice.amount_total.toFixed(2)} €</span></p>
         <p><strong>Montant dû :</strong> <span class="amount">${invoice.amount_due.toFixed(2)} €</span></p>
-        <p><strong>Statut :</strong> ${invoice.status}</p>
+        <p><strong>Statut :</strong> ${translateInvoiceStatus(invoice.status)}</p>
       </div>
 
       <p>Merci de votre confiance !</p>
