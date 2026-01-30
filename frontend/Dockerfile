@@ -14,8 +14,8 @@ WORKDIR /app
 # Copy package files from frontend directory
 COPY frontend/package*.json ./
 
-# Install dependencies
-RUN npm ci && npm cache clean --force
+# Install dependencies (--loglevel=warn suppresses deprecation notices)
+RUN npm ci --loglevel=warn && npm cache clean --force
 
 # Copy source code from frontend directory
 COPY frontend/ .

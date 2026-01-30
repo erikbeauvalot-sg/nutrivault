@@ -37,13 +37,22 @@ export default defineConfig({
           'vendor-ui': ['react-bootstrap', 'bootstrap'],
 
           // Vendor chunk: Forms and validation
-          'vendor-forms': ['react-hook-form'],
+          'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'yup'],
 
           // Vendor chunk: i18n
-          'vendor-i18n': ['react-i18next', 'i18next'],
+          'vendor-i18n': ['react-i18next', 'i18next', 'i18next-browser-languagedetector'],
 
-          // Vendor chunk: Charts (if used)
+          // Vendor chunk: Charts
           'vendor-charts': ['recharts'],
+
+          // Vendor chunk: PDF generation (large)
+          'vendor-pdf': ['jspdf', 'html2canvas'],
+
+          // Vendor chunk: Calendar (large)
+          'vendor-calendar': ['react-big-calendar', 'date-fns'],
+
+          // Vendor chunk: Utilities
+          'vendor-utils': ['axios', 'uuid', 'file-saver', 'dompurify'],
         },
 
         // Asset file naming
@@ -66,8 +75,8 @@ export default defineConfig({
       }
     },
 
-    // Chunk size warnings
-    chunkSizeWarningLimit: 500,
+    // Chunk size warnings (increased for large libraries like jspdf, recharts)
+    chunkSizeWarningLimit: 800,
 
     // Source maps for debugging (disable in production for smaller size)
     sourcemap: false,

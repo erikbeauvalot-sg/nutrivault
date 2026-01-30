@@ -24,7 +24,8 @@ COPY backend/package*.json ./
 
 # Install ALL dependencies (including devDependencies for sequelize-cli)
 # sequelize-cli is needed for database migrations
-RUN npm ci && \
+# --loglevel=warn suppresses deprecation notices from transitive dependencies
+RUN npm ci --loglevel=warn && \
     npm cache clean --force
 
 # Development stage
