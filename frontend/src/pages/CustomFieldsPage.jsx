@@ -13,8 +13,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import customFieldService from '../services/customFieldService';
+import visitTypeService from '../services/visitTypeService';
 import CustomFieldCategoryModal from '../components/CustomFieldCategoryModal';
 import CustomFieldDefinitionModal from '../components/CustomFieldDefinitionModal';
+import VisitTypeModal from '../components/VisitTypeModal';
 import ActionButton from '../components/ActionButton';
 import ConfirmModal from '../components/ConfirmModal';
 import './CustomFieldsPage.css';
@@ -42,6 +44,7 @@ const CustomFieldsPage = () => {
   // State
   const [categories, setCategories] = useState([]);
   const [definitions, setDefinitions] = useState([]);
+  const [visitTypes, setVisitTypes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState(() => getStoredFilters().activeTab);
@@ -51,12 +54,16 @@ const CustomFieldsPage = () => {
   // Modal state
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showDefinitionModal, setShowDefinitionModal] = useState(false);
+  const [showVisitTypeModal, setShowVisitTypeModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedDefinition, setSelectedDefinition] = useState(null);
+  const [selectedVisitType, setSelectedVisitType] = useState(null);
   const [showDeleteCategoryConfirm, setShowDeleteCategoryConfirm] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
   const [showDeleteDefinitionConfirm, setShowDeleteDefinitionConfirm] = useState(false);
   const [definitionToDelete, setDefinitionToDelete] = useState(null);
+  const [showDeleteVisitTypeConfirm, setShowDeleteVisitTypeConfirm] = useState(false);
+  const [visitTypeToDelete, setVisitTypeToDelete] = useState(null);
 
   // Redirect if not admin
   useEffect(() => {
@@ -88,13 +95,15 @@ const CustomFieldsPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [categoriesRes, definitionsRes] = await Promise.all([
+      const [categoriesRes, definitionsRes, visitTypesRes] = await Promise.all([
         customFieldService.getCategories(),
-        customFieldService.getDefinitions()
+        customFieldService.getDefinitions(),
+        visitTypeService.getAllVisitTypes()
       ]);
 
       setCategories(categoriesRes || []);
       setDefinitions(definitionsRes || []);
+      setVisitTypes(visitTypesRes?.data || []);
       setError(null);
     } catch (err) {
       console.error('Error fetching custom fields data:', err);
@@ -203,6 +212,54 @@ const CustomFieldsPage = () => {
       setDefinitionToDelete(null);
     }
   };
+
+  // Visit Type handlers
+  const handleCreateVisitType = () => {
+    setSelectedVisitType(null);
+    setShowVisitTypeModal(true);
+  };
+
+  const handleEditVisitType = (visitType) => {
+    setSelectedVisitType(visitType);
+    setShowVisitTypeModal(true);
+  };
+
+  const handleDeleteVisitType = (visitTypeId) => {
+    setVisitTypeToDelete(visitTypeId);
+    setShowDeleteVisitTypeConfirm(true);
+  };
+
+  const confirmDeleteVisitType = async () => {
+    if (!visitTypeToDelete) return;
+
+    try {
+      const result = await visitTypeService.deleteVisitType(visitTypeToDelete);
+      if (result.success !== false) {
+        await fetchData();
+      } else {
+        setError(result.error || t('visitTypes.deleteError', 'Failed to delete visit type'));
+      }
+    } catch (err) {
+      console.error('Error deleting visit type:', err);
+      const errorMessage = err.response?.data?.error || err.message || t('visitTypes.deleteError', 'Failed to delete visit type');
+      setError(errorMessage);
+    } finally {
+      setVisitTypeToDelete(null);
+    }
+  };
+
+  // Filter visit types based on search query
+  const filteredVisitTypes = useMemo(() => {
+    if (!searchQuery.trim()) return visitTypes;
+
+    const query = searchQuery.toLowerCase();
+    return visitTypes.filter(vt => {
+      return (
+        vt.name?.toLowerCase().includes(query) ||
+        vt.description?.toLowerCase().includes(query)
+      );
+    });
+  }, [visitTypes, searchQuery]);
 
   // Get field type icon
   const getFieldTypeIcon = (type) => {
@@ -870,6 +927,226 @@ const CustomFieldsPage = () => {
               </Card.Body>
             </Card>
           </Tab>
+
+          {/* Visit Types Tab */}
+          <Tab eventKey="visitTypes" title={`🏷️ ${t('visitTypes.title', 'Visit Types')} (${visitTypes.length})`}>
+            <Card>
+              <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 className="mb-0">{t('visitTypes.titleManagement', 'Visit Types Management')}</h5>
+                <Button variant="primary" size="sm" onClick={handleCreateVisitType}>
+                  ➕ {t('visitTypes.newVisitType', 'New Visit Type')}
+                </Button>
+              </Card.Header>
+              <Card.Body>
+                {/* Search Bar */}
+                <Row className="mb-3">
+                  <Col xs={12} md={6}>
+                    <Form.Label>{t('common.search', 'Search')}</Form.Label>
+                    <InputGroup>
+                      <InputGroup.Text>🔍</InputGroup.Text>
+                      <Form.Control
+                        type="text"
+                        placeholder={t('visitTypes.searchPlaceholder', 'Search by name or description...')}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                      {searchQuery && (
+                        <Button
+                          variant="outline-secondary"
+                          onClick={() => setSearchQuery('')}
+                          title={t('common.clear', 'Clear')}
+                        >
+                          ✕
+                        </Button>
+                      )}
+                    </InputGroup>
+                  </Col>
+                </Row>
+
+                {/* Results Counter */}
+                {searchQuery && (
+                  <Row className="mb-2">
+                    <Col>
+                      <Form.Text className="text-muted">
+                        {t('visitTypes.showingResults', 'Showing {{filtered}} of {{total}} visit types', {
+                          filtered: filteredVisitTypes.length,
+                          total: visitTypes.length
+                        })}
+                      </Form.Text>
+                    </Col>
+                  </Row>
+                )}
+
+                {visitTypes.length === 0 ? (
+                  <Alert variant="info">
+                    {t('visitTypes.noVisitTypes', 'No visit types yet. Create one to get started!')}
+                  </Alert>
+                ) : filteredVisitTypes.length === 0 ? (
+                  <Alert variant="warning">
+                    {t('visitTypes.noVisitTypesFound', 'No visit types found matching your search.')}
+                  </Alert>
+                ) : (
+                  <>
+                    {/* Desktop Table View */}
+                    <div className="custom-fields-table-desktop">
+                      <Table striped bordered hover>
+                        <thead>
+                          <tr>
+                            <th>{t('visitTypes.name', 'Name')}</th>
+                            <th>{t('visitTypes.description', 'Description')}</th>
+                            <th>{t('visitTypes.color', 'Color')}</th>
+                            <th>{t('visitTypes.duration', 'Duration')}</th>
+                            <th>{t('visitTypes.price', 'Price')}</th>
+                            <th>{t('visitTypes.displayOrder', 'Order')}</th>
+                            <th>{t('visitTypes.status', 'Status')}</th>
+                            <th>{t('visitTypes.actions', 'Actions')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredVisitTypes.map((visitType) => (
+                            <tr key={visitType.id}>
+                              <td>
+                                <strong>{highlightText(visitType.name, searchQuery)}</strong>
+                              </td>
+                              <td>
+                                {visitType.description ? (
+                                  highlightText(visitType.description, searchQuery)
+                                ) : (
+                                  <span className="text-muted">-</span>
+                                )}
+                              </td>
+                              <td>
+                                {visitType.color ? (
+                                  <Badge
+                                    bg=""
+                                    style={{
+                                      backgroundColor: visitType.color,
+                                      color: '#fff'
+                                    }}
+                                  >
+                                    {visitType.color}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted">-</span>
+                                )}
+                              </td>
+                              <td>
+                                {visitType.duration_minutes ? (
+                                  <span>{visitType.duration_minutes} {t('visitTypes.minutes', 'min')}</span>
+                                ) : (
+                                  <span className="text-muted">-</span>
+                                )}
+                              </td>
+                              <td>
+                                {visitType.default_price ? (
+                                  <span>{parseFloat(visitType.default_price).toFixed(2)} €</span>
+                                ) : (
+                                  <span className="text-muted">-</span>
+                                )}
+                              </td>
+                              <td>
+                                <Badge bg="light" text="dark">{visitType.display_order}</Badge>
+                              </td>
+                              <td>
+                                {visitType.is_active ? (
+                                  <Badge bg="success">{t('common.active', 'Active')}</Badge>
+                                ) : (
+                                  <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>
+                                )}
+                              </td>
+                              <td>
+                                <div className="action-buttons">
+                                  <ActionButton
+                                    action="edit"
+                                    onClick={() => handleEditVisitType(visitType)}
+                                    title={t('common.edit', 'Edit')}
+                                  />
+                                  <ActionButton
+                                    action="delete"
+                                    onClick={() => handleDeleteVisitType(visitType.id)}
+                                    title={t('common.delete', 'Delete')}
+                                  />
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </Table>
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="custom-fields-cards-mobile">
+                      {filteredVisitTypes.map((visitType) => (
+                        <div
+                          key={visitType.id}
+                          className="category-card-mobile"
+                        >
+                          <div className="card-mobile-header">
+                            <div>
+                              <h6 className="card-mobile-title">
+                                {visitType.color && (
+                                  <span
+                                    style={{
+                                      display: 'inline-block',
+                                      width: '12px',
+                                      height: '12px',
+                                      borderRadius: '50%',
+                                      backgroundColor: visitType.color,
+                                      marginRight: '8px'
+                                    }}
+                                  />
+                                )}
+                                {highlightText(visitType.name, searchQuery)}
+                              </h6>
+                              {visitType.description && (
+                                <div className="card-mobile-subtitle">
+                                  {highlightText(visitType.description, searchQuery)}
+                                </div>
+                              )}
+                            </div>
+                            {visitType.is_active ? (
+                              <Badge bg="success">{t('common.active', 'Active')}</Badge>
+                            ) : (
+                              <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>
+                            )}
+                          </div>
+
+                          <div className="card-mobile-badges">
+                            {visitType.duration_minutes && (
+                              <Badge bg="info" text="dark">
+                                {visitType.duration_minutes} {t('visitTypes.minutes', 'min')}
+                              </Badge>
+                            )}
+                            {visitType.default_price && (
+                              <Badge bg="success">
+                                {parseFloat(visitType.default_price).toFixed(2)} €
+                              </Badge>
+                            )}
+                            <Badge bg="light" text="dark">
+                              {t('visitTypes.order', 'Order')}: {visitType.display_order}
+                            </Badge>
+                          </div>
+
+                          <div className="card-mobile-actions">
+                            <ActionButton
+                              action="edit"
+                              onClick={() => handleEditVisitType(visitType)}
+                              title={t('common.edit', 'Edit')}
+                            />
+                            <ActionButton
+                              action="delete"
+                              onClick={() => handleDeleteVisitType(visitType.id)}
+                              title={t('common.delete', 'Delete')}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </Card.Body>
+            </Card>
+          </Tab>
         </ResponsiveTabs>
 
         {/* Modals */}
@@ -926,6 +1203,35 @@ const CustomFieldsPage = () => {
           onConfirm={confirmDeleteDefinition}
           title={t('common.confirmation', 'Confirmation')}
           message={t('customFields.confirmDeleteField', 'Are you sure you want to delete this field definition?')}
+          confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
+        />
+
+        {/* Visit Type Modal */}
+        <VisitTypeModal
+          show={showVisitTypeModal}
+          onHide={() => {
+            setShowVisitTypeModal(false);
+            setSelectedVisitType(null);
+          }}
+          visitType={selectedVisitType}
+          onSuccess={() => {
+            fetchData();
+            setShowVisitTypeModal(false);
+            setSelectedVisitType(null);
+          }}
+        />
+
+        {/* Delete Visit Type Confirm Modal */}
+        <ConfirmModal
+          show={showDeleteVisitTypeConfirm}
+          onHide={() => {
+            setShowDeleteVisitTypeConfirm(false);
+            setVisitTypeToDelete(null);
+          }}
+          onConfirm={confirmDeleteVisitType}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('visitTypes.confirmDelete', 'Are you sure you want to delete this visit type?')}
           confirmLabel={t('common.delete', 'Delete')}
           variant="danger"
         />

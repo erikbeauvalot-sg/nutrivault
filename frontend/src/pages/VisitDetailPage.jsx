@@ -14,7 +14,9 @@ import { formatDate as utilFormatDate, formatDateTime as utilFormatDateTime } fr
 import { applyTranslationsToMeasures, fetchMeasureTranslations } from '../utils/measureTranslations';
 import visitService from '../services/visitService';
 import visitCustomFieldService from '../services/visitCustomFieldService';
+import visitTypeService from '../services/visitTypeService';
 import CustomFieldDisplay from '../components/CustomFieldDisplay';
+import CustomFieldRadarChart from '../components/CustomFieldRadarChart';
 import SendReminderButton from '../components/SendReminderButton';
 import GenerateFollowupModal from '../components/GenerateFollowupModal';
 import { getMeasuresByVisit, formatMeasureValue, getAllMeasureTranslations } from '../services/measureService';
@@ -46,6 +48,7 @@ const VisitDetailPage = () => {
   const [cancelReason, setCancelReason] = useState('CANCEL'); // Default: CANCEL
   const [customFieldCategories, setCustomFieldCategories] = useState([]);
   const [fieldValues, setFieldValues] = useState({});
+  const [visitTypes, setVisitTypes] = useState([]);
 
   // Measures state
   const [measures, setMeasures] = useState([]);
@@ -68,6 +71,7 @@ const VisitDetailPage = () => {
     if (id && i18n.resolvedLanguage) {
       fetchVisitDetails();
       fetchCustomFields();
+      fetchVisitTypes();
       fetchVisitMeasures();
       fetchVisitInvoices();
     }
@@ -119,6 +123,16 @@ const VisitDetailPage = () => {
     } catch (err) {
       console.error('Error fetching visit custom fields:', err);
       // Don't set error for custom fields failure
+    }
+  };
+
+  const fetchVisitTypes = async () => {
+    try {
+      const response = await visitTypeService.getAllVisitTypes({ is_active: true });
+      setVisitTypes(response?.data || []);
+    } catch (err) {
+      console.error('Error fetching visit types:', err);
+      setVisitTypes([]);
     }
   };
 
@@ -336,6 +350,29 @@ const VisitDetailPage = () => {
     }
     const diffDays = Math.floor(diffHours / 24);
     return t('visits.overdueDays', { count: diffDays });
+  };
+
+  // Get current visit type ID from visit data
+  const currentVisitTypeId = visitTypes.find(vt => vt.name === visit?.visit_type)?.id;
+
+  // Filter custom field categories based on visit type
+  const filteredCategories = customFieldCategories.filter(category => {
+    // If category has no visit_types restriction (null or empty), show for all types
+    if (!category.visit_types || category.visit_types.length === 0) {
+      return true;
+    }
+    // Category HAS visit_types restriction - must verify match
+    if (currentVisitTypeId) {
+      return category.visit_types.includes(currentVisitTypeId);
+    }
+    // Category has restriction but no valid visit type ID - hide it
+    return false;
+  });
+
+  // Helper function to get column width based on display_layout
+  const getColumnWidth = (displayLayout) => {
+    const columns = displayLayout?.columns || 1;
+    return Math.floor(12 / columns);
   };
 
   // Check permissions
@@ -581,66 +618,91 @@ const VisitDetailPage = () => {
               </Tab>
 
 
-              {/* Custom Fields Tabs - Only visible if there are categories for visits */}
-              {customFieldCategories.length > 0 && customFieldCategories.map((category) => (
-                <Tab
-                  key={category.id}
-                  eventKey={`category-${category.id}`}
-                  title={
-                    <span>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          width: '12px',
-                          height: '12px',
-                          backgroundColor: category.color || '#3498db',
-                          borderRadius: '50%',
-                          marginRight: '8px',
-                          verticalAlign: 'middle',
-                          border: '2px solid rgba(255,255,255,0.5)'
-                        }}
-                      />
-                      {category.name}
-                    </span>
-                  }
-                >
-                  <div
-                    className="mb-3"
-                    style={{
-                      borderLeft: `4px solid ${category.color || '#3498db'}`,
-                      paddingLeft: '15px'
-                    }}
+              {/* Custom Fields Tabs - filtered by visit type */}
+              {filteredCategories.length > 0 && filteredCategories.map((category) => {
+                const displayLayout = category.display_layout || { type: 'columns', columns: 1 };
+                const columnWidth = getColumnWidth(displayLayout);
+
+                return (
+                  <Tab
+                    key={category.id}
+                    eventKey={`category-${category.id}`}
+                    title={
+                      <span>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            width: '12px',
+                            height: '12px',
+                            backgroundColor: category.color || '#3498db',
+                            borderRadius: '50%',
+                            marginRight: '8px',
+                            verticalAlign: 'middle',
+                            border: '2px solid rgba(255,255,255,0.5)'
+                          }}
+                        />
+                        {category.name}
+                      </span>
+                    }
                   >
-                    {category.description && (
-                      <Alert
-                        variant="info"
-                        style={{
-                          borderLeft: `4px solid ${category.color || '#3498db'}`,
-                          backgroundColor: `${category.color || '#3498db'}10`
-                        }}
-                      >
-                        {category.description}
-                      </Alert>
-                    )}
-                    {category.fields.length === 0 ? (
-                      <Alert variant="warning">
-                        No fields defined for this category
-                      </Alert>
-                    ) : (
-                      <Row>
-                        {category.fields.map(field => (
-                          <Col key={field.definition_id} xs={12} md={6} className={(field.field_type === 'separator' || field.field_type === 'blank') ? 'mb-3' : ''}>
-                            <CustomFieldDisplay
-                              fieldDefinition={field}
-                              value={fieldValues[field.definition_id]}
-                            />
-                          </Col>
-                        ))}
-                      </Row>
-                    )}
-                  </div>
-                </Tab>
-              ))}
+                    <div
+                      className="mb-3"
+                      style={{
+                        borderLeft: `4px solid ${category.color || '#3498db'}`,
+                        paddingLeft: '15px'
+                      }}
+                    >
+                      {category.description && (
+                        <Alert
+                          variant="info"
+                          style={{
+                            borderLeft: `4px solid ${category.color || '#3498db'}`,
+                            backgroundColor: `${category.color || '#3498db'}10`
+                          }}
+                        >
+                          {category.description}
+                        </Alert>
+                      )}
+                      {category.fields.length === 0 ? (
+                        <Alert variant="warning">
+                          No fields defined for this category
+                        </Alert>
+                      ) : displayLayout.type === 'radar' ? (
+                        // Radar chart layout
+                        <CustomFieldRadarChart
+                          category={category}
+                          fieldValues={fieldValues}
+                          options={displayLayout.options || {}}
+                        />
+                      ) : displayLayout.type === 'list' ? (
+                        // List layout - one field per row
+                        <div>
+                          {category.fields.map(field => (
+                            <div key={field.definition_id} className="mb-3">
+                              <CustomFieldDisplay
+                                fieldDefinition={field}
+                                value={fieldValues[field.definition_id]}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        // Columns layout - configurable number of columns
+                        <Row>
+                          {category.fields.map(field => (
+                            <Col key={field.definition_id} xs={12} md={columnWidth}>
+                              <CustomFieldDisplay
+                                fieldDefinition={field}
+                                value={fieldValues[field.definition_id]}
+                              />
+                            </Col>
+                          ))}
+                        </Row>
+                      )}
+                    </div>
+                  </Tab>
+                );
+              })}
 
               {/* Health Measures Tab */}
               <Tab eventKey="measures" title={`📏 ${t('measures.healthMeasures', 'Measures')} (${measures.length})`}>

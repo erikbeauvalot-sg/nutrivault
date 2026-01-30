@@ -7,6 +7,7 @@ const { Op } = require('sequelize');
 const db = require('../../../models');
 const emailService = require('./email.service');
 const templateRendererService = require('./templateRenderer.service');
+const { generateICalEvent } = require('../utils/icsGenerator');
 
 const { Visit, Patient, User, EmailTemplate, SystemSetting, EmailLog } = db;
 
@@ -79,9 +80,10 @@ async function getEligibleVisits(reminderHoursBefore) {
  * @returns {Promise<Object>} Result of the send operation
  */
 async function sendVisitReminder(visitId, userId, manual = false) {
+  let visit = null;
   try {
     // Get visit with patient and dietitian
-    const visit = await Visit.findByPk(visitId, {
+    visit = await Visit.findByPk(visitId, {
       include: [
         {
           model: Patient,
@@ -100,24 +102,26 @@ async function sendVisitReminder(visitId, userId, manual = false) {
       throw new Error('Visit not found');
     }
 
-    // Validate eligibility (unless manual send)
+    // Always require email address (can't send without one)
+    if (!visit.patient.email) {
+      throw new Error('Patient has no email address');
+    }
+
+    // Always validate status and date
+    if (visit.status !== 'SCHEDULED') {
+      throw new Error('Visit is not scheduled');
+    }
+
+    if (new Date(visit.visit_date) <= new Date()) {
+      throw new Error('Visit is in the past');
+    }
+
+    if (!visit.patient.appointment_reminders_enabled) {
+      throw new Error('Patient has opted out of appointment reminders');
+    }
+
+    // Only check max reminders for automatic sends (allow manual override)
     if (!manual) {
-      if (visit.status !== 'SCHEDULED') {
-        throw new Error('Visit is not scheduled');
-      }
-
-      if (new Date(visit.visit_date) <= new Date()) {
-        throw new Error('Visit is in the past');
-      }
-
-      if (!visit.patient.email) {
-        throw new Error('Patient has no email address');
-      }
-
-      if (!visit.patient.appointment_reminders_enabled) {
-        throw new Error('Patient has opted out of appointment reminders');
-      }
-
       const maxReminders = await SystemSetting.getValue('max_reminders_per_visit') || 2;
       if (visit.reminders_sent >= maxReminders) {
         throw new Error('Maximum reminders already sent for this visit');
@@ -149,7 +153,7 @@ async function sendVisitReminder(visitId, userId, manual = false) {
     // Render template
     const rendered = templateRendererService.renderTemplate(template, variableContext);
 
-    // Send email
+    // Send reminder email (without calendar invitation)
     const emailResult = await emailService.sendEmail({
       to: visit.patient.email,
       subject: rendered.subject,
@@ -212,6 +216,153 @@ async function sendVisitReminder(visitId, userId, manual = false) {
       });
     } catch (logError) {
       console.error('[AppointmentReminder] Error logging failed send:', logError);
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * Send calendar invitation email for a specific visit (with ICS as MIME)
+ * Gmail and other email clients will recognize this as a calendar invitation
+ * @param {string} visitId - Visit ID
+ * @param {string} userId - User ID triggering the send (for audit)
+ * @returns {Promise<Object>} Result of the send operation
+ */
+async function sendVisitInvitation(visitId, userId) {
+  try {
+    // Get visit with patient and dietitian
+    const visit = await Visit.findByPk(visitId, {
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          required: true
+        },
+        {
+          model: User,
+          as: 'dietitian',
+          required: true
+        }
+      ]
+    });
+
+    if (!visit) {
+      throw new Error('Visit not found');
+    }
+
+    if (!visit.patient.email) {
+      throw new Error('Patient has no email address');
+    }
+
+    if (visit.status !== 'SCHEDULED') {
+      throw new Error('Visit is not scheduled');
+    }
+
+    if (new Date(visit.visit_date) <= new Date()) {
+      throw new Error('Visit is in the past');
+    }
+
+    // Get appointment invitation template (or fallback to reminder template)
+    let template = await EmailTemplate.findOne({
+      where: {
+        category: 'appointment_invitation',
+        is_active: true
+      }
+    });
+
+    // Fallback to reminder template if no specific invitation template exists
+    if (!template) {
+      template = await EmailTemplate.findOne({
+        where: {
+          category: 'appointment_reminder',
+          is_active: true
+        }
+      });
+    }
+
+    if (!template) {
+      throw new Error('No active appointment template found');
+    }
+
+    // Prepare template data
+    const templateData = {
+      patient: visit.patient,
+      visit: visit,
+      dietitian: visit.dietitian
+    };
+
+    // Build variable context
+    const variableContext = templateRendererService.buildVariableContext(templateData);
+
+    // Render template
+    const rendered = templateRendererService.renderTemplate(template, variableContext);
+
+    // Generate iCalendar event (Gmail will recognize this as a calendar invitation)
+    const icalEvent = generateICalEvent({
+      visit,
+      patient: visit.patient,
+      dietitian: visit.dietitian
+    });
+
+    // Send email with iCalendar event (displayed as invitation in Gmail)
+    const emailResult = await emailService.sendEmail({
+      to: visit.patient.email,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
+      icalEvent
+    });
+
+    // Log email
+    await EmailLog.create({
+      template_id: template.id,
+      template_slug: template.slug,
+      email_type: 'invitation',
+      sent_to: visit.patient.email,
+      patient_id: visit.patient.id,
+      visit_id: visit.id,
+      subject: rendered.subject,
+      body_html: rendered.html,
+      body_text: rendered.text,
+      status: 'sent',
+      sent_by: userId,
+      variables_used: {
+        visit_id: visit.id,
+        visit_date: visit.visit_date,
+        invitation: true,
+        message_id: emailResult.messageId
+      }
+    });
+
+    console.log(`[AppointmentInvitation] Sent invitation for visit ${visitId} to ${visit.patient.email}`);
+
+    return {
+      success: true,
+      visitId: visit.id,
+      patientEmail: visit.patient.email,
+      type: 'invitation'
+    };
+  } catch (error) {
+    console.error(`[AppointmentInvitation] Error sending invitation for visit ${visitId}:`, error);
+
+    // Log failed attempt
+    try {
+      await EmailLog.create({
+        template_slug: 'appointment_invitation',
+        email_type: 'invitation',
+        sent_to: 'unknown@example.com',
+        subject: 'Appointment Invitation',
+        status: 'failed',
+        error_message: error.message,
+        sent_by: userId,
+        variables_used: {
+          visit_id: visitId,
+          invitation: true
+        }
+      });
+    } catch (logError) {
+      console.error('[AppointmentInvitation] Error logging failed send:', logError);
     }
 
     throw error;
@@ -395,6 +546,7 @@ async function getReminderStats() {
 module.exports = {
   getEligibleVisits,
   sendVisitReminder,
+  sendVisitInvitation,
   processScheduledReminders,
   getReminderStats
 };

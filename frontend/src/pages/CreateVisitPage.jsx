@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import visitService from '../services/visitService';
 import visitCustomFieldService from '../services/visitCustomFieldService';
+import visitTypeService from '../services/visitTypeService';
 import { getPatients } from '../services/patientService';
 import { getCategories } from '../services/customFieldService';
 import { getMeasureDefinitions, logPatientMeasure, getAllMeasureTranslations } from '../services/measureService';
@@ -30,6 +31,7 @@ const CreateVisitPage = () => {
   const [error, setError] = useState(null);
   const [patients, setPatients] = useState([]);
   const [dietitians, setDietitians] = useState([]);
+  const [visitTypes, setVisitTypes] = useState([]);
   const [completeImmediately, setCompleteImmediately] = useState(false);
 
   // Custom fields state
@@ -46,7 +48,8 @@ const CreateVisitPage = () => {
     patient_id: '',
     dietitian_id: '',
     visit_date: '',
-    visit_type: '',
+    visit_type_id: '', // For UI selection
+    visit_type: '', // Name to send to backend
     duration_minutes: '',
     status: 'SCHEDULED',
     next_visit_date: ''
@@ -55,6 +58,7 @@ const CreateVisitPage = () => {
   useEffect(() => {
     fetchPatients();
     fetchDietitians();
+    fetchVisitTypes();
     fetchVisitCustomFieldCategories();
     fetchMeasureDefinitions();
 
@@ -71,20 +75,13 @@ const CreateVisitPage = () => {
 
   // Set default duration when visit type changes
   useEffect(() => {
-    if (formData.visit_type) {
-      const durationMap = {
-        'Initial Consultation': 60,
-        'Follow-up': 30,
-        'Final Assessment': 30,
-        'Nutrition Counseling': 45,
-        'Other': 60
-      };
-      const defaultDuration = durationMap[formData.visit_type];
-      if (defaultDuration && !formData.duration_minutes) {
-        setFormData(prev => ({ ...prev, duration_minutes: defaultDuration }));
+    if (formData.visit_type_id && visitTypes.length > 0) {
+      const selectedType = visitTypes.find(vt => vt.id === formData.visit_type_id);
+      if (selectedType?.duration_minutes && !formData.duration_minutes) {
+        setFormData(prev => ({ ...prev, duration_minutes: selectedType.duration_minutes }));
       }
     }
-  }, [formData.visit_type]);
+  }, [formData.visit_type_id, visitTypes]);
 
   const fetchPatients = async () => {
     try {
@@ -101,6 +98,16 @@ const CreateVisitPage = () => {
       setDietitians(Array.isArray(data) ? data : []);
     } catch (err) {
       setDietitians([]);
+    }
+  };
+
+  const fetchVisitTypes = async () => {
+    try {
+      const response = await visitTypeService.getAllVisitTypes({ is_active: true });
+      setVisitTypes(response?.data || []);
+    } catch (err) {
+      console.error('Error fetching visit types:', err);
+      setVisitTypes([]);
     }
   };
 
@@ -136,6 +143,8 @@ const CreateVisitPage = () => {
         description: category.description,
         display_order: category.display_order,
         color: category.color || '#3498db',
+        visit_types: category.visit_types || null,
+        display_layout: category.display_layout || { type: 'columns', columns: 1 },
         fields: (category.field_definitions || []).map(def => {
           // Safely parse JSON fields
           let validationRules = def.validation_rules;
@@ -255,6 +264,30 @@ const CreateVisitPage = () => {
     other: t('measures.categories.other', 'Other')
   };
 
+  // Get current visit type ID from form data
+  const currentVisitTypeId = formData.visit_type_id || null;
+
+  // Filter custom field categories based on visit type
+  const filteredCategories = customFieldCategories.filter(category => {
+    // If category has no visit_types restriction (null or empty), show for all types
+    if (!category.visit_types || category.visit_types.length === 0) {
+      return true;
+    }
+    // Category HAS visit_types restriction - must verify match
+    if (currentVisitTypeId) {
+      // We have a valid visit type ID, check if it matches
+      return category.visit_types.includes(currentVisitTypeId);
+    }
+    // Category has restriction but no visit type selected - hide it
+    return false;
+  });
+
+  // Helper function to get column width based on display_layout
+  const getColumnWidth = (displayLayout) => {
+    const columns = displayLayout?.columns || 1;
+    return Math.floor(12 / columns);
+  };
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -356,8 +389,10 @@ const CreateVisitPage = () => {
     setError(null);
 
     try {
+      // eslint-disable-next-line no-unused-vars
+      const { visit_type_id, ...dataWithoutTypeId } = formData;
       const submitData = {
-        ...formData,
+        ...dataWithoutTypeId,
         visit_date: formData.visit_date + ':00', // Keep as local time (no Z suffix)
         next_visit_date: formData.next_visit_date && formData.next_visit_date.trim()
           ? formData.next_visit_date + ':00' // Keep as local time (no Z suffix)
@@ -595,17 +630,33 @@ const CreateVisitPage = () => {
                           <Form.Group className="mb-3">
                             <Form.Label>{t('visits.visitType')}</Form.Label>
                             <Form.Select
-                              name="visit_type"
-                              value={formData.visit_type}
-                              onChange={handleInputChange}
+                              name="visit_type_id"
+                              value={formData.visit_type_id}
+                              onChange={(e) => {
+                                const selectedId = e.target.value;
+                                const selectedType = visitTypes.find(vt => vt.id === selectedId);
+                                setFormData(prev => ({
+                                  ...prev,
+                                  visit_type_id: selectedId,
+                                  visit_type: selectedType?.name || '', // Store name for backend
+                                  // Pre-fill duration from visit type if not already set
+                                  duration_minutes: selectedType?.duration_minutes || prev.duration_minutes
+                                }));
+                              }}
                             >
                               <option value="">{t('visits.selectType')}</option>
-                              <option value="Initial Consultation">{t('visits.initialConsultation')}</option>
-                              <option value="Follow-up">{t('visits.followUp')}</option>
-                              <option value="Final Assessment">{t('visits.finalAssessment')}</option>
-                              <option value="Nutrition Counseling">{t('visits.nutritionCounseling')}</option>
-                              <option value="Other">{t('visits.other', 'Other')}</option>
+                              {visitTypes.map(vt => (
+                                <option key={vt.id} value={vt.id}>
+                                  {vt.name}
+                                  {vt.duration_minutes && ` (${vt.duration_minutes} min)`}
+                                </option>
+                              ))}
                             </Form.Select>
+                            {formData.visit_type_id && visitTypes.find(vt => vt.id === formData.visit_type_id)?.default_price && (
+                              <Form.Text className="text-muted">
+                                {t('visitTypes.defaultPrice', 'Default Price')}: {parseFloat(visitTypes.find(vt => vt.id === formData.visit_type_id).default_price).toFixed(2)} €
+                              </Form.Text>
+                            )}
                           </Form.Group>
 
                           <Form.Group className="mb-3">
@@ -689,45 +740,67 @@ const CreateVisitPage = () => {
                   </Row>
                 </Tab>
 
-                {/* Custom Field Category Tabs */}
-                {customFieldCategories.length > 0 && customFieldCategories.map((category) => (
-                  <Tab
-                    key={category.id}
-                    eventKey={`category-${category.id}`}
-                    title={
-                      <span>
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            width: '10px',
-                            height: '10px',
-                            borderRadius: '50%',
-                            backgroundColor: category.color || '#3498db',
-                            marginRight: '6px'
-                          }}
-                        />
-                        {category.name}
-                      </span>
-                    }
-                  >
-                    {category.fields && category.fields.length > 0 ? (
-                      <Row>
-                        {category.fields.map(field => (
-                          <Col key={field.definition_id} xs={12} className={(field.field_type === 'separator' || field.field_type === 'blank') ? 'mb-3' : ''}>
-                            <CustomFieldInput
-                              fieldDefinition={field}
-                              value={fieldValues[field.definition_id]}
-                              onChange={handleCustomFieldChange}
-                              error={fieldErrors[field.definition_id]}
-                            />
-                          </Col>
-                        ))}
-                      </Row>
-                    ) : (
-                      <p className="text-muted">{t('customFields.noFieldsInCategory', 'No fields defined in this category.')}</p>
-                    )}
-                  </Tab>
-                ))}
+                {/* Custom Field Category Tabs - filtered by visit type */}
+                {filteredCategories.length > 0 && filteredCategories.map((category) => {
+                  const displayLayout = category.display_layout || { type: 'columns', columns: 1 };
+                  const columnWidth = getColumnWidth(displayLayout);
+
+                  return (
+                    <Tab
+                      key={category.id}
+                      eventKey={`category-${category.id}`}
+                      title={
+                        <span>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              width: '10px',
+                              height: '10px',
+                              borderRadius: '50%',
+                              backgroundColor: category.color || '#3498db',
+                              marginRight: '6px'
+                            }}
+                          />
+                          {category.name}
+                        </span>
+                      }
+                    >
+                      {category.fields && category.fields.length > 0 ? (
+                        displayLayout.type === 'list' ? (
+                          // List layout - one field per row
+                          <div>
+                            {category.fields.map(field => (
+                              <div key={field.definition_id} className="mb-3">
+                                <CustomFieldInput
+                                  fieldDefinition={field}
+                                  value={fieldValues[field.definition_id]}
+                                  onChange={handleCustomFieldChange}
+                                  error={fieldErrors[field.definition_id]}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          // Columns layout - configurable number of columns
+                          <Row>
+                            {category.fields.map(field => (
+                              <Col key={field.definition_id} xs={12} md={columnWidth}>
+                                <CustomFieldInput
+                                  fieldDefinition={field}
+                                  value={fieldValues[field.definition_id]}
+                                  onChange={handleCustomFieldChange}
+                                  error={fieldErrors[field.definition_id]}
+                                />
+                              </Col>
+                            ))}
+                          </Row>
+                        )
+                      ) : (
+                        <p className="text-muted">{t('customFields.noFieldsInCategory', 'No fields defined in this category.')}</p>
+                      )}
+                    </Tab>
+                  );
+                })}
 
                 {/* Measures Tab */}
                 {measureDefinitions.length > 0 && (

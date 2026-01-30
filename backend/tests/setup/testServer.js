@@ -36,6 +36,7 @@ function createTestApp() {
   const invoiceCustomizationsRoutes = require('../../src/routes/invoiceCustomizations');
   const exportRoutes = require('../../src/routes/export');
   const measureAlertsRoutes = require('../../src/routes/measureAlerts');
+  const appointmentRemindersRoutes = require('../../src/routes/appointmentReminders');
 
   // Mount routes
   app.use('/api/auth', authRoutes);
@@ -52,6 +53,7 @@ function createTestApp() {
   app.use('/api/invoice-customizations', invoiceCustomizationsRoutes);
   app.use('/api/export', exportRoutes);
   app.use('/api', measureAlertsRoutes);
+  app.use('/api/appointment-reminders', appointmentRemindersRoutes);
 
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(__dirname, '../../../uploads')));

@@ -363,6 +363,8 @@ async function getPatientCustomFields(user, patientId, language = 'fr', requestM
         description: translatedCategory.description,
         display_order: translatedCategory.display_order,
         color: translatedCategory.color || '#3498db',
+        display_layout: translatedCategory.display_layout || { type: 'columns', columns: 2 },
+        visit_types: translatedCategory.visit_types || [],
         fields
       };
     }));

@@ -8,6 +8,7 @@ import { Modal, Button, Form, Row, Col, Alert, Spinner, InputGroup } from 'react
 import { useTranslation } from 'react-i18next';
 import * as patientService from '../services/patientService';
 import * as visitService from '../services/visitService';
+import visitTypeService from '../services/visitTypeService';
 
 const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
   const { t } = useTranslation();
@@ -16,6 +17,7 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
   const [error, setError] = useState(null);
   const [patients, setPatients] = useState([]);
   const [visits, setVisits] = useState([]);
+  const [visitTypes, setVisitTypes] = useState([]);
 
   const getStatusText = (status) => {
     const statusMap = {
@@ -39,9 +41,20 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
   useEffect(() => {
     if (show) {
       fetchPatients();
+      fetchVisitTypes();
       resetForm();
     }
   }, [show]);
+
+  const fetchVisitTypes = async () => {
+    try {
+      const response = await visitTypeService.getAllVisitTypes();
+      setVisitTypes(response?.data || []);
+    } catch (err) {
+      console.error('Failed to fetch visit types:', err);
+      setVisitTypes([]);
+    }
+  };
 
   const fetchPatients = async () => {
     try {
@@ -106,6 +119,23 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
         ...prev,
         visit_id: ''
       }));
+    }
+
+    // If visit changed, try to pre-fill amount from visit type's default_price
+    if (name === 'visit_id' && value) {
+      const selectedVisit = visits.find(v => v.id === value);
+      if (selectedVisit?.visit_type) {
+        // Find the visit type by name
+        const matchedType = visitTypes.find(vt => vt.name === selectedVisit.visit_type);
+        if (matchedType?.default_price) {
+          setFormData(prev => ({
+            ...prev,
+            amount_total: parseFloat(matchedType.default_price).toFixed(2),
+            // Also pre-fill description with visit type if empty
+            description: prev.description || `${selectedVisit.visit_type} - ${new Date(selectedVisit.visit_date).toLocaleDateString()}`
+          }));
+        }
+      }
     }
   };
 

@@ -12,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import visitService from '../services/visitService';
 import visitCustomFieldService from '../services/visitCustomFieldService';
+import visitTypeService from '../services/visitTypeService';
 import userService from '../services/userService';
 import { getMeasureDefinitions, getMeasuresByVisit, logPatientMeasure, updatePatientMeasure, getAllMeasureTranslations } from '../services/measureService';
 import { fetchMeasureTranslations } from '../utils/measureTranslations';
@@ -50,6 +51,7 @@ const EditVisitPage = () => {
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [dietitians, setDietitians] = useState([]);
+  const [visitTypes, setVisitTypes] = useState([]);
 
   // Measures state
   const [measureDefinitions, setMeasureDefinitions] = useState([]);
@@ -76,6 +78,7 @@ const EditVisitPage = () => {
       fetchVisitData();
       fetchCustomFields();
       fetchDietitians();
+      fetchVisitTypes();
       fetchMeasureDefinitions();
       fetchExistingMeasures();
     }
@@ -87,6 +90,16 @@ const EditVisitPage = () => {
       setDietitians(Array.isArray(data) ? data : []);
     } catch (err) {
       setDietitians([]);
+    }
+  };
+
+  const fetchVisitTypes = async () => {
+    try {
+      const response = await visitTypeService.getAllVisitTypes({ is_active: true });
+      setVisitTypes(response?.data || []);
+    } catch (err) {
+      console.error('Error fetching visit types:', err);
+      setVisitTypes([]);
     }
   };
 
@@ -181,6 +194,14 @@ const EditVisitPage = () => {
         language = localStorage.getItem('i18nextLng') || 'fr';
       }
       const data = await visitCustomFieldService.getVisitCustomFields(id, language);
+
+      // Debug: Log the received categories with their visit_types and display_layout
+      console.log('[DEBUG] Received custom field categories:', data?.map(c => ({
+        name: c.name,
+        visit_types: c.visit_types,
+        display_layout: c.display_layout
+      })));
+
       setCustomFieldCategories(data || []);
 
       // Build initial values map
@@ -291,6 +312,42 @@ const EditVisitPage = () => {
     symptoms: t('measures.categories.symptoms', 'Symptoms'),
     lifestyle: t('measures.categories.lifestyle', 'Lifestyle'),
     other: t('measures.categories.other', 'Other')
+  };
+
+  // Get current visit type ID from form data
+  const currentVisitTypeId = visitTypes.find(vt => vt.name === formData.visit_type)?.id;
+
+  // Debug: Log visit type info
+  console.log('[DEBUG] Current visit type:', {
+    visitTypeName: formData.visit_type,
+    currentVisitTypeId,
+    availableTypes: visitTypes.map(vt => ({ id: vt.id, name: vt.name }))
+  });
+
+  // Filter custom field categories based on visit type
+  const filteredCategories = customFieldCategories.filter(category => {
+    // If category has no visit_types restriction (null or empty), show for all types
+    if (!category.visit_types || category.visit_types.length === 0) {
+      console.log(`[DEBUG] Category "${category.name}" has no visit_types restriction, showing`);
+      return true;
+    }
+    // Category HAS visit_types restriction - must verify match
+    if (currentVisitTypeId) {
+      // We have a valid visit type ID, check if it matches
+      const matches = category.visit_types.includes(currentVisitTypeId);
+      console.log(`[DEBUG] Category "${category.name}" visit_types:`, category.visit_types, `current type: ${currentVisitTypeId}, matches: ${matches}`);
+      return matches;
+    }
+    // Category has restriction but we can't verify (no valid visit type ID)
+    // Hide the category since we can't confirm it should be visible
+    console.log(`[DEBUG] Category "${category.name}" has restriction but no valid visit type ID, hiding`);
+    return false;
+  });
+
+  // Helper function to get column width based on display_layout
+  const getColumnWidth = (displayLayout) => {
+    const columns = displayLayout?.columns || 1;
+    return Math.floor(12 / columns);
   };
 
   /**
@@ -777,15 +834,41 @@ const EditVisitPage = () => {
                             <Form.Select
                               name="visit_type"
                               value={formData.visit_type}
-                              onChange={handleInputChange}
+                              onChange={(e) => {
+                                const selectedName = e.target.value;
+                                const selectedType = visitTypes.find(vt => vt.name === selectedName);
+                                setFormData(prev => ({
+                                  ...prev,
+                                  visit_type: selectedName,
+                                  // Update duration from visit type default if changing type
+                                  duration_minutes: selectedType?.duration_minutes || prev.duration_minutes
+                                }));
+                                setError(null);
+                              }}
                             >
                               <option value="">{t('visits.selectType')}</option>
-                              <option value="Initial Consultation">{t('visits.initialConsultation')}</option>
-                              <option value="Follow-up">{t('visits.followUp')}</option>
-                              <option value="Final Assessment">{t('visits.finalAssessment')}</option>
-                              <option value="Nutrition Counseling">{t('visits.nutritionCounseling')}</option>
-                              <option value="Other">{t('visits.other', 'Other')}</option>
+                              {visitTypes.length > 0 ? (
+                                visitTypes.map(vt => (
+                                  <option key={vt.id} value={vt.name}>
+                                    {vt.name}
+                                    {vt.duration_minutes && ` (${vt.duration_minutes} min)`}
+                                  </option>
+                                ))
+                              ) : (
+                                <>
+                                  <option value="Initial Consultation">{t('visits.initialConsultation')}</option>
+                                  <option value="Follow-up">{t('visits.followUp')}</option>
+                                  <option value="Final Assessment">{t('visits.finalAssessment')}</option>
+                                  <option value="Nutrition Counseling">{t('visits.nutritionCounseling')}</option>
+                                  <option value="Other">{t('visits.other', 'Other')}</option>
+                                </>
+                              )}
                             </Form.Select>
+                            {formData.visit_type && visitTypes.find(vt => vt.name === formData.visit_type)?.default_price && (
+                              <Form.Text className="text-muted">
+                                {t('visitTypes.defaultPrice', 'Default Price')}: {parseFloat(visitTypes.find(vt => vt.name === formData.visit_type).default_price).toFixed(2)} €
+                              </Form.Text>
+                            )}
                           </Form.Group>
 
                           <Form.Group className="mb-3">
@@ -871,67 +954,94 @@ const EditVisitPage = () => {
                 </Tab>
 
                 {/* Custom Fields Tabs - Only visible if there are categories for visits */}
-                {customFieldCategories.length > 0 && customFieldCategories.map((category) => (
-                  <Tab
-                    key={category.id}
-                    eventKey={`category-${category.id}`}
-                    title={
-                      <span>
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            width: '12px',
-                            height: '12px',
-                            backgroundColor: category.color || '#3498db',
-                            borderRadius: '50%',
-                            marginRight: '8px',
-                            verticalAlign: 'middle',
-                            border: '2px solid rgba(255,255,255,0.5)'
-                          }}
-                        />
-                        {category.name}
-                      </span>
-                    }
-                  >
-                    <div
-                      className="mb-3"
-                      style={{
-                        borderLeft: `4px solid ${category.color || '#3498db'}`,
-                        paddingLeft: '15px'
-                      }}
+                {filteredCategories.length > 0 && filteredCategories.map((category) => {
+                  const displayLayout = category.display_layout || { type: 'columns', columns: 1 };
+                  const columnWidth = getColumnWidth(displayLayout);
+
+                  // Debug: Log layout info for each category
+                  console.log(`[DEBUG] Rendering category "${category.name}":`, {
+                    display_layout: category.display_layout,
+                    resolved_layout: displayLayout,
+                    columnWidth
+                  });
+
+                  return (
+                    <Tab
+                      key={category.id}
+                      eventKey={`category-${category.id}`}
+                      title={
+                        <span>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              width: '12px',
+                              height: '12px',
+                              backgroundColor: category.color || '#3498db',
+                              borderRadius: '50%',
+                              marginRight: '8px',
+                              verticalAlign: 'middle',
+                              border: '2px solid rgba(255,255,255,0.5)'
+                            }}
+                          />
+                          {category.name}
+                        </span>
+                      }
                     >
-                      {category.description && (
-                        <Alert
-                          variant="info"
-                          style={{
-                            borderLeft: `4px solid ${category.color || '#3498db'}`,
-                            backgroundColor: `${category.color || '#3498db'}10`
-                          }}
-                        >
-                          {category.description}
-                        </Alert>
-                      )}
-                      {category.fields.length === 0 ? (
-                        <Alert variant="warning">
-                          No fields defined for this category
-                        </Alert>
-                      ) : (
-                        <Row>
-                          {category.fields.map(field => (
-                            <Col key={field.definition_id} xs={12} md={6}>
-                              <CustomFieldInput
-                                fieldDefinition={field}
-                                value={fieldValues[field.definition_id]}
-                                onChange={handleCustomFieldChange}
-                                error={fieldErrors[field.definition_id]}
-                              />
-                            </Col>
-                          ))}
-                        </Row>
-                      )}
-                    </div>
-                  </Tab>
-                ))}
+                      <div
+                        className="mb-3"
+                        style={{
+                          borderLeft: `4px solid ${category.color || '#3498db'}`,
+                          paddingLeft: '15px'
+                        }}
+                      >
+                        {category.description && (
+                          <Alert
+                            variant="info"
+                            style={{
+                              borderLeft: `4px solid ${category.color || '#3498db'}`,
+                              backgroundColor: `${category.color || '#3498db'}10`
+                            }}
+                          >
+                            {category.description}
+                          </Alert>
+                        )}
+                        {category.fields.length === 0 ? (
+                          <Alert variant="warning">
+                            No fields defined for this category
+                          </Alert>
+                        ) : displayLayout.type === 'list' ? (
+                          // List layout - one field per row
+                          <div>
+                            {category.fields.map(field => (
+                              <div key={field.definition_id} className="mb-3">
+                                <CustomFieldInput
+                                  fieldDefinition={field}
+                                  value={fieldValues[field.definition_id]}
+                                  onChange={handleCustomFieldChange}
+                                  error={fieldErrors[field.definition_id]}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          // Columns layout - configurable number of columns
+                          <Row>
+                            {category.fields.map(field => (
+                              <Col key={field.definition_id} xs={12} md={columnWidth}>
+                                <CustomFieldInput
+                                  fieldDefinition={field}
+                                  value={fieldValues[field.definition_id]}
+                                  onChange={handleCustomFieldChange}
+                                  error={fieldErrors[field.definition_id]}
+                                />
+                              </Col>
+                            ))}
+                          </Row>
+                        )}
+                      </div>
+                    </Tab>
+                  );
+                })}
 
                 {/* Measures Tab */}
                 {measureDefinitions.length > 0 && (

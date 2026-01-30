@@ -41,6 +41,14 @@ const templateCategories = {
     category: 'appointment_reminder',
     is_active: true
   },
+  appointmentInvitation: {
+    name: 'Appointment Invitation',
+    slug: 'appointment_invitation_template',
+    subject: 'Calendar Invitation: Appointment on {{appointment_date}}',
+    body_html: 'Dear {{patient_name}}, please find attached your calendar invitation for your appointment on {{appointment_date}} at {{appointment_time}}.',
+    category: 'appointment_invitation',
+    is_active: true
+  },
   invoice: {
     name: 'Invoice Notification',
     slug: 'invoice_notification',

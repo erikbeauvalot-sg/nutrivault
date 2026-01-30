@@ -15,6 +15,7 @@ import MeasurementCharts from '../components/MeasurementCharts';
 import InvoiceList from '../components/InvoiceList';
 import CustomFieldInput from '../components/CustomFieldInput';
 import CustomFieldDisplay from '../components/CustomFieldDisplay';
+import CustomFieldRadarChart from '../components/CustomFieldRadarChart';
 import MeasureHistory from '../components/MeasureHistory';
 import MeasureComparison from '../components/MeasureComparison';
 import EmailHistory from '../components/EmailHistory';
@@ -417,6 +418,18 @@ const PatientDetailPage = () => {
     return new Date(dateString).toLocaleString(locale);
   };
 
+  // Helper to get column width based on display_layout
+  const getColumnWidth = (columns) => {
+    const columnMap = {
+      1: 12,
+      2: 6,
+      3: 4,
+      4: 3,
+      6: 2
+    };
+    return columnMap[columns] || 6;
+  };
+
   // Check permissions
   const canEditPatient = user?.role === 'ADMIN' || user?.role === 'DIETITIAN';
   const canViewMedicalData = user?.role === 'ADMIN' || user?.role === 'DIETITIAN' || user?.role === 'ASSISTANT';
@@ -702,67 +715,84 @@ const PatientDetailPage = () => {
               </Tab>
 
               {/* Dynamic Custom Field Category Tabs */}
-              {customFieldCategories.map((category) => (
-                <Tab
-                  key={category.id}
-                  eventKey={`category-${category.id}`}
-                  title={
-                    <span>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          width: '12px',
-                          height: '12px',
-                          backgroundColor: category.color || '#3498db',
-                          borderRadius: '50%',
-                          marginRight: '8px',
-                          verticalAlign: 'middle',
-                          border: '2px solid rgba(255,255,255,0.5)'
-                        }}
-                      />
-                      {category.name}
-                    </span>
-                  }
-                >
-                  <div
-                    className="mb-3"
-                    style={{
-                      borderLeft: `4px solid ${category.color || '#3498db'}`,
-                      paddingLeft: '15px'
-                    }}
+              {customFieldCategories.map((category) => {
+                // Get display layout configuration
+                const displayLayout = category.display_layout || { type: 'columns', columns: 2 };
+                const columnWidth = getColumnWidth(displayLayout.columns || 2);
+
+                return (
+                  <Tab
+                    key={category.id}
+                    eventKey={`category-${category.id}`}
+                    title={
+                      <span>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            width: '12px',
+                            height: '12px',
+                            backgroundColor: category.color || '#3498db',
+                            borderRadius: '50%',
+                            marginRight: '8px',
+                            verticalAlign: 'middle',
+                            border: '2px solid rgba(255,255,255,0.5)'
+                          }}
+                        />
+                        {category.name}
+                      </span>
+                    }
                   >
-                    {category.description && (
-                      <Alert
-                        variant="info"
-                        style={{
-                          borderLeft: `4px solid ${category.color || '#3498db'}`,
-                          backgroundColor: `${category.color || '#3498db'}10`
-                        }}
-                      >
-                        {category.description}
-                      </Alert>
-                    )}
-                    {category.fields.length === 0 ? (
-                      <Alert variant="warning">
-                        Aucun champ défini pour cette catégorie
-                      </Alert>
-                    ) : (
-                      <Row>
-                        {category.fields.map(field => (
-                          <Col key={field.definition_id} xs={12} md={6} className={(field.field_type === 'separator' || field.field_type === 'blank') ? 'mb-3' : ''}>
-                            <CustomFieldDisplay
-                              fieldDefinition={field}
-                              value={fieldValues[field.definition_id]}
-                              searchQuery={searchQuery}
-                              highlightText={highlightText}
-                            />
-                          </Col>
-                        ))}
-                      </Row>
-                    )}
-                  </div>
-                </Tab>
-              ))}
+                    <div
+                      className="mb-3"
+                      style={{
+                        borderLeft: `4px solid ${category.color || '#3498db'}`,
+                        paddingLeft: '15px'
+                      }}
+                    >
+                      {category.description && (
+                        <Alert
+                          variant="info"
+                          style={{
+                            borderLeft: `4px solid ${category.color || '#3498db'}`,
+                            backgroundColor: `${category.color || '#3498db'}10`
+                          }}
+                        >
+                          {category.description}
+                        </Alert>
+                      )}
+                      {category.fields.length === 0 ? (
+                        <Alert variant="warning">
+                          Aucun champ défini pour cette catégorie
+                        </Alert>
+                      ) : displayLayout.type === 'radar' ? (
+                        <CustomFieldRadarChart
+                          category={category}
+                          fieldValues={fieldValues}
+                          options={displayLayout.options || {}}
+                        />
+                      ) : (
+                        <Row>
+                          {category.fields.map(field => (
+                            <Col
+                              key={field.definition_id}
+                              xs={12}
+                              md={columnWidth}
+                              className={(field.field_type === 'separator' || field.field_type === 'blank') ? 'mb-3' : ''}
+                            >
+                              <CustomFieldDisplay
+                                fieldDefinition={field}
+                                value={fieldValues[field.definition_id]}
+                                searchQuery={searchQuery}
+                                highlightText={highlightText}
+                              />
+                            </Col>
+                          ))}
+                        </Row>
+                      )}
+                    </div>
+                  </Tab>
+                );
+              })}
 
               {/* 3. Measures Tab */}
               <Tab eventKey="measures" title={`📊 ${t('patients.measures', 'Measures')}`}>

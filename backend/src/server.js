@@ -157,6 +157,10 @@ app.use('/api/analytics', analyticsRoutes);
 const googleCalendarRoutes = require('./routes/googleCalendar');
 app.use('/api/calendar', googleCalendarRoutes);
 
+// Visit Types routes (protected - RBAC enforced in routes file)
+const visitTypesRoutes = require('./routes/visitTypes');
+app.use('/api/visit-types', visitTypesRoutes);
+
 // Serve uploaded files (logos, signatures)
 // Use /app in production (Docker), process.cwd() in development
 const uploadsBasePath = process.env.NODE_ENV === 'production' ? '/app/uploads' : path.join(process.cwd(), 'uploads');
