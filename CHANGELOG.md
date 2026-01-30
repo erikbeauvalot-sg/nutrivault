@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.4.3] - 2026-01-30
+
+### Fixed
+- **French Translations (i18n)**: Complete French localization improvements
+  - Invoice status badges now translated (SENT → Envoyée, PAID → Payée, etc.)
+  - Invoice edit page fully translated (help section, buttons, labels)
+  - Invoice detail page status translated
+  - Email template modals fully translated (categories, validation, tabs, labels)
+  - `{{payment_status}}` variable in email templates now translated
+  - Currency symbol fixed ($ → €) on create invoice page
+  - Billing email status translated
+
+- **Docker Volume Permissions**: Fixed upload permission issues in production
+  - Entrypoint now runs as root to create directories with proper permissions
+  - Uses `su-exec` to drop privileges to nodejs user for the app server
+  - Resolves "EACCES: permission denied, mkdir '/uploads'" error
+  - Invoice customization logo/signature uploads now work correctly
+
+### Technical Details
+- `frontend/src/pages/EditInvoicePage.jsx` - Added status translation
+- `frontend/src/pages/InvoiceDetailPage.jsx` - Added status translation
+- `frontend/src/pages/CreateInvoicePage.jsx` - Fixed currency symbol
+- `frontend/src/components/EmailTemplateModal.jsx` - Full i18n support
+- `frontend/src/locales/fr.json` - Added email template translations
+- `backend/src/services/email.service.js` - Translate invoice status in emails
+- `backend/src/services/templateRenderer.service.js` - Translate payment_status variable
+- `backend/Dockerfile` - Run entrypoint as root, drop to nodejs with su-exec
+- `backend/scripts/docker-entrypoint.sh` - Create directories with proper permissions
+
+---
+
 ## [5.4.2] - 2026-01-29
 
 ### Fixed
