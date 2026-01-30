@@ -251,7 +251,8 @@ const VisitDetailPage = () => {
       setError(null);
 
       const response = await visitService.finishAndInvoice(id, finishOptions);
-      const result = response.data.data || response.data;
+      // finishAndInvoice already extracts data via extractData()
+      const result = response?.data?.data || response?.data || response;
 
       // Show success message with actions taken
       setFinishSuccess({
