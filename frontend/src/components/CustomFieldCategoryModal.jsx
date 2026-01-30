@@ -106,8 +106,6 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
         entity_types: entityTypes
       };
 
-      console.log('Submitting category data:', submitData);
-
       if (isEditing) {
         await customFieldService.updateCategory(category.id, submitData);
       } else {
@@ -159,7 +157,6 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
       // Add the type
       newEntityTypes = [...entityTypes, type];
     }
-    console.log('🔄 Entity types changed:', newEntityTypes);
     setEntityTypes(newEntityTypes);
   };
 

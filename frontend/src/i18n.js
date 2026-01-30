@@ -37,10 +37,4 @@ i18n
     supportedLngs: ['en', 'fr'], // Only support English and French
   });
 
-// Debug logging
-console.log('🌐 i18n initialized');
-console.log('🌐 Detected language:', i18n.language);
-console.log('🌐 localStorage value:', localStorage.getItem('i18nextLng'));
-console.log('🌐 Available languages:', i18n.languages);
-
 export default i18n;

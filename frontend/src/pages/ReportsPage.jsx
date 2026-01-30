@@ -17,8 +17,6 @@ const ReportsPage = () => {
   const { t } = useTranslation();
   const { isAuthenticated, user } = useAuth();
 
-  console.log('🔐 ReportsPage - isAuthenticated:', isAuthenticated);
-  console.log('👤 ReportsPage - user:', user);
   const [stats, setStats] = useState({
     users: { total: 0, active: 0, inactive: 0 },
     patients: { total: 0, active: 0 },
@@ -45,12 +43,10 @@ const ReportsPage = () => {
 
   // Load all statistics
   const loadStatistics = async () => {
-    console.log('📊 loadStatistics called');
     setLoading(true);
     setError(null);
 
     try {
-      console.log('🔐 Permissions check:', { canViewUsers, canViewBilling });
 
       // Load data based on permissions
       const promises = [
@@ -74,31 +70,25 @@ const ReportsPage = () => {
 
       const [patientsRes, visitsRes, usersRes, billingRes] = await Promise.all(promises);
 
-      console.log('✅ API responses received');
-
       // Process patients statistics
       const patients = patientsRes.data?.data || [];
       const activePatients = patients.filter(p => p.is_active).length;
-      console.log('🏥 Patients:', patients.length);
 
       // Process visits statistics
       const visits = visitsRes.data?.data || [];
       const completedVisits = visits.filter(v => v.status === 'COMPLETED').length;
       const scheduledVisits = visits.filter(v => v.status === 'SCHEDULED').length;
-      console.log('📅 Visits:', visits.length);
 
       // Process users statistics (if permission granted)
       const users = usersRes.data?.data || [];
       const activeUsers = users.filter(u => u.is_active).length;
       const inactiveUsers = users.length - activeUsers;
-      console.log('👥 Users:', users.length, canViewUsers ? '(access granted)' : '(no access)');
 
       // Process billing statistics (if permission granted)
       const billing = billingRes.data?.data || [];
       const paidBilling = billing.filter(b => b.status === 'PAID').length;
       const pendingBilling = billing.filter(b => b.status === 'SENT').length;
       const overdueBilling = billing.filter(b => b.status === 'OVERDUE').length;
-      console.log('💰 Billing:', billing.length, canViewBilling ? '(access granted)' : '(no access)');
 
       setStats({
         users: {

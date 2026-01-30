@@ -52,9 +52,7 @@ const DocumentUploadPage = () => {
       const response = await api.get('/patients?limit=1000'); // Get all patients
       const data = response.data?.data || response.data;
       setPatients(Array.isArray(data) ? data : []);
-      console.log('Loaded patients:', data);
     } catch (err) {
-      console.error('Error loading patients:', err);
       setError(t('documents.failedToLoadPatients', 'Failed to load patients'));
     } finally {
       setLoadingResources(false);
@@ -67,9 +65,7 @@ const DocumentUploadPage = () => {
       const response = await api.get('/users?limit=1000'); // Get all users
       const data = response.data?.data || response.data;
       setUsers(Array.isArray(data) ? data : []);
-      console.log('Loaded users:', data);
     } catch (err) {
-      console.error('Error loading users:', err);
       setError(t('documents.failedToLoadUsers', 'Failed to load users'));
     } finally {
       setLoadingResources(false);
@@ -82,9 +78,7 @@ const DocumentUploadPage = () => {
       const response = await api.get('/visits?limit=1000'); // Get all visits
       const data = response.data?.data || response.data;
       setVisits(Array.isArray(data) ? data : []);
-      console.log('Loaded visits:', data);
     } catch (err) {
-      console.error('Error loading visits:', err);
       setError(t('documents.failedToLoadVisits', 'Failed to load visits'));
     } finally {
       setLoadingResources(false);

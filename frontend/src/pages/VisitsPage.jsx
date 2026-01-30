@@ -56,13 +56,6 @@ const VisitsPage = () => {
   // Handle patient selection from navigation state (from patients page)
   useEffect(() => {
     if (location.state?.selectedPatient) {
-      console.log('🎯 VisitsPage received patient from navigation:', {
-        patientId: location.state.selectedPatient.id,
-        patientName: `${location.state.selectedPatient.first_name} ${location.state.selectedPatient.last_name}`,
-        assignedDietitian: location.state.selectedPatient.assigned_dietitian,
-        hasAssignedDietitian: !!location.state.selectedPatient.assigned_dietitian?.id
-      });
-
       // Navigate to create visit page with pre-selected patient
       navigate('/visits/create', { state: { selectedPatient: location.state.selectedPatient } });
     }
