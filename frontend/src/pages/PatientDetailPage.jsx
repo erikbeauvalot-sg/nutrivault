@@ -94,15 +94,12 @@ const PatientDetailPage = () => {
   const fetchPatientDetails = async () => {
     try {
       setLoading(true);
-      const response = await patientService.getPatientDetails(id);
-      // Handle nested data structure from API
-      const patientData = response.data?.data || response.data || response;
+      const patientData = await patientService.getPatientDetails(id);
       setPatient(patientData);
-      setVisits(patientData.visits || []);
+      setVisits(patientData?.visits || []);
       setError(null);
     } catch (err) {
       setError(t('patients.failedToLoad') + ': ' + (err.response?.data?.error || err.message));
-      console.error('Error fetching patient details:', err);
     } finally {
       setLoading(false);
     }

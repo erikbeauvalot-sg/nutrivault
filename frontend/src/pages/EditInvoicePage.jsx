@@ -84,11 +84,10 @@ const EditInvoicePage = () => {
 
   const fetchPatients = async () => {
     try {
-      const response = await getPatients({ is_active: true, limit: 1000 });
-      const data = response.data?.data || response.data || response;
+      const { data } = await getPatients({ is_active: true, limit: 1000 });
       setPatients(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error fetching patients:', err);
+      // Error fetching patients
     }
   };
 
@@ -98,11 +97,9 @@ const EditInvoicePage = () => {
       return;
     }
     try {
-      const response = await visitService.getVisits({ patient_id: patientId, limit: 100 });
-      const data = response.data?.data || response.data || response;
+      const { data } = await visitService.getVisits({ patient_id: patientId, limit: 100 });
       setVisits(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error fetching visits:', err);
       setVisits([]);
     }
   };

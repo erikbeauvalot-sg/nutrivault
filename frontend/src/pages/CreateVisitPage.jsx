@@ -87,21 +87,18 @@ const CreateVisitPage = () => {
 
   const fetchPatients = async () => {
     try {
-      const response = await getPatients({ limit: 1000 });
-      const data = response.data?.data || response.data || response;
+      const { data } = await getPatients({ limit: 1000 });
       setPatients(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error fetching patients:', err);
+      // Error fetching patients
     }
   };
 
   const fetchDietitians = async () => {
     try {
-      const response = await userService.getDietitians();
-      const data = response.data?.data || response.data || [];
+      const data = await userService.getDietitians();
       setDietitians(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error fetching dietitians:', err);
       setDietitians([]);
     }
   };
@@ -372,8 +369,7 @@ const CreateVisitPage = () => {
         if (submitData[key] === '') submitData[key] = null;
       });
 
-      const response = await visitService.createVisit(submitData);
-      const savedVisit = response.data?.data || response.data;
+      const savedVisit = await visitService.createVisit(submitData);
 
       // Save custom field values if any were filled
       if (savedVisit && savedVisit.id && Object.keys(fieldValues).length > 0) {

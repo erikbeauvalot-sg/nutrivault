@@ -71,11 +71,9 @@ const EditVisitPage = () => {
 
   const fetchDietitians = async () => {
     try {
-      const response = await userService.getDietitians();
-      const data = response.data?.data || response.data || [];
+      const data = await userService.getDietitians();
       setDietitians(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error fetching dietitians:', err);
       setDietitians([]);
     }
   };
@@ -83,8 +81,7 @@ const EditVisitPage = () => {
   const fetchVisitData = async () => {
     try {
       setLoading(true);
-      const response = await visitService.getVisitById(id);
-      const visitData = response.data.data || response.data;
+      const visitData = await visitService.getVisitById(id);
       setVisit(visitData);
 
       // Pre-populate form with visit data

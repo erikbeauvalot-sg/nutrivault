@@ -58,34 +58,34 @@ const ReportsPage = () => {
       if (canViewUsers) {
         promises.push(getUsers({ limit: 1000 }));
       } else {
-        promises.push(Promise.resolve({ data: { data: [] } })); // Empty result
+        promises.push(Promise.resolve({ data: [] })); // Empty result
       }
 
       // Only load billing if user has permission
       if (canViewBilling) {
         promises.push(getInvoices({ limit: 1000 }));
       } else {
-        promises.push(Promise.resolve({ data: { data: [] } })); // Empty result
+        promises.push(Promise.resolve({ data: [] })); // Empty result
       }
 
       const [patientsRes, visitsRes, usersRes, billingRes] = await Promise.all(promises);
 
-      // Process patients statistics
-      const patients = patientsRes.data?.data || [];
+      // Process patients statistics (new format: { data, pagination })
+      const patients = patientsRes.data || [];
       const activePatients = patients.filter(p => p.is_active).length;
 
-      // Process visits statistics
-      const visits = visitsRes.data?.data || [];
+      // Process visits statistics (old format still: response.data.data)
+      const visits = visitsRes.data?.data || visitsRes.data || [];
       const completedVisits = visits.filter(v => v.status === 'COMPLETED').length;
       const scheduledVisits = visits.filter(v => v.status === 'SCHEDULED').length;
 
-      // Process users statistics (if permission granted)
-      const users = usersRes.data?.data || [];
+      // Process users statistics (old format still: response.data.data)
+      const users = usersRes.data?.data || usersRes.data || [];
       const activeUsers = users.filter(u => u.is_active).length;
       const inactiveUsers = users.length - activeUsers;
 
-      // Process billing statistics (if permission granted)
-      const billing = billingRes.data?.data || [];
+      // Process billing statistics (old format still: response.data.data)
+      const billing = billingRes.data?.data || billingRes.data || [];
       const paidBilling = billing.filter(b => b.status === 'PAID').length;
       const pendingBilling = billing.filter(b => b.status === 'SENT').length;
       const overdueBilling = billing.filter(b => b.status === 'OVERDUE').length;

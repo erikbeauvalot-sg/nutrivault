@@ -53,19 +53,14 @@ const PatientsPage = () => {
       filters.page = currentPage;
       filters.limit = 10; // Match PatientList itemsPerPage
 
-      const response = await getPatients(filters);
-      
-      // Handle API response format
-      const patientsData = response.data.data || response.data;
-      const paginationData = response.data.pagination || {};
-      
-      setPatients(Array.isArray(patientsData) ? patientsData : []);
-      setTotalPages(paginationData.totalPages || 1);
-      setTotalPatients(paginationData.totalCount || patientsData.length || 0);
+      const { data, pagination } = await getPatients(filters);
+
+      setPatients(Array.isArray(data) ? data : []);
+      setTotalPages(pagination?.totalPages || 1);
+      setTotalPatients(pagination?.totalCount || data?.length || 0);
       setError(null);
     } catch (err) {
       setError(t('errors.failedToLoadPatients', { error: err.response?.data?.error || err.message }));
-      console.error('Error fetching patients:', err);
     } finally {
       setLoading(false);
     }

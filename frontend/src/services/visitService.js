@@ -4,11 +4,12 @@
  */
 
 import api from './api';
+import { extractData, extractPagination } from '../utils/apiResponse';
 
 /**
  * Get all visits with optional filters
  * @param {Object} filters - Query parameters (search, patient_id, dietitian_id, status, start_date, end_date, page, limit)
- * @returns {Promise} API response
+ * @returns {Promise<{data: Array, pagination: object|null}>} Visits array and pagination info
  */
 export const getVisits = async (filters = {}) => {
   const params = new URLSearchParams();
@@ -17,50 +18,53 @@ export const getVisits = async (filters = {}) => {
       params.append(key, filters[key]);
     }
   });
-  
+
   const response = await api.get(`/visits?${params.toString()}`);
-  return response;
+  return {
+    data: extractData(response, []),
+    pagination: extractPagination(response)
+  };
 };
 
 /**
  * Get visit by ID
  * @param {string} id - Visit UUID
- * @returns {Promise} API response
+ * @returns {Promise<object>} Visit object
  */
 export const getVisitById = async (id) => {
   const response = await api.get(`/visits/${id}`);
-  return response;
+  return extractData(response);
 };
 
 /**
  * Create new visit
  * @param {Object} visitData - Visit data
- * @returns {Promise} API response
+ * @returns {Promise<object>} Created visit
  */
 export const createVisit = async (visitData) => {
   const response = await api.post('/visits', visitData);
-  return response;
+  return extractData(response);
 };
 
 /**
  * Update visit
  * @param {string} id - Visit UUID
  * @param {Object} updateData - Update data
- * @returns {Promise} API response
+ * @returns {Promise<object>} Updated visit
  */
 export const updateVisit = async (id, updateData) => {
   const response = await api.put(`/visits/${id}`, updateData);
-  return response;
+  return extractData(response);
 };
 
 /**
  * Delete visit
  * @param {string} id - Visit UUID
- * @returns {Promise} API response
+ * @returns {Promise<object>} Deletion result
  */
 export const deleteVisit = async (id) => {
   const response = await api.delete(`/visits/${id}`);
-  return response;
+  return extractData(response);
 };
 
 /**
@@ -71,11 +75,11 @@ export const deleteVisit = async (id) => {
  * @param {boolean} options.markCompleted - Mark visit as COMPLETED (default: true)
  * @param {boolean} options.generateInvoice - Generate invoice automatically (default: true)
  * @param {boolean} options.sendEmail - Send invoice email to patient (default: false)
- * @returns {Promise} API response with visit, invoice, and email status
+ * @returns {Promise<object>} Result with visit, invoice, and email status
  */
 export const finishAndInvoice = async (id, options = {}) => {
   const response = await api.post(`/visits/${id}/finish-and-invoice`, options);
-  return response;
+  return extractData(response);
 };
 
 export default {

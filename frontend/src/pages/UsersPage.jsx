@@ -66,17 +66,12 @@ const UsersPage = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await userService.getUsers(filters);
-      
-      const data = response.data.data || response.data;
-      const usersList = Array.isArray(data) ? data : [];
-      setUsers(usersList);
-      
-      const paginationData = response.data.pagination || { total: 0, totalPages: 0 };
-      setPagination(paginationData);
+      const { data, pagination: paginationData } = await userService.getUsers(filters);
+
+      setUsers(Array.isArray(data) ? data : []);
+      setPagination(paginationData || { total: 0, totalPages: 0 });
       setError(null);
     } catch (err) {
-      console.error('Error fetching users:', err);
       setError(err.response?.data?.error || t('users.failedToLoad'));
       setUsers([]);
     } finally {
@@ -86,13 +81,10 @@ const UsersPage = () => {
 
   const fetchRoles = async () => {
     try {
-      const response = await userService.getRoles();
-      const data = response.data.data || response.data;
-      const rolesList = Array.isArray(data) ? data : [];
-      setRoles(rolesList);
+      const rolesList = await userService.getRoles();
+      setRoles(Array.isArray(rolesList) ? rolesList : []);
     } catch (err) {
-      console.error('Error fetching roles:', err);
-      // Don't set error state for roles, just log it
+      // Don't set error state for roles
     }
   };
 
@@ -154,13 +146,11 @@ const UsersPage = () => {
 
   const handleEditClick = async (userId) => {
     try {
-      const response = await userService.getUserById(userId);
-      const userData = response.data.data || response.data;
+      const userData = await userService.getUserById(userId);
       setSelectedUser(userData);
       setUserModalMode('edit');
       setShowUserModal(true);
     } catch (err) {
-      console.error('Error fetching user:', err);
       alert(err.response?.data?.error || t('users.failedToLoad'));
     }
   };

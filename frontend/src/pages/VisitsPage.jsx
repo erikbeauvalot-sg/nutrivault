@@ -63,24 +63,21 @@ const VisitsPage = () => {
 
   const fetchPatients = async () => {
     try {
-      const response = await getPatients();
-      const patientsData = response.data.data || response.data;
-      setPatients(Array.isArray(patientsData) ? patientsData : []);
+      const { data } = await getPatients();
+      setPatients(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error fetching patients:', err);
+      // Error fetching patients - silently ignore
     }
   };
 
   const fetchVisits = async () => {
     try {
       setLoading(true);
-      const response = await visitService.getVisits(filters);
-      const data = response.data.data || response.data;
+      const { data, pagination: paginationData } = await visitService.getVisits(filters);
       setVisits(Array.isArray(data) ? data : []);
-      setPagination(response.data.pagination || { total: 0, totalPages: 0 });
+      setPagination(paginationData || { total: 0, totalPages: 0 });
       setError(null);
     } catch (err) {
-      console.error('Error fetching visits:', err);
       setError(err.response?.data?.error || t('visits.failedToLoad'));
       setVisits([]);
     } finally {

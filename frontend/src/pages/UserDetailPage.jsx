@@ -60,11 +60,10 @@ const UserDetailPage = () => {
   const fetchUser = async () => {
     try {
       setLoading(true);
-      const response = await userService.getUserById(id);
-      setUser(response.data.data || response.data);
+      const userData = await userService.getUserById(id);
+      setUser(userData);
       setError(null);
     } catch (err) {
-      console.error('Error fetching user:', err);
       setError(err.response?.data?.error || t('users.failedToLoad'));
     } finally {
       setLoading(false);
@@ -73,11 +72,10 @@ const UserDetailPage = () => {
 
   const fetchRoles = async () => {
     try {
-      const response = await userService.getRoles();
-      const data = response.data.data || response.data;
-      setRoles(Array.isArray(data) ? data : []);
+      const rolesList = await userService.getRoles();
+      setRoles(Array.isArray(rolesList) ? rolesList : []);
     } catch (err) {
-      console.error('Error fetching roles:', err);
+      // Error fetching roles
     }
   };
 
@@ -86,12 +84,10 @@ const UserDetailPage = () => {
       setVisitsLoading(true);
 
       // Fetch all visits for this dietitian
-      const visitsResponse = await visitService.getVisits({
+      const { data: allVisits } = await visitService.getVisits({
         dietitian_id: id,
         limit: 100
       });
-
-      const allVisits = visitsResponse.data?.data || [];
 
       // Filter scheduled visits (upcoming)
       const scheduledVisits = allVisits.filter(v =>

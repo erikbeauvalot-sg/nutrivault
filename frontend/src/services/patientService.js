@@ -4,11 +4,12 @@
  */
 
 import api from './api';
+import { extractData, extractPagination } from '../utils/apiResponse';
 
 /**
  * Get all patients with optional filters
  * @param {object} filters - Filter parameters (page, limit, search, etc.)
- * @returns {Promise<object>} Patients array and pagination info
+ * @returns {Promise<{data: Array, pagination: object|null}>} Patients array and pagination info
  */
 export const getPatients = async (filters = {}) => {
   const params = new URLSearchParams();
@@ -20,9 +21,12 @@ export const getPatients = async (filters = {}) => {
       }
     }
   });
-  
+
   const response = await api.get(`/patients?${params.toString()}`);
-  return response;
+  return {
+    data: extractData(response, []),
+    pagination: extractPagination(response)
+  };
 };
 
 /**
@@ -32,7 +36,7 @@ export const getPatients = async (filters = {}) => {
  */
 export const getPatientById = async (id) => {
   const response = await api.get(`/patients/${id}`);
-  return response;
+  return extractData(response);
 };
 
 /**
@@ -42,7 +46,7 @@ export const getPatientById = async (id) => {
  */
 export const getPatientDetails = async (id) => {
   const response = await api.get(`/patients/${id}/details`);
-  return response;
+  return extractData(response);
 };
 
 /**
@@ -52,7 +56,7 @@ export const getPatientDetails = async (id) => {
  */
 export const createPatient = async (patientData) => {
   const response = await api.post('/patients', patientData);
-  return response.data;
+  return extractData(response);
 };
 
 /**
@@ -63,15 +67,15 @@ export const createPatient = async (patientData) => {
  */
 export const updatePatient = async (id, patientData) => {
   const response = await api.put(`/patients/${id}`, patientData);
-  return response.data;
+  return extractData(response);
 };
 
 /**
  * Delete patient (soft delete)
  * @param {string} id - Patient UUID
- * @returns {Promise<void>}
+ * @returns {Promise<object>} Deletion result
  */
 export const deletePatient = async (id) => {
   const response = await api.delete(`/patients/${id}`);
-  return response.data;
+  return extractData(response);
 };
