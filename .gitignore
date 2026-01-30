@@ -59,3 +59,14 @@ uploads/
 
 *.OLD
 backend/nutrivault_dev.db
+backups.tar.gz
+backend/.env.BKP
+backend/backend/data/old_nutrivault-01.db
+backend/backend/data/old_nutrivault-01.db.BKP
+backend/data/nutrivault_prod.db.BKP
+backend/data/nutrivault.db.BKP
+backend/data/old_nutrivault-01.db.BKP
+backend/data/old_nutrivault-02.db.BKP
+backend/data.BKP/nutrivault_prod.db
+backend/data.BKP/nutrivault.db
+backend/data.BKP/old_nutrivault-01.db

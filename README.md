@@ -270,6 +270,12 @@ age_years({date_naissance})
 - Le système détecte les dépendances à partir de la formule
 - Les dépendances circulaires sont détectées et bloquées
 
+
+### STOP ALL PROCESS 
+```
+lsof -ti:3001 | xargs kill -9 2>/dev/null; lsof -ti:5173 | xargs kill -9 2>/dev/null; pkill -f "nodemon" 2>/dev/null; echo "All servers stopped
+```
+
 ### Bonnes pratiques
 
 1. **Nommez clairement vos champs** : Utilisez des noms explicites (ex: `imc` plutôt que `calc1`)
