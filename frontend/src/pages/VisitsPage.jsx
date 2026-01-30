@@ -456,19 +456,19 @@ const VisitsPage = () => {
                                     {getStatusBadge(visit.status)}
                                   </div>
                                   <div className="timeline-meta">
-                                    <strong>Patient:</strong> {visit.patient ? `${visit.patient.first_name} ${visit.patient.last_name}` : 'Unknown'} |
-                                    <strong> Dietitian:</strong> {visit.dietitian ? `${visit.dietitian.first_name} ${visit.dietitian.last_name}` : 'Unknown'} |
-                                    <strong> Type:</strong> {visit.visit_type || 'General'} |
-                                    <strong> Duration:</strong> {visit.duration_minutes ? `${visit.duration_minutes} min` : 'N/A'}
+                                    <strong>{t('visits.patient')}:</strong> {visit.patient ? `${visit.patient.first_name} ${visit.patient.last_name}` : t('visits.unknown')} |
+                                    <strong> {t('visits.dietitian')}:</strong> {visit.dietitian ? `${visit.dietitian.first_name} ${visit.dietitian.last_name}` : t('visits.unknown')} |
+                                    <strong> {t('visits.type')}:</strong> {visit.visit_type || t('visits.generalVisit')} |
+                                    <strong> {t('visits.duration')}:</strong> {visit.duration_minutes ? `${visit.duration_minutes} ${t('visits.min')}` : t('visits.na')}
                                   </div>
                                   {visit.chief_complaint && (
                                     <div className="mt-2">
-                                      <strong>Chief Complaint:</strong> {visit.chief_complaint}
+                                      <strong>{t('visits.chiefComplaint')}:</strong> {visit.chief_complaint}
                                     </div>
                                   )}
                                   {visit.assessment && (
                                     <div className="mt-2">
-                                      <strong>Assessment:</strong> {visit.assessment}
+                                      <strong>{t('visits.assessment')}:</strong> {visit.assessment}
                                     </div>
                                   )}
                                 </Col>

@@ -831,7 +831,7 @@ const PatientDetailPage = () => {
                                   className="visit-row"
                                 >
                                   <td>{formatDateTime(visit.visit_date)}</td>
-                                  <td>{visit.visit_type || 'General'}</td>
+                                  <td>{visit.visit_type || t('visits.generalVisit', 'General')}</td>
                                   <td>{visit.notes || '-'}</td>
                                   <td>
                                     <Badge bg={visit.status === 'completed' ? 'success' : 'warning'}>
@@ -884,7 +884,7 @@ const PatientDetailPage = () => {
                               <div className="visit-card-body">
                                 <div className="visit-card-row">
                                   <div className="visit-card-label">{t('visits.type', 'Type')}:</div>
-                                  <div className="visit-card-value">{visit.visit_type || 'General'}</div>
+                                  <div className="visit-card-value">{visit.visit_type || t('visits.generalVisit', 'General')}</div>
                                 </div>
                                 {visit.notes && (
                                   <div className="visit-card-row">

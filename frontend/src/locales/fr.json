@@ -1914,5 +1914,82 @@
         "description": "Mettez à jour le mot de passe de votre compte pour la sécurité."
       }
     }
+  },
+  "invoiceCustomization": {
+    "title": "Personnalisation des factures",
+    "subtitle": "Personnalisez votre modèle de facture avec votre image de marque",
+    "loading": "Chargement de la personnalisation...",
+    "saving": "Enregistrement...",
+    "saved": "Paramètres enregistrés avec succès",
+    "saveError": "Échec de l'enregistrement des paramètres",
+    "loadError": "Échec du chargement de la personnalisation",
+    "tabs": {
+      "logoBranding": "Logo et image de marque",
+      "contactInfo": "Coordonnées",
+      "footerSignature": "Pied de page et signature"
+    },
+    "logo": {
+      "title": "Logo",
+      "showOnInvoices": "Afficher le logo sur les factures",
+      "currentLogo": "Logo actuel",
+      "uploadNew": "Télécharger un nouveau logo",
+      "noLogo": "Aucun logo téléchargé",
+      "dimensions": "Dimensions du logo",
+      "width": "Largeur (px)",
+      "height": "Hauteur (px)",
+      "delete": "Supprimer le logo",
+      "confirmDelete": "Êtes-vous sûr de vouloir supprimer le logo ?",
+      "deleted": "Logo supprimé avec succès",
+      "deleteError": "Échec de la suppression du logo"
+    },
+    "colors": {
+      "title": "Couleurs de marque",
+      "primary": "Couleur principale",
+      "secondary": "Couleur secondaire",
+      "accent": "Couleur d'accent"
+    },
+    "contact": {
+      "showOnInvoices": "Afficher les coordonnées sur les factures",
+      "businessName": "Nom de l'entreprise",
+      "businessNamePlaceholder": "ex: Cabinet NutriVault",
+      "addressLine1": "Adresse ligne 1",
+      "addressLine2": "Adresse ligne 2",
+      "city": "Ville",
+      "postalCode": "Code postal",
+      "country": "Pays",
+      "phone": "Téléphone",
+      "email": "Email",
+      "website": "Site web",
+      "websitePlaceholder": "https://",
+      "miscInfo": "Informations complémentaires",
+      "miscInfoPlaceholder": "Informations supplémentaires..."
+    },
+    "footer": {
+      "showOnInvoices": "Afficher le pied de page sur les factures",
+      "closingMessage": "Message de clôture",
+      "closingMessagePlaceholder": "ex: Merci pour votre confiance !",
+      "signature": "Signature",
+      "currentSignature": "Signature actuelle",
+      "uploadNew": "Télécharger une image de signature",
+      "noSignature": "Aucune signature téléchargée",
+      "signatureName": "Nom",
+      "signatureTitle": "Titre/Qualification",
+      "signatureTitlePlaceholder": "ex: Diététicien(ne) diplômé(e)",
+      "delete": "Supprimer la signature",
+      "confirmDelete": "Êtes-vous sûr de vouloir supprimer la signature ?",
+      "deleted": "Signature supprimée avec succès",
+      "deleteError": "Échec de la suppression de la signature"
+    },
+    "notes": {
+      "title": "Notes par défaut des factures",
+      "placeholder": "Notes à inclure par défaut sur toutes les factures..."
+    },
+    "actions": {
+      "save": "Enregistrer les modifications",
+      "reset": "Réinitialiser par défaut",
+      "confirmReset": "Êtes-vous sûr de vouloir réinitialiser tous les paramètres ? Cette action est irréversible.",
+      "resetSuccess": "Paramètres réinitialisés par défaut",
+      "resetError": "Échec de la réinitialisation"
+    }
   }
 }

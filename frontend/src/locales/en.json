@@ -1752,5 +1752,82 @@
         "description": "Update your account password for security."
       }
     }
+  },
+  "invoiceCustomization": {
+    "title": "Invoice Customization",
+    "subtitle": "Customize your invoice template with your branding",
+    "loading": "Loading customization...",
+    "saving": "Saving...",
+    "saved": "Settings saved successfully",
+    "saveError": "Failed to save settings",
+    "loadError": "Failed to load customization",
+    "tabs": {
+      "logoBranding": "Logo & Branding",
+      "contactInfo": "Contact Information",
+      "footerSignature": "Footer & Signature"
+    },
+    "logo": {
+      "title": "Logo",
+      "showOnInvoices": "Show logo on invoices",
+      "currentLogo": "Current Logo",
+      "uploadNew": "Upload New Logo",
+      "noLogo": "No logo uploaded",
+      "dimensions": "Logo Dimensions",
+      "width": "Width (px)",
+      "height": "Height (px)",
+      "delete": "Delete Logo",
+      "confirmDelete": "Are you sure you want to delete the logo?",
+      "deleted": "Logo deleted successfully",
+      "deleteError": "Failed to delete logo"
+    },
+    "colors": {
+      "title": "Brand Colors",
+      "primary": "Primary Color",
+      "secondary": "Secondary Color",
+      "accent": "Accent Color"
+    },
+    "contact": {
+      "showOnInvoices": "Show contact information on invoices",
+      "businessName": "Business Name",
+      "businessNamePlaceholder": "e.g., NutriVault Practice",
+      "addressLine1": "Address Line 1",
+      "addressLine2": "Address Line 2",
+      "city": "City",
+      "postalCode": "Postal Code",
+      "country": "Country",
+      "phone": "Phone",
+      "email": "Email",
+      "website": "Website",
+      "websitePlaceholder": "https://",
+      "miscInfo": "Additional Information",
+      "miscInfoPlaceholder": "Additional information..."
+    },
+    "footer": {
+      "showOnInvoices": "Show footer on invoices",
+      "closingMessage": "Closing Message",
+      "closingMessagePlaceholder": "e.g., Thank you for your business!",
+      "signature": "Signature",
+      "currentSignature": "Current Signature",
+      "uploadNew": "Upload Signature Image",
+      "noSignature": "No signature uploaded",
+      "signatureName": "Name",
+      "signatureTitle": "Title/Credential",
+      "signatureTitlePlaceholder": "e.g., Registered Dietitian",
+      "delete": "Delete Signature",
+      "confirmDelete": "Are you sure you want to delete the signature?",
+      "deleted": "Signature deleted successfully",
+      "deleteError": "Failed to delete signature"
+    },
+    "notes": {
+      "title": "Default Invoice Notes",
+      "placeholder": "Default notes to include on all invoices..."
+    },
+    "actions": {
+      "save": "Save Changes",
+      "reset": "Reset to Defaults",
+      "confirmReset": "Are you sure you want to reset all settings to defaults? This cannot be undone.",
+      "resetSuccess": "Settings reset to defaults",
+      "resetError": "Failed to reset settings"
+    }
   }
 }
