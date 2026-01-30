@@ -7,9 +7,10 @@
 import { useState, useEffect } from 'react';
 import { Card, Table, Badge, Button, Spinner, Alert, Modal, Row, Col } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { FaEnvelope, FaCheckCircle, FaTimesCircle, FaClock } from 'react-icons/fa';
+import { FaEnvelope, FaCheckCircle, FaTimesCircle, FaClock, FaEye } from 'react-icons/fa';
 import DOMPurify from 'dompurify';
 import api from '../services/api';
+import { useIsMobile } from '../hooks';
 import ActionButton from './ActionButton';
 
 // Email type configurations
@@ -25,6 +26,7 @@ const EMAIL_TYPES = {
 const VisitEmailHistory = ({ visitId, refreshKey = 0 }) => {
   const { t, i18n } = useTranslation();
   const isEn = i18n.language?.startsWith('en');
+  const isMobile = useIsMobile();
 
   const [emails, setEmails] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +49,6 @@ const VisitEmailHistory = ({ visitId, refreshKey = 0 }) => {
       const response = await api.get(`/visits/${visitId}/email-logs`);
       setEmails(response.data?.data || []);
     } catch (err) {
-      console.error('Error fetching visit emails:', err);
       setError(t('emailHistory.fetchError', 'Failed to load email history'));
     } finally {
       setLoading(false);
@@ -123,7 +124,54 @@ const VisitEmailHistory = ({ visitId, refreshKey = 0 }) => {
               <FaEnvelope size={30} className="mb-2 opacity-50" />
               <p className="mb-0">{t('emailHistory.noVisitEmails', 'Aucune communication pour cette visite')}</p>
             </div>
+          ) : isMobile ? (
+            /* Mobile Card View */
+            <div className="p-2">
+              {emails.map((email) => {
+                const typeConfig = getEmailTypeConfig(email.email_type);
+                return (
+                  <Card
+                    key={email.id}
+                    className="mb-2 email-card"
+                    onClick={() => {
+                      setSelectedEmail(email);
+                      setShowPreview(true);
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <Card.Body className="py-2 px-3">
+                      <div className="d-flex justify-content-between align-items-start mb-2">
+                        <Badge bg={typeConfig.color}>
+                          {typeConfig.icon} {isEn ? typeConfig.labelEn : typeConfig.label}
+                        </Badge>
+                        {getStatusBadge(email.status)}
+                      </div>
+                      <div className="fw-medium mb-1" style={{ fontSize: '0.9rem' }}>
+                        {email.subject}
+                      </div>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <small className="text-muted">{formatDate(email.sent_at)}</small>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="p-0 text-primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedEmail(email);
+                            setShowPreview(true);
+                          }}
+                        >
+                          <FaEye className="me-1" />
+                          {t('emailHistory.view', 'Voir')}
+                        </Button>
+                      </div>
+                    </Card.Body>
+                  </Card>
+                );
+              })}
+            </div>
           ) : (
+            /* Desktop Table View */
             <Table hover responsive className="mb-0">
               <thead>
                 <tr>
