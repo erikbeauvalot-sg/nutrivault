@@ -292,12 +292,33 @@ async function createVisit(user, visitData, requestMetadata = {}) {
         });
 
         if (!existingInvoice) {
+          // Get invoice amount from VisitType.default_price
+          let invoiceAmount = 0;
+          if (visit.visit_type) {
+            const visitType = await db.VisitType.findOne({
+              where: { name: visit.visit_type, is_active: true }
+            });
+            if (visitType && visitType.default_price) {
+              invoiceAmount = parseFloat(visitType.default_price);
+              console.log(`💰 Create visit auto-invoice using VisitType price: ${invoiceAmount} for ${visit.visit_type}`);
+            }
+          }
+
+          // Fallback to calculateVisitAmount if no VisitType price found
+          if (invoiceAmount <= 0) {
+            invoiceAmount = calculateVisitAmount(visit);
+            console.log(`💰 Create visit auto-invoice using calculated price: ${invoiceAmount}`);
+          }
+
+          // Format visit date for description
+          const visitDate = new Date(visit.visit_date).toLocaleDateString('fr-FR');
+
           // Create invoice automatically
           const invoiceData = {
             patient_id: visit.patient_id,
             visit_id: visit.id,
-            service_description: `Consultation - ${visit.visit_type || 'General Visit'}`,
-            amount_total: calculateVisitAmount(visit), // Helper function for pricing
+            service_description: `${visit.visit_type || 'Consultation'} - ${visitDate}`,
+            amount_total: invoiceAmount,
             due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
           };
 
@@ -306,7 +327,7 @@ async function createVisit(user, visitData, requestMetadata = {}) {
             note: 'Auto-generated invoice for immediately completed visit'
           });
 
-          console.log(`✅ Auto-created invoice for immediately completed visit ${visit.id}: ${createdInvoice.id}`);
+          console.log(`✅ Auto-created invoice for immediately completed visit ${visit.id}: ${createdInvoice.id} with amount ${invoiceAmount}`);
         }
       } catch (billingError) {
         console.error('❌ Failed to auto-create invoice for new completed visit:', billingError);
@@ -414,12 +435,33 @@ async function updateVisit(user, visitId, updateData, requestMetadata = {}) {
         });
 
         if (!existingInvoice) {
+          // Get invoice amount from VisitType.default_price
+          let invoiceAmount = 0;
+          if (visit.visit_type) {
+            const visitType = await db.VisitType.findOne({
+              where: { name: visit.visit_type, is_active: true }
+            });
+            if (visitType && visitType.default_price) {
+              invoiceAmount = parseFloat(visitType.default_price);
+              console.log(`💰 Auto-invoice using VisitType price: ${invoiceAmount} for ${visit.visit_type}`);
+            }
+          }
+
+          // Fallback to calculateVisitAmount if no VisitType price found
+          if (invoiceAmount <= 0) {
+            invoiceAmount = calculateVisitAmount(visit);
+            console.log(`💰 Auto-invoice using calculated price: ${invoiceAmount}`);
+          }
+
+          // Format visit date for description
+          const visitDate = new Date(visit.visit_date).toLocaleDateString('fr-FR');
+
           // Create invoice automatically
           const invoiceData = {
             patient_id: visit.patient_id,
             visit_id: visitId,
-            service_description: `Consultation - ${visit.visit_type || 'General Visit'}`,
-            amount_total: calculateVisitAmount(visit), // Helper function for pricing
+            service_description: `${visit.visit_type || 'Consultation'} - ${visitDate}`,
+            amount_total: invoiceAmount,
             due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
           };
 
@@ -428,7 +470,7 @@ async function updateVisit(user, visitId, updateData, requestMetadata = {}) {
             note: 'Auto-generated invoice for completed visit'
           });
 
-          console.log(`✅ Auto-created invoice for completed visit ${visitId}`);
+          console.log(`✅ Auto-created invoice for completed visit ${visitId} with amount ${invoiceAmount}`);
         }
       } catch (billingError) {
         console.error('❌ Failed to auto-create invoice:', billingError);
@@ -538,6 +580,8 @@ async function finishAndInvoice(user, visitId, options = {}, requestMetadata = {
 
     // Step 2: Generate invoice (if requested)
     if (generateInvoice) {
+      console.log(`🧾 [finishAndInvoice] Generating invoice for visit ${visitId}`);
+
       // First check if an invoice already exists for this visit
       invoice = await db.Billing.findOne({
         where: {
@@ -555,21 +599,27 @@ async function finishAndInvoice(user, visitId, options = {}, requestMetadata = {
       });
 
       if (invoice) {
+        console.log(`🧾 [finishAndInvoice] Invoice already exists: ${invoice.invoice_number}`);
         messages.push('Invoice already exists');
       } else {
+        console.log(`🧾 [finishAndInvoice] No existing invoice, creating new one...`);
         // Create new invoice - get amount from visit type's default_price
         let invoiceAmount = 0;
         let invoiceDescription = visit.visit_type || 'Consultation';
 
         // Try to get default_price from VisitType
         if (visit.visit_type) {
+          console.log(`🧾 [finishAndInvoice] Looking up visit type: "${visit.visit_type}"`);
           const visitType = await db.VisitType.findOne({
             where: { name: visit.visit_type, is_active: true }
           });
+          console.log(`🧾 [finishAndInvoice] Visit type found:`, visitType ? `${visitType.name} (default_price: ${visitType.default_price})` : 'NOT FOUND');
           if (visitType && visitType.default_price) {
             invoiceAmount = parseFloat(visitType.default_price);
             console.log(`💰 Using visit type default_price: ${invoiceAmount} for ${visit.visit_type}`);
           }
+        } else {
+          console.log(`🧾 [finishAndInvoice] Visit has no visit_type set`);
         }
 
         // If no amount from visit type, use fallback calculation

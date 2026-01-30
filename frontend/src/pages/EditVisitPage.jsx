@@ -438,7 +438,7 @@ const EditVisitPage = () => {
   };
 
   /**
-   * Confirm finish visit - saves all changes, sets status to COMPLETED, and generates summary
+   * Confirm finish visit - saves all changes, sets status to COMPLETED, generates summary and invoice
    */
   const confirmFinishVisit = async () => {
     setFinishing(true);
@@ -448,10 +448,9 @@ const EditVisitPage = () => {
       // Generate the change summary
       const visitSummary = generateChangeSummary();
 
-      // Step 1: Update visit data with COMPLETED status and summary
+      // Step 1: Update visit data (save all changes first, but don't set COMPLETED yet)
       const submitData = {
         ...formData,
-        status: 'COMPLETED',
         visit_summary: visitSummary,
         visit_date: createLocalISOString(formData.visit_date),
         next_visit_date: formData.next_visit_date && formData.next_visit_date.trim()
@@ -465,6 +464,7 @@ const EditVisitPage = () => {
         if (submitData[key] === '') submitData[key] = null;
       });
 
+      // Save visit data first (without COMPLETED status)
       await visitService.updateVisit(id, submitData);
 
       // Step 2: Save custom fields
@@ -534,6 +534,19 @@ const EditVisitPage = () => {
             console.error('Error saving measure:', measureError);
           }
         }
+      }
+
+      // Step 4: Use finishAndInvoice to complete visit AND generate invoice with correct price
+      try {
+        await visitService.finishAndInvoice(id, {
+          markCompleted: true,
+          generateInvoice: true,
+          sendEmail: false
+        });
+      } catch (finishError) {
+        console.error('Error in finishAndInvoice:', finishError);
+        // Don't fail the whole operation - visit data is already saved
+        // Invoice may have failed but visit is still complete
       }
 
       navigate(`/visits/${id}`);

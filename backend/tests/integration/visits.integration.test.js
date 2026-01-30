@@ -395,4 +395,157 @@ describe('Visits API', () => {
       expect(res.status).toBe(403);
     });
   });
+
+  // ========================================
+  // POST /api/visits/:id/finish-and-invoice
+  // ========================================
+  describe('POST /api/visits/:id/finish-and-invoice', () => {
+    let testVisit;
+    let testVisitType;
+
+    beforeEach(async () => {
+      const db = testDb.getDb();
+
+      // Create a visit type with default price
+      testVisitType = await db.VisitType.findOne({
+        where: { name: 'Consultation initiale' }
+      });
+
+      // If not found, create it
+      if (!testVisitType) {
+        testVisitType = await db.VisitType.create({
+          name: 'Consultation initiale',
+          description: 'First consultation',
+          default_price: 80.00,
+          duration_minutes: 60,
+          is_active: true
+        });
+      }
+
+      // Create a visit with this visit type
+      testVisit = await db.Visit.create({
+        ...visitFixtures.validVisit,
+        patient_id: testPatient.id,
+        dietitian_id: dietitianAuth.user.id,
+        visit_type: 'Consultation initiale',
+        status: 'SCHEDULED'
+      });
+    });
+
+    it('should complete visit and create invoice with visit type price', async () => {
+      const res = await request(app)
+        .post(`/api/visits/${testVisit.id}/finish-and-invoice`)
+        .set('Authorization', adminAuth.authHeader)
+        .send({
+          markCompleted: true,
+          generateInvoice: true,
+          sendEmail: false
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.actions.markCompleted).toBe(true);
+      expect(res.body.data.actions.generateInvoice).toBe(true);
+      expect(res.body.data.invoice).toBeTruthy();
+      // Check that invoice amount matches visit type default_price
+      expect(parseFloat(res.body.data.invoice.amount_total)).toBe(80.00);
+    });
+
+    it('should mark visit as COMPLETED', async () => {
+      const res = await request(app)
+        .post(`/api/visits/${testVisit.id}/finish-and-invoice`)
+        .set('Authorization', adminAuth.authHeader)
+        .send({
+          markCompleted: true,
+          generateInvoice: false
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.visit.status).toBe('COMPLETED');
+    });
+
+    it('should return existing invoice if one already exists', async () => {
+      const db = testDb.getDb();
+
+      // First, create an invoice for this visit with all required fields
+      await db.Billing.create({
+        patient_id: testPatient.id,
+        visit_id: testVisit.id,
+        invoice_number: 'INV-TEST-001',
+        invoice_date: new Date(),
+        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        service_description: 'Test Invoice',
+        amount_total: 100.00,
+        amount_due: 100.00,
+        status: 'DRAFT',
+        is_active: true
+      });
+
+      const res = await request(app)
+        .post(`/api/visits/${testVisit.id}/finish-and-invoice`)
+        .set('Authorization', adminAuth.authHeader)
+        .send({
+          markCompleted: true,
+          generateInvoice: true
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      // Should return the existing invoice
+      expect(res.body.data.invoice.invoice_number).toBe('INV-TEST-001');
+    });
+
+    it('should reject for already completed visit', async () => {
+      // Complete the visit first
+      testVisit.status = 'COMPLETED';
+      await testVisit.save();
+
+      const res = await request(app)
+        .post(`/api/visits/${testVisit.id}/finish-and-invoice`)
+        .set('Authorization', adminAuth.authHeader)
+        .send({
+          markCompleted: true,
+          generateInvoice: true
+        });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 404 for non-existent visit', async () => {
+      const res = await request(app)
+        .post('/api/visits/00000000-0000-0000-0000-000000000000/finish-and-invoice')
+        .set('Authorization', adminAuth.authHeader)
+        .send({
+          markCompleted: true,
+          generateInvoice: true
+        });
+
+      expect(res.status).toBe(404);
+    });
+
+    it('should reject without authentication', async () => {
+      const res = await request(app)
+        .post(`/api/visits/${testVisit.id}/finish-and-invoice`)
+        .send({
+          markCompleted: true,
+          generateInvoice: true
+        });
+
+      expect(res.status).toBe(401);
+    });
+
+    it('should allow dietitian to finish own patient visit', async () => {
+      const res = await request(app)
+        .post(`/api/visits/${testVisit.id}/finish-and-invoice`)
+        .set('Authorization', dietitianAuth.authHeader)
+        .send({
+          markCompleted: true,
+          generateInvoice: true
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
+  });
 });
