@@ -60,14 +60,14 @@ const EditVisitPage = () => {
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
 
   /**
-   * Create ISO string that preserves local time as intended
+   * Format date string for API submission (keep as local time)
    * @param {string} dateTimeStr - Date string in format 'YYYY-MM-DDTHH:mm'
-   * @returns {string|null} ISO string with seconds added
+   * @returns {string|null} Date string with seconds added (no Z suffix to preserve local time)
    */
   const createLocalISOString = (dateTimeStr) => {
     if (!dateTimeStr) return null;
-    // Add seconds and milliseconds if not present, treat as local time
-    return dateTimeStr.length === 16 ? dateTimeStr + ':00.000Z' : dateTimeStr + '.000Z';
+    // Add seconds if not present, no Z suffix to keep as local time
+    return dateTimeStr.length === 16 ? dateTimeStr + ':00' : dateTimeStr;
   };
 
   useEffect(() => {
