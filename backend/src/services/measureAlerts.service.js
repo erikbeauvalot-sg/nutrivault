@@ -14,6 +14,7 @@ const Patient = db.Patient;
 const User = db.User;
 const { Op } = db.Sequelize;
 const emailService = require('./email.service');
+const { formatDateTime } = require('../utils/timezone');
 
 /**
  * Check measure value and calculate severity level
@@ -242,7 +243,7 @@ Alert Type: ${alert.alert_type.replace(/_/g, ' ').toUpperCase()}
 
 Message: ${alert.message}
 
-Recorded: ${new Date(patientMeasure.measured_at).toLocaleString()}
+Recorded: ${formatDateTime(patientMeasure.measured_at, 'fr')}
 Recorded by: ${patientMeasure.recorder ? `${patientMeasure.recorder.first_name} ${patientMeasure.recorder.last_name}` : 'System'}
 
 Please review and take appropriate action.
@@ -288,7 +289,7 @@ NutriVault Alert System
         <hr>
         <p><em>${alert.message}</em></p>
         <hr>
-        <p><span class="label">Recorded:</span> ${new Date(patientMeasure.measured_at).toLocaleString()}</p>
+        <p><span class="label">Recorded:</span> ${formatDateTime(patientMeasure.measured_at, 'fr')}</p>
       </div>
 
       <p>Please review this alert and take appropriate action.</p>

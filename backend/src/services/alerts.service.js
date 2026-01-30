@@ -14,6 +14,7 @@ const Visit = db.Visit;
 const VisitCustomFieldValue = db.VisitCustomFieldValue;
 const CustomFieldDefinition = db.CustomFieldDefinition;
 const { Op } = db.Sequelize;
+const { formatDate } = require('../utils/timezone');
 
 /**
  * Get all alerts for the authenticated user
@@ -212,7 +213,7 @@ async function getAlerts(user, requestMetadata = {}) {
       visit_date: visit.visit_date,
       visit_type: visit.visit_type,
       missing_fields_count: missingFieldsCount,
-      message: `Visit on ${new Date(visit.visit_date).toLocaleDateString()} has no custom field data (${missingFieldsCount} fields empty)`,
+      message: `Visit on ${formatDate(visit.visit_date, 'fr')} has no custom field data (${missingFieldsCount} fields empty)`,
       action: 'edit_visit'
     }));
 

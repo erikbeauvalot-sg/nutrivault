@@ -3,6 +3,7 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const { Op } = require('sequelize');
 const db = require('../../../models');
+const { formatDate, formatDateTime } = require('../utils/timezone');
 
 /**
  * Export Service
@@ -52,7 +53,7 @@ class ExportService {
       'Assigned Dietitian': patient.assignedDietitian ?
         `${patient.assignedDietitian.first_name} ${patient.assignedDietitian.last_name}` : '',
       'Is Active': patient.is_active ? 'Yes' : 'No',
-      'Created At': new Date(patient.created_at).toLocaleDateString()
+      'Created At': formatDate(patient.created_at, 'fr')
     }));
 
     return this.generateFile(exportData, format, 'patients');
@@ -114,13 +115,13 @@ class ExportService {
     const exportData = visits.map(visit => ({
       'ID': visit.id,
       'Patient Name': `${visit.patient.first_name} ${visit.patient.last_name}`,
-      'Visit Date': new Date(visit.visit_date).toLocaleDateString(),
+      'Visit Date': formatDate(visit.visit_date, 'fr'),
       'Visit Type': visit.visit_type || '',
       'Status': visit.status,
       'Dietitian': visit.dietitian ?
         `${visit.dietitian.first_name} ${visit.dietitian.last_name}` : '',
       'Duration (min)': visit.duration_minutes || '',
-      'Created At': new Date(visit.created_at).toLocaleDateString()
+      'Created At': formatDate(visit.created_at, 'fr')
     }));
 
     return this.generateFile(exportData, format, 'visits');
@@ -174,13 +175,13 @@ class ExportService {
     const exportData = billingRecords.map(record => ({
       'Invoice Number': record.invoice_number || '',
       'Patient Name': `${record.patient.first_name} ${record.patient.last_name}`,
-      'Invoice Date': record.invoice_date ? new Date(record.invoice_date).toLocaleDateString() : '',
-      'Due Date': record.due_date ? new Date(record.due_date).toLocaleDateString() : '',
+      'Invoice Date': record.invoice_date ? formatDate(record.invoice_date, 'fr') : '',
+      'Due Date': record.due_date ? formatDate(record.due_date, 'fr') : '',
       'Amount': record.amount ? `$${record.amount.toFixed(2)}` : '',
       'Amount Paid': record.amount_paid ? `$${record.amount_paid.toFixed(2)}` : '',
       'Status': record.status,
       'Payment Method': record.payment_method || '',
-      'Created At': new Date(record.created_at).toLocaleDateString()
+      'Created At': formatDate(record.created_at, 'fr')
     }));
 
     return this.generateFile(exportData, format, 'billing');
@@ -297,7 +298,7 @@ class ExportService {
         // Add title
         doc.fontSize(16).text(`${filename.replace('_', ' ').toUpperCase()} REPORT`, { align: 'center' });
         doc.moveDown();
-        doc.fontSize(10).text(`Generated on: ${new Date().toLocaleString()}`, { align: 'center' });
+        doc.fontSize(10).text(`Generated on: ${formatDateTime(new Date(), 'fr')}`, { align: 'center' });
         doc.moveDown(2);
 
         // Calculate column widths

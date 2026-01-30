@@ -15,6 +15,7 @@ import visitCustomFieldService from '../services/visitCustomFieldService';
 import userService from '../services/userService';
 import { getMeasureDefinitions, getMeasuresByVisit, logPatientMeasure, updatePatientMeasure, getAllMeasureTranslations } from '../services/measureService';
 import { fetchMeasureTranslations } from '../utils/measureTranslations';
+import { formatDateTime } from '../utils/dateUtils';
 import CustomFieldInput from '../components/CustomFieldInput';
 import ConfirmModal from '../components/ConfirmModal';
 
@@ -297,7 +298,7 @@ const EditVisitPage = () => {
    */
   const generateChangeSummary = () => {
     const changes = [];
-    const timestamp = new Date().toLocaleString(i18n.language === 'fr' ? 'fr-FR' : 'en-US');
+    const timestamp = formatDateTime(new Date(), i18n.language);
 
     changes.push(`=== ${t('visits.visitSummaryTitle', 'Visit Summary')} ===`);
     changes.push(`${t('visits.completedAt', 'Completed at')}: ${timestamp}`);
@@ -672,7 +673,7 @@ const EditVisitPage = () => {
               {visit?.patient && ` - ${visit.patient.first_name} ${visit.patient.last_name}`}
             </h1>
             <p className="text-muted">
-              {visit?.visit_date && new Date(visit.visit_date).toLocaleString()}
+              {visit?.visit_date && formatDateTime(visit.visit_date, i18n.language)}
             </p>
           </Col>
         </Row>

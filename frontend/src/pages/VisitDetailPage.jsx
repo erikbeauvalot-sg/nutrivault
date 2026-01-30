@@ -10,7 +10,7 @@ import ResponsiveTabs, { Tab } from '../components/ResponsiveTabs';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
-import { formatDate as utilFormatDate } from '../utils/dateUtils';
+import { formatDate as utilFormatDate, formatDateTime as utilFormatDateTime } from '../utils/dateUtils';
 import { applyTranslationsToMeasures, fetchMeasureTranslations } from '../utils/measureTranslations';
 import visitService from '../services/visitService';
 import visitCustomFieldService from '../services/visitCustomFieldService';
@@ -288,9 +288,7 @@ const VisitDetailPage = () => {
   };
 
   const formatDateTime = (dateString) => {
-    if (!dateString) return '-';
-    const locale = i18n.language === 'fr' ? 'fr-FR' : 'en-US';
-    return new Date(dateString).toLocaleString(locale);
+    return utilFormatDateTime(dateString, i18n.language);
   };
 
   const formatDate = (dateString) => {

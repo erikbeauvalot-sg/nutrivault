@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../../../models');
 const invoiceCustomizationService = require('./invoiceCustomization.service');
+const { formatDate } = require('../utils/timezone');
 
 /**
  * Get the base path for uploads directory
@@ -246,7 +247,6 @@ function drawInvoiceAndPatientInfo(doc, invoice, patient, customization, t, lang
   const y = doc.y + 20; // Add spacing
   const leftCol = MARGIN;
   const rightCol = 370; // Pushed further right, almost to the edge
-  const dateLocale = language === 'fr' ? 'fr-FR' : 'en-US';
 
   // LEFT COLUMN: Patient info
   doc.fontSize(11).fillColor('#3498db').font('Helvetica-Bold');
@@ -260,8 +260,8 @@ function drawInvoiceAndPatientInfo(doc, invoice, patient, customization, t, lang
   // RIGHT COLUMN: Invoice details
   doc.fontSize(10).fillColor('#333').font('Helvetica');
   doc.text(`${t.invoiceNumber} ${invoice.invoice_number}`, rightCol, y);
-  doc.text(`${t.date} ${new Date(invoice.invoice_date).toLocaleDateString(dateLocale)}`, rightCol, y + 14);
-  doc.text(`${t.dueDate} ${new Date(invoice.due_date).toLocaleDateString(dateLocale)}`, rightCol, y + 28);
+  doc.text(`${t.date} ${formatDate(invoice.invoice_date, language)}`, rightCol, y + 14);
+  doc.text(`${t.dueDate} ${formatDate(invoice.due_date, language)}`, rightCol, y + 28);
 
   // Translate status
   const translatedStatus = t[invoice.status] || invoice.status;

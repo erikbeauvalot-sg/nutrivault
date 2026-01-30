@@ -206,10 +206,17 @@ const DashboardPage = () => {
               </Col>
             </Row>
 
-            {/* Today's Stats */}
+            {/* Today's Stats - Clickable cards */}
             <Row className="g-3 mb-4">
               <Col xs={6} md={3}>
-                <Card className="text-center shadow-sm">
+                <Card
+                  className="text-center shadow-sm cursor-pointer hover-shadow"
+                  style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                  onClick={() => {
+                    const today = format(new Date(), 'yyyy-MM-dd');
+                    navigate(`/visits?date=${today}`);
+                  }}
+                >
                   <Card.Body>
                     <div className="h2 text-primary mb-1">
                       {stats.loading ? '...' : todaysVisits.length}
@@ -219,7 +226,14 @@ const DashboardPage = () => {
                 </Card>
               </Col>
               <Col xs={6} md={3}>
-                <Card className="text-center shadow-sm">
+                <Card
+                  className="text-center shadow-sm"
+                  style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                  onClick={() => {
+                    const today = format(new Date(), 'yyyy-MM-dd');
+                    navigate(`/visits?status=COMPLETED&date=${today}`);
+                  }}
+                >
                   <Card.Body>
                     <div className="h2 text-success mb-1">
                       {stats.loading ? '...' : stats.completedToday}
@@ -229,7 +243,11 @@ const DashboardPage = () => {
                 </Card>
               </Col>
               <Col xs={6} md={3}>
-                <Card className="text-center shadow-sm">
+                <Card
+                  className="text-center shadow-sm"
+                  style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                  onClick={() => navigate('/visits?status=SCHEDULED')}
+                >
                   <Card.Body>
                     <div className="h2 text-info mb-1">
                       {stats.loading ? '...' : stats.scheduledVisits}
@@ -239,7 +257,11 @@ const DashboardPage = () => {
                 </Card>
               </Col>
               <Col xs={6} md={3}>
-                <Card className="text-center shadow-sm">
+                <Card
+                  className="text-center shadow-sm"
+                  style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                  onClick={() => navigate('/patients?is_active=true')}
+                >
                   <Card.Body>
                     <div className="h2 text-warning mb-1">
                       {stats.loading ? '...' : stats.activePatients}
@@ -359,7 +381,7 @@ const DashboardPage = () => {
               </Col>
             </Row>
 
-            {/* Global Metrics */}
+            {/* Global Metrics - Clickable stats */}
             <Row>
               <Col md={12}>
                 <Card className="shadow-sm">
@@ -367,44 +389,72 @@ const DashboardPage = () => {
                     <h4 className="mb-3">{t('dashboard.quickStats')}</h4>
                     <Row className="text-center">
                       <Col md={3}>
-                        <div className="h2 text-primary mb-1">
-                          {stats.loading ? (
-                            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                          ) : (
-                            stats.totalPatients
-                          )}
+                        <div
+                          style={{ cursor: 'pointer', padding: '10px', borderRadius: '8px', transition: 'background-color 0.2s' }}
+                          onClick={() => navigate('/patients')}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <div className="h2 text-primary mb-1">
+                            {stats.loading ? (
+                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            ) : (
+                              stats.totalPatients
+                            )}
+                          </div>
+                          <div className="text-muted">{t('dashboard.totalPatients')}</div>
                         </div>
-                        <div className="text-muted">{t('dashboard.totalPatients')}</div>
                       </Col>
                       <Col md={3}>
-                        <div className="h2 text-success mb-1">
-                          {stats.loading ? (
-                            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                          ) : (
-                            stats.scheduledVisits
-                          )}
+                        <div
+                          style={{ cursor: 'pointer', padding: '10px', borderRadius: '8px', transition: 'background-color 0.2s' }}
+                          onClick={() => navigate('/visits?status=SCHEDULED')}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <div className="h2 text-success mb-1">
+                            {stats.loading ? (
+                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            ) : (
+                              stats.scheduledVisits
+                            )}
+                          </div>
+                          <div className="text-muted">{t('dashboard.scheduledVisits')}</div>
                         </div>
-                        <div className="text-muted">{t('dashboard.scheduledVisits')}</div>
                       </Col>
                       <Col md={3}>
-                        <div className="h2 text-info mb-1">
-                          {stats.loading ? (
-                            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                          ) : (
-                            stats.totalVisits
-                          )}
+                        <div
+                          style={{ cursor: 'pointer', padding: '10px', borderRadius: '8px', transition: 'background-color 0.2s' }}
+                          onClick={() => navigate('/visits')}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <div className="h2 text-info mb-1">
+                            {stats.loading ? (
+                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            ) : (
+                              stats.totalVisits
+                            )}
+                          </div>
+                          <div className="text-muted">{t('dashboard.totalVisits')}</div>
                         </div>
-                        <div className="text-muted">{t('dashboard.totalVisits')}</div>
                       </Col>
                       <Col md={3}>
-                        <div className="h2 text-warning mb-1">
-                          {stats.loading ? (
-                            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                          ) : (
-                            user?.role === 'ADMIN' ? stats.totalUsers : user?.role || 'N/A'
-                          )}
+                        <div
+                          style={{ cursor: user?.role === 'ADMIN' ? 'pointer' : 'default', padding: '10px', borderRadius: '8px', transition: 'background-color 0.2s' }}
+                          onClick={() => user?.role === 'ADMIN' && navigate('/users')}
+                          onMouseEnter={(e) => user?.role === 'ADMIN' && (e.currentTarget.style.backgroundColor = '#f8f9fa')}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <div className="h2 text-warning mb-1">
+                            {stats.loading ? (
+                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            ) : (
+                              user?.role === 'ADMIN' ? stats.totalUsers : user?.role || 'N/A'
+                            )}
+                          </div>
+                          <div className="text-muted">{user?.role === 'ADMIN' ? t('dashboard.totalUsers') : t('dashboard.yourRole')}</div>
                         </div>
-                        <div className="text-muted">{user?.role === 'ADMIN' ? t('dashboard.totalUsers') : t('dashboard.yourRole')}</div>
                       </Col>
                     </Row>
                   </Card.Body>

@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Container } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,6 +20,7 @@ const PatientsPage = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,13 +28,25 @@ const PatientsPage = () => {
   const [showQuickPatientModal, setShowQuickPatientModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState(null);
-  
+
   // Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalPatients, setTotalPatients] = useState(0);
+
+  // Initialize filters from URL parameters
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const urlIsActive = searchParams.get('is_active');
+
+    if (urlIsActive === 'true') {
+      setStatusFilter('active');
+    } else if (urlIsActive === 'false') {
+      setStatusFilter('inactive');
+    }
+  }, [location.search]);
 
   useEffect(() => {
     fetchPatients();

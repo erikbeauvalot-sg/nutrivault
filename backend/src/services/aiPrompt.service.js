@@ -5,6 +5,7 @@
 
 const { AIPrompt, User } = require('../../../models');
 const { Op } = require('sequelize');
+const { formatDate } = require('../utils/timezone');
 
 /**
  * Get all AI prompts with optional filtering
@@ -293,7 +294,7 @@ async function testPrompt(id, sampleData = {}) {
   const defaultSampleData = {
     patient_name: 'Le patient',  // Anonymized for GDPR
     dietitian_name: 'Dr. Martin',
-    visit_date: new Date().toLocaleDateString('fr-FR'),
+    visit_date: formatDate(new Date(), 'fr'),
     visit_type: 'Consultation de suivi',
     // Visit-specific data
     visit_custom_fields: '- Motif de consultation: Perte de poids\n- Objectifs: Améliorer l\'alimentation\n- Évaluation: Patient motivé, bonne progression',
@@ -301,7 +302,7 @@ async function testPrompt(id, sampleData = {}) {
     // Patient-level data (separate from visit data)
     patient_custom_fields: '- Allergies: Aucune\n- Régime alimentaire: Omnivore\n- Activité physique: Modérée',
     patient_measures: '- Poids (évolution): 78 kg → 75 kg sur 3 mois\n- Tour de taille: 92 cm → 88 cm',
-    next_visit_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR'),
+    next_visit_date: formatDate(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), 'fr'),
     tone: 'professionnel',
     ...sampleData
   };

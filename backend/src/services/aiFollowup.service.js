@@ -10,6 +10,7 @@
 const aiProviderService = require('./aiProvider.service');
 const aiPromptService = require('./aiPrompt.service');
 const db = require('../../../models');
+const { formatDate, formatDateLong } = require('../utils/timezone');
 const Visit = db.Visit;
 const Patient = db.Patient;
 const User = db.User;
@@ -328,7 +329,7 @@ async function getPatientMeasuresForAI(patientId, language = 'fr', limit = 5) {
 
         measuresByType[defId].values.push({
           value,
-          date: new Date(measure.measured_at).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US')
+          date: formatDate(measure.measured_at, language)
         });
       }
     }
@@ -493,16 +494,10 @@ async function generateFollowupContent(visitId, options = {}) {
     ? `${visit.dietitian.first_name || ''} ${visit.dietitian.last_name || ''}`.trim()
     : 'Votre diététicien(ne)';
 
-  const visitDate = new Date(visit.visit_date).toLocaleDateString(
-    validLanguage === 'fr' ? 'fr-FR' : 'en-US',
-    { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
-  );
+  const visitDate = formatDateLong(visit.visit_date, validLanguage);
 
   const nextVisitInfo = visit.next_visit_date && includeNextAppointment
-    ? new Date(visit.next_visit_date).toLocaleDateString(
-        validLanguage === 'fr' ? 'fr-FR' : 'en-US',
-        { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
-      )
+    ? formatDateLong(visit.next_visit_date, validLanguage)
     : null;
 
   // Fetch additional patient data for AI context (GDPR-compliant: no identity)
@@ -899,15 +894,12 @@ async function generateMockFollowup(visit, options) {
     : 'Votre diététicien(ne)';
 
   const nextVisitInfo = visit.next_visit_date
-    ? new Date(visit.next_visit_date).toLocaleDateString(
-        language === 'fr' ? 'fr-FR' : 'en-US',
-        { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
-      )
+    ? formatDateLong(visit.next_visit_date, language)
     : null;
 
   // Mock content uses actual values directly (not going through AI, so no GDPR concern)
   const mockContent = language === 'fr' ? {
-    subject: `Suite à votre consultation du ${new Date(visit.visit_date).toLocaleDateString('fr-FR')}`,
+    subject: `Suite à votre consultation du ${formatDate(visit.visit_date, 'fr')}`,
     greeting: `Bonjour ${visit.patient.first_name},`,
     summary: 'Suite à notre consultation, je souhaitais vous faire un récapitulatif des points importants que nous avons abordés ensemble. Nous avons fait le point sur votre situation nutritionnelle et défini ensemble des objectifs réalistes.',
     keyPoints: [
@@ -924,7 +916,7 @@ async function generateMockFollowup(visit, options) {
     closing: 'Je reste à votre disposition pour toute question. N\'hésitez pas à me contacter.',
     signature: dietitianName
   } : {
-    subject: `Follow-up: Your consultation on ${new Date(visit.visit_date).toLocaleDateString('en-US')}`,
+    subject: `Follow-up: Your consultation on ${formatDate(visit.visit_date, 'en')}`,
     greeting: `Hello ${visit.patient.first_name},`,
     summary: 'Following our consultation, I wanted to provide you with a summary of the key points we discussed. We reviewed your nutritional situation and set realistic goals together.',
     keyPoints: [

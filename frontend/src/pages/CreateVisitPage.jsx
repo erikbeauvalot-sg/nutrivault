@@ -15,6 +15,7 @@ import { getPatients } from '../services/patientService';
 import { getCategories } from '../services/customFieldService';
 import { getMeasureDefinitions, logPatientMeasure, getAllMeasureTranslations } from '../services/measureService';
 import { fetchMeasureTranslations } from '../utils/measureTranslations';
+import { getTimezone } from '../utils/dateUtils';
 import userService from '../services/userService';
 import CustomFieldInput from '../components/CustomFieldInput';
 
@@ -299,17 +300,18 @@ const CreateVisitPage = () => {
   };
 
   const setToNow = () => {
-    // Get current time in Paris timezone (Europe/Paris)
+    // Get current time in configured timezone
     const now = new Date();
-    const parisTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+    const timezone = getTimezone();
+    const localTime = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
 
-    const year = parisTime.getFullYear();
-    const month = String(parisTime.getMonth() + 1).padStart(2, '0');
-    const day = String(parisTime.getDate()).padStart(2, '0');
-    const hour = String(parisTime.getHours()).padStart(2, '0');
+    const year = localTime.getFullYear();
+    const month = String(localTime.getMonth() + 1).padStart(2, '0');
+    const day = String(localTime.getDate()).padStart(2, '0');
+    const hour = String(localTime.getHours()).padStart(2, '0');
 
     // Round minutes to nearest 15-minute interval
-    const minutes = parisTime.getMinutes();
+    const minutes = localTime.getMinutes();
     const roundedMinutes = String(Math.round(minutes / 15) * 15 % 60).padStart(2, '0');
 
     const formattedNow = `${year}-${month}-${day}T${hour}:${roundedMinutes}`;

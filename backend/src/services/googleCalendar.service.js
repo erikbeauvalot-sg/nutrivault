@@ -11,6 +11,7 @@ const User = db.User;
 const Visit = db.Visit;
 const Patient = db.Patient;
 const auditService = require('./audit.service');
+const { getTimezone } = require('../utils/timezone');
 
 /**
  * Google Calendar scopes needed for calendar operations
@@ -150,7 +151,7 @@ async function createOrUpdateCalendarEvent(visit, user, calendarId = 'primary', 
 
   // Get patient and dietitian info
   const patient = await Patient.findByPk(visit.patient_id, {
-    attributes: ['first_name', 'last_name']
+    attributes: ['first_name', 'last_name', 'phone', 'email']
   });
 
   if (!patient) {
@@ -174,14 +175,14 @@ async function createOrUpdateCalendarEvent(visit, user, calendarId = 'primary', 
 
   const eventData = {
     summary: `Consultation - ${patient.first_name} ${patient.last_name}${dietitianName}`,
-    description: `Rendez-vous avec ${patient.first_name} ${patient.last_name}\nType: ${visit.visit_type || 'Consultation'}\nStatut: ${visit.status}${dietitianName ? `\nDiététicien: ${dietitianName.trim()}` : ''}`,
+    description: `Rendez-vous avec ${patient.first_name} ${patient.last_name}${patient.phone ? `\nTéléphone: ${patient.phone}` : ''}${patient.email ? `\nEmail: ${patient.email}` : ''}\nType: ${visit.visit_type || 'Consultation'}\nStatut: ${visit.status}${dietitianName ? `\nDiététicien: ${dietitianName.trim()}` : ''}`,
     start: {
       dateTime: startDateTime.toISOString(),
-      timeZone: 'Europe/Paris' // Default timezone, could be configurable
+      timeZone: getTimezone()
     },
     end: {
       dateTime: endDateTime.toISOString(),
-      timeZone: 'Europe/Paris'
+      timeZone: getTimezone()
     },
     attendees: [], // Could add patient email if available
     reminders: {
@@ -536,7 +537,7 @@ async function getSyncIssues(userId) {
       as: 'patient',
       attributes: ['first_name', 'last_name']
     }],
-    order: [['updatedAt', 'DESC']]
+    order: [['updated_at', 'DESC']]
   });
 
   const conflicts = visits.filter(v => v.sync_status === 'conflict');
@@ -952,8 +953,22 @@ async function syncVisitsToCalendar(userId, options = {}) {
             eventId: visit.google_event_id
           });
 
+          // Check if event was deleted/cancelled in Google Calendar
+          if (existingEvent.data.status === 'cancelled') {
+            console.log(`🗑️ [DELETION DETECTED] Google Calendar event ${visit.google_event_id} was deleted, marking visit ${visit.id} as CANCELLED`);
+            await handleGoogleDeletion(visit);
+            results.events.push({
+              visitId: visit.id,
+              eventId: visit.google_event_id,
+              status: 'cancelled_from_google',
+              source: 'google_calendar'
+            });
+            results.skipped++;
+            continue; // Skip this visit - it's been cancelled
+          }
+
           const eventLastModified = new Date(existingEvent.data.updated);
-          const visitLastModified = visit.updatedAt;
+          const visitLastModified = visit.updated_at ? new Date(visit.updated_at) : new Date(0);
 
           // If the calendar event was modified more recently than the visit, don't overwrite it
           if (eventLastModified > visitLastModified) {
@@ -969,7 +984,20 @@ async function syncVisitsToCalendar(userId, options = {}) {
             continue; // Skip this visit
           }
         } catch (error) {
-          // If we can't fetch the event, it might have been deleted, so we'll recreate it
+          // 404 means event was truly deleted (not just cancelled)
+          if (error.code === 404) {
+            console.log(`🗑️ [DELETION DETECTED] Google Calendar event ${visit.google_event_id} not found (404), marking visit ${visit.id} as CANCELLED`);
+            await handleGoogleDeletion(visit);
+            results.events.push({
+              visitId: visit.id,
+              eventId: visit.google_event_id,
+              status: 'cancelled_from_google',
+              source: 'google_calendar'
+            });
+            results.skipped++;
+            continue; // Skip this visit - it's been cancelled
+          }
+          // For other errors, log and try to recreate
           console.log(`⚠️ Could not fetch existing Google Calendar event ${visit.google_event_id} for visit ${visit.id}, will recreate: ${error.message}`);
         }
       }
@@ -1068,7 +1096,7 @@ async function syncCalendarToVisits(userId, options = {}) {
 
           // Check for conflicts using timestamps
           const eventLastModified = new Date(event.updated);
-          const visitLastModified = visit.updatedAt;
+          const visitLastModified = visit.updated_at ? new Date(visit.updated_at) : new Date(0);
 
           // If the calendar event was modified more recently than the visit, update the visit
           if (eventLastModified > visitLastModified) {

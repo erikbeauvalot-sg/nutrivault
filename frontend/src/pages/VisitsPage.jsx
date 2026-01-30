@@ -3,7 +3,7 @@
  * Visit management with list, filters, and basic actions
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Table, Button, Badge, Form, InputGroup } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -13,14 +13,16 @@ import { PageHeader, PageError, LoadingSpinner, EmptyState, Pagination } from '.
 import { useIsMobile } from '../hooks';
 import visitService from '../services/visitService';
 import { getPatients } from '../services/patientService';
+import { formatDate as utilFormatDate, formatTime as utilFormatTime } from '../utils/dateUtils';
 import ExportModal from '../components/ExportModal';
 import ActionButton from '../components/ActionButton';
 import ConfirmModal from '../components/ConfirmModal';
+import api from '../services/api';
 import './VisitsPage.css';
 
 const VisitsPage = () => {
   const { user } = useAuth();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [visits, setVisits] = useState([]);
@@ -39,7 +41,39 @@ const VisitsPage = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [visitToDelete, setVisitToDelete] = useState(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const hasSyncedRef = useRef(false);
   const isMobile = useIsMobile();
+
+  // Initialize filters from URL parameters
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const urlStatus = searchParams.get('status');
+    const urlDate = searchParams.get('date');
+    const urlPatientId = searchParams.get('patient_id');
+
+    const newFilters = { ...filters };
+    let hasChanges = false;
+
+    if (urlStatus && urlStatus !== filters.status) {
+      newFilters.status = urlStatus;
+      hasChanges = true;
+    }
+    if (urlDate) {
+      // Set date range for a specific day
+      newFilters.start_date = urlDate;
+      newFilters.end_date = urlDate;
+      hasChanges = true;
+    }
+    if (urlPatientId && urlPatientId !== filters.patient_id) {
+      newFilters.patient_id = urlPatientId;
+      hasChanges = true;
+    }
+
+    if (hasChanges) {
+      setFilters(newFilters);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     fetchPatients();
@@ -53,6 +87,41 @@ const VisitsPage = () => {
       navigate('/visits/create', { state: { selectedPatient: location.state.selectedPatient } });
     }
   }, [location.state, navigate]);
+
+  // Sync with Google Calendar on page load (once per session)
+  useEffect(() => {
+    const syncWithGoogleCalendar = async () => {
+      // Only sync once per page load
+      if (hasSyncedRef.current) return;
+      hasSyncedRef.current = true;
+
+      try {
+        // Check if user has Google Calendar sync enabled
+        const statusResponse = await api.get('/calendar/sync-status');
+        if (!statusResponse.data.success || !statusResponse.data.data.google_calendar_sync_enabled) {
+          return; // User doesn't have Google Calendar sync enabled
+        }
+
+        setIsSyncing(true);
+
+        // Sync from Google Calendar to NutriVault (bidirectional)
+        await api.post('/calendar/sync-from-calendar');
+
+        // Sync from NutriVault to Google Calendar
+        await api.post('/calendar/sync-to-calendar');
+
+        // Refresh visits after sync
+        await fetchVisits();
+      } catch (err) {
+        // Silently fail - don't show error to user for background sync
+        console.warn('Google Calendar sync failed:', err.message);
+      } finally {
+        setIsSyncing(false);
+      }
+    };
+
+    syncWithGoogleCalendar();
+  }, []);
 
   const fetchPatients = async () => {
     try {
@@ -129,15 +198,11 @@ const VisitsPage = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return utilFormatDate(dateString, i18n.language);
   };
 
   const formatTime = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    return utilFormatTime(dateString, i18n.language);
   };
 
   const canEdit = (visit) => {
@@ -149,7 +214,17 @@ const VisitsPage = () => {
     <Layout>
       <Container fluid>
         <PageHeader
-          title={t('visits.title')}
+          title={
+            <span>
+              {t('visits.title')}
+              {isSyncing && (
+                <span className="ms-2 text-muted small">
+                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                  {t('googleCalendar.syncing', 'Synchronisation...')}
+                </span>
+              )}
+            </span>
+          }
           actions={[
             {
               label: t('visits.tableView'),

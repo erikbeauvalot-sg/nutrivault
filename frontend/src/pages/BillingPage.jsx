@@ -13,9 +13,10 @@ import InvoiceList from '../components/InvoiceList';
 import ExportModal from '../components/ExportModal';
 import ConfirmModal from '../components/ConfirmModal';
 import * as billingService from '../services/billingService';
+import { formatDate } from '../utils/dateUtils';
 
 const BillingPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -227,11 +228,11 @@ const BillingPage = () => {
                       <p className="h4">{currentInvoice.amount?.toFixed(2)} €</p>
 
                       <h5>{t('billing.dueDate', 'Due Date')}</h5>
-                      <p>{new Date(currentInvoice.due_date).toLocaleDateString()}</p>
+                      <p>{formatDate(currentInvoice.due_date, i18n.language)}</p>
                     </Col>
                     <Col xs={12} md={6}>
                       <h5>{t('billing.created', 'Created')}</h5>
-                      <p>{new Date(currentInvoice.created_at).toLocaleDateString()}</p>
+                      <p>{formatDate(currentInvoice.created_at, i18n.language)}</p>
 
                       <h5>{t('billing.description', 'Description')}</h5>
                       <p>{currentInvoice.description || t('billing.noDescription', 'No description')}</p>

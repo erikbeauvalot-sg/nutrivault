@@ -514,13 +514,14 @@ const GoogleCalendarSettings = () => {
       )}
 
       <ConfirmModal
-        isOpen={showDisconnectModal}
+        show={showDisconnectModal}
         title={t('googleCalendar.disconnectConfirm.title')}
         message={t('googleCalendar.disconnectConfirm.message')}
         onConfirm={handleDisconnect}
-        onCancel={() => setShowDisconnectModal(false)}
-        confirmText={t('googleCalendar.disconnect')}
-        cancelText={t('common.cancel')}
+        onHide={() => setShowDisconnectModal(false)}
+        confirmLabel={t('googleCalendar.disconnect')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
       />
 
       <SyncConflictModal

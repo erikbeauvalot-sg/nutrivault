@@ -6,6 +6,8 @@
  * Sprint 5: US-5.5.2 - Email Templates
  */
 
+const { formatDate, formatDateTime, formatTime, getTimezone } = require('../utils/timezone');
+
 /**
  * Translate invoice/payment status to French
  */
@@ -161,10 +163,10 @@ function buildVariableContext(data = {}) {
   if (invoice) {
     context.invoice_number = invoice.invoice_number;
     context.invoice_date = invoice.invoice_date
-      ? new Date(invoice.invoice_date).toLocaleDateString('fr-FR')
+      ? formatDate(invoice.invoice_date, 'fr')
       : '';
     context.due_date = invoice.due_date
-      ? new Date(invoice.due_date).toLocaleDateString('fr-FR')
+      ? formatDate(invoice.due_date, 'fr')
       : '';
     context.service_description = invoice.service_description || '';
     context.amount_total = invoice.amount_total
@@ -197,23 +199,19 @@ function buildVariableContext(data = {}) {
   // Appointment variables
   if (appointment) {
     context.appointment_date = appointment.appointment_date
-      ? new Date(appointment.appointment_date).toLocaleDateString('fr-FR')
+      ? formatDate(appointment.appointment_date, 'fr')
       : '';
     context.appointment_time = appointment.appointment_time || '';
     context.appointment_datetime = appointment.appointment_date
-      ? new Date(appointment.appointment_date).toLocaleString('fr-FR')
+      ? formatDateTime(appointment.appointment_date, 'fr')
       : '';
   }
 
   // Visit variables (for appointment reminders)
   if (visit) {
-    const visitDate = new Date(visit.visit_date);
-    context.appointment_date = visitDate.toLocaleDateString('fr-FR');
-    context.appointment_time = visitDate.toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-    context.appointment_datetime = visitDate.toLocaleString('fr-FR');
+    context.appointment_date = formatDate(visit.visit_date, 'fr');
+    context.appointment_time = formatTime(visit.visit_date, 'fr');
+    context.appointment_datetime = formatDateTime(visit.visit_date, 'fr');
     context.visit_type = visit.visit_type || 'Consultation';
   }
 
@@ -231,7 +229,7 @@ function buildVariableContext(data = {}) {
     context.shared_by_name = `${sharedBy.first_name} ${sharedBy.last_name}`;
     context.shared_by_first_name = sharedBy.first_name;
     context.shared_by_last_name = sharedBy.last_name;
-    context.share_date = new Date().toLocaleDateString('fr-FR');
+    context.share_date = formatDate(new Date(), 'fr');
   }
 
   // Additional fields
@@ -245,11 +243,11 @@ function buildVariableContext(data = {}) {
 
   // Visit dates (for follow-up)
   if (data.lastVisitDate) {
-    context.last_visit_date = new Date(data.lastVisitDate).toLocaleDateString('fr-FR');
+    context.last_visit_date = formatDate(data.lastVisitDate, 'fr');
   }
 
   if (data.nextRecommendedDate) {
-    context.next_recommended_date = new Date(data.nextRecommendedDate).toLocaleDateString('fr-FR');
+    context.next_recommended_date = formatDate(data.nextRecommendedDate, 'fr');
   }
 
   // Clinic info (for appointments)

@@ -1719,6 +1719,7 @@
     "syncAllDietitiansDescription": "Sync visits from all dietitians in the system, not just your own",
     "autoSyncEnabled": "Automatic synchronization is enabled",
     "autoSyncDisabled": "Automatic synchronization is disabled",
+    "syncing": "Syncing...",
     "updateSettings": "Update Settings",
     "syncToCalendar": "Sync to Calendar",
     "syncFromCalendar": "Sync from Calendar",

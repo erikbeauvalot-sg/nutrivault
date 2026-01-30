@@ -10,6 +10,7 @@ const { generateInvoicePDF } = require('./invoicePDF.service');
 const emailTemplateTranslationService = require('./emailTemplateTranslation.service');
 const db = require('../../../models');
 const EmailLog = db.EmailLog;
+const { formatDate } = require('../utils/timezone');
 
 /**
  * Translate invoice status to French
@@ -122,8 +123,8 @@ Bonjour ${patient.first_name} ${patient.last_name},
 Veuillez trouver ci-dessous les détails de votre facture :
 
 Numéro de facture : ${invoice.invoice_number}
-Date : ${new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}
-Date d'échéance : ${invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('fr-FR') : 'N/A'}
+Date : ${formatDate(invoice.invoice_date, 'fr')}
+Date d'échéance : ${invoice.due_date ? formatDate(invoice.due_date, 'fr') : 'N/A'}
 
 Service : ${invoice.service_description}
 Montant total : ${invoice.amount_total.toFixed(2)} €
@@ -161,8 +162,8 @@ L'équipe NutriVault
 
       <div class="invoice-details">
         <p><strong>Numéro de facture :</strong> ${invoice.invoice_number}</p>
-        <p><strong>Date :</strong> ${new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}</p>
-        <p><strong>Date d'échéance :</strong> ${invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('fr-FR') : 'N/A'}</p>
+        <p><strong>Date :</strong> ${formatDate(invoice.invoice_date, 'fr')}</p>
+        <p><strong>Date d'échéance :</strong> ${invoice.due_date ? formatDate(invoice.due_date, 'fr') : 'N/A'}</p>
         <hr>
         <p><strong>Service :</strong> ${invoice.service_description}</p>
         <p><strong>Montant total :</strong> <span class="amount">${invoice.amount_total.toFixed(2)} €</span></p>
@@ -307,7 +308,7 @@ Bonjour ${patient.first_name} ${patient.last_name},
 Nous vous rappelons que votre facture suivante est en attente de paiement :
 
 Numéro de facture : ${invoice.invoice_number}
-Date d'échéance : ${invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('fr-FR') : 'N/A'}
+Date d'échéance : ${invoice.due_date ? formatDate(invoice.due_date, 'fr') : 'N/A'}
 ${daysOverdue > 0 ? `Retard : ${daysOverdue} jour(s)` : ''}
 
 Montant dû : ${invoice.amount_due.toFixed(2)} €
@@ -350,7 +351,7 @@ L'équipe NutriVault
 
       <div class="invoice-details">
         <p><strong>Numéro de facture :</strong> ${invoice.invoice_number}</p>
-        <p><strong>Date d'échéance :</strong> ${invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('fr-FR') : 'N/A'}</p>
+        <p><strong>Date d'échéance :</strong> ${invoice.due_date ? formatDate(invoice.due_date, 'fr') : 'N/A'}</p>
         ${daysOverdue > 0 ? `<p class="overdue"><strong>Retard :</strong> ${daysOverdue} jour(s)</p>` : ''}
         <hr>
         <p><strong>Montant dû :</strong> <span class="amount">${invoice.amount_due.toFixed(2)} €</span></p>
