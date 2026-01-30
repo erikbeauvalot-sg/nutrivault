@@ -52,8 +52,8 @@ export const useEmailCheck = (email, entityType = 'patient', excludeId = null, d
 
         const normalizedEmail = email.trim().toLowerCase();
         const endpoint = entityType === 'patient'
-          ? `/api/patients/check-email/${encodeURIComponent(normalizedEmail)}`
-          : `/api/users/check-email/${encodeURIComponent(normalizedEmail)}`;
+          ? `/patients/check-email/${encodeURIComponent(normalizedEmail)}`
+          : `/users/check-email/${encodeURIComponent(normalizedEmail)}`;
 
         const params = excludeId ? { excludeId } : {};
 

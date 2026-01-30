@@ -1902,7 +1902,60 @@
       "updateSettings": "Échec de la mise à jour des paramètres",
       "syncToCalendar": "Échec de la synchronisation vers le calendrier",
       "syncFromCalendar": "Échec de la synchronisation depuis le calendrier",
-      "disconnect": "Échec de la déconnexion de Google Calendar"
+      "disconnect": "Échec de la déconnexion de Google Calendar",
+      "retryFailed": "Échec de la relance des synchronisations"
+    },
+    "syncStatus": {
+      "synced": "Synchronisé",
+      "syncedTooltip": "Synchronisé avec Google Calendar",
+      "pendingToGoogle": "En attente",
+      "pendingToGoogleTooltip": "Modifications en attente de synchronisation vers Google Calendar",
+      "pendingFromGoogle": "Mise à jour",
+      "pendingFromGoogleTooltip": "Modifications en attente depuis Google Calendar",
+      "conflict": "Conflit",
+      "conflictTooltip": "Modifications conflictuelles - résolution manuelle requise",
+      "error": "Erreur",
+      "errorTooltip": "Une erreur de synchronisation s'est produite",
+      "notSynced": "Non synchronisé",
+      "notSyncedTooltip": "Non connecté à Google Calendar"
+    },
+    "syncIssues": {
+      "title": "Problèmes de synchronisation",
+      "summary": "{{conflicts}} conflit(s) et {{errors}} erreur(s) trouvé(s)",
+      "noIssues": "Aucun problème de synchronisation. Toutes les visites sont synchronisées.",
+      "resolve": "Résoudre",
+      "retryFailed": "Relancer les échecs",
+      "retrying": "Relance en cours...",
+      "retrySuccess": "Relance terminée : {{successful}} réussi(s), {{failed}} échoué(s)",
+      "more": "+{{count}} autres problèmes"
+    },
+    "syncStats": {
+      "totalVisits": "Total des visites",
+      "synced": "Synchronisées",
+      "pending": "En attente",
+      "issues": "Problèmes",
+      "lastSync": "Dernière sync"
+    },
+    "conflict": {
+      "title": "Conflit de synchronisation détecté",
+      "description": "Cette visite a été modifiée à la fois dans NutriVault et Google Calendar. Choisissez quelle version conserver ou fusionnez les modifications.",
+      "field": "Champ",
+      "nutrivault": "NutriVault",
+      "google": "Google Calendar",
+      "lastModified": "Dernière modification",
+      "deleted": "Supprimé",
+      "eventDeleted": "Événement supprimé",
+      "resolution": "Résolution",
+      "keepLocal": "Conserver la version NutriVault",
+      "keepLocalDesc": "Écraser Google Calendar avec les données NutriVault",
+      "keepRemote": "Conserver la version Google Calendar",
+      "keepRemoteDesc": "Mettre à jour NutriVault avec les données Google Calendar",
+      "resolve": "Résoudre le conflit",
+      "resolving": "Résolution en cours...",
+      "resolved": "Conflit résolu avec succès",
+      "loadError": "Échec du chargement des détails du conflit",
+      "resolveError": "Échec de la résolution du conflit",
+      "noData": "Aucune donnée de conflit disponible"
     }
   },
   "settings": {

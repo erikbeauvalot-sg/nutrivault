@@ -37,4 +37,21 @@ router.put('/settings', authenticate, googleCalendarController.updateSettings);
 // Disconnect Google Calendar
 router.delete('/disconnect', authenticate, googleCalendarController.disconnect);
 
+// === New endpoints for sync issues and conflict resolution ===
+
+// Get sync issues (conflicts and errors)
+router.get('/sync-issues', authenticate, googleCalendarController.getSyncIssues);
+
+// Resolve a sync conflict
+router.post('/resolve-conflict/:visitId', authenticate, googleCalendarController.resolveConflict);
+
+// Retry failed syncs
+router.post('/retry-failed', authenticate, googleCalendarController.retryFailedSyncs);
+
+// Get sync statistics
+router.get('/sync-stats', authenticate, googleCalendarController.getSyncStats);
+
+// Get conflict details for a specific visit
+router.get('/conflict/:visitId', authenticate, googleCalendarController.getConflictDetails);
+
 module.exports = router;

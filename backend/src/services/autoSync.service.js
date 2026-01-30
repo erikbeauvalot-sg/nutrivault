@@ -3,6 +3,7 @@
  *
  * Handles automatic Google Calendar synchronization with rate limiting
  * to prevent excessive API calls while keeping data synchronized.
+ * Now includes conflict-aware syncing and smart sync capabilities.
  */
 
 const googleCalendarService = require('./googleCalendar.service');
@@ -10,6 +11,7 @@ const googleCalendarService = require('./googleCalendar.service');
 // Cache to track last sync time per user
 const lastSyncCache = new Map();
 const SYNC_COOLDOWN_MS = 2 * 1000; // 2 seconds cooldown (allows ~5 syncs per 10 seconds)
+const { MAX_SYNC_ERROR_COUNT } = googleCalendarService;
 
 /**
  * Check if user can sync (rate limiting)
@@ -220,6 +222,7 @@ async function forceSyncVisitsToCalendar(user, options = {}) {
 /**
  * Bidirectional sync: Google Calendar ↔ NutriVault
  * First syncs from Google to NutriVault, then from NutriVault to Google
+ * Now includes conflict detection and smart sync capabilities
  * @param {Object} user - User object with role information
  * @param {Object} options - Sync options
  * @returns {Promise<Object|null>} Combined sync results or null if not synced
@@ -242,15 +245,29 @@ async function bidirectionalSync(user, options = {}) {
     const results = {
       calendarToVisits: null,
       visitsToCalendar: null,
+      deletedEvents: null,
       totalSynced: 0,
       totalSkipped: 0,
-      totalErrors: 0
+      totalErrors: 0,
+      totalConflicts: 0
     };
 
     // Determine sync parameters
     const isAdmin = user.role && user.role.name === 'ADMIN';
     const syncAllDietitians = isAdmin && options.syncAllDietitians !== false;
     const since = options.since || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // Last 7 days
+
+    // Step 0: Check for deleted events in Google Calendar
+    try {
+      console.log(`🗑️ Checking for deleted Google Calendar events for user ${user.username}`);
+      results.deletedEvents = await googleCalendarService.syncDeletedEvents(user.id, { since });
+      if (results.deletedEvents.cancelled > 0) {
+        console.log(`🗑️ Cancelled ${results.deletedEvents.cancelled} visits from deleted Google events`);
+      }
+    } catch (error) {
+      console.error(`❌ Deleted events check failed for user ${user.username}:`, error.message);
+      results.deletedEvents = { total: 0, cancelled: 0 };
+    }
 
     // Step 1: Sync from Google Calendar to NutriVault (get changes from Google)
     try {
@@ -289,6 +306,14 @@ async function bidirectionalSync(user, options = {}) {
     results.totalSkipped = (results.calendarToVisits?.skipped || 0) + (results.visitsToCalendar?.skipped || 0);
     results.totalErrors = (results.calendarToVisits?.errors || 0) + (results.visitsToCalendar?.errors || 0);
 
+    // Count conflicts from events
+    if (results.calendarToVisits?.events) {
+      results.totalConflicts += results.calendarToVisits.events.filter(e => e.status === 'conflict').length;
+    }
+    if (results.visitsToCalendar?.events) {
+      results.totalConflicts += results.visitsToCalendar.events.filter(e => e.status === 'conflict').length;
+    }
+
     // Log detailed errors if any
     if (results.totalErrors > 0) {
       console.log(`🔍 [DEBUG] Detailed error breakdown for user ${user.username}:`);
@@ -316,12 +341,50 @@ async function bidirectionalSync(user, options = {}) {
       }
     }
 
-    console.log(`✅ Bidirectional sync completed for user ${user.username}: ${results.totalSynced} total synced, ${results.totalSkipped} skipped, ${results.totalErrors} errors`);
+    // Log conflicts if any
+    if (results.totalConflicts > 0) {
+      console.log(`⚠️ [CONFLICTS] Found ${results.totalConflicts} sync conflicts for user ${user.username}`);
+    }
+
+    console.log(`✅ Bidirectional sync completed for user ${user.username}: ${results.totalSynced} total synced, ${results.totalSkipped} skipped, ${results.totalErrors} errors, ${results.totalConflicts} conflicts`);
     return results;
 
   } catch (error) {
     console.error(`❌ Bidirectional sync failed for user ${user.username}:`, error.message);
     return null;
+  }
+}
+
+/**
+ * Smart sync for a single visit - uses intelligent conflict detection
+ * @param {Object} user - User object
+ * @param {Object} visit - Visit object
+ * @returns {Promise<Object|null>} Sync result or null if skipped
+ */
+async function smartSyncVisit(user, visit) {
+  try {
+    // Check if user has Google Calendar enabled
+    if (!user.google_calendar_sync_enabled || !user.google_access_token) {
+      return null;
+    }
+
+    // Skip if in conflict state
+    if (visit.sync_status === 'conflict') {
+      console.log(`⏭️ Smart sync skipped for visit ${visit.id} - in conflict state`);
+      return { status: 'skipped', reason: 'conflict' };
+    }
+
+    // Skip if too many errors
+    if (visit.sync_error_count >= MAX_SYNC_ERROR_COUNT) {
+      console.log(`⏭️ Smart sync skipped for visit ${visit.id} - max errors reached (${visit.sync_error_count})`);
+      return { status: 'skipped', reason: 'max_errors' };
+    }
+
+    const calendarId = user.google_calendar_id || 'primary';
+    return await googleCalendarService.smartSync(visit, user, calendarId);
+  } catch (error) {
+    console.error(`❌ Smart sync failed for visit ${visit.id}:`, error.message);
+    return { status: 'error', error: error.message };
   }
 }
 
@@ -348,6 +411,7 @@ module.exports = {
   autoSyncOnAgendaAccess,
   forceSyncVisitsToCalendar,
   bidirectionalSync,
+  smartSyncVisit,
   getLastSyncTime,
   clearSyncCache,
   SYNC_COOLDOWN_MS
