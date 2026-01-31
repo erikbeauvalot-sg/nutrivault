@@ -3,42 +3,47 @@
  * Modal for importing custom field categories from JSON file
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Modal, Button, Form, Alert, Spinner, ListGroup, Badge, Card } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import customFieldService from '../services/customFieldService';
+
+// Shared styles for category color indicator
+const colorDotStyle = (color) => ({
+  display: 'inline-block',
+  width: '12px',
+  height: '12px',
+  borderRadius: '50%',
+  backgroundColor: color || '#3498db'
+});
+
+const INITIAL_OPTIONS = { skipExisting: true, updateExisting: false };
 
 const ImportCustomFieldsModal = ({ show, onHide, onSuccess, existingCategories }) => {
   const { t } = useTranslation();
   const fileInputRef = useRef(null);
 
-  // State
   const [importData, setImportData] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectAll, setSelectAll] = useState(true);
-  const [options, setOptions] = useState({
-    skipExisting: true,
-    updateExisting: false
-  });
+  const [options, setOptions] = useState(INITIAL_OPTIONS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [importResults, setImportResults] = useState(null);
 
-  // Reset state when modal closes
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setImportData(null);
     setSelectedIds([]);
     setSelectAll(true);
-    setOptions({ skipExisting: true, updateExisting: false });
+    setOptions(INITIAL_OPTIONS);
     setError(null);
     setImportResults(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
     onHide();
-  };
+  }, [onHide]);
 
-  // Handle file selection
   const handleFileChange = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -47,11 +52,9 @@ const ImportCustomFieldsModal = ({ show, onHide, onSuccess, existingCategories }
       setError(null);
       setImportResults(null);
 
-      // Read file
       const text = await file.text();
       const data = JSON.parse(text);
 
-      // Validate structure
       if (!data.categories || !Array.isArray(data.categories)) {
         throw new Error(t('customFields.invalidFileFormat', 'Invalid file format. Expected a NutriVault export file.'));
       }
@@ -61,77 +64,58 @@ const ImportCustomFieldsModal = ({ show, onHide, onSuccess, existingCategories }
       setSelectAll(true);
     } catch (err) {
       console.error('File read error:', err);
-      if (err instanceof SyntaxError) {
-        setError(t('customFields.invalidJson', 'Invalid JSON file. Please select a valid export file.'));
-      } else {
-        setError(err.message || t('customFields.fileReadError', 'Failed to read file'));
-      }
+      const errorMessage = err instanceof SyntaxError
+        ? t('customFields.invalidJson', 'Invalid JSON file. Please select a valid export file.')
+        : err.message || t('customFields.fileReadError', 'Failed to read file');
+      setError(errorMessage);
       setImportData(null);
     }
   };
 
-  // Handle select all toggle
-  const handleSelectAllChange = (checked) => {
+  const handleSelectAllChange = useCallback((checked) => {
     setSelectAll(checked);
     if (checked && importData) {
       setSelectedIds(importData.categories.map((_, index) => index));
     } else {
       setSelectedIds([]);
     }
-  };
+  }, [importData]);
 
-  // Handle individual category toggle
-  const handleCategoryToggle = (index) => {
+  const handleCategoryToggle = useCallback((index) => {
     setSelectedIds(prev => {
-      if (prev.includes(index)) {
-        const newIds = prev.filter(id => id !== index);
-        setSelectAll(false);
-        return newIds;
-      } else {
-        const newIds = [...prev, index];
-        if (importData && newIds.length === importData.categories.length) {
-          setSelectAll(true);
-        }
-        return newIds;
-      }
+      const isSelected = prev.includes(index);
+      const newIds = isSelected
+        ? prev.filter(id => id !== index)
+        : [...prev, index];
+      setSelectAll(importData && newIds.length === importData.categories.length);
+      return newIds;
     });
-  };
+  }, [importData]);
 
-  // Check if category already exists
-  const categoryExists = (categoryName) => {
+  const categoryExists = useCallback((categoryName) => {
     return existingCategories.some(cat => cat.name.toLowerCase() === categoryName.toLowerCase());
-  };
+  }, [existingCategories]);
 
-  // Handle import
   const handleImport = async () => {
+    if (selectedIds.length === 0) {
+      setError(t('customFields.noCategoriesToImport', 'Please select at least one category to import.'));
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
-      // Filter selected categories
       const selectedCategories = importData.categories.filter((_, index) => selectedIds.includes(index));
-
-      if (selectedCategories.length === 0) {
-        setError(t('customFields.noCategoriesToImport', 'Please select at least one category to import.'));
-        return;
-      }
-
-      // Prepare import data with only selected categories
-      const dataToImport = {
-        ...importData,
-        categories: selectedCategories
-      };
-
+      const dataToImport = { ...importData, categories: selectedCategories };
       const result = await customFieldService.importCategories(dataToImport, options);
 
-      if (result.success) {
-        setImportResults(result.data);
-        if (onSuccess) {
-          onSuccess();
-        }
-      } else {
+      if (!result.success) {
         throw new Error(result.error || 'Import failed');
       }
+
+      setImportResults(result.data);
+      onSuccess?.();
     } catch (err) {
       console.error('Import error:', err);
       setError(err.response?.data?.error || err.message || t('customFields.importError', 'Failed to import custom fields'));
@@ -140,25 +124,16 @@ const ImportCustomFieldsModal = ({ show, onHide, onSuccess, existingCategories }
     }
   };
 
-  // Calculate import preview stats
-  const getPreviewStats = () => {
+  const stats = (() => {
     if (!importData) return { categories: 0, definitions: 0, existing: 0 };
 
-    const selectedCategories = importData.categories.filter((_, index) => selectedIds.includes(index));
-    const totalDefinitions = selectedCategories.reduce(
-      (sum, cat) => sum + (cat.field_definitions?.length || 0),
-      0
-    );
-    const existingCount = selectedCategories.filter(cat => categoryExists(cat.name)).length;
-
+    const selected = importData.categories.filter((_, index) => selectedIds.includes(index));
     return {
-      categories: selectedCategories.length,
-      definitions: totalDefinitions,
-      existing: existingCount
+      categories: selected.length,
+      definitions: selected.reduce((sum, cat) => sum + (cat.field_definitions?.length || 0), 0),
+      existing: selected.filter(cat => categoryExists(cat.name)).length
     };
-  };
-
-  const stats = getPreviewStats();
+  })();
 
   return (
     <Modal show={show} onHide={handleClose} size="lg">
@@ -307,64 +282,47 @@ const ImportCustomFieldsModal = ({ show, onHide, onSuccess, existingCategories }
 
                 {/* Category List */}
                 <ListGroup className="mb-3" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                  {importData.categories.map((category, index) => {
-                    const fieldCount = category.field_definitions?.length || 0;
-                    const entityTypes = category.entity_types || ['patient'];
-                    const exists = categoryExists(category.name);
-
-                    return (
-                      <ListGroup.Item
-                        key={index}
-                        className="d-flex justify-content-between align-items-center"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => handleCategoryToggle(index)}
-                      >
-                        <Form.Check
-                          type="checkbox"
-                          id={`import-category-${index}`}
-                          checked={selectedIds.includes(index)}
-                          onChange={() => handleCategoryToggle(index)}
-                          onClick={(e) => e.stopPropagation()}
-                          label={
-                            <div>
-                              <span
-                                className="me-2"
-                                style={{
-                                  display: 'inline-block',
-                                  width: '12px',
-                                  height: '12px',
-                                  borderRadius: '50%',
-                                  backgroundColor: category.color || '#3498db'
-                                }}
-                              />
-                              <strong>{category.name}</strong>
-                              {exists && (
-                                <Badge bg="warning" className="ms-2" text="dark">
-                                  {t('customFields.exists', 'Exists')}
-                                </Badge>
-                              )}
-                              {category.description && (
-                                <small className="text-muted d-block ms-4">
-                                  {category.description}
-                                </small>
-                              )}
-                            </div>
-                          }
-                        />
-                        <div className="d-flex gap-2">
-                          {entityTypes.includes('patient') && (
-                            <Badge bg="primary" className="me-1">Patient</Badge>
-                          )}
-                          {entityTypes.includes('visit') && (
-                            <Badge bg="info">Visit</Badge>
-                          )}
-                          <Badge bg="secondary">
-                            {fieldCount} {t('customFields.fields', 'fields')}
-                          </Badge>
-                        </div>
-                      </ListGroup.Item>
-                    );
-                  })}
+                  {importData.categories.map((category, index) => (
+                    <ListGroup.Item
+                      key={index}
+                      className="d-flex justify-content-between align-items-center"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => handleCategoryToggle(index)}
+                    >
+                      <Form.Check
+                        type="checkbox"
+                        id={`import-category-${index}`}
+                        checked={selectedIds.includes(index)}
+                        onChange={() => handleCategoryToggle(index)}
+                        onClick={(e) => e.stopPropagation()}
+                        label={
+                          <div>
+                            <span className="me-2" style={colorDotStyle(category.color)} />
+                            <strong>{category.name}</strong>
+                            {categoryExists(category.name) && (
+                              <Badge bg="warning" className="ms-2" text="dark">
+                                {t('customFields.exists', 'Exists')}
+                              </Badge>
+                            )}
+                            {category.description && (
+                              <small className="text-muted d-block ms-4">{category.description}</small>
+                            )}
+                          </div>
+                        }
+                      />
+                      <div className="d-flex gap-2">
+                        {(category.entity_types || ['patient']).includes('patient') && (
+                          <Badge bg="primary" className="me-1">Patient</Badge>
+                        )}
+                        {(category.entity_types || ['patient']).includes('visit') && (
+                          <Badge bg="info">Visit</Badge>
+                        )}
+                        <Badge bg="secondary">
+                          {category.field_definitions?.length || 0} {t('customFields.fields', 'fields')}
+                        </Badge>
+                      </div>
+                    </ListGroup.Item>
+                  ))}
                 </ListGroup>
 
                 {/* Selection Summary */}
@@ -398,16 +356,10 @@ const ImportCustomFieldsModal = ({ show, onHide, onSuccess, existingCategories }
             onClick={handleImport}
             disabled={loading || !importData || selectedIds.length === 0}
           >
-            {loading ? (
-              <>
-                <Spinner animation="border" size="sm" className="me-2" />
-                {t('customFields.importing', 'Importing...')}
-              </>
-            ) : (
-              <>
-                {t('customFields.import', 'Import')}
-              </>
-            )}
+            {loading && <Spinner animation="border" size="sm" className="me-2" />}
+            {loading
+              ? t('customFields.importing', 'Importing...')
+              : t('customFields.import', 'Import')}
           </Button>
         )}
       </Modal.Footer>

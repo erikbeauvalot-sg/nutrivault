@@ -7,36 +7,48 @@ const { body, param, validationResult } = require('express-validator');
  */
 
 /**
+ * Extract request metadata for audit logging
+ */
+function getRequestMetadata(req) {
+  return {
+    ip_address: req.ip,
+    user_agent: req.get('user-agent'),
+    request_method: req.method,
+    request_path: req.originalUrl
+  };
+}
+
+/**
+ * Send error response with consistent format
+ */
+function sendError(res, error, defaultMessage) {
+  console.error(`${defaultMessage}:`, error);
+  res.status(error.statusCode || 500).json({
+    success: false,
+    error: error.message || defaultMessage
+  });
+}
+
+/**
  * Get all categories
  * GET /api/custom-fields/categories
  */
 const getAllCategories = async (req, res) => {
   try {
-    const user = req.user;
     const filters = {
       is_active: req.query.is_active,
-      language: req.query.language || user.language_preference || 'fr'
+      language: req.query.language || req.user.language_preference || 'fr'
     };
 
-    const requestMetadata = {
-      ip_address: req.ip,
-      user_agent: req.get('user-agent'),
-      request_method: req.method,
-      request_path: req.originalUrl
-    };
+    const categories = await customFieldCategoryService.getAllCategories(
+      req.user,
+      filters,
+      getRequestMetadata(req)
+    );
 
-    const categories = await customFieldCategoryService.getAllCategories(user, filters, requestMetadata);
-
-    res.json({
-      success: true,
-      data: categories
-    });
+    res.json({ success: true, data: categories });
   } catch (error) {
-    console.error('Get all categories error:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      error: error.message || 'Failed to get categories'
-    });
+    sendError(res, error, 'Failed to get categories');
   }
 };
 
@@ -46,31 +58,36 @@ const getAllCategories = async (req, res) => {
  */
 const getCategoryById = async (req, res) => {
   try {
-    const { id } = req.params;
-    const user = req.user;
-    const language = req.query.language || user.language_preference || 'fr';
+    const language = req.query.language || req.user.language_preference || 'fr';
+    const category = await customFieldCategoryService.getCategoryById(
+      req.user,
+      req.params.id,
+      language,
+      getRequestMetadata(req)
+    );
 
-    const requestMetadata = {
-      ip_address: req.ip,
-      user_agent: req.get('user-agent'),
-      request_method: req.method,
-      request_path: req.originalUrl
-    };
-
-    const category = await customFieldCategoryService.getCategoryById(user, id, language, requestMetadata);
-
-    res.json({
-      success: true,
-      data: category
-    });
+    res.json({ success: true, data: category });
   } catch (error) {
-    console.error('Get category by ID error:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      error: error.message || 'Failed to get category'
-    });
+    sendError(res, error, 'Failed to get category');
   }
 };
+
+/**
+ * Check validation errors and return 400 if any
+ * @returns {boolean} true if validation passed, false if response was sent
+ */
+function checkValidation(req, res) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({
+      success: false,
+      error: 'Validation failed',
+      details: errors.array()
+    });
+    return false;
+  }
+  return true;
+}
 
 /**
  * Create a new category (Admin only)
@@ -78,27 +95,13 @@ const getCategoryById = async (req, res) => {
  */
 const createCategory = async (req, res) => {
   try {
-    // Check validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        details: errors.array()
-      });
-    }
+    if (!checkValidation(req, res)) return;
 
-    const user = req.user;
-    const categoryData = req.body;
-
-    const requestMetadata = {
-      ip_address: req.ip,
-      user_agent: req.get('user-agent'),
-      request_method: req.method,
-      request_path: req.originalUrl
-    };
-
-    const category = await customFieldCategoryService.createCategory(user, categoryData, requestMetadata);
+    const category = await customFieldCategoryService.createCategory(
+      req.user,
+      req.body,
+      getRequestMetadata(req)
+    );
 
     res.status(201).json({
       success: true,
@@ -106,11 +109,7 @@ const createCategory = async (req, res) => {
       message: 'Category created successfully'
     });
   } catch (error) {
-    console.error('Create category error:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      error: error.message || 'Failed to create category'
-    });
+    sendError(res, error, 'Failed to create category');
   }
 };
 
@@ -120,28 +119,14 @@ const createCategory = async (req, res) => {
  */
 const updateCategory = async (req, res) => {
   try {
-    // Check validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        details: errors.array()
-      });
-    }
+    if (!checkValidation(req, res)) return;
 
-    const { id } = req.params;
-    const user = req.user;
-    const updateData = req.body;
-
-    const requestMetadata = {
-      ip_address: req.ip,
-      user_agent: req.get('user-agent'),
-      request_method: req.method,
-      request_path: req.originalUrl
-    };
-
-    const category = await customFieldCategoryService.updateCategory(user, id, updateData, requestMetadata);
+    const category = await customFieldCategoryService.updateCategory(
+      req.user,
+      req.params.id,
+      req.body,
+      getRequestMetadata(req)
+    );
 
     res.json({
       success: true,
@@ -149,11 +134,7 @@ const updateCategory = async (req, res) => {
       message: 'Category updated successfully'
     });
   } catch (error) {
-    console.error('Update category error:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      error: error.message || 'Failed to update category'
-    });
+    sendError(res, error, 'Failed to update category');
   }
 };
 
@@ -163,28 +144,15 @@ const updateCategory = async (req, res) => {
  */
 const deleteCategory = async (req, res) => {
   try {
-    const { id } = req.params;
-    const user = req.user;
+    const result = await customFieldCategoryService.deleteCategory(
+      req.user,
+      req.params.id,
+      getRequestMetadata(req)
+    );
 
-    const requestMetadata = {
-      ip_address: req.ip,
-      user_agent: req.get('user-agent'),
-      request_method: req.method,
-      request_path: req.originalUrl
-    };
-
-    const result = await customFieldCategoryService.deleteCategory(user, id, requestMetadata);
-
-    res.json({
-      success: true,
-      message: result.message
-    });
+    res.json({ success: true, message: result.message });
   } catch (error) {
-    console.error('Delete category error:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      error: error.message || 'Failed to delete category'
-    });
+    sendError(res, error, 'Failed to delete category');
   }
 };
 
@@ -194,38 +162,17 @@ const deleteCategory = async (req, res) => {
  */
 const reorderCategories = async (req, res) => {
   try {
-    // Check validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        details: errors.array()
-      });
-    }
+    if (!checkValidation(req, res)) return;
 
-    const user = req.user;
-    const { order } = req.body;
+    const result = await customFieldCategoryService.reorderCategories(
+      req.user,
+      req.body.order,
+      getRequestMetadata(req)
+    );
 
-    const requestMetadata = {
-      ip_address: req.ip,
-      user_agent: req.get('user-agent'),
-      request_method: req.method,
-      request_path: req.originalUrl
-    };
-
-    const result = await customFieldCategoryService.reorderCategories(user, order, requestMetadata);
-
-    res.json({
-      success: true,
-      message: result.message
-    });
+    res.json({ success: true, message: result.message });
   } catch (error) {
-    console.error('Reorder categories error:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      error: error.message || 'Failed to reorder categories'
-    });
+    sendError(res, error, 'Failed to reorder categories');
   }
 };
 
@@ -290,18 +237,12 @@ const validateReorderCategories = [
  */
 const duplicateCategory = async (req, res) => {
   try {
-    const { id } = req.params;
-    const user = req.user;
-    const overrides = req.body || {};
-
-    const requestMetadata = {
-      ip_address: req.ip,
-      user_agent: req.get('user-agent'),
-      request_method: req.method,
-      request_path: req.originalUrl
-    };
-
-    const duplicatedCategory = await customFieldCategoryService.duplicateCategory(user, id, overrides, requestMetadata);
+    const duplicatedCategory = await customFieldCategoryService.duplicateCategory(
+      req.user,
+      req.params.id,
+      req.body || {},
+      getRequestMetadata(req)
+    );
 
     res.status(201).json({
       success: true,
@@ -309,11 +250,7 @@ const duplicateCategory = async (req, res) => {
       message: 'Category duplicated successfully'
     });
   } catch (error) {
-    console.error('Duplicate category error:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      error: error.message || 'Failed to duplicate category'
-    });
+    sendError(res, error, 'Failed to duplicate category');
   }
 };
 
@@ -323,20 +260,10 @@ const duplicateCategory = async (req, res) => {
  */
 const exportCategories = async (req, res) => {
   try {
-    const user = req.user;
-    const { categoryIds } = req.body; // Array of category IDs (empty = all)
-
-    const requestMetadata = {
-      ip_address: req.ip,
-      user_agent: req.get('user-agent'),
-      request_method: req.method,
-      request_path: req.originalUrl
-    };
-
     const exportData = await customFieldCategoryService.exportCategories(
-      user,
-      categoryIds || [],
-      requestMetadata
+      req.user,
+      req.body.categoryIds || [],
+      getRequestMetadata(req)
     );
 
     res.json({
@@ -345,11 +272,7 @@ const exportCategories = async (req, res) => {
       message: 'Categories exported successfully'
     });
   } catch (error) {
-    console.error('Export categories error:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      error: error.message || 'Failed to export categories'
-    });
+    sendError(res, error, 'Failed to export categories');
   }
 };
 
@@ -359,31 +282,14 @@ const exportCategories = async (req, res) => {
  */
 const importCategories = async (req, res) => {
   try {
-    // Check validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        details: errors.array()
-      });
-    }
+    if (!checkValidation(req, res)) return;
 
-    const user = req.user;
     const { importData, options } = req.body;
-
-    const requestMetadata = {
-      ip_address: req.ip,
-      user_agent: req.get('user-agent'),
-      request_method: req.method,
-      request_path: req.originalUrl
-    };
-
     const results = await customFieldCategoryService.importCategories(
-      user,
+      req.user,
       importData,
       options || {},
-      requestMetadata
+      getRequestMetadata(req)
     );
 
     res.json({
@@ -392,11 +298,7 @@ const importCategories = async (req, res) => {
       message: 'Import completed successfully'
     });
   } catch (error) {
-    console.error('Import categories error:', error);
-    res.status(error.statusCode || 500).json({
-      success: false,
-      error: error.message || 'Failed to import categories'
-    });
+    sendError(res, error, 'Failed to import categories');
   }
 };
 

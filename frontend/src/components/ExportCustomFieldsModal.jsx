@@ -3,15 +3,23 @@
  * Modal for selecting and exporting custom field categories
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Modal, Button, Form, Alert, Spinner, ListGroup, Badge } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import customFieldService from '../services/customFieldService';
 
+// Shared styles for category color indicator
+const colorDotStyle = (color) => ({
+  display: 'inline-block',
+  width: '12px',
+  height: '12px',
+  borderRadius: '50%',
+  backgroundColor: color || '#3498db'
+});
+
 const ExportCustomFieldsModal = ({ show, onHide, categories }) => {
   const { t } = useTranslation();
 
-  // State
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectAll, setSelectAll] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -26,60 +34,49 @@ const ExportCustomFieldsModal = ({ show, onHide, categories }) => {
     }
   }, [show, categories]);
 
-  // Handle select all toggle
-  const handleSelectAllChange = (checked) => {
+  const handleSelectAllChange = useCallback((checked) => {
     setSelectAll(checked);
-    if (checked) {
-      setSelectedIds(categories.map(cat => cat.id));
-    } else {
-      setSelectedIds([]);
-    }
-  };
+    setSelectedIds(checked ? categories.map(cat => cat.id) : []);
+  }, [categories]);
 
-  // Handle individual category toggle
-  const handleCategoryToggle = (categoryId) => {
+  const handleCategoryToggle = useCallback((categoryId) => {
     setSelectedIds(prev => {
-      if (prev.includes(categoryId)) {
-        const newIds = prev.filter(id => id !== categoryId);
-        setSelectAll(false);
-        return newIds;
-      } else {
-        const newIds = [...prev, categoryId];
-        if (newIds.length === categories.length) {
-          setSelectAll(true);
-        }
-        return newIds;
-      }
+      const isSelected = prev.includes(categoryId);
+      const newIds = isSelected
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId];
+      setSelectAll(newIds.length === categories.length);
+      return newIds;
     });
+  }, [categories.length]);
+
+  const downloadJson = (data, filename) => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
-  // Handle export
   const handleExport = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Export selected categories (empty array = all)
       const categoryIdsToExport = selectAll ? [] : selectedIds;
       const result = await customFieldService.exportCategories(categoryIdsToExport);
 
-      if (result.success && result.data) {
-        // Create and download JSON file
-        const exportData = result.data;
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `nutrivault-custom-fields-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        onHide();
-      } else {
+      if (!result.success || !result.data) {
         throw new Error(result.error || 'Export failed');
       }
+
+      const filename = `nutrivault-custom-fields-${new Date().toISOString().split('T')[0]}.json`;
+      downloadJson(result.data, filename);
+      onHide();
     } catch (err) {
       console.error('Export error:', err);
       setError(err.response?.data?.error || err.message || t('customFields.exportError', 'Failed to export custom fields'));
@@ -88,20 +85,13 @@ const ExportCustomFieldsModal = ({ show, onHide, categories }) => {
     }
   };
 
-  // Count definitions for selected categories
-  const getSelectedStats = () => {
-    const selectedCategories = categories.filter(cat => selectedIds.includes(cat.id));
-    const totalDefinitions = selectedCategories.reduce(
-      (sum, cat) => sum + (cat.field_definitions?.length || 0),
-      0
-    );
+  const stats = (() => {
+    const selected = categories.filter(cat => selectedIds.includes(cat.id));
     return {
-      categories: selectedCategories.length,
-      definitions: totalDefinitions
+      categories: selected.length,
+      definitions: selected.reduce((sum, cat) => sum + (cat.field_definitions?.length || 0), 0)
     };
-  };
-
-  const stats = getSelectedStats();
+  })();
 
   return (
     <Modal show={show} onHide={onHide} size="lg">
@@ -133,58 +123,42 @@ const ExportCustomFieldsModal = ({ show, onHide, categories }) => {
 
         {/* Category List */}
         <ListGroup className="mb-3" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-          {categories.map((category) => {
-            const fieldCount = category.field_definitions?.length || 0;
-            const entityTypes = category.entity_types || ['patient'];
-
-            return (
-              <ListGroup.Item
-                key={category.id}
-                className="d-flex justify-content-between align-items-center"
-                style={{ cursor: 'pointer' }}
-                onClick={() => handleCategoryToggle(category.id)}
-              >
-                <Form.Check
-                  type="checkbox"
-                  id={`category-${category.id}`}
-                  checked={selectedIds.includes(category.id)}
-                  onChange={() => handleCategoryToggle(category.id)}
-                  onClick={(e) => e.stopPropagation()}
-                  label={
-                    <div>
-                      <span
-                        className="me-2"
-                        style={{
-                          display: 'inline-block',
-                          width: '12px',
-                          height: '12px',
-                          borderRadius: '50%',
-                          backgroundColor: category.color || '#3498db'
-                        }}
-                      />
-                      <strong>{category.name}</strong>
-                      {category.description && (
-                        <small className="text-muted d-block ms-4">
-                          {category.description}
-                        </small>
-                      )}
-                    </div>
-                  }
-                />
-                <div className="d-flex gap-2">
-                  {entityTypes.includes('patient') && (
-                    <Badge bg="primary" className="me-1">Patient</Badge>
-                  )}
-                  {entityTypes.includes('visit') && (
-                    <Badge bg="info">Visit</Badge>
-                  )}
-                  <Badge bg="secondary">
-                    {fieldCount} {t('customFields.fields', 'fields')}
-                  </Badge>
-                </div>
-              </ListGroup.Item>
-            );
-          })}
+          {categories.map((category) => (
+            <ListGroup.Item
+              key={category.id}
+              className="d-flex justify-content-between align-items-center"
+              style={{ cursor: 'pointer' }}
+              onClick={() => handleCategoryToggle(category.id)}
+            >
+              <Form.Check
+                type="checkbox"
+                id={`category-${category.id}`}
+                checked={selectedIds.includes(category.id)}
+                onChange={() => handleCategoryToggle(category.id)}
+                onClick={(e) => e.stopPropagation()}
+                label={
+                  <div>
+                    <span className="me-2" style={colorDotStyle(category.color)} />
+                    <strong>{category.name}</strong>
+                    {category.description && (
+                      <small className="text-muted d-block ms-4">{category.description}</small>
+                    )}
+                  </div>
+                }
+              />
+              <div className="d-flex gap-2">
+                {(category.entity_types || ['patient']).includes('patient') && (
+                  <Badge bg="primary" className="me-1">Patient</Badge>
+                )}
+                {(category.entity_types || ['patient']).includes('visit') && (
+                  <Badge bg="info">Visit</Badge>
+                )}
+                <Badge bg="secondary">
+                  {category.field_definitions?.length || 0} {t('customFields.fields', 'fields')}
+                </Badge>
+              </div>
+            </ListGroup.Item>
+          ))}
         </ListGroup>
 
         {categories.length === 0 && (
@@ -212,16 +186,10 @@ const ExportCustomFieldsModal = ({ show, onHide, categories }) => {
           onClick={handleExport}
           disabled={loading || selectedIds.length === 0}
         >
-          {loading ? (
-            <>
-              <Spinner animation="border" size="sm" className="me-2" />
-              {t('customFields.exporting', 'Exporting...')}
-            </>
-          ) : (
-            <>
-              {t('customFields.export', 'Export')}
-            </>
-          )}
+          {loading && <Spinner animation="border" size="sm" className="me-2" />}
+          {loading
+            ? t('customFields.exporting', 'Exporting...')
+            : t('customFields.export', 'Export')}
         </Button>
       </Modal.Footer>
     </Modal>

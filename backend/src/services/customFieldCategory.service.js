@@ -431,6 +431,30 @@ async function duplicateCategory(user, categoryId, overrides = {}, requestMetada
   }
 }
 
+// Fields to export for categories (excludes IDs and timestamps)
+const CATEGORY_EXPORT_FIELDS = [
+  'name', 'description', 'display_order', 'is_active', 'color',
+  'entity_types', 'visit_types', 'display_layout'
+];
+
+// Fields to export for field definitions (excludes IDs and timestamps)
+const DEFINITION_EXPORT_FIELDS = [
+  'field_name', 'field_label', 'field_type', 'is_required', 'validation_rules',
+  'select_options', 'allow_multiple', 'help_text', 'display_order', 'is_active',
+  'show_in_basic_info', 'show_in_list', 'formula', 'dependencies',
+  'decimal_places', 'is_calculated'
+];
+
+/**
+ * Pick specified fields from an object
+ */
+function pickFields(obj, fields) {
+  return fields.reduce((result, field) => {
+    result[field] = obj[field];
+    return result;
+  }, {});
+}
+
 /**
  * Export categories with their field definitions
  *
@@ -441,68 +465,36 @@ async function duplicateCategory(user, categoryId, overrides = {}, requestMetada
  */
 async function exportCategories(user, categoryIds = [], requestMetadata = {}) {
   try {
-    const whereClause = {};
-
-    // If specific IDs provided, filter by them
-    if (categoryIds && categoryIds.length > 0) {
-      whereClause.id = { [Op.in]: categoryIds };
-    }
+    const whereClause = categoryIds?.length > 0 ? { id: { [Op.in]: categoryIds } } : {};
 
     const categories = await CustomFieldCategory.findAll({
       where: whereClause,
       order: [['display_order', 'ASC'], ['name', 'ASC']],
-      include: [
-        {
-          model: CustomFieldDefinition,
-          as: 'field_definitions',
-          order: [['display_order', 'ASC']],
-          // Include soft-deleted definitions for full export
-          paranoid: false
-        }
-      ]
+      include: [{
+        model: CustomFieldDefinition,
+        as: 'field_definitions',
+        order: [['display_order', 'ASC']],
+        paranoid: false
+      }]
     });
 
-    // Transform to export format (remove IDs that would cause conflicts on import)
     const exportData = {
       version: '1.0',
       exportDate: new Date().toISOString(),
       exportedBy: user.username,
       categories: categories.map(cat => {
         const catData = cat.toJSON();
+        const activeDefinitions = (catData.field_definitions || [])
+          .filter(def => !def.deleted_at)
+          .map(def => pickFields(def, DEFINITION_EXPORT_FIELDS));
+
         return {
-          name: catData.name,
-          description: catData.description,
-          display_order: catData.display_order,
-          is_active: catData.is_active,
-          color: catData.color,
-          entity_types: catData.entity_types,
-          visit_types: catData.visit_types,
-          display_layout: catData.display_layout,
-          field_definitions: (catData.field_definitions || [])
-            .filter(def => !def.deleted_at) // Exclude soft-deleted
-            .map(def => ({
-              field_name: def.field_name,
-              field_label: def.field_label,
-              field_type: def.field_type,
-              is_required: def.is_required,
-              validation_rules: def.validation_rules,
-              select_options: def.select_options,
-              allow_multiple: def.allow_multiple,
-              help_text: def.help_text,
-              display_order: def.display_order,
-              is_active: def.is_active,
-              show_in_basic_info: def.show_in_basic_info,
-              show_in_list: def.show_in_list,
-              formula: def.formula,
-              dependencies: def.dependencies,
-              decimal_places: def.decimal_places,
-              is_calculated: def.is_calculated
-            }))
+          ...pickFields(catData, CATEGORY_EXPORT_FIELDS),
+          field_definitions: activeDefinitions
         };
       })
     };
 
-    // Audit log
     await auditService.log({
       user_id: user.id,
       username: user.username,
@@ -522,6 +514,39 @@ async function exportCategories(user, categoryIds = [], requestMetadata = {}) {
     console.error('Error in exportCategories:', error);
     throw error;
   }
+}
+
+// Default values for imported categories
+const CATEGORY_DEFAULTS = {
+  is_active: true,
+  color: '#3498db',
+  entity_types: ['patient'],
+  visit_types: null,
+  display_layout: { type: 'columns', columns: 1 }
+};
+
+// Default values for imported field definitions
+const DEFINITION_DEFAULTS = {
+  is_required: false,
+  allow_multiple: false,
+  display_order: 0,
+  is_active: true,
+  show_in_basic_info: false,
+  show_in_list: false,
+  is_calculated: false
+};
+
+/**
+ * Apply defaults to data, only for fields that are undefined
+ */
+function applyDefaults(data, defaults) {
+  const result = { ...data };
+  for (const [key, defaultValue] of Object.entries(defaults)) {
+    if (result[key] === undefined) {
+      result[key] = defaultValue;
+    }
+  }
+  return result;
 }
 
 /**
@@ -550,14 +575,13 @@ async function importCategories(user, importData, options = {}, requestMetadata 
       errors: []
     };
 
-    if (!importData || !importData.categories || !Array.isArray(importData.categories)) {
+    if (!importData?.categories || !Array.isArray(importData.categories)) {
       throw new Error('Invalid import data format');
     }
 
     for (const catData of importData.categories) {
       try {
-        // Check if category already exists by name
-        let existingCategory = await CustomFieldCategory.findOne({
+        const existingCategory = await CustomFieldCategory.findOne({
           where: { name: catData.name },
           transaction
         });
@@ -566,113 +590,52 @@ async function importCategories(user, importData, options = {}, requestMetadata 
 
         if (existingCategory) {
           if (updateExisting) {
-            // Update existing category
-            await existingCategory.update({
-              description: catData.description,
-              display_order: catData.display_order,
-              is_active: catData.is_active,
-              color: catData.color,
-              entity_types: catData.entity_types,
-              visit_types: catData.visit_types,
-              display_layout: catData.display_layout
-            }, { transaction });
+            await existingCategory.update(pickFields(catData, CATEGORY_EXPORT_FIELDS.filter(f => f !== 'name')), { transaction });
             category = existingCategory;
             results.categoriesUpdated++;
           } else if (skipExisting) {
             category = existingCategory;
             results.categoriesSkipped++;
           } else {
-            // Create with modified name
             category = await CustomFieldCategory.create({
+              ...applyDefaults(catData, CATEGORY_DEFAULTS),
               name: `${catData.name} (imported)`,
-              description: catData.description,
-              display_order: catData.display_order,
-              is_active: catData.is_active,
-              color: catData.color,
-              entity_types: catData.entity_types,
-              visit_types: catData.visit_types,
-              display_layout: catData.display_layout,
               created_by: user.id
             }, { transaction });
             results.categoriesCreated++;
           }
         } else {
-          // Create new category
           category = await CustomFieldCategory.create({
-            name: catData.name,
-            description: catData.description,
-            display_order: catData.display_order,
-            is_active: catData.is_active !== undefined ? catData.is_active : true,
-            color: catData.color || '#3498db',
-            entity_types: catData.entity_types || ['patient'],
-            visit_types: catData.visit_types || null,
-            display_layout: catData.display_layout || { type: 'columns', columns: 1 },
+            ...applyDefaults(catData, CATEGORY_DEFAULTS),
             created_by: user.id
           }, { transaction });
           results.categoriesCreated++;
         }
 
-        // Import field definitions for this category
-        if (catData.field_definitions && Array.isArray(catData.field_definitions)) {
+        // Import field definitions
+        if (Array.isArray(catData.field_definitions)) {
           for (const defData of catData.field_definitions) {
             try {
-              // Check if definition already exists by field_name within this category
-              let existingDef = await CustomFieldDefinition.findOne({
-                where: {
-                  category_id: category.id,
-                  field_name: defData.field_name
-                },
-                paranoid: false, // Include soft-deleted
+              const existingDef = await CustomFieldDefinition.findOne({
+                where: { category_id: category.id, field_name: defData.field_name },
+                paranoid: false,
                 transaction
               });
 
               if (existingDef) {
                 if (updateExisting) {
-                  // Restore if soft-deleted and update
                   if (existingDef.deleted_at) {
                     await existingDef.restore({ transaction });
                   }
-                  await existingDef.update({
-                    field_label: defData.field_label,
-                    field_type: defData.field_type,
-                    is_required: defData.is_required,
-                    validation_rules: defData.validation_rules,
-                    select_options: defData.select_options,
-                    allow_multiple: defData.allow_multiple,
-                    help_text: defData.help_text,
-                    display_order: defData.display_order,
-                    is_active: defData.is_active,
-                    show_in_basic_info: defData.show_in_basic_info,
-                    show_in_list: defData.show_in_list,
-                    formula: defData.formula,
-                    dependencies: defData.dependencies,
-                    decimal_places: defData.decimal_places,
-                    is_calculated: defData.is_calculated
-                  }, { transaction });
+                  await existingDef.update(pickFields(defData, DEFINITION_EXPORT_FIELDS.filter(f => f !== 'field_name')), { transaction });
                   results.definitionsUpdated++;
                 } else {
                   results.definitionsSkipped++;
                 }
               } else {
-                // Create new definition
                 await CustomFieldDefinition.create({
+                  ...applyDefaults(defData, DEFINITION_DEFAULTS),
                   category_id: category.id,
-                  field_name: defData.field_name,
-                  field_label: defData.field_label,
-                  field_type: defData.field_type,
-                  is_required: defData.is_required || false,
-                  validation_rules: defData.validation_rules,
-                  select_options: defData.select_options,
-                  allow_multiple: defData.allow_multiple || false,
-                  help_text: defData.help_text,
-                  display_order: defData.display_order || 0,
-                  is_active: defData.is_active !== undefined ? defData.is_active : true,
-                  show_in_basic_info: defData.show_in_basic_info || false,
-                  show_in_list: defData.show_in_list || false,
-                  formula: defData.formula,
-                  dependencies: defData.dependencies,
-                  decimal_places: defData.decimal_places,
-                  is_calculated: defData.is_calculated || false,
                   created_by: user.id
                 }, { transaction });
                 results.definitionsCreated++;
@@ -698,7 +661,6 @@ async function importCategories(user, importData, options = {}, requestMetadata 
 
     await transaction.commit();
 
-    // Audit log
     await auditService.log({
       user_id: user.id,
       username: user.username,
