@@ -59,7 +59,8 @@
     "add": "Ajouter",
     "confirm": "Confirmer",
     "confirmation": "Confirmation",
-    "help": "Aide"
+    "help": "Aide",
+    "deletePermanently": "Supprimer définitivement"
   },
   "navigation": {
     "dashboard": "Tableau de bord",
@@ -1107,6 +1108,8 @@
     "noCategories": "Aucune catégorie pour le moment. Créez-en une pour commencer !",
     "noFields": "Aucune définition de champ pour le moment. Créez-en une pour commencer !",
     "confirmDeleteCategory": "Êtes-vous sûr de vouloir supprimer cette catégorie ?",
+    "confirmDeactivateCategory": "Êtes-vous sûr de vouloir désactiver cette catégorie ? Elle pourra être réactivée ultérieurement.",
+    "confirmDeleteCategoryPermanently": "Êtes-vous sûr de vouloir supprimer définitivement cette catégorie ? Cette action est irréversible.",
     "confirmDeleteField": "Êtes-vous sûr de vouloir supprimer cette définition de champ ?",
     "categoryCreated": "Catégorie créée avec succès",
     "categoryUpdated": "Catégorie mise à jour avec succès",

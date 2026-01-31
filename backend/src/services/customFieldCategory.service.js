@@ -248,7 +248,8 @@ async function updateCategory(user, categoryId, updateData, requestMetadata = {}
 
 /**
  * Delete a category (Admin only)
- * Soft delete by setting is_active to false
+ * - If category is active: Soft delete by setting is_active to false
+ * - If category is already inactive: Hard delete (remove from database)
  *
  * @param {Object} user - Authenticated user object (must be ADMIN)
  * @param {string} categoryId - Category UUID
@@ -277,7 +278,35 @@ async function deleteCategory(user, categoryId, requestMetadata = {}) {
 
     const beforeData = category.toJSON();
 
-    // Soft delete
+    // If category is already inactive, do a hard delete
+    if (!category.is_active) {
+      // Also check for any field definitions (active or inactive)
+      const allDefinitions = await CustomFieldDefinition.count({
+        where: { category_id: categoryId }
+      });
+
+      if (allDefinitions > 0) {
+        throw new Error('Cannot permanently delete category with field definitions. Delete all fields first.');
+      }
+
+      // Hard delete the category
+      await category.destroy();
+
+      // Audit log
+      await auditService.log({
+        user_id: user.id,
+        username: user.username,
+        action: 'DELETE',
+        resource_type: 'custom_field_category',
+        resource_id: categoryId,
+        changes: { before: beforeData, permanent: true },
+        ...requestMetadata
+      });
+
+      return { message: 'Category permanently deleted', deleted: true };
+    }
+
+    // Soft delete (first delete)
     category.is_active = false;
     await category.save();
 
@@ -292,7 +321,7 @@ async function deleteCategory(user, categoryId, requestMetadata = {}) {
       ...requestMetadata
     });
 
-    return { message: 'Category deactivated successfully' };
+    return { message: 'Category deactivated successfully', deleted: false };
   } catch (error) {
     console.error('Error in deleteCategory:', error);
     throw error;

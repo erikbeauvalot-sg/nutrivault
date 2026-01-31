@@ -52,7 +52,8 @@
     "noFieldsMatch": "No fields match your search",
     "add": "Add",
     "confirm": "Confirm",
-    "confirmation": "Confirmation"
+    "confirmation": "Confirmation",
+    "deletePermanently": "Delete permanently"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -1069,6 +1070,8 @@
     "noCategories": "No categories yet. Create one to get started!",
     "noFields": "No field definitions yet. Create one to get started!",
     "confirmDeleteCategory": "Are you sure you want to delete this category?",
+    "confirmDeactivateCategory": "Are you sure you want to deactivate this category? It can be reactivated later.",
+    "confirmDeleteCategoryPermanently": "Are you sure you want to permanently delete this category? This action cannot be undone.",
     "confirmDeleteField": "Are you sure you want to delete this field definition?",
     "categoryCreated": "Category created successfully",
     "categoryUpdated": "Category updated successfully",

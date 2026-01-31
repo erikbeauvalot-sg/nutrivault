@@ -124,8 +124,8 @@ const CustomFieldsPage = () => {
     setShowCategoryModal(true);
   };
 
-  const handleDeleteCategory = (categoryId) => {
-    setCategoryToDelete(categoryId);
+  const handleDeleteCategory = (category) => {
+    setCategoryToDelete(category);
     setShowDeleteCategoryConfirm(true);
   };
 
@@ -148,7 +148,7 @@ const CustomFieldsPage = () => {
     if (!categoryToDelete) return;
 
     try {
-      const result = await customFieldService.deleteCategory(categoryToDelete);
+      const result = await customFieldService.deleteCategory(categoryToDelete.id);
       if (result.success !== false) {
         await fetchData();
       } else {
@@ -544,8 +544,8 @@ const CustomFieldsPage = () => {
                                     {fieldCount === 0 ? (
                                       <ActionButton
                                         action="delete"
-                                        onClick={() => handleDeleteCategory(category.id)}
-                                        title={t('common.delete', 'Delete')}
+                                        onClick={() => handleDeleteCategory(category)}
+                                        title={category.is_active ? t('common.deactivate', 'Deactivate') : t('common.deletePermanently', 'Delete permanently')}
                                       />
                                     ) : (
                                       <ActionButton
@@ -619,8 +619,8 @@ const CustomFieldsPage = () => {
                               {fieldCount === 0 ? (
                                 <ActionButton
                                   action="delete"
-                                  onClick={() => handleDeleteCategory(category.id)}
-                                  title={t('common.delete', 'Delete')}
+                                  onClick={() => handleDeleteCategory(category)}
+                                  title={category.is_active ? t('common.deactivate', 'Deactivate') : t('common.deletePermanently', 'Delete permanently')}
                                 />
                               ) : (
                                 <ActionButton
@@ -1188,8 +1188,11 @@ const CustomFieldsPage = () => {
           }}
           onConfirm={confirmDeleteCategory}
           title={t('common.confirmation', 'Confirmation')}
-          message={t('customFields.confirmDeleteCategory', 'Are you sure you want to delete this category?')}
-          confirmLabel={t('common.delete', 'Delete')}
+          message={categoryToDelete?.is_active
+            ? t('customFields.confirmDeactivateCategory', 'Are you sure you want to deactivate this category? It can be reactivated later.')
+            : t('customFields.confirmDeleteCategoryPermanently', 'Are you sure you want to permanently delete this category? This action cannot be undone.')
+          }
+          confirmLabel={categoryToDelete?.is_active ? t('common.deactivate', 'Deactivate') : t('common.deletePermanently', 'Delete permanently')}
           variant="danger"
         />
 
