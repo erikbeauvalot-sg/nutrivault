@@ -369,10 +369,9 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
             </Form.Group>
           )}
 
-          {/* Display Layout Options - Only show if visit is selected */}
-          {entityTypes.includes('visit') && (
-            <Form.Group className="mb-3">
-              <Form.Label>{t('customFields.displayLayout', 'Display Layout')}</Form.Label>
+          {/* Display Layout Options - Always show (used for both patient and visit views) */}
+          <Form.Group className="mb-3">
+            <Form.Label>{t('customFields.displayLayout', 'Display Layout')}</Form.Label>
               <Row>
                 <Col xs={12} md={6}>
                   <Form.Select
@@ -434,7 +433,6 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
                 </div>
               )}
             </Form.Group>
-          )}
 
           <Form.Group className="mb-3">
             <Form.Label>Category Color</Form.Label>
