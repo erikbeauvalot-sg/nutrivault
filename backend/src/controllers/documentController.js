@@ -398,4 +398,157 @@ exports.getShares = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/documents/:id/shares-with-logs - Get document shares with access logs
+ */
+exports.getSharesWithLogs = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const requestMetadata = getRequestMetadata(req);
+
+    const shares = await documentService.getDocumentSharesWithLogs(user, id, requestMetadata);
+
+    res.json({
+      success: true,
+      data: shares
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/documents/:id/create-share-link - Create public share link
+ */
+exports.createShareLink = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const { patient_id, expires_at, password, max_downloads, notes } = req.body;
+    const requestMetadata = getRequestMetadata(req);
+
+    if (!patient_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'patient_id is required'
+      });
+    }
+
+    const share = await documentService.createShareLink(
+      user,
+      id,
+      {
+        patient_id,
+        expires_at: expires_at ? new Date(expires_at) : null,
+        password,
+        max_downloads,
+        notes
+      },
+      requestMetadata
+    );
+
+    res.status(201).json({
+      success: true,
+      data: share,
+      message: 'Share link created successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/documents/shares/:shareId - Update share settings
+ */
+exports.updateShare = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { shareId } = req.params;
+    const updates = req.body;
+    const requestMetadata = getRequestMetadata(req);
+
+    // Convert expires_at string to Date if provided
+    if (updates.expires_at && updates.expires_at !== null) {
+      updates.expires_at = new Date(updates.expires_at);
+    }
+
+    const share = await documentService.updateShareSettings(
+      user,
+      shareId,
+      updates,
+      requestMetadata
+    );
+
+    res.json({
+      success: true,
+      data: share,
+      message: 'Share updated successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/documents/shares/:shareId - Revoke share link
+ */
+exports.revokeShare = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { shareId } = req.params;
+    const requestMetadata = getRequestMetadata(req);
+
+    await documentService.revokeShare(user, shareId, requestMetadata);
+
+    res.json({
+      success: true,
+      message: 'Share link revoked successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/documents/:id/send-by-email - Send document as email attachment
+ */
+exports.sendByEmail = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const { patient_id, message } = req.body;
+    const requestMetadata = getRequestMetadata(req);
+
+    if (!patient_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'patient_id is required'
+      });
+    }
+
+    const result = await documentService.sendDocumentByEmail(
+      user,
+      id,
+      patient_id,
+      message || null,
+      requestMetadata
+    );
+
+    res.status(200).json({
+      success: true,
+      data: result,
+      message: 'Document sent by email successfully'
+    });
+  } catch (error) {
+    if (error.message === 'Patient does not have an email address') {
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
+    }
+    next(error);
+  }
+};
+
 exports.upload = upload;

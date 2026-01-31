@@ -53,6 +53,10 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Public document sharing routes (no authentication required)
+const publicDocumentRoutes = require('./routes/publicDocuments');
+app.use('/public/documents', publicDocumentRoutes);
+
 // Authentication routes (public)
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);

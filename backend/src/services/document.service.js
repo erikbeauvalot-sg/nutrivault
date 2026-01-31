@@ -8,6 +8,7 @@
 const db = require('../../../models');
 const Document = db.Document;
 const DocumentShare = db.DocumentShare;
+const DocumentAccessLog = db.DocumentAccessLog;
 const User = db.User;
 const Patient = db.Patient;
 const Visit = db.Visit;
@@ -15,7 +16,11 @@ const auditService = require('./audit.service');
 const emailService = require('./email.service');
 const fs = require('fs').promises;
 const path = require('path');
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const { Op } = db.Sequelize;
+
+const SALT_ROUNDS = 10;
 
 /**
  * Allowed MIME types for file uploads
@@ -896,6 +901,636 @@ async function getDocumentShares(user, documentId, requestMetadata = {}) {
   }
 }
 
+/**
+ * Generate a secure random share token
+ * @returns {string} 64-character hex token
+ */
+function generateShareToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+/**
+ * Build the public share URL
+ * @param {string} token - Share token
+ * @returns {string} Full share URL
+ */
+function buildShareUrl(token) {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  return `${frontendUrl}/shared/${token}`;
+}
+
+/**
+ * Create a public share link for a document
+ * @param {Object} user - Authenticated user object
+ * @param {string} documentId - Document UUID
+ * @param {Object} config - Share configuration
+ * @param {string} config.patient_id - Patient UUID
+ * @param {Date} config.expires_at - Expiration date (optional)
+ * @param {string} config.password - Password protection (optional)
+ * @param {number} config.max_downloads - Download limit (optional)
+ * @param {string} config.notes - Notes about the share (optional)
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Created share with URL
+ */
+async function createShareLink(user, documentId, config = {}, requestMetadata = {}) {
+  try {
+    // Verify document exists and user has access
+    const document = await getDocumentById(user, documentId, requestMetadata);
+
+    // Verify patient exists
+    const patient = await Patient.findOne({
+      where: { id: config.patient_id, is_active: true }
+    });
+
+    if (!patient) {
+      throw new Error('Patient not found');
+    }
+
+    // Check if user has permission to share documents
+    const hasSharePermission = user.permissions?.some(p => p.code === 'documents.share');
+    if (!hasSharePermission && user.role.name !== 'ADMIN') {
+      throw new Error('Insufficient permissions to share documents');
+    }
+
+    // Generate secure token
+    const shareToken = generateShareToken();
+
+    // Hash password if provided
+    let passwordHash = null;
+    if (config.password) {
+      passwordHash = await bcrypt.hash(config.password, SALT_ROUNDS);
+    }
+
+    // Create document share record
+    const documentShare = await DocumentShare.create({
+      document_id: documentId,
+      patient_id: config.patient_id,
+      shared_by: user.id,
+      sent_via: 'link',
+      sent_at: new Date(),
+      notes: config.notes || null,
+      share_token: shareToken,
+      expires_at: config.expires_at || null,
+      password_hash: passwordHash,
+      max_downloads: config.max_downloads || null,
+      is_active: true
+    });
+
+    // Fetch complete share record with associations
+    const completeShare = await DocumentShare.findByPk(documentShare.id, {
+      include: [
+        {
+          model: Document,
+          as: 'document',
+          attributes: ['id', 'file_name', 'description', 'category', 'mime_type', 'file_size']
+        },
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email']
+        },
+        {
+          model: User,
+          as: 'sharedByUser',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        }
+      ]
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      action: 'SHARE',
+      resource_type: 'document',
+      resource_id: documentId,
+      details: {
+        action: 'create_share_link',
+        share_id: documentShare.id,
+        patient_id: config.patient_id,
+        has_password: !!config.password,
+        has_expiration: !!config.expires_at,
+        max_downloads: config.max_downloads
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return {
+      ...completeShare.toJSON(),
+      share_url: buildShareUrl(shareToken),
+      is_password_protected: !!passwordHash
+    };
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Get share information by token (public - no auth required)
+ * @param {string} token - Share token
+ * @returns {Promise<Object>} Share info (without sensitive data)
+ */
+async function getShareByToken(token) {
+  try {
+    const share = await DocumentShare.findOne({
+      where: { share_token: token },
+      include: [
+        {
+          model: Document,
+          as: 'document',
+          attributes: ['id', 'file_name', 'description', 'category', 'mime_type', 'file_size']
+        },
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name']
+        }
+      ]
+    });
+
+    if (!share) {
+      throw new Error('Share link not found');
+    }
+
+    // Check if share is accessible
+    const isExpired = share.isExpired();
+    const hasReachedLimit = share.hasReachedDownloadLimit();
+    const isActive = share.is_active;
+
+    return {
+      id: share.id,
+      document: share.document,
+      patient: share.patient,
+      is_password_protected: !!share.password_hash,
+      expires_at: share.expires_at,
+      max_downloads: share.max_downloads,
+      download_count: share.download_count,
+      is_active: isActive,
+      is_expired: isExpired,
+      has_reached_limit: hasReachedLimit,
+      is_accessible: isActive && !isExpired && !hasReachedLimit
+    };
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Verify password for a protected share
+ * @param {string} token - Share token
+ * @param {string} password - Password to verify
+ * @param {Object} metadata - Request metadata (ip, userAgent)
+ * @returns {Promise<Object>} Verification result
+ */
+async function verifySharePassword(token, password, metadata = {}) {
+  try {
+    const share = await DocumentShare.findOne({
+      where: { share_token: token }
+    });
+
+    if (!share) {
+      throw new Error('Share link not found');
+    }
+
+    if (!share.password_hash) {
+      return { valid: true, message: 'No password required' };
+    }
+
+    const isValid = await bcrypt.compare(password, share.password_hash);
+
+    // Log the password attempt
+    await logShareAccess(share.id, 'password_attempt', isValid, metadata);
+
+    if (!isValid) {
+      throw new Error('Invalid password');
+    }
+
+    return { valid: true };
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Download document via share token (public - no auth required)
+ * @param {string} token - Share token
+ * @param {Object} metadata - Request metadata (ip, userAgent)
+ * @param {boolean} passwordVerified - Whether password was verified (for protected shares)
+ * @returns {Promise<Object>} Document with file stream info
+ */
+async function downloadViaShareToken(token, metadata = {}, passwordVerified = false) {
+  try {
+    const share = await DocumentShare.findOne({
+      where: { share_token: token },
+      include: [
+        {
+          model: Document,
+          as: 'document'
+        }
+      ]
+    });
+
+    if (!share) {
+      throw new Error('Share link not found');
+    }
+
+    // Check if share is accessible
+    if (!share.is_active) {
+      await logShareAccess(share.id, 'download', false, metadata);
+      throw new Error('This share link has been revoked');
+    }
+
+    if (share.isExpired()) {
+      await logShareAccess(share.id, 'download', false, metadata);
+      throw new Error('This share link has expired');
+    }
+
+    if (share.hasReachedDownloadLimit()) {
+      await logShareAccess(share.id, 'download', false, metadata);
+      throw new Error('Download limit reached for this share link');
+    }
+
+    // Check password if protected and not verified
+    if (share.password_hash && !passwordVerified) {
+      throw new Error('Password verification required');
+    }
+
+    const document = share.document;
+    if (!document || !document.is_active) {
+      await logShareAccess(share.id, 'download', false, metadata);
+      throw new Error('Document not found or has been deleted');
+    }
+
+    const fullFilePath = path.join(process.cwd(), UPLOAD_DIR, document.file_path);
+
+    // Check if file exists
+    try {
+      await fs.access(fullFilePath);
+    } catch (error) {
+      await logShareAccess(share.id, 'download', false, metadata);
+      throw new Error('Document file not found on disk');
+    }
+
+    // Update share statistics
+    await share.update({
+      download_count: share.download_count + 1,
+      last_accessed_at: new Date(),
+      viewed_at: share.viewed_at || new Date()
+    });
+
+    // Log successful download
+    await logShareAccess(share.id, 'download', true, metadata);
+
+    return {
+      document,
+      filePath: fullFilePath
+    };
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Log access to a shared document
+ * @param {string} shareId - Document share UUID
+ * @param {string} action - Action type (view, download, password_attempt)
+ * @param {boolean} success - Whether the action was successful
+ * @param {Object} metadata - Request metadata (ip, userAgent)
+ * @returns {Promise<Object>} Created access log
+ */
+async function logShareAccess(shareId, action, success, metadata = {}) {
+  try {
+    const log = await DocumentAccessLog.create({
+      document_share_id: shareId,
+      ip_address: metadata.ip || null,
+      user_agent: metadata.userAgent || null,
+      action,
+      success
+    });
+    return log;
+  } catch (error) {
+    // Don't throw on logging errors - just log to console
+    console.error('Error logging share access:', error);
+    return null;
+  }
+}
+
+/**
+ * Revoke a share link
+ * @param {Object} user - Authenticated user object
+ * @param {string} shareId - Document share UUID
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated share
+ */
+async function revokeShare(user, shareId, requestMetadata = {}) {
+  try {
+    const share = await DocumentShare.findByPk(shareId, {
+      include: [
+        {
+          model: Document,
+          as: 'document'
+        }
+      ]
+    });
+
+    if (!share) {
+      throw new Error('Share not found');
+    }
+
+    // Check permissions
+    const hasSharePermission = user.permissions?.some(p => p.code === 'documents.share');
+    if (!hasSharePermission && user.role.name !== 'ADMIN' && share.shared_by !== user.id) {
+      throw new Error('Insufficient permissions to revoke this share');
+    }
+
+    await share.update({ is_active: false });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      action: 'UPDATE',
+      resource_type: 'document_share',
+      resource_id: shareId,
+      details: { action: 'revoke_share' },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return share;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Update share settings
+ * @param {Object} user - Authenticated user object
+ * @param {string} shareId - Document share UUID
+ * @param {Object} updates - Fields to update
+ * @param {Date} updates.expires_at - New expiration date
+ * @param {number} updates.max_downloads - New download limit
+ * @param {string} updates.password - New password (null to remove)
+ * @param {boolean} updates.is_active - Activate/deactivate
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Object>} Updated share
+ */
+async function updateShareSettings(user, shareId, updates, requestMetadata = {}) {
+  try {
+    const share = await DocumentShare.findByPk(shareId);
+
+    if (!share) {
+      throw new Error('Share not found');
+    }
+
+    // Check permissions
+    const hasSharePermission = user.permissions?.some(p => p.code === 'documents.share');
+    if (!hasSharePermission && user.role.name !== 'ADMIN' && share.shared_by !== user.id) {
+      throw new Error('Insufficient permissions to update this share');
+    }
+
+    const updateData = {};
+
+    if (updates.expires_at !== undefined) {
+      updateData.expires_at = updates.expires_at;
+    }
+
+    if (updates.max_downloads !== undefined) {
+      updateData.max_downloads = updates.max_downloads;
+    }
+
+    if (updates.is_active !== undefined) {
+      updateData.is_active = updates.is_active;
+    }
+
+    // Handle password update
+    if (updates.password !== undefined) {
+      if (updates.password === null || updates.password === '') {
+        updateData.password_hash = null;
+      } else {
+        updateData.password_hash = await bcrypt.hash(updates.password, SALT_ROUNDS);
+      }
+    }
+
+    await share.update(updateData);
+
+    // Fetch updated share with associations
+    const updatedShare = await DocumentShare.findByPk(shareId, {
+      include: [
+        {
+          model: Document,
+          as: 'document',
+          attributes: ['id', 'file_name', 'description', 'category', 'mime_type', 'file_size']
+        },
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email']
+        },
+        {
+          model: User,
+          as: 'sharedByUser',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        }
+      ]
+    });
+
+    // Audit log
+    await auditService.log({
+      user_id: user.id,
+      action: 'UPDATE',
+      resource_type: 'document_share',
+      resource_id: shareId,
+      details: {
+        action: 'update_share_settings',
+        updated_fields: Object.keys(updates)
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent
+    });
+
+    return {
+      ...updatedShare.toJSON(),
+      share_url: share.share_token ? buildShareUrl(share.share_token) : null,
+      is_password_protected: !!updatedShare.password_hash
+    };
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Get document shares with access logs
+ * @param {Object} user - Authenticated user object
+ * @param {string} documentId - Document UUID
+ * @param {Object} requestMetadata - Request metadata for audit logging
+ * @returns {Promise<Array>} Array of document share records with access logs
+ */
+async function getDocumentSharesWithLogs(user, documentId, requestMetadata = {}) {
+  try {
+    // Verify document exists and user has access
+    const document = await getDocumentById(user, documentId, requestMetadata);
+
+    // Check read permission
+    const hasReadPermission = user.permissions?.some(p => p.code === 'documents.read');
+    if (!hasReadPermission && user.role.name !== 'ADMIN' && document.uploaded_by !== user.id) {
+      throw new Error('Insufficient permissions to view document shares');
+    }
+
+    const shares = await DocumentShare.findAll({
+      where: { document_id: documentId },
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name', 'email']
+        },
+        {
+          model: User,
+          as: 'sharedByUser',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        },
+        {
+          model: DocumentAccessLog,
+          as: 'accessLogs',
+          order: [['created_at', 'DESC']],
+          limit: 50 // Limit logs per share
+        }
+      ],
+      order: [['sent_at', 'DESC']]
+    });
+
+    // Add computed fields to each share
+    return shares.map(share => ({
+      ...share.toJSON(),
+      share_url: share.share_token ? buildShareUrl(share.share_token) : null,
+      is_password_protected: !!share.password_hash,
+      is_expired: share.isExpired(),
+      has_reached_limit: share.hasReachedDownloadLimit(),
+      is_accessible: share.isAccessible()
+    }));
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Record a view access for a share (public)
+ * @param {string} token - Share token
+ * @param {Object} metadata - Request metadata (ip, userAgent)
+ * @returns {Promise<void>}
+ */
+async function recordShareView(token, metadata = {}) {
+  try {
+    const share = await DocumentShare.findOne({
+      where: { share_token: token }
+    });
+
+    if (share) {
+      await share.update({
+        last_accessed_at: new Date(),
+        viewed_at: share.viewed_at || new Date()
+      });
+      await logShareAccess(share.id, 'view', true, metadata);
+    }
+  } catch (error) {
+    console.error('Error recording share view:', error);
+  }
+}
+
+/**
+ * Send document as email attachment to a patient
+ * @param {Object} user - User sending the document
+ * @param {string} documentId - Document UUID
+ * @param {string} patientId - Patient UUID
+ * @param {string} message - Optional custom message
+ * @param {Object} requestMetadata - Request metadata for audit
+ * @returns {Promise<Object>} Email send result
+ */
+async function sendDocumentByEmail(user, documentId, patientId, message = null, requestMetadata = {}) {
+  try {
+    // Get document
+    const document = await Document.findOne({
+      where: { id: documentId, is_active: true }
+    });
+
+    if (!document) {
+      throw new Error('Document not found');
+    }
+
+    // Get patient
+    const patient = await Patient.findByPk(patientId);
+    if (!patient) {
+      throw new Error('Patient not found');
+    }
+
+    if (!patient.email) {
+      throw new Error('Patient does not have an email address');
+    }
+
+    // Get full file path
+    const filePath = path.join(process.cwd(), UPLOAD_DIR, document.file_path);
+
+    // Check if file exists
+    try {
+      await fs.access(filePath);
+    } catch {
+      throw new Error('Document file not found on disk');
+    }
+
+    // Send email with attachment
+    const emailResult = await emailService.sendDocumentAsAttachment(
+      document,
+      patient,
+      user,
+      filePath,
+      message
+    );
+
+    // Create a document share record to track the send
+    const share = await DocumentShare.create({
+      document_id: documentId,
+      patient_id: patientId,
+      shared_by: user.id,
+      sent_via: 'email_attachment',
+      notes: message,
+      sent_at: new Date()
+    });
+
+    // Log the action
+    await auditService.log({
+      userId: user.id,
+      action: 'document.email_sent',
+      resourceType: 'document',
+      resourceId: documentId,
+      ...requestMetadata,
+      changes: {
+        patient_id: patientId,
+        patient_email: patient.email,
+        file_name: document.file_name
+      }
+    });
+
+    return {
+      success: true,
+      share_id: share.id,
+      email_result: emailResult,
+      sent_to: patient.email
+    };
+  } catch (error) {
+    // Log the failed attempt
+    await auditService.log({
+      userId: user?.id,
+      action: 'document.email_failed',
+      resourceType: 'document',
+      resourceId: documentId,
+      ...requestMetadata,
+      changes: { error: error.message }
+    });
+
+    throw error;
+  }
+}
+
 module.exports = {
   uploadDocument,
   getDocuments,
@@ -910,6 +1545,19 @@ module.exports = {
   sendDocumentToPatient,
   sendDocumentToGroup,
   getDocumentShares,
+  // Share link functions
+  generateShareToken,
+  buildShareUrl,
+  createShareLink,
+  getShareByToken,
+  verifySharePassword,
+  downloadViaShareToken,
+  logShareAccess,
+  revokeShare,
+  updateShareSettings,
+  getDocumentSharesWithLogs,
+  recordShareView,
+  sendDocumentByEmail,
   ALLOWED_MIME_TYPES,
   MAX_FILE_SIZE
 };

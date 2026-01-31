@@ -222,6 +222,7 @@ export const formatFileSize = (bytes) => {
  * @returns {string} Icon name or emoji
  */
 export const getFileTypeIcon = (mimeType) => {
+  if (!mimeType) return '📎';
   if (mimeType.startsWith('image/')) return '🖼️';
   if (mimeType === 'application/pdf') return '📄';
   if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
@@ -235,6 +236,7 @@ export const getFileTypeIcon = (mimeType) => {
  * @returns {boolean} Whether file can be previewed
  */
 export const canPreviewFile = (mimeType) => {
+  if (!mimeType) return false;
   return mimeType.startsWith('image/') || mimeType === 'application/pdf';
 };
 
@@ -245,4 +247,70 @@ export const canPreviewFile = (mimeType) => {
  */
 export const getDocumentPreviewUrl = (id) => {
   return `${api.defaults.baseURL}/api/documents/${id}/download`;
+};
+
+// ==========================================
+// Share Link Management Functions
+// ==========================================
+
+/**
+ * Create a public share link for a document
+ * @param {string} documentId - Document UUID
+ * @param {object} options - Share options
+ * @param {string} options.patient_id - Patient UUID
+ * @param {string} options.expires_at - Expiration date (ISO string)
+ * @param {string} options.password - Password protection
+ * @param {number} options.max_downloads - Download limit
+ * @param {string} options.notes - Notes about the share
+ * @returns {Promise<object>} Created share with URL
+ */
+export const createShareLink = async (documentId, options) => {
+  const response = await api.post(`/documents/${documentId}/create-share-link`, options);
+  return response.data;
+};
+
+/**
+ * Update share link settings
+ * @param {string} shareId - Share UUID
+ * @param {object} updates - Fields to update
+ * @returns {Promise<object>} Updated share
+ */
+export const updateShareSettings = async (shareId, updates) => {
+  const response = await api.put(`/documents/shares/${shareId}`, updates);
+  return response.data;
+};
+
+/**
+ * Revoke a share link
+ * @param {string} shareId - Share UUID
+ * @returns {Promise<object>} Success response
+ */
+export const revokeShareLink = async (shareId) => {
+  const response = await api.delete(`/documents/shares/${shareId}`);
+  return response.data;
+};
+
+/**
+ * Get document shares with access logs
+ * @param {string} documentId - Document UUID
+ * @returns {Promise<array>} Array of shares with logs
+ */
+export const getSharesWithLogs = async (documentId) => {
+  const response = await api.get(`/documents/${documentId}/shares-with-logs`);
+  return response.data;
+};
+
+/**
+ * Send document as email attachment to a patient
+ * @param {string} documentId - Document UUID
+ * @param {string} patientId - Patient UUID
+ * @param {string} message - Optional message to include in email
+ * @returns {Promise<object>} Send result
+ */
+export const sendDocumentByEmail = async (documentId, patientId, message = null) => {
+  const response = await api.post(`/documents/${documentId}/send-by-email`, {
+    patient_id: patientId,
+    message
+  });
+  return response.data;
 };

@@ -68,6 +68,7 @@ async function reset() {
     'CustomFieldDefinition',
     'CustomFieldCategory',
     'PatientTag',
+    'DocumentAccessLog',
     'DocumentShare',
     'Document',
     'Patient',

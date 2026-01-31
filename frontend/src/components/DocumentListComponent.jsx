@@ -8,7 +8,11 @@ import { Card, Table, Button, Badge, Alert, Spinner, Form, Row, Col, InputGroup,
 import { useTranslation } from 'react-i18next';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import * as documentService from '../services/documentService';
+import * as patientService from '../services/patientService';
 import ActionButton from './ActionButton';
+import DocumentSharingModal from './DocumentSharingModal';
+import DocumentEmailModal from './DocumentEmailModal';
+import { useAuth } from '../contexts/AuthContext';
 
 const DocumentListComponent = ({
   resourceType,
@@ -17,6 +21,7 @@ const DocumentListComponent = ({
   onUploadClick
 }) => {
   const { t, i18n } = useTranslation();
+  const { hasPermission } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,9 +40,35 @@ const DocumentListComponent = ({
   const [documentToDelete, setDocumentToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Share modal state
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [documentToShare, setDocumentToShare] = useState(null);
+  const [patients, setPatients] = useState([]);
+
+  // Email modal state
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [documentToEmail, setDocumentToEmail] = useState(null);
+
   useEffect(() => {
     fetchDocuments();
   }, [resourceType, resourceId, filters]);
+
+  // Load patients for share modal
+  useEffect(() => {
+    if (hasPermission('documents.share')) {
+      fetchPatients();
+    }
+  }, [hasPermission]);
+
+  const fetchPatients = async () => {
+    try {
+      const response = await patientService.getPatients({ limit: 1000 });
+      const data = response.data?.data || response.data || [];
+      setPatients(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error fetching patients for share:', err);
+    }
+  };
 
   // Cleanup blob URL on unmount
   useEffect(() => {
@@ -152,6 +183,26 @@ const DocumentListComponent = ({
   const handleDeleteCancel = () => {
     setShowDeleteModal(false);
     setDocumentToDelete(null);
+  };
+
+  const handleShareClick = (document) => {
+    setDocumentToShare(document);
+    setShowShareModal(true);
+  };
+
+  const handleShareModalClose = () => {
+    setShowShareModal(false);
+    setDocumentToShare(null);
+  };
+
+  const handleEmailClick = (document) => {
+    setDocumentToEmail(document);
+    setShowEmailModal(true);
+  };
+
+  const handleEmailModalClose = () => {
+    setShowEmailModal(false);
+    setDocumentToEmail(null);
   };
 
   const handleFilterChange = (field, value) => {
@@ -349,6 +400,20 @@ const DocumentListComponent = ({
                             title={t('documents.download', 'Download')}
                             loading={downloading === document.id}
                           />
+                          {hasPermission('documents.share') && (
+                            <>
+                              <ActionButton
+                                action="share"
+                                onClick={() => handleShareClick(document)}
+                                title={t('documents.shareDocument', 'Share link')}
+                              />
+                              <ActionButton
+                                action="send"
+                                onClick={() => handleEmailClick(document)}
+                                title={t('documents.sendByEmail', 'Send by email')}
+                              />
+                            </>
+                          )}
                           <ActionButton
                             action="delete"
                             onClick={() => handleDeleteClick(document)}
@@ -402,6 +467,20 @@ const DocumentListComponent = ({
                       title={t('documents.download', 'Download')}
                       loading={downloading === document.id}
                     />
+                    {hasPermission('documents.share') && (
+                      <>
+                        <ActionButton
+                          action="share"
+                          onClick={() => handleShareClick(document)}
+                          title={t('documents.shareDocument', 'Share link')}
+                        />
+                        <ActionButton
+                          action="send"
+                          onClick={() => handleEmailClick(document)}
+                          title={t('documents.sendByEmail', 'Send by email')}
+                        />
+                      </>
+                    )}
                     <ActionButton
                       action="delete"
                       onClick={() => handleDeleteClick(document)}
@@ -547,6 +626,28 @@ const DocumentListComponent = ({
         </Button>
       </Modal.Footer>
     </Modal>
+
+    {/* Share Modal */}
+    <DocumentSharingModal
+      show={showShareModal}
+      onHide={handleShareModalClose}
+      document={documentToShare}
+      patients={patients}
+      onShareCreated={() => {
+        // Optionally refresh documents or show success
+      }}
+    />
+
+    {/* Email Modal */}
+    <DocumentEmailModal
+      show={showEmailModal}
+      onHide={handleEmailModalClose}
+      document={documentToEmail}
+      patients={patients}
+      onEmailSent={() => {
+        // Optionally refresh documents or show success
+      }}
+    />
     </>
   );
 };

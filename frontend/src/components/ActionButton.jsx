@@ -29,6 +29,7 @@ const ACTION_CONFIG = {
   download: { icon: '⬇️', variant: 'outline-primary' },
   preview: { icon: '👁️', variant: 'outline-info' },
   view: { icon: '🔍', variant: 'outline-info' },
+  share: { icon: '🔗', variant: 'outline-success' },
   translate: { icon: '🌐', variant: 'outline-secondary' },
   duplicate: { icon: '📋', variant: 'outline-info' },
   clone: { icon: '📋', variant: 'outline-info' },
@@ -97,7 +98,7 @@ ActionButton.propTypes = {
     'edit', 'delete', 'disable', 'deactivate', 'enable', 'activate',
     'schedule', 'payment', 'download', 'preview', 'view', 'translate',
     'duplicate', 'clone', 'reset-password', 'default', 'setDefault',
-    'acknowledge', 'add', 'send'
+    'acknowledge', 'add', 'send', 'share'
   ]),
   onClick: PropTypes.func,
   title: PropTypes.string.isRequired,

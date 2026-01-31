@@ -331,4 +331,144 @@ router.get(
   documentController.getShares
 );
 
+// GET /api/documents/:id/shares-with-logs - Get document shares with access logs
+router.get(
+  '/:id/shares-with-logs',
+  authenticate,
+  requirePermission('documents.read'),
+  documentIdValidation,
+  validate,
+  documentController.getSharesWithLogs
+);
+
+/**
+ * Validation rules for creating share link
+ */
+const createShareLinkValidation = [
+  body('patient_id')
+    .isUUID()
+    .withMessage('patient_id must be a valid UUID'),
+
+  body('expires_at')
+    .optional()
+    .isISO8601()
+    .withMessage('expires_at must be a valid ISO 8601 date'),
+
+  body('password')
+    .optional()
+    .isString()
+    .isLength({ min: 4, max: 255 })
+    .withMessage('Password must be between 4 and 255 characters'),
+
+  body('max_downloads')
+    .optional()
+    .isInt({ min: 1, max: 1000 })
+    .withMessage('max_downloads must be between 1 and 1000'),
+
+  body('notes')
+    .optional()
+    .isLength({ max: 500 })
+    .withMessage('Notes must be less than 500 characters')
+];
+
+// POST /api/documents/:id/create-share-link - Create public share link
+router.post(
+  '/:id/create-share-link',
+  authenticate,
+  requirePermission('documents.share'),
+  documentIdValidation,
+  createShareLinkValidation,
+  validate,
+  documentController.createShareLink
+);
+
+/**
+ * Validation rules for share ID parameter
+ */
+const shareIdValidation = [
+  param('shareId')
+    .isUUID()
+    .withMessage('Invalid share ID format')
+];
+
+/**
+ * Validation rules for updating share
+ */
+const updateShareValidation = [
+  body('expires_at')
+    .optional()
+    .custom((value) => {
+      if (value === null || value === '') return true;
+      return !isNaN(Date.parse(value));
+    })
+    .withMessage('expires_at must be a valid date or null'),
+
+  body('password')
+    .optional()
+    .custom((value) => {
+      if (value === null || value === '') return true;
+      return typeof value === 'string' && value.length >= 4 && value.length <= 255;
+    })
+    .withMessage('Password must be between 4 and 255 characters or null to remove'),
+
+  body('max_downloads')
+    .optional()
+    .custom((value) => {
+      if (value === null) return true;
+      return Number.isInteger(value) && value >= 1 && value <= 1000;
+    })
+    .withMessage('max_downloads must be between 1 and 1000 or null for unlimited'),
+
+  body('is_active')
+    .optional()
+    .isBoolean()
+    .withMessage('is_active must be a boolean')
+];
+
+// PUT /api/documents/shares/:shareId - Update share settings
+router.put(
+  '/shares/:shareId',
+  authenticate,
+  requirePermission('documents.share'),
+  shareIdValidation,
+  updateShareValidation,
+  validate,
+  documentController.updateShare
+);
+
+// DELETE /api/documents/shares/:shareId - Revoke share link
+router.delete(
+  '/shares/:shareId',
+  authenticate,
+  requirePermission('documents.share'),
+  shareIdValidation,
+  validate,
+  documentController.revokeShare
+);
+
+/**
+ * Validation rules for sending document by email
+ */
+const sendByEmailValidation = [
+  body('patient_id')
+    .isUUID()
+    .withMessage('patient_id must be a valid UUID'),
+
+  body('message')
+    .optional()
+    .isLength({ max: 1000 })
+    .withMessage('Message must be less than 1000 characters')
+];
+
+// POST /api/documents/:id/send-by-email - Send document as email attachment
+router.post(
+  '/:id/send-by-email',
+  authenticate,
+  requirePermission('documents.share'),
+  documentIdValidation,
+  sendByEmailValidation,
+  validate,
+  documentController.sendByEmail
+);
+
 module.exports = router;

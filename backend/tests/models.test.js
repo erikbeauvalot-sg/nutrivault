@@ -58,6 +58,7 @@ describe('Models Index', () => {
     'InvoiceEmail',
     'Document',
     'DocumentShare',
+    'DocumentAccessLog',
     'AuditLog',
     'RefreshToken',
     'ApiKey',

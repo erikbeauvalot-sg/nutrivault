@@ -534,10 +534,99 @@ async function sendEmailFromTemplate({
   }
 }
 
+/**
+ * Send document as email attachment to patient
+ * @param {Object} document - Document object
+ * @param {Object} patient - Patient object
+ * @param {Object} sharedBy - User who is sending the document
+ * @param {string} filePath - Full path to the document file
+ * @param {string} message - Optional custom message
+ * @returns {Promise<Object>} Email send result
+ */
+async function sendDocumentAsAttachment(document, patient, sharedBy, filePath, message = null) {
+  const subject = `Document : ${document.file_name} - NutriVault`;
+
+  const customMessage = message ? `<p style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 15px 0;"><strong>Message :</strong><br>${message.replace(/\n/g, '<br>')}</p>` : '';
+  const customMessageText = message ? `\nMessage :\n${message}\n` : '';
+
+  const text = `
+Bonjour ${patient.first_name} ${patient.last_name},
+
+${sharedBy.first_name} ${sharedBy.last_name} vous envoie le document suivant en pièce jointe :
+
+Document : ${document.file_name}
+${document.description ? `Description : ${document.description}` : ''}
+${customMessageText}
+Cordialement,
+L'équipe NutriVault
+  `.trim();
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #2196F3; color: white; padding: 20px; text-align: center; }
+    .content { padding: 20px; background-color: #f9f9f9; }
+    .document-details { background-color: white; padding: 15px; margin: 20px 0; border-left: 4px solid #2196F3; }
+    .footer { text-align: center; padding: 20px; color: #777; font-size: 12px; }
+    .attachment-notice { background-color: #e8f5e9; border: 1px solid #4CAF50; padding: 10px; border-radius: 4px; margin: 15px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📎 Document en pièce jointe</h1>
+    </div>
+    <div class="content">
+      <p>Bonjour ${patient.first_name} ${patient.last_name},</p>
+      <p><strong>${sharedBy.first_name} ${sharedBy.last_name}</strong> vous envoie le document suivant en pièce jointe :</p>
+
+      <div class="document-details">
+        <p><strong>📄 Document :</strong> ${document.file_name}</p>
+        ${document.description ? `<p><strong>Description :</strong> ${document.description}</p>` : ''}
+      </div>
+
+      ${customMessage}
+
+      <div class="attachment-notice">
+        <strong>📎 Pièce jointe :</strong> ${document.file_name}
+      </div>
+
+      <p>Cordialement,<br><strong>L'équipe NutriVault</strong></p>
+    </div>
+    <div class="footer">
+      <p>Ceci est un email automatique. Veuillez ne pas répondre à ce message.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  const attachments = [
+    {
+      filename: document.file_name,
+      path: filePath,
+      contentType: document.mime_type
+    }
+  ];
+
+  return sendEmail({
+    to: patient.email,
+    subject,
+    text,
+    html,
+    attachments
+  });
+}
+
 module.exports = {
   sendEmail,
   sendInvoiceEmail,
   sendDocumentShareEmail,
+  sendDocumentAsAttachment,
   sendPaymentReminderEmail,
   verifyEmailConfig,
   sendEmailFromTemplate

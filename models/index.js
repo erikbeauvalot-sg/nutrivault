@@ -45,6 +45,7 @@ db.InvoiceCustomization = require('./InvoiceCustomization')(sequelize, DataTypes
 db.AIPrompt = require('./AIPrompt')(sequelize, DataTypes);
 db.MeasureAnnotation = require('./MeasureAnnotation')(sequelize, DataTypes);
 db.VisitType = require('./VisitType')(sequelize, DataTypes);
+db.DocumentAccessLog = require('./DocumentAccessLog')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -219,6 +220,16 @@ db.DocumentShare.belongsTo(db.User, {
 db.User.hasMany(db.DocumentShare, {
   foreignKey: 'shared_by',
   as: 'documents_shared'
+});
+
+// DocumentAccessLog - DocumentShare relationship
+db.DocumentAccessLog.belongsTo(db.DocumentShare, {
+  foreignKey: 'document_share_id',
+  as: 'documentShare'
+});
+db.DocumentShare.hasMany(db.DocumentAccessLog, {
+  foreignKey: 'document_share_id',
+  as: 'accessLogs'
 });
 
 // RefreshToken - User relationship

@@ -47,6 +47,7 @@ const InvoiceCustomizationPage = lazy(() => import('./pages/InvoiceCustomization
 const AIConfigPage = lazy(() => import('./pages/AIConfigPage'));
 const AnalyticsDashboardPage = lazy(() => import('./pages/AnalyticsDashboardPage'));
 const UserSettingsPage = lazy(() => import('./pages/UserSettingsPage'));
+const SharedDocumentPage = lazy(() => import('./pages/SharedDocumentPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -83,6 +84,12 @@ function App() {
           element={
             isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
           }
+        />
+
+        {/* Shared Document Route (Public - No Auth Required) */}
+        <Route
+          path="/shared/:token"
+          element={<SharedDocumentPage />}
         />
 
         {/* Protected Routes */}
