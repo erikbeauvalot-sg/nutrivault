@@ -613,13 +613,52 @@ L'équipe NutriVault
     }
   ];
 
-  return sendEmail({
-    to: patient.email,
+  // Create email log entry before sending
+  const emailLog = await EmailLog.create({
+    email_type: 'document',
+    sent_to: patient.email,
+    patient_id: patient.id,
     subject,
-    text,
-    html,
-    attachments
+    body_html: html,
+    body_text: text,
+    variables_used: {
+      document_id: document.id,
+      document_name: document.file_name,
+      has_attachment: true
+    },
+    status: 'queued',
+    sent_by: sharedBy.id
   });
+
+  try {
+    const result = await sendEmail({
+      to: patient.email,
+      subject,
+      text,
+      html,
+      attachments
+    });
+
+    // Update log entry on success
+    await emailLog.update({
+      status: 'sent',
+      sent_at: new Date()
+    });
+
+    return {
+      ...result,
+      logId: emailLog.id
+    };
+  } catch (error) {
+    // Update log entry on failure
+    await emailLog.update({
+      status: 'failed',
+      error_message: error.message,
+      sent_at: new Date()
+    });
+
+    throw error;
+  }
 }
 
 module.exports = {

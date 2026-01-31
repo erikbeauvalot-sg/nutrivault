@@ -18,6 +18,7 @@ const EMAIL_TYPES = {
   reminder: { label: 'Rappel RDV', labelEn: 'Reminder', color: 'warning', icon: '⏰' },
   payment_reminder: { label: 'Relance', labelEn: 'Payment', color: 'danger', icon: '💳' },
   welcome: { label: 'Bienvenue', labelEn: 'Welcome', color: 'info', icon: '👋' },
+  document: { label: 'Document', labelEn: 'Document', color: 'secondary', icon: '📎' },
   other: { label: 'Autre', labelEn: 'Other', color: 'secondary', icon: '📄' }
 };
 
