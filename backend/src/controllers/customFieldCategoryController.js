@@ -317,6 +317,111 @@ const duplicateCategory = async (req, res) => {
   }
 };
 
+/**
+ * Export categories with their field definitions
+ * POST /api/custom-fields/export
+ */
+const exportCategories = async (req, res) => {
+  try {
+    const user = req.user;
+    const { categoryIds } = req.body; // Array of category IDs (empty = all)
+
+    const requestMetadata = {
+      ip_address: req.ip,
+      user_agent: req.get('user-agent'),
+      request_method: req.method,
+      request_path: req.originalUrl
+    };
+
+    const exportData = await customFieldCategoryService.exportCategories(
+      user,
+      categoryIds || [],
+      requestMetadata
+    );
+
+    res.json({
+      success: true,
+      data: exportData,
+      message: 'Categories exported successfully'
+    });
+  } catch (error) {
+    console.error('Export categories error:', error);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message || 'Failed to export categories'
+    });
+  }
+};
+
+/**
+ * Import categories with their field definitions
+ * POST /api/custom-fields/import
+ */
+const importCategories = async (req, res) => {
+  try {
+    // Check validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
+    const user = req.user;
+    const { importData, options } = req.body;
+
+    const requestMetadata = {
+      ip_address: req.ip,
+      user_agent: req.get('user-agent'),
+      request_method: req.method,
+      request_path: req.originalUrl
+    };
+
+    const results = await customFieldCategoryService.importCategories(
+      user,
+      importData,
+      options || {},
+      requestMetadata
+    );
+
+    res.json({
+      success: true,
+      data: results,
+      message: 'Import completed successfully'
+    });
+  } catch (error) {
+    console.error('Import categories error:', error);
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message || 'Failed to import categories'
+    });
+  }
+};
+
+// Validation middleware for import
+const validateImport = [
+  body('importData')
+    .isObject()
+    .withMessage('Import data must be an object'),
+  body('importData.categories')
+    .isArray()
+    .withMessage('Import data must contain a categories array'),
+  body('options')
+    .optional()
+    .isObject()
+    .withMessage('Options must be an object'),
+  body('options.skipExisting')
+    .optional()
+    .isBoolean()
+    .withMessage('skipExisting must be a boolean'),
+  body('options.updateExisting')
+    .optional()
+    .isBoolean()
+    .withMessage('updateExisting must be a boolean')
+];
+
 module.exports = {
   getAllCategories,
   getCategoryById,
@@ -325,7 +430,10 @@ module.exports = {
   deleteCategory,
   duplicateCategory,
   reorderCategories,
+  exportCategories,
+  importCategories,
   validateCreateCategory,
   validateUpdateCategory,
-  validateReorderCategories
+  validateReorderCategories,
+  validateImport
 };

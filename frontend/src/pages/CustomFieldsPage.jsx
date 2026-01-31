@@ -17,6 +17,8 @@ import visitTypeService from '../services/visitTypeService';
 import CustomFieldCategoryModal from '../components/CustomFieldCategoryModal';
 import CustomFieldDefinitionModal from '../components/CustomFieldDefinitionModal';
 import VisitTypeModal from '../components/VisitTypeModal';
+import ExportCustomFieldsModal from '../components/ExportCustomFieldsModal';
+import ImportCustomFieldsModal from '../components/ImportCustomFieldsModal';
 import ActionButton from '../components/ActionButton';
 import ConfirmModal from '../components/ConfirmModal';
 import './CustomFieldsPage.css';
@@ -64,6 +66,8 @@ const CustomFieldsPage = () => {
   const [definitionToDelete, setDefinitionToDelete] = useState(null);
   const [showDeleteVisitTypeConfirm, setShowDeleteVisitTypeConfirm] = useState(false);
   const [visitTypeToDelete, setVisitTypeToDelete] = useState(null);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Redirect if not admin
   useEffect(() => {
@@ -389,8 +393,29 @@ const CustomFieldsPage = () => {
       <Container className="mt-4">
         <Row className="mb-4">
           <Col>
-            <h1>🔧 {t('customFields.title', 'Custom Fields Management')}</h1>
-            <p className="text-muted">{t('customFields.subtitle', 'Define custom fields for patient profiles and visits')}</p>
+            <div className="d-flex justify-content-between align-items-start flex-wrap gap-2">
+              <div>
+                <h1>🔧 {t('customFields.title', 'Custom Fields Management')}</h1>
+                <p className="text-muted">{t('customFields.subtitle', 'Define custom fields for patient profiles and visits')}</p>
+              </div>
+              <div className="d-flex gap-2">
+                <Button
+                  variant="outline-primary"
+                  size="sm"
+                  onClick={() => setShowExportModal(true)}
+                  disabled={categories.length === 0}
+                >
+                  📤 {t('customFields.exportBtn', 'Export')}
+                </Button>
+                <Button
+                  variant="outline-success"
+                  size="sm"
+                  onClick={() => setShowImportModal(true)}
+                >
+                  📥 {t('customFields.importBtn', 'Import')}
+                </Button>
+              </div>
+            </div>
           </Col>
         </Row>
 
@@ -1237,6 +1262,21 @@ const CustomFieldsPage = () => {
           message={t('visitTypes.confirmDelete', 'Are you sure you want to delete this visit type?')}
           confirmLabel={t('common.delete', 'Delete')}
           variant="danger"
+        />
+
+        {/* Export Custom Fields Modal */}
+        <ExportCustomFieldsModal
+          show={showExportModal}
+          onHide={() => setShowExportModal(false)}
+          categories={categories}
+        />
+
+        {/* Import Custom Fields Modal */}
+        <ImportCustomFieldsModal
+          show={showImportModal}
+          onHide={() => setShowImportModal(false)}
+          onSuccess={fetchData}
+          existingCategories={categories}
         />
       </Container>
     </Layout>

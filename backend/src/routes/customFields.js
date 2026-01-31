@@ -107,6 +107,37 @@ router.post(
   customFieldCategoryController.duplicateCategory
 );
 
+// ===========================================
+// Export/Import Routes
+// ===========================================
+
+/**
+ * POST /api/custom-fields/export
+ * Export categories with their field definitions
+ * Role: ADMIN only
+ * Body: { categoryIds: [...] } - optional array of category IDs (empty = all)
+ */
+router.post(
+  '/export',
+  authenticate,
+  requireRole('ADMIN'),
+  customFieldCategoryController.exportCategories
+);
+
+/**
+ * POST /api/custom-fields/import
+ * Import categories with their field definitions
+ * Role: ADMIN only
+ * Body: { importData: {...}, options: { skipExisting: true, updateExisting: false } }
+ */
+router.post(
+  '/import',
+  authenticate,
+  requireRole('ADMIN'),
+  customFieldCategoryController.validateImport,
+  customFieldCategoryController.importCategories
+);
+
 /**
  * POST /api/custom-fields/definitions/:id/duplicate
  * Duplicate a field definition

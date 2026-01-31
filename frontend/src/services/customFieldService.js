@@ -274,6 +274,33 @@ export const duplicateDefinition = async (id, overrides = {}) => {
   return response.data;
 };
 
+// ===========================================
+// Export/Import API Calls
+// ===========================================
+
+/**
+ * Export categories with their field definitions
+ * @param {Array<string>} categoryIds - Array of category IDs to export (empty = all)
+ * @returns {Promise<object>} Export data
+ */
+export const exportCategories = async (categoryIds = []) => {
+  const response = await api.post('/custom-fields/export', { categoryIds });
+  return response.data;
+};
+
+/**
+ * Import categories with their field definitions
+ * @param {object} importData - Import data from export
+ * @param {object} options - Import options
+ * @param {boolean} options.skipExisting - Skip categories that already exist
+ * @param {boolean} options.updateExisting - Update existing categories
+ * @returns {Promise<object>} Import results
+ */
+export const importCategories = async (importData, options = {}) => {
+  const response = await api.post('/custom-fields/import', { importData, options });
+  return response.data;
+};
+
 export default {
   // Categories
   getCategories,
@@ -303,5 +330,9 @@ export default {
   getAllTranslations,
   getTranslations,
   setTranslations,
-  deleteTranslation
+  deleteTranslation,
+
+  // Export/Import
+  exportCategories,
+  importCategories
 };
