@@ -615,6 +615,7 @@ L'équipe NutriVault
 
   // Create email log entry before sending
   const emailLog = await EmailLog.create({
+    template_slug: 'document_attachment',
     email_type: 'document',
     sent_to: patient.email,
     patient_id: patient.id,
