@@ -108,10 +108,11 @@ const PatientDetailPage = () => {
 
   const fetchPatientDocuments = async () => {
     try {
-      const documentsData = await documentService.getDocuments({
+      const response = await documentService.getDocuments({
         resource_type: 'patient',
         resource_id: id
       });
+      const documentsData = response?.data || response;
       setDocuments(Array.isArray(documentsData) ? documentsData : []);
     } catch (err) {
       console.error('Error fetching patient documents:', err);
