@@ -240,7 +240,9 @@ function buildUnsubscribeLink(token) {
  * @returns {string} Tracking pixel URL
  */
 function buildTrackingPixel(patientId, campaignId) {
-  const baseUrl = process.env.API_URL || process.env.BACKEND_URL || 'http://localhost:3001';
+  // Use FRONTEND_URL because nginx proxies /api to backend
+  // This ensures tracking works in production where backend is not directly accessible
+  const baseUrl = process.env.BASE_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
   return `${baseUrl}/api/campaigns/track/open/${campaignId}/${patientId}`;
 }
 
@@ -307,7 +309,9 @@ function addTrackingPixel(html, pixelUrl) {
  * @returns {string} HTML with tracked links
  */
 function rewriteLinks(html, patientId, campaignId) {
-  const baseUrl = process.env.API_URL || process.env.BACKEND_URL || 'http://localhost:3001';
+  // Use FRONTEND_URL because nginx proxies /api to backend
+  // This ensures tracking works in production where backend is not directly accessible
+  const baseUrl = process.env.BASE_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
 
   // Find all href attributes and rewrite them
   const linkPattern = /href="(https?:\/\/[^"]+)"/gi;
