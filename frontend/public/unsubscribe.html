@@ -85,9 +85,6 @@
       const spinnerEl = document.getElementById('spinner');
       const footerEl = document.getElementById('footer');
 
-      // Get backend URL from environment or use default
-      const backendUrl = 'http://localhost:3001';
-
       if (!token) {
         spinnerEl.style.display = 'none';
         messageEl.textContent = '❌ Erreur : Jeton d\'annulation manquant.';
@@ -96,8 +93,8 @@
         return;
       }
 
-      // Call unsubscribe API
-      fetch(`${backendUrl}/api/appointment-reminders/unsubscribe/${encodeURIComponent(token)}`, {
+      // Call unsubscribe API using relative URL (works in production via nginx proxy)
+      fetch(`/api/appointment-reminders/unsubscribe/${encodeURIComponent(token)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
