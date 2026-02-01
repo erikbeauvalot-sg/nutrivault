@@ -12,6 +12,14 @@ import Layout from '../components/layout/Layout';
 import QuickPatientModal from '../components/QuickPatientModal';
 import AlertsWidget from '../components/AlertsWidget';
 import MeasureAlertsWidget from '../components/MeasureAlertsWidget';
+import {
+  PracticeOverviewWidget,
+  RevenueChartWidget,
+  ActivityFeedWidget,
+  TaskManagerWidget,
+  PracticeHealthScoreWidget,
+  WhatsNewWidget
+} from '../components/dashboard';
 import api from '../services/api';
 import visitService from '../services/visitService';
 import userService from '../services/userService';
@@ -337,126 +345,66 @@ const DashboardPage = () => {
             </Row>
           </>
         ) : (
-          /* MY OFFICE VIEW - Desktop-optimized, administration-focused */
+          /* MY OFFICE VIEW - Enhanced dashboard with KPIs, charts, and activity */
           <>
-            {/* Quick Actions */}
-            <Row className="g-4 mb-4">
+            {/* What's New Widget */}
+            <WhatsNewWidget />
+
+            {/* Practice Overview KPIs */}
+            <PracticeOverviewWidget />
+
+            {/* Revenue Chart + Health Score */}
+            <Row className="mb-4">
+              <Col lg={8} className="mb-4 mb-lg-0">
+                <RevenueChartWidget />
+              </Col>
+              <Col lg={4}>
+                <PracticeHealthScoreWidget />
+              </Col>
+            </Row>
+
+            {/* Activity Feed + Task Manager */}
+            <Row className="mb-4">
+              <Col lg={6} className="mb-4 mb-lg-0">
+                <ActivityFeedWidget />
+              </Col>
+              <Col lg={6}>
+                <TaskManagerWidget />
+              </Col>
+            </Row>
+
+            {/* Quick Navigation Cards */}
+            <Row className="g-3">
               <Col md={4}>
-                <Card className="text-center h-100 shadow-sm">
-                  <Card.Body>
-                    <div className="display-4 mb-3">👥</div>
-                    <h3 className="mb-2">{t('navigation.patients')}</h3>
-                    <p className="text-muted mb-3">{t('dashboard.managePatientRecords')}</p>
-                    <Link to="/patients" className="btn btn-primary">
+                <Card className="text-center h-100 shadow-sm border-0">
+                  <Card.Body className="py-3">
+                    <div className="h3 mb-2">👥</div>
+                    <h6 className="mb-2">{t('navigation.patients')}</h6>
+                    <Link to="/patients" className="btn btn-outline-primary btn-sm">
                       {t('dashboard.viewPatients')}
                     </Link>
                   </Card.Body>
                 </Card>
               </Col>
-
               <Col md={4}>
-                <Card className="text-center h-100 shadow-sm">
-                  <Card.Body>
-                    <div className="display-4 mb-3">🗓️</div>
-                    <h3 className="mb-2">{t('navigation.agenda')}</h3>
-                    <p className="text-muted mb-3">{t('dashboard.scheduleAndTrackVisits')}</p>
-                    <Link to="/agenda" className="btn btn-primary">
+                <Card className="text-center h-100 shadow-sm border-0">
+                  <Card.Body className="py-3">
+                    <div className="h3 mb-2">🗓️</div>
+                    <h6 className="mb-2">{t('navigation.agenda')}</h6>
+                    <Link to="/agenda" className="btn btn-outline-primary btn-sm">
                       {t('dashboard.viewAgenda')}
                     </Link>
                   </Card.Body>
                 </Card>
               </Col>
-
               <Col md={4}>
-                <Card className="text-center h-100 shadow-sm">
-                  <Card.Body>
-                    <div className="display-4 mb-3">💰</div>
-                    <h3 className="mb-2">{t('navigation.billing')}</h3>
-                    <p className="text-muted mb-3">{t('dashboard.manageInvoicesAndPayments')}</p>
-                    <Link to="/billing" className="btn btn-primary">
+                <Card className="text-center h-100 shadow-sm border-0">
+                  <Card.Body className="py-3">
+                    <div className="h3 mb-2">💰</div>
+                    <h6 className="mb-2">{t('navigation.billing')}</h6>
+                    <Link to="/billing" className="btn btn-outline-primary btn-sm">
                       {t('dashboard.viewBilling')}
                     </Link>
-                  </Card.Body>
-                </Card>
-              </Col>
-            </Row>
-
-            {/* Global Metrics - Clickable stats */}
-            <Row>
-              <Col md={12}>
-                <Card className="shadow-sm">
-                  <Card.Body>
-                    <h4 className="mb-3">{t('dashboard.quickStats')}</h4>
-                    <Row className="text-center">
-                      <Col md={3}>
-                        <div
-                          style={{ cursor: 'pointer', padding: '10px', borderRadius: '8px', transition: 'background-color 0.2s' }}
-                          onClick={() => navigate('/patients')}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          <div className="h2 text-primary mb-1">
-                            {stats.loading ? (
-                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                            ) : (
-                              stats.totalPatients
-                            )}
-                          </div>
-                          <div className="text-muted">{t('dashboard.totalPatients')}</div>
-                        </div>
-                      </Col>
-                      <Col md={3}>
-                        <div
-                          style={{ cursor: 'pointer', padding: '10px', borderRadius: '8px', transition: 'background-color 0.2s' }}
-                          onClick={() => navigate('/visits?status=SCHEDULED')}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          <div className="h2 text-success mb-1">
-                            {stats.loading ? (
-                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                            ) : (
-                              stats.scheduledVisits
-                            )}
-                          </div>
-                          <div className="text-muted">{t('dashboard.scheduledVisits')}</div>
-                        </div>
-                      </Col>
-                      <Col md={3}>
-                        <div
-                          style={{ cursor: 'pointer', padding: '10px', borderRadius: '8px', transition: 'background-color 0.2s' }}
-                          onClick={() => navigate('/visits')}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          <div className="h2 text-info mb-1">
-                            {stats.loading ? (
-                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                            ) : (
-                              stats.totalVisits
-                            )}
-                          </div>
-                          <div className="text-muted">{t('dashboard.totalVisits')}</div>
-                        </div>
-                      </Col>
-                      <Col md={3}>
-                        <div
-                          style={{ cursor: user?.role === 'ADMIN' ? 'pointer' : 'default', padding: '10px', borderRadius: '8px', transition: 'background-color 0.2s' }}
-                          onClick={() => user?.role === 'ADMIN' && navigate('/users')}
-                          onMouseEnter={(e) => user?.role === 'ADMIN' && (e.currentTarget.style.backgroundColor = '#f8f9fa')}
-                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                        >
-                          <div className="h2 text-warning mb-1">
-                            {stats.loading ? (
-                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                            ) : (
-                              user?.role === 'ADMIN' ? stats.totalUsers : user?.role || 'N/A'
-                            )}
-                          </div>
-                          <div className="text-muted">{user?.role === 'ADMIN' ? t('dashboard.totalUsers') : t('dashboard.yourRole')}</div>
-                        </div>
-                      </Col>
-                    </Row>
                   </Card.Body>
                 </Card>
               </Col>

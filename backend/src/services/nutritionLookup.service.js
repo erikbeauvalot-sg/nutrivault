@@ -200,6 +200,8 @@ function extractAllergens(tags) {
 
 /**
  * Guess ingredient category based on tags or name
+ * PRIORITY: Name-based detection takes precedence over API tags
+ * This prevents misclassification (e.g., "gros sel" being tagged as dairy by API)
  * @param {Array} tags - Category tags from API
  * @param {string} name - Ingredient name
  * @returns {string} Category
@@ -222,9 +224,20 @@ function guessCategory(tags, name) {
     beverages: ['juice', 'tea', 'coffee', 'jus', 'thé', 'café']
   };
 
+  // STEP 1: Check ingredient NAME first (takes priority)
+  // This ensures "gros sel" → spices, not dairy from misleading API tags
   for (const [category, patterns] of Object.entries(categoryPatterns)) {
     for (const pattern of patterns) {
-      if (nameLower.includes(pattern) || allTags.includes(pattern)) {
+      if (nameLower.includes(pattern)) {
+        return category;
+      }
+    }
+  }
+
+  // STEP 2: Fall back to API tags only if name didn't match
+  for (const [category, patterns] of Object.entries(categoryPatterns)) {
+    for (const pattern of patterns) {
+      if (allTags.includes(pattern)) {
         return category;
       }
     }

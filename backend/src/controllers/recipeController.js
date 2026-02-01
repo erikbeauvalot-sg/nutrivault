@@ -331,6 +331,29 @@ exports.getPatientRecipes = async (req, res, next) => {
 };
 
 /**
+ * POST /api/recipes/:id/shares/:shareId/resend - Resend share email
+ */
+exports.resendShareEmail = async (req, res, next) => {
+  try {
+    const { shareId } = req.params;
+    const user = req.user;
+    const requestMetadata = getRequestMetadata(req);
+
+    const result = await recipeSharingService.resendShareEmail(shareId, user, requestMetadata);
+
+    res.json({
+      success: true,
+      message: result.message,
+      data: {
+        patient_email: result.patient_email
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * GET /api/recipes/:id/export/pdf - Export recipe as PDF
  */
 exports.exportRecipePDF = async (req, res, next) => {

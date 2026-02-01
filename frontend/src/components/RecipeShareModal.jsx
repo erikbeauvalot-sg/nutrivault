@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Modal, Form, Button, Spinner, ListGroup, Badge, Alert, InputGroup } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
-import { FaSearch, FaShare, FaTimes, FaUser, FaTrash, FaEdit, FaCheck } from 'react-icons/fa';
+import { FaSearch, FaShare, FaTimes, FaUser, FaTrash, FaEdit, FaCheck, FaEnvelope } from 'react-icons/fa';
 import * as recipeService from '../services/recipeService';
 import * as patientService from '../services/patientService';
 import { debounce } from 'lodash';
@@ -26,6 +26,7 @@ const RecipeShareModal = ({ show, onHide, recipe, onSuccess }) => {
   const [editNotes, setEditNotes] = useState('');
   const [revokeAccessId, setRevokeAccessId] = useState(null);
   const [showRevokeModal, setShowRevokeModal] = useState(false);
+  const [resendingId, setResendingId] = useState(null);
 
   // Load existing shares when modal opens
   useEffect(() => {
@@ -151,6 +152,24 @@ const RecipeShareModal = ({ show, onHide, recipe, onSuccess }) => {
   const handleCancelEdit = () => {
     setEditingShare(null);
     setEditNotes('');
+  };
+
+  const handleResendEmail = async (share) => {
+    if (!share.patient?.email) {
+      toast.error(t('recipes.noPatientEmail', 'Patient does not have an email address'));
+      return;
+    }
+
+    setResendingId(share.id);
+    try {
+      await recipeService.resendShareEmail(recipe.id, share.id);
+      toast.success(t('recipes.emailResent', 'Email sent successfully to {{email}}', { email: share.patient.email }));
+    } catch (error) {
+      console.error('Error resending email:', error);
+      toast.error(error.response?.data?.error || t('common.error', 'An error occurred'));
+    } finally {
+      setResendingId(null);
+    }
   };
 
   return (
@@ -297,6 +316,21 @@ const RecipeShareModal = ({ show, onHide, recipe, onSuccess }) => {
                       </small>
                     </div>
                     <div className="d-flex gap-1">
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => handleResendEmail(share)}
+                        disabled={resendingId === share.id || !share.patient?.email}
+                        title={share.patient?.email
+                          ? t('recipes.resendEmail', 'Resend email')
+                          : t('recipes.noPatientEmail', 'No email address')}
+                      >
+                        {resendingId === share.id ? (
+                          <Spinner size="sm" />
+                        ) : (
+                          <FaEnvelope />
+                        )}
+                      </Button>
                       <Button
                         variant="outline-secondary"
                         size="sm"

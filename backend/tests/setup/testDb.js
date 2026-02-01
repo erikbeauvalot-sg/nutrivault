@@ -77,6 +77,8 @@ async function reset() {
     'Recipe',
     'RecipeCategory',
     'Ingredient',
+    // Task model
+    'Task',
     'Patient',
     'AuditLog',
     'RefreshToken',

@@ -199,7 +199,7 @@ const PatientsPage = () => {
       <QuickPatientModal
         show={showQuickPatientModal}
         onHide={() => setShowQuickPatientModal(false)}
-        onPatientCreated={handlePatientCreated}
+        onSuccess={handlePatientCreated}
       />
 
       <ConfirmModal

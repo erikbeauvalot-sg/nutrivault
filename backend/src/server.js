@@ -184,6 +184,10 @@ app.delete('/api/recipe-access/:id', authenticate, requirePermission('recipes.sh
 app.put('/api/recipe-access/:id', authenticate, requirePermission('recipes.share'), recipeController.updateShareNotes);
 app.get('/api/patients/:id/recipes', authenticate, requirePermission('recipes.read'), recipeController.getPatientRecipes);
 
+// Dashboard routes (protected - authentication required)
+const dashboardRoutes = require('./routes/dashboard');
+app.use('/api/dashboard', dashboardRoutes);
+
 // Serve uploaded files (logos, signatures)
 // Use /app in production (Docker), process.cwd() in development
 const uploadsBasePath = process.env.NODE_ENV === 'production' ? '/app/uploads' : path.join(process.cwd(), 'uploads');

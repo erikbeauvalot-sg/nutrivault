@@ -663,7 +663,7 @@ L'équipe NutriVault
 }
 
 /**
- * Send recipe share notification to patient
+ * Send recipe share notification to patient with PDF attachment
  * @param {Object} recipe - Recipe object
  * @param {Object} patient - Patient object
  * @param {Object} sharedBy - User who shared the recipe
@@ -671,6 +671,8 @@ L'équipe NutriVault
  * @returns {Promise<Object>} Email send result
  */
 async function sendRecipeShareEmail(recipe, patient, sharedBy, notes = null) {
+  const { generateRecipePDF } = require('./recipePDF.service');
+
   const subject = `Recette partagée : ${recipe.title} - NutriVault`;
 
   const difficultyLabels = {
@@ -693,6 +695,8 @@ ${totalTime > 0 ? `Temps total : ${totalTime} min` : ''}
 ${recipe.difficulty ? `Difficulté : ${difficultyLabels[recipe.difficulty] || recipe.difficulty}` : ''}
 ${notes ? `\nNote de votre diététicien(ne) : ${notes}` : ''}
 
+Vous trouverez la recette complète en pièce jointe (PDF).
+
 Cette recette a été spécialement sélectionnée pour vous par votre diététicien(ne).
 
 Cordialement,
@@ -713,6 +717,7 @@ L'équipe NutriVault
     .note { background-color: #e3f2fd; padding: 10px; border-radius: 4px; margin: 10px 0; border-left: 3px solid #2196F3; }
     .meta-info { display: flex; gap: 15px; margin: 10px 0; color: #666; }
     .meta-item { display: inline-block; }
+    .attachment-notice { background-color: #e8f5e9; border: 1px solid #4CAF50; padding: 10px; border-radius: 4px; margin: 15px 0; }
   </style>
 </head>
 <body>
@@ -736,6 +741,10 @@ L'équipe NutriVault
 
       ${notes ? `<div class="note"><strong>💬 Note de votre diététicien(ne) :</strong><br>${notes}</div>` : ''}
 
+      <div class="attachment-notice">
+        <strong>📎 Pièce jointe :</strong> Recette complète en PDF
+      </div>
+
       <p>Cette recette a été spécialement sélectionnée pour vous par votre diététicien(ne).</p>
       <p>Cordialement,<br><strong>L'équipe NutriVault</strong></p>
     </div>
@@ -747,12 +756,86 @@ L'équipe NutriVault
 </html>
   `.trim();
 
-  return sendEmail({
-    to: patient.email,
+  // Generate PDF attachment
+  let attachments = [];
+  try {
+    const pdfDoc = await generateRecipePDF(recipe.id, 'fr', notes);
+
+    // Collect PDF data into buffer
+    const chunks = [];
+    await new Promise((resolve, reject) => {
+      pdfDoc.on('data', chunk => chunks.push(chunk));
+      pdfDoc.on('end', resolve);
+      pdfDoc.on('error', reject);
+    });
+
+    const pdfBuffer = Buffer.concat(chunks);
+
+    // Sanitize filename
+    const safeTitle = recipe.title
+      .replace(/[^a-zA-Z0-9àâäéèêëïîôùûüçÀÂÄÉÈÊËÏÎÔÙÛÜÇ\s-]/g, '')
+      .replace(/\s+/g, '_')
+      .substring(0, 50);
+
+    attachments = [{
+      filename: `Recette_${safeTitle}.pdf`,
+      content: pdfBuffer,
+      contentType: 'application/pdf'
+    }];
+
+    console.log(`[RecipeShareEmail] PDF generated for recipe "${recipe.title}" (${pdfBuffer.length} bytes)`);
+  } catch (pdfError) {
+    // Log error but continue sending email without attachment
+    console.error('[RecipeShareEmail] Failed to generate PDF attachment:', pdfError.message);
+  }
+
+  // Create email log entry
+  const emailLog = await EmailLog.create({
+    template_slug: 'recipe_share',
+    email_type: 'recipe',
+    sent_to: patient.email,
+    patient_id: patient.id,
     subject,
-    text,
-    html
+    body_html: html,
+    body_text: text,
+    variables_used: {
+      recipe_id: recipe.id,
+      recipe_title: recipe.title,
+      has_attachment: attachments.length > 0
+    },
+    status: 'queued',
+    sent_by: sharedBy.id
   });
+
+  try {
+    const result = await sendEmail({
+      to: patient.email,
+      subject,
+      text,
+      html,
+      attachments: attachments.length > 0 ? attachments : undefined
+    });
+
+    // Update log entry on success
+    await emailLog.update({
+      status: 'sent',
+      sent_at: new Date()
+    });
+
+    return {
+      ...result,
+      logId: emailLog.id
+    };
+  } catch (error) {
+    // Update log entry on failure
+    await emailLog.update({
+      status: 'failed',
+      error_message: error.message,
+      sent_at: new Date()
+    });
+
+    throw error;
+  }
 }
 
 module.exports = {

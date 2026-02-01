@@ -162,6 +162,17 @@ export const updateShareNotes = async (accessId, notes) => {
 };
 
 /**
+ * Resend share email to patient
+ * @param {string} recipeId - Recipe UUID
+ * @param {string} shareId - Access record UUID
+ * @returns {Promise<object>}
+ */
+export const resendShareEmail = async (recipeId, shareId) => {
+  const response = await api.post(`/recipes/${recipeId}/shares/${shareId}/resend`);
+  return extractData(response);
+};
+
+/**
  * Get recipes shared with a patient
  * @param {string} patientId - Patient UUID
  * @param {object} filters - Pagination filters

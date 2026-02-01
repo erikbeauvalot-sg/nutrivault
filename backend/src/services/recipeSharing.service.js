@@ -355,10 +355,88 @@ async function updateShareNotes(accessId, notes, user, requestMetadata = {}) {
   }
 }
 
+/**
+ * Resend share email for an existing share
+ *
+ * @param {string} accessId - Access record UUID
+ * @param {Object} user - Authenticated user
+ * @param {Object} requestMetadata - Request metadata
+ * @returns {Promise<Object>} Result
+ */
+async function resendShareEmail(accessId, user, requestMetadata = {}) {
+  try {
+    // Find the access record with all required associations
+    const access = await RecipePatientAccess.findOne({
+      where: { id: accessId, is_active: true },
+      include: [
+        {
+          model: Recipe,
+          as: 'recipe',
+          where: { is_active: true }
+        },
+        {
+          model: Patient,
+          as: 'patient',
+          where: { is_active: true }
+        }
+      ]
+    });
+
+    if (!access) {
+      const error = new Error('Share record not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (!access.patient.email) {
+      const error = new Error('Patient does not have an email address');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Send the email
+    await emailService.sendRecipeShareEmail(
+      access.recipe,
+      access.patient,
+      user,
+      access.notes
+    );
+
+    // Log the resend action
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'UPDATE',
+      resource_type: 'recipe_patient_access',
+      resource_id: accessId,
+      changes: {
+        action: 'resend_email',
+        patient_id: access.patient.id,
+        recipe_id: access.recipe.id
+      },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200
+    });
+
+    return {
+      success: true,
+      message: 'Email sent successfully',
+      patient_email: access.patient.email
+    };
+  } catch (error) {
+    if (!error.statusCode) error.statusCode = 500;
+    throw error;
+  }
+}
+
 module.exports = {
   shareRecipe,
   getRecipeShares,
   getPatientRecipes,
   revokeAccess,
-  updateShareNotes
+  updateShareNotes,
+  resendShareEmail
 };

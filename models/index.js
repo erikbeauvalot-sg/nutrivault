@@ -51,6 +51,7 @@ db.Recipe = require('./Recipe')(sequelize, DataTypes);
 db.Ingredient = require('./Ingredient')(sequelize, DataTypes);
 db.RecipeIngredient = require('./RecipeIngredient')(sequelize, DataTypes);
 db.RecipePatientAccess = require('./RecipePatientAccess')(sequelize, DataTypes);
+db.Task = require('./Task')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -681,6 +682,34 @@ db.RecipePatientAccess.belongsTo(db.User, {
 db.User.hasMany(db.RecipePatientAccess, {
   foreignKey: 'shared_by',
   as: 'shared_recipes'
+});
+
+// Task associations
+db.Task.belongsTo(db.Patient, {
+  foreignKey: 'patient_id',
+  as: 'patient'
+});
+db.Patient.hasMany(db.Task, {
+  foreignKey: 'patient_id',
+  as: 'tasks'
+});
+
+db.Task.belongsTo(db.User, {
+  foreignKey: 'assigned_to',
+  as: 'assignee'
+});
+db.User.hasMany(db.Task, {
+  foreignKey: 'assigned_to',
+  as: 'assigned_tasks'
+});
+
+db.Task.belongsTo(db.User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+db.User.hasMany(db.Task, {
+  foreignKey: 'created_by',
+  as: 'created_tasks'
 });
 
 module.exports = db;

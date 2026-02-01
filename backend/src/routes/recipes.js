@@ -444,4 +444,19 @@ router.get(
   recipeController.getRecipeShares
 );
 
+/**
+ * POST /api/recipes/:id/shares/:shareId/resend - Resend share email
+ */
+router.post(
+  '/:id/shares/:shareId/resend',
+  authenticate,
+  requirePermission('recipes.share'),
+  [
+    param('id').isUUID().withMessage('Recipe ID must be a valid UUID'),
+    param('shareId').isUUID().withMessage('Share ID must be a valid UUID'),
+    validate
+  ],
+  recipeController.resendShareEmail
+);
+
 module.exports = router;
