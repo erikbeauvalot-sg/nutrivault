@@ -116,8 +116,8 @@ router.put(
       .isArray()
       .withMessage('permission_ids must be an array'),
     body('permission_ids.*')
-      .isUUID()
-      .withMessage('Each permission ID must be a valid UUID')
+      .notEmpty()
+      .withMessage('Permission ID cannot be empty')
   ],
   validate,
   roleController.updateRolePermissions
