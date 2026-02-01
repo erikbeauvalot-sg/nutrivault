@@ -158,7 +158,8 @@ exports.uploadDocument = [
       const metadata = {
         resource_type: req.body.resource_type,
         resource_id: req.body.resource_id,
-        description: req.body.description
+        description: req.body.description,
+        category: req.body.category
       };
       const requestMetadata = getRequestMetadata(req);
 
@@ -547,6 +548,32 @@ exports.sendByEmail = async (req, res, next) => {
         error: error.message
       });
     }
+    next(error);
+  }
+};
+
+/**
+ * Get documents shared with a patient
+ * GET /api/documents/patient/:patientId/shares
+ */
+exports.getPatientDocumentShares = async (req, res, next) => {
+  try {
+    const { patientId } = req.params;
+    const user = req.user;
+    const requestMetadata = {
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      method: req.method,
+      path: req.path
+    };
+
+    const shares = await documentService.getPatientDocumentShares(patientId, user, requestMetadata);
+
+    res.status(200).json({
+      success: true,
+      data: shares
+    });
+  } catch (error) {
     next(error);
   }
 };

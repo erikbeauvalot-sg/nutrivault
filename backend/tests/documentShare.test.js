@@ -460,4 +460,94 @@ describe('DocumentShare Model', () => {
       expect(share.sent_via).toBe('email');
     });
   });
+
+  // ========================================
+  // Document Category Tests
+  // ========================================
+  describe('Document Category', () => {
+    it('creates document with category', async () => {
+      const document = await db.Document.create({
+        resource_type: 'patient',
+        resource_id: testPatient.id,
+        file_name: 'recipe-test.pdf',
+        file_path: 'patient/2024-01-15/recipe-test.pdf',
+        file_size: 2048,
+        mime_type: 'application/pdf',
+        category: 'recipe',
+        uploaded_by: testUser.id,
+        is_active: true
+      });
+
+      expect(document.category).toBe('recipe');
+    });
+
+    it('supports various document categories', async () => {
+      const categories = ['recipe', 'guide', 'report', 'prescription', 'analysis', 'educational', 'other'];
+
+      for (const category of categories) {
+        const document = await db.Document.create({
+          resource_type: 'patient',
+          resource_id: testPatient.id,
+          file_name: `${category}-document.pdf`,
+          file_path: `patient/2024-01-15/${category}-document.pdf`,
+          file_size: 1024,
+          mime_type: 'application/pdf',
+          category: category,
+          uploaded_by: testUser.id,
+          is_active: true
+        });
+        expect(document.category).toBe(category);
+      }
+    });
+
+    it('allows null category', async () => {
+      const document = await db.Document.create({
+        resource_type: 'patient',
+        resource_id: testPatient.id,
+        file_name: 'no-category.pdf',
+        file_path: 'patient/2024-01-15/no-category.pdf',
+        file_size: 1024,
+        mime_type: 'application/pdf',
+        category: null,
+        uploaded_by: testUser.id,
+        is_active: true
+      });
+
+      expect(document.category).toBeNull();
+    });
+
+    it('filters documents by category', async () => {
+      // Create documents with different categories
+      await db.Document.create({
+        resource_type: 'patient',
+        resource_id: testPatient.id,
+        file_name: 'recipe1.pdf',
+        file_path: 'patient/2024-01-15/recipe1.pdf',
+        file_size: 1024,
+        mime_type: 'application/pdf',
+        category: 'recipe',
+        uploaded_by: testUser.id,
+        is_active: true
+      });
+
+      await db.Document.create({
+        resource_type: 'patient',
+        resource_id: testPatient.id,
+        file_name: 'guide1.pdf',
+        file_path: 'patient/2024-01-15/guide1.pdf',
+        file_size: 1024,
+        mime_type: 'application/pdf',
+        category: 'guide',
+        uploaded_by: testUser.id,
+        is_active: true
+      });
+
+      const recipeDocuments = await db.Document.findAll({
+        where: { category: 'recipe', is_active: true }
+      });
+
+      expect(recipeDocuments.length).toBeGreaterThanOrEqual(1);
+      expect(recipeDocuments.every(d => d.category === 'recipe')).toBe(true);
+    });
+  });
 });

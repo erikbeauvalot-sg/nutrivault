@@ -46,6 +46,11 @@ db.AIPrompt = require('./AIPrompt')(sequelize, DataTypes);
 db.MeasureAnnotation = require('./MeasureAnnotation')(sequelize, DataTypes);
 db.VisitType = require('./VisitType')(sequelize, DataTypes);
 db.DocumentAccessLog = require('./DocumentAccessLog')(sequelize, DataTypes);
+db.RecipeCategory = require('./RecipeCategory')(sequelize, DataTypes);
+db.Recipe = require('./Recipe')(sequelize, DataTypes);
+db.Ingredient = require('./Ingredient')(sequelize, DataTypes);
+db.RecipeIngredient = require('./RecipeIngredient')(sequelize, DataTypes);
+db.RecipePatientAccess = require('./RecipePatientAccess')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -589,6 +594,93 @@ db.MeasureAnnotation.belongsTo(db.User, {
 db.User.hasMany(db.MeasureAnnotation, {
   foreignKey: 'created_by',
   as: 'created_annotations'
+});
+
+// RecipeCategory - Recipe relationship
+db.RecipeCategory.hasMany(db.Recipe, {
+  foreignKey: 'category_id',
+  as: 'recipes'
+});
+db.Recipe.belongsTo(db.RecipeCategory, {
+  foreignKey: 'category_id',
+  as: 'category'
+});
+
+// RecipeCategory - User (created_by) relationship
+db.RecipeCategory.belongsTo(db.User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+db.User.hasMany(db.RecipeCategory, {
+  foreignKey: 'created_by',
+  as: 'created_recipe_categories'
+});
+
+// Recipe - User (created_by) relationship
+db.Recipe.belongsTo(db.User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+db.User.hasMany(db.Recipe, {
+  foreignKey: 'created_by',
+  as: 'created_recipes'
+});
+
+// Ingredient - User (created_by) relationship
+db.Ingredient.belongsTo(db.User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+db.User.hasMany(db.Ingredient, {
+  foreignKey: 'created_by',
+  as: 'created_ingredients'
+});
+
+// RecipeIngredient associations
+db.RecipeIngredient.belongsTo(db.Recipe, {
+  foreignKey: 'recipe_id',
+  as: 'recipe'
+});
+db.Recipe.hasMany(db.RecipeIngredient, {
+  foreignKey: 'recipe_id',
+  as: 'ingredients'
+});
+
+db.RecipeIngredient.belongsTo(db.Ingredient, {
+  foreignKey: 'ingredient_id',
+  as: 'ingredient'
+});
+db.Ingredient.hasMany(db.RecipeIngredient, {
+  foreignKey: 'ingredient_id',
+  as: 'recipe_usages'
+});
+
+// RecipePatientAccess associations
+db.RecipePatientAccess.belongsTo(db.Recipe, {
+  foreignKey: 'recipe_id',
+  as: 'recipe'
+});
+db.Recipe.hasMany(db.RecipePatientAccess, {
+  foreignKey: 'recipe_id',
+  as: 'patient_access'
+});
+
+db.RecipePatientAccess.belongsTo(db.Patient, {
+  foreignKey: 'patient_id',
+  as: 'patient'
+});
+db.Patient.hasMany(db.RecipePatientAccess, {
+  foreignKey: 'patient_id',
+  as: 'recipe_access'
+});
+
+db.RecipePatientAccess.belongsTo(db.User, {
+  foreignKey: 'shared_by',
+  as: 'sharedByUser'
+});
+db.User.hasMany(db.RecipePatientAccess, {
+  foreignKey: 'shared_by',
+  as: 'shared_recipes'
 });
 
 module.exports = db;

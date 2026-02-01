@@ -19,6 +19,7 @@ import CustomFieldRadarChart from '../components/CustomFieldRadarChart';
 import MeasureHistory from '../components/MeasureHistory';
 import MeasureComparison from '../components/MeasureComparison';
 import EmailHistory from '../components/EmailHistory';
+import SharingHistory from '../components/SharingHistory';
 import PatientHealthScore from '../components/PatientHealthScore';
 import ActionButton from '../components/ActionButton';
 import ConfirmModal from '../components/ConfirmModal';
@@ -33,6 +34,7 @@ import api from '../services/api';
 import * as patientService from '../services/patientService';
 import * as documentService from '../services/documentService';
 import visitService from '../services/visitService';
+import * as recipeService from '../services/recipeService';
 import './PatientDetailPage.css';
 
 const PatientDetailPage = () => {
@@ -75,6 +77,8 @@ const PatientDetailPage = () => {
   const [visitToDelete, setVisitToDelete] = useState(null);
   const [showDeleteInvoiceConfirm, setShowDeleteInvoiceConfirm] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState(null);
+  const [patientRecipes, setPatientRecipes] = useState([]);
+  const [recipesLoading, setRecipesLoading] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -82,6 +86,7 @@ const PatientDetailPage = () => {
       fetchPatientDocuments();
       fetchPatientInvoices();
       fetchPatientMeasures();
+      fetchPatientRecipes();
     }
   }, [id]);
 
@@ -131,6 +136,19 @@ const PatientDetailPage = () => {
       // Don't set error for invoices failure
     } finally {
       setInvoicesLoading(false);
+    }
+  };
+
+  const fetchPatientRecipes = async () => {
+    try {
+      setRecipesLoading(true);
+      const { data } = await recipeService.getPatientRecipes(id);
+      setPatientRecipes(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error fetching patient recipes:', err);
+      // Don't set error for recipes failure
+    } finally {
+      setRecipesLoading(false);
     }
   };
 
@@ -1004,7 +1022,102 @@ const PatientDetailPage = () => {
                 )}
               </Tab>
 
-              {/* 7. Administrative Tab */}
+              {/* 7. Recipes Tab */}
+              <Tab eventKey="recipes" title={`🍽️ ${t('recipes.title', 'Recettes')} (${patientRecipes.length})`}>
+                <Card>
+                  <Card.Header>
+                    <h5 className="mb-0">{t('recipes.sharedWithPatient', 'Recettes partagées avec ce patient')}</h5>
+                  </Card.Header>
+                  <Card.Body>
+                    {recipesLoading ? (
+                      <div className="text-center py-5">
+                        <Spinner animation="border" role="status">
+                          <span className="visually-hidden">{t('common.loading')}</span>
+                        </Spinner>
+                        <p className="mt-2">{t('common.loading', 'Chargement...')}</p>
+                      </div>
+                    ) : patientRecipes.length === 0 ? (
+                      <div className="text-center py-5">
+                        <div className="mb-3" style={{ fontSize: '3rem' }}>🍽️</div>
+                        <h6>{t('recipes.noSharedRecipes', 'Aucune recette partagée')}</h6>
+                        <p className="text-muted">
+                          {t('recipes.noSharedRecipesDescription', 'Aucune recette n\'a encore été partagée avec ce patient.')}
+                        </p>
+                        <Button
+                          variant="outline-primary"
+                          onClick={() => navigate('/recipes')}
+                        >
+                          {t('recipes.goToRecipes', 'Aller aux recettes')}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="table-responsive">
+                        <table className="table table-hover mb-0">
+                          <thead>
+                            <tr>
+                              <th>{t('recipes.recipeTitle', 'Recette')}</th>
+                              <th>{t('recipes.category', 'Catégorie')}</th>
+                              <th>{t('recipes.sharedAt', 'Partagée le')}</th>
+                              <th>{t('recipes.sharedBy', 'Par')}</th>
+                              <th>{t('recipes.notes', 'Notes')}</th>
+                              <th className="text-end">{t('common.actions', 'Actions')}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {patientRecipes.map(share => (
+                              <tr
+                                key={share.id}
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => share.recipe && navigate(`/recipes/${share.recipe.id}`)}
+                              >
+                                <td>
+                                  <strong>{share.recipe?.title || t('recipes.unknown', 'Recette inconnue')}</strong>
+                                  {share.recipe?.difficulty && (
+                                    <Badge bg="light" text="dark" className="ms-2">
+                                      {t(`recipes.difficulty.${share.recipe.difficulty}`, share.recipe.difficulty)}
+                                    </Badge>
+                                  )}
+                                </td>
+                                <td>
+                                  {share.recipe?.category && (
+                                    <span>
+                                      {share.recipe.category.icon} {share.recipe.category.name}
+                                    </span>
+                                  )}
+                                </td>
+                                <td>{formatDate(share.shared_at)}</td>
+                                <td>
+                                  {share.sharedByUser
+                                    ? `${share.sharedByUser.first_name} ${share.sharedByUser.last_name}`
+                                    : '-'}
+                                </td>
+                                <td>
+                                  {share.notes ? (
+                                    <span className="text-truncate d-inline-block" style={{ maxWidth: '200px' }} title={share.notes}>
+                                      {share.notes}
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted">-</span>
+                                  )}
+                                </td>
+                                <td className="text-end" onClick={(e) => e.stopPropagation()}>
+                                  <ActionButton
+                                    action="view"
+                                    onClick={() => share.recipe && navigate(`/recipes/${share.recipe.id}`)}
+                                    title={t('common.view', 'Voir')}
+                                  />
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </Card.Body>
+                </Card>
+              </Tab>
+
+              {/* 8. Administrative Tab */}
               {canEditPatient && (
                 <Tab eventKey="admin" title={t('patients.administrativeTab', 'Administratif')}>
                   {/* Administrative Info Card */}
@@ -1048,6 +1161,9 @@ const PatientDetailPage = () => {
 
                   {/* Email Communication History */}
                   <EmailHistory patientId={id} />
+
+                  {/* Sharing History (Documents & Recipes) */}
+                  <SharingHistory patientId={id} />
                 </Tab>
               )}
 

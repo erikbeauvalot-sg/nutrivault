@@ -163,7 +163,8 @@ async function uploadDocument(user, file, metadata, requestMetadata = {}) {
       file_size: file.size,
       mime_type: file.mimetype,
       uploaded_by: user.id,
-      description: metadata.description || null
+      description: metadata.description || null,
+      category: metadata.category || null
     });
 
     // Fetch complete document with uploader info
@@ -1531,6 +1532,49 @@ async function sendDocumentByEmail(user, documentId, patientId, message = null, 
   }
 }
 
+/**
+ * Get documents shared with a specific patient
+ * @param {string} patientId - Patient UUID
+ * @param {object} user - Current user
+ * @param {object} requestMetadata - Request metadata
+ * @returns {Promise<Array>} Array of document shares
+ */
+async function getPatientDocumentShares(patientId, user, requestMetadata = {}) {
+  try {
+    const shares = await DocumentShare.findAll({
+      where: {
+        patient_id: patientId,
+        is_active: true
+      },
+      include: [
+        {
+          model: Document,
+          as: 'document',
+          attributes: ['id', 'file_name', 'original_name', 'mime_type', 'file_size', 'description']
+        },
+        {
+          model: User,
+          as: 'sharedByUser',
+          attributes: ['id', 'username', 'first_name', 'last_name']
+        }
+      ],
+      order: [['created_at', 'DESC']]
+    });
+
+    await auditService.log({
+      userId: user.id,
+      action: 'document.list_patient_shares',
+      resourceType: 'patient',
+      resourceId: patientId,
+      ...requestMetadata
+    });
+
+    return shares;
+  } catch (error) {
+    throw error;
+  }
+}
+
 module.exports = {
   uploadDocument,
   getDocuments,
@@ -1558,6 +1602,7 @@ module.exports = {
   getDocumentSharesWithLogs,
   recordShareView,
   sendDocumentByEmail,
+  getPatientDocumentShares,
   ALLOWED_MIME_TYPES,
   MAX_FILE_SIZE
 };

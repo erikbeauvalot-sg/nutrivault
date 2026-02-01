@@ -167,20 +167,34 @@ export const getDocumentShares = async (id) => {
 };
 
 /**
+ * Get documents shared with a specific patient
+ * @param {string} patientId - Patient UUID
+ * @returns {Promise<array>} Array of document share records
+ */
+export const getPatientDocumentShares = async (patientId) => {
+  const response = await api.get(`/documents/patient/${patientId}/shares`);
+  return response.data?.data || response.data || [];
+};
+
+/**
  * Helper function to create FormData for file upload
  * @param {File} file - File object
  * @param {string} resourceType - Type of resource
  * @param {string} resourceId - Resource ID
  * @param {string} description - Optional description
+ * @param {string} category - Optional category
  * @returns {FormData} FormData object ready for upload
  */
-export const createUploadFormData = (file, resourceType, resourceId, description = '') => {
+export const createUploadFormData = (file, resourceType, resourceId, description = '', category = '') => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('resource_type', resourceType);
   formData.append('resource_id', resourceId);
   if (description) {
     formData.append('description', description);
+  }
+  if (category) {
+    formData.append('category', category);
   }
   return formData;
 };

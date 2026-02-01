@@ -662,10 +662,104 @@ L'équipe NutriVault
   }
 }
 
+/**
+ * Send recipe share notification to patient
+ * @param {Object} recipe - Recipe object
+ * @param {Object} patient - Patient object
+ * @param {Object} sharedBy - User who shared the recipe
+ * @param {string} notes - Optional notes about the sharing
+ * @returns {Promise<Object>} Email send result
+ */
+async function sendRecipeShareEmail(recipe, patient, sharedBy, notes = null) {
+  const subject = `Recette partagée : ${recipe.title} - NutriVault`;
+
+  const difficultyLabels = {
+    easy: 'Facile',
+    medium: 'Moyen',
+    hard: 'Difficile'
+  };
+
+  const totalTime = (recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0);
+
+  const text = `
+Bonjour ${patient.first_name} ${patient.last_name},
+
+${sharedBy.first_name} ${sharedBy.last_name} a partagé une recette avec vous :
+
+Recette : ${recipe.title}
+${recipe.description ? `Description : ${recipe.description}` : ''}
+${recipe.servings ? `Portions : ${recipe.servings}` : ''}
+${totalTime > 0 ? `Temps total : ${totalTime} min` : ''}
+${recipe.difficulty ? `Difficulté : ${difficultyLabels[recipe.difficulty] || recipe.difficulty}` : ''}
+${notes ? `\nNote de votre diététicien(ne) : ${notes}` : ''}
+
+Cette recette a été spécialement sélectionnée pour vous par votre diététicien(ne).
+
+Cordialement,
+L'équipe NutriVault
+  `.trim();
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #FF9800; color: white; padding: 20px; text-align: center; }
+    .content { padding: 20px; background-color: #f9f9f9; }
+    .recipe-details { background-color: white; padding: 15px; margin: 20px 0; border-left: 4px solid #FF9800; }
+    .footer { text-align: center; padding: 20px; color: #777; font-size: 12px; }
+    .note { background-color: #e3f2fd; padding: 10px; border-radius: 4px; margin: 10px 0; border-left: 3px solid #2196F3; }
+    .meta-info { display: flex; gap: 15px; margin: 10px 0; color: #666; }
+    .meta-item { display: inline-block; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🍽️ Recette partagée</h1>
+    </div>
+    <div class="content">
+      <p>Bonjour ${patient.first_name} ${patient.last_name},</p>
+      <p><strong>${sharedBy.first_name} ${sharedBy.last_name}</strong> a partagé une recette avec vous :</p>
+
+      <div class="recipe-details">
+        <h2 style="margin-top: 0; color: #FF9800;">${recipe.title}</h2>
+        ${recipe.description ? `<p>${recipe.description}</p>` : ''}
+        <div class="meta-info">
+          ${recipe.servings ? `<span class="meta-item">👥 ${recipe.servings} portions</span>` : ''}
+          ${totalTime > 0 ? `<span class="meta-item">⏱️ ${totalTime} min</span>` : ''}
+          ${recipe.difficulty ? `<span class="meta-item">📊 ${difficultyLabels[recipe.difficulty] || recipe.difficulty}</span>` : ''}
+        </div>
+      </div>
+
+      ${notes ? `<div class="note"><strong>💬 Note de votre diététicien(ne) :</strong><br>${notes}</div>` : ''}
+
+      <p>Cette recette a été spécialement sélectionnée pour vous par votre diététicien(ne).</p>
+      <p>Cordialement,<br><strong>L'équipe NutriVault</strong></p>
+    </div>
+    <div class="footer">
+      <p>Ceci est un email automatique. Veuillez ne pas répondre à ce message.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  return sendEmail({
+    to: patient.email,
+    subject,
+    text,
+    html
+  });
+}
+
 module.exports = {
   sendEmail,
   sendInvoiceEmail,
   sendDocumentShareEmail,
+  sendRecipeShareEmail,
   sendDocumentAsAttachment,
   sendPaymentReminderEmail,
   verifyEmailConfig,

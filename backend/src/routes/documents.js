@@ -299,6 +299,20 @@ router.delete(
   documentController.removeTags
 );
 
+// GET /api/documents/patient/:patientId/shares - Get documents shared with a patient
+router.get(
+  '/patient/:patientId/shares',
+  authenticate,
+  requirePermission('documents.read'),
+  [
+    param('patientId')
+      .isUUID()
+      .withMessage('Invalid patient ID format')
+  ],
+  validate,
+  documentController.getPatientDocumentShares
+);
+
 // POST /api/documents/:id/send-to-patient - Send document to patient
 router.post(
   '/:id/send-to-patient',

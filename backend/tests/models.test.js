@@ -78,7 +78,12 @@ describe('Models Index', () => {
     'BillingTemplate',
     'BillingTemplateItem',
     'InvoiceCustomization',
-    'AIPrompt'
+    'AIPrompt',
+    'Recipe',
+    'RecipeCategory',
+    'Ingredient',
+    'RecipeIngredient',
+    'RecipePatientAccess'
   ];
 
   test.each(expectedModels)('Expected model %s should be exported', (modelName) => {

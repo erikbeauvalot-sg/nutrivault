@@ -71,6 +71,12 @@ async function reset() {
     'DocumentAccessLog',
     'DocumentShare',
     'Document',
+    // Recipe models
+    'RecipePatientAccess',
+    'RecipeIngredient',
+    'Recipe',
+    'RecipeCategory',
+    'Ingredient',
     'Patient',
     'AuditLog',
     'RefreshToken',

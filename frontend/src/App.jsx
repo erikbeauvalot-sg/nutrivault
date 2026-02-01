@@ -48,6 +48,8 @@ const AIConfigPage = lazy(() => import('./pages/AIConfigPage'));
 const AnalyticsDashboardPage = lazy(() => import('./pages/AnalyticsDashboardPage'));
 const UserSettingsPage = lazy(() => import('./pages/UserSettingsPage'));
 const SharedDocumentPage = lazy(() => import('./pages/SharedDocumentPage'));
+const RecipesPage = lazy(() => import('./pages/RecipesPage'));
+const RecipeDetailPage = lazy(() => import('./pages/RecipeDetailPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -368,6 +370,24 @@ function App() {
         element={
           <ProtectedRoute>
             <UserSettingsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/recipes"
+        element={
+          <ProtectedRoute permission="recipes.read">
+            <RecipesPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/recipes/:id"
+        element={
+          <ProtectedRoute permission="recipes.read">
+            <RecipeDetailPage />
           </ProtectedRoute>
         }
       />

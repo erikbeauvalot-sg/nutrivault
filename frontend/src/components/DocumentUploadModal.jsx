@@ -9,6 +9,16 @@ import { useTranslation } from 'react-i18next';
 import { useDropzone } from 'react-dropzone';
 import * as documentService from '../services/documentService';
 
+const DOCUMENT_CATEGORIES = [
+  'recipe',
+  'guide',
+  'report',
+  'prescription',
+  'analysis',
+  'educational',
+  'other'
+];
+
 const DocumentUploadModal = ({
   show,
   onHide,
@@ -20,6 +30,7 @@ const DocumentUploadModal = ({
   const { t } = useTranslation();
   const [files, setFiles] = useState([]);
   const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
@@ -73,7 +84,8 @@ const DocumentUploadModal = ({
           file,
           actualResourceType,
           actualResourceId,
-          description
+          description,
+          category
         );
 
         const result = await documentService.uploadDocument(formData);
@@ -89,6 +101,7 @@ const DocumentUploadModal = ({
       setSuccess(t('documents.uploadSuccess', 'Documents uploaded successfully'));
       setFiles([]);
       setDescription('');
+      setCategory('');
 
       if (onUploadSuccess) {
         onUploadSuccess();
@@ -105,6 +118,7 @@ const DocumentUploadModal = ({
     if (!uploading) {
       setFiles([]);
       setDescription('');
+      setCategory('');
       setError(null);
       setSuccess(null);
       setUploadProgress(0);
@@ -201,6 +215,23 @@ const DocumentUploadModal = ({
             </Card.Body>
           </Card>
         )}
+
+        {/* Category */}
+        <Form.Group className="mb-3">
+          <Form.Label>{t('documents.category', 'Category')}</Form.Label>
+          <Form.Select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            disabled={uploading}
+          >
+            <option value="">{t('documents.selectCategory', 'Select a category...')}</option>
+            {DOCUMENT_CATEGORIES.map(cat => (
+              <option key={cat} value={cat}>
+                {t(`documents.categories.${cat}`, cat)}
+              </option>
+            ))}
+          </Form.Select>
+        </Form.Group>
 
         {/* Description */}
         <Form.Group className="mb-3">

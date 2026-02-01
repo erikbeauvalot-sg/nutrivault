@@ -165,6 +165,25 @@ app.use('/api/calendar', googleCalendarRoutes);
 const visitTypesRoutes = require('./routes/visitTypes');
 app.use('/api/visit-types', visitTypesRoutes);
 
+// Recipe routes (protected - RBAC enforced in routes file)
+const recipeRoutes = require('./routes/recipes');
+app.use('/api/recipes', recipeRoutes);
+app.use('/api/recipe-categories', (req, res, next) => {
+  // Redirect /api/recipe-categories to /api/recipes/categories
+  req.url = '/categories' + req.url;
+  recipeRoutes(req, res, next);
+});
+
+// Ingredient routes (protected - RBAC enforced in routes file)
+const ingredientRoutes = require('./routes/ingredients');
+app.use('/api/ingredients', ingredientRoutes);
+
+// Recipe access routes (for revoking/updating shares)
+const recipeController = require('./controllers/recipeController');
+app.delete('/api/recipe-access/:id', authenticate, requirePermission('recipes.share'), recipeController.revokeAccess);
+app.put('/api/recipe-access/:id', authenticate, requirePermission('recipes.share'), recipeController.updateShareNotes);
+app.get('/api/patients/:id/recipes', authenticate, requirePermission('recipes.read'), recipeController.getPatientRecipes);
+
 // Serve uploaded files (logos, signatures)
 // Use /app in production (Docker), process.cwd() in development
 const uploadsBasePath = process.env.NODE_ENV === 'production' ? '/app/uploads' : path.join(process.cwd(), 'uploads');
