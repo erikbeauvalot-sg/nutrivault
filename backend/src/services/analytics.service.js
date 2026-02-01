@@ -297,7 +297,7 @@ async function getFinancialMetrics(options = {}) {
       attributes: [
         'status',
         [fn('COUNT', col('id')), 'count'],
-        [fn('SUM', col('total_amount')), 'total'],
+        [fn('SUM', col('amount_total')), 'total'],
         [fn('SUM', col('amount_paid')), 'paid'],
         [fn('SUM', col('amount_due')), 'due']
       ],
@@ -312,7 +312,7 @@ async function getFinancialMetrics(options = {}) {
     const monthlyRevenue = await Billing.findAll({
       attributes: [
         [fn('strftime', '%Y-%m', col('invoice_date')), 'month'],
-        [fn('SUM', col('total_amount')), 'total'],
+        [fn('SUM', col('amount_total')), 'total'],
         [fn('SUM', col('amount_paid')), 'paid'],
         [fn('COUNT', col('id')), 'invoice_count']
       ],
@@ -343,10 +343,10 @@ async function getFinancialMetrics(options = {}) {
     const totalStats = await Billing.findOne({
       attributes: [
         [fn('COUNT', col('id')), 'total_invoices'],
-        [fn('SUM', col('total_amount')), 'total_revenue'],
+        [fn('SUM', col('amount_total')), 'total_revenue'],
         [fn('SUM', col('amount_paid')), 'total_collected'],
         [fn('SUM', col('amount_due')), 'total_outstanding'],
-        [fn('AVG', col('total_amount')), 'avg_invoice_amount']
+        [fn('AVG', col('amount_total')), 'avg_invoice_amount']
       ],
       where: {
         ...invoiceDateFilter,
@@ -468,9 +468,7 @@ async function getCommunicationEffectiveness(options = {}) {
         [fn('COUNT', col('id')), 'count'],
         [fn('AVG', col('reminders_sent')), 'avg_reminders']
       ],
-      where: {
-        visit_date: Object.keys(dateFilter).length > 0 ? dateFilter : undefined
-      },
+      where: Object.keys(dateFilter).length > 0 ? { visit_date: dateFilter } : {},
       group: ['status']
     });
 
@@ -482,7 +480,7 @@ async function getCommunicationEffectiveness(options = {}) {
         [fn('COUNT', col('id')), 'count']
       ],
       where: {
-        visit_date: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
+        ...(Object.keys(dateFilter).length > 0 ? { visit_date: dateFilter } : {}),
         status: { [Op.in]: ['COMPLETED', 'NO_SHOW', 'CANCELLED'] }
       },
       group: [literal("CASE WHEN reminders_sent > 0 THEN 'with_reminder' ELSE 'no_reminder' END"), 'status']

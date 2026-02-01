@@ -167,7 +167,7 @@ function AnalyticsDashboardPage() {
             <Card className="text-center h-100">
               <Card.Body>
                 <h2 className="text-success">
-                  {measureStats?.complianceRate ? `${measureStats.complianceRate.toFixed(1)}%` : 'N/A'}
+                  {measureStats?.complianceRate ? `${parseFloat(measureStats.complianceRate).toFixed(1)}%` : 'N/A'}
                 </h2>
                 <small className="text-muted">{t('analytics.complianceRate', 'Compliance Rate')}</small>
               </Card.Body>
@@ -478,7 +478,7 @@ function AnalyticsDashboardPage() {
             <Card className="text-center h-100">
               <Card.Body>
                 <h2 className="text-success">
-                  {summary?.deliveryRate ? `${summary.deliveryRate.toFixed(1)}%` : 'N/A'}
+                  {summary?.deliveryRate ? `${parseFloat(summary.deliveryRate).toFixed(1)}%` : 'N/A'}
                 </h2>
                 <small className="text-muted">{t('analytics.deliveryRate', 'Delivery Rate')}</small>
               </Card.Body>
@@ -488,7 +488,7 @@ function AnalyticsDashboardPage() {
             <Card className="text-center h-100">
               <Card.Body>
                 <h2 className="text-info">
-                  {summary?.openRate ? `${summary.openRate.toFixed(1)}%` : 'N/A'}
+                  {summary?.openRate ? `${parseFloat(summary.openRate).toFixed(1)}%` : 'N/A'}
                 </h2>
                 <small className="text-muted">{t('analytics.openRate', 'Open Rate')}</small>
               </Card.Body>
@@ -497,8 +497,8 @@ function AnalyticsDashboardPage() {
           <Col md={3}>
             <Card className="text-center h-100">
               <Card.Body>
-                <h2 className={noShowRates?.overall > 10 ? 'text-danger' : 'text-success'}>
-                  {noShowRates?.overall ? `${noShowRates.overall.toFixed(1)}%` : 'N/A'}
+                <h2 className={parseFloat(noShowRates?.overall) > 10 ? 'text-danger' : 'text-success'}>
+                  {noShowRates?.overall ? `${parseFloat(noShowRates.overall).toFixed(1)}%` : 'N/A'}
                 </h2>
                 <small className="text-muted">{t('analytics.noShowRate', 'No-Show Rate')}</small>
               </Card.Body>
@@ -569,9 +569,9 @@ function AnalyticsDashboardPage() {
                     </Row>
                     <hr />
                     <div className="text-center">
-                      <Badge bg={reminderEffectiveness.reductionRate > 0 ? 'success' : 'secondary'} className="fs-6">
-                        {reminderEffectiveness.reductionRate > 0
-                          ? t('analytics.noShowReduction', 'No-show reduction: {{rate}}%', { rate: reminderEffectiveness.reductionRate.toFixed(1) })
+                      <Badge bg={parseFloat(reminderEffectiveness.reductionRate) > 0 ? 'success' : 'secondary'} className="fs-6">
+                        {parseFloat(reminderEffectiveness.reductionRate) > 0
+                          ? t('analytics.noShowReduction', 'No-show reduction: {{rate}}%', { rate: parseFloat(reminderEffectiveness.reductionRate).toFixed(1) })
                           : t('analytics.noReductionData', 'Not enough data')}
                       </Badge>
                     </div>

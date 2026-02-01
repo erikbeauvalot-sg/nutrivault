@@ -50,6 +50,9 @@ const UserSettingsPage = lazy(() => import('./pages/UserSettingsPage'));
 const SharedDocumentPage = lazy(() => import('./pages/SharedDocumentPage'));
 const RecipesPage = lazy(() => import('./pages/RecipesPage'));
 const RecipeDetailPage = lazy(() => import('./pages/RecipeDetailPage'));
+const CampaignsPage = lazy(() => import('./pages/CampaignsPage'));
+const CampaignEditorPage = lazy(() => import('./pages/CampaignEditorPage'));
+const CampaignStatsPage = lazy(() => import('./pages/CampaignStatsPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -388,6 +391,51 @@ function App() {
         element={
           <ProtectedRoute permission="recipes.read">
             <RecipeDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/campaigns"
+        element={
+          <ProtectedRoute permission="campaigns.read">
+            <CampaignsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/campaigns/new"
+        element={
+          <ProtectedRoute permission="campaigns.create">
+            <CampaignEditorPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/campaigns/:id/edit"
+        element={
+          <ProtectedRoute permission="campaigns.update">
+            <CampaignEditorPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/campaigns/:id/stats"
+        element={
+          <ProtectedRoute permission="campaigns.read">
+            <CampaignStatsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/campaigns/:id"
+        element={
+          <ProtectedRoute permission="campaigns.read">
+            <CampaignStatsPage />
           </ProtectedRoute>
         }
       />

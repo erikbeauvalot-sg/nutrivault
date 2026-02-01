@@ -668,14 +668,20 @@ const PatientDetailPage = () => {
                     </Row>
                     <hr />
                     <Row>
-                      <Col>
+                      <Col xs={12} md={6} className="mb-2">
                         <strong>{t('patients.status', 'Status')}:</strong>{' '}
                         <Badge bg={patient.is_active ? 'success' : 'secondary'}>
                           {patient.is_active ? t('patients.active', 'Active') : t('patients.inactive', 'Inactive')}
                         </Badge>
                       </Col>
+                      <Col xs={12} md={6} className="mb-2">
+                        <strong>{t('patients.acceptsEmails', 'Accepte les emails')}:</strong>{' '}
+                        <Badge bg={patient.appointment_reminders_enabled ? 'success' : 'warning'}>
+                          {patient.appointment_reminders_enabled ? t('common.yes', 'Oui') : t('common.no', 'Non')}
+                        </Badge>
+                      </Col>
                       {patient.assigned_dietitian && (
-                        <Col>
+                        <Col xs={12}>
                           <strong>{t('patients.assignedDietitian', 'Assigned Dietitian')}:</strong> {patient.assigned_dietitian.first_name} {patient.assigned_dietitian.last_name}
                         </Col>
                       )}

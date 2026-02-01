@@ -180,14 +180,14 @@ async function getPatients(user, filters = {}, requestMetadata = {}) {
  */
 async function getPatientById(patientId, user, requestMetadata = {}) {
   try {
+    // Note: We don't filter by is_active here to allow viewing/editing inactive patients
     const patient = await Patient.findOne({
-      where: { 
-        id: patientId,
-        is_active: true
+      where: {
+        id: patientId
       },
       attributes: [
         'id', 'first_name', 'last_name', 'email', 'phone',
-        'assigned_dietitian_id', 'is_active', 'created_at', 'updated_at'
+        'assigned_dietitian_id', 'is_active', 'appointment_reminders_enabled', 'created_at', 'updated_at'
       ],
       include: [
         {
@@ -459,10 +459,11 @@ async function createPatient(patientData, user, requestMetadata = {}) {
  */
 async function updatePatient(patientId, updateData, user, requestMetadata = {}) {
   try {
+    // Note: We don't filter by is_active here to allow editing inactive patients
+    // (e.g., to reactivate them or update their information)
     const patient = await Patient.findOne({
-      where: { 
-        id: patientId,
-        is_active: true
+      where: {
+        id: patientId
       }
     });
 

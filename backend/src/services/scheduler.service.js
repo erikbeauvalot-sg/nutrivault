@@ -5,13 +5,15 @@
 
 const cron = require('node-cron');
 const appointmentReminderService = require('./appointmentReminder.service');
+const campaignSenderService = require('./campaignSender.service');
 const db = require('../../../models');
 
 const { SystemSetting } = db;
 
 // Store active cron jobs
 const jobs = {
-  appointmentReminders: null
+  appointmentReminders: null,
+  scheduledCampaigns: null
 };
 
 /**
@@ -61,6 +63,45 @@ async function scheduleAppointmentReminders() {
 }
 
 /**
+ * Schedule campaign sender job
+ * Checks for scheduled campaigns every minute
+ */
+async function scheduleScheduledCampaigns() {
+  try {
+    // Stop existing job if running
+    if (jobs.scheduledCampaigns) {
+      jobs.scheduledCampaigns.stop();
+      jobs.scheduledCampaigns = null;
+    }
+
+    // Check every minute for scheduled campaigns
+    const cronSchedule = '* * * * *';
+
+    console.log(`[Scheduler] Scheduling campaign sender with cron: ${cronSchedule}`);
+
+    // Create and start the job
+    jobs.scheduledCampaigns = cron.schedule(
+      cronSchedule,
+      async () => {
+        try {
+          await campaignSenderService.processScheduledCampaigns();
+        } catch (error) {
+          console.error('[Scheduler] Error in campaign sender job:', error);
+        }
+      },
+      {
+        scheduled: true,
+        timezone: process.env.TZ || 'Europe/Paris'
+      }
+    );
+
+    console.log('[Scheduler] Campaign sender job scheduled successfully');
+  } catch (error) {
+    console.error('[Scheduler] Error scheduling campaign sender:', error);
+  }
+}
+
+/**
  * Initialize all scheduled jobs
  */
 async function initializeScheduledJobs() {
@@ -69,6 +110,9 @@ async function initializeScheduledJobs() {
 
     // Schedule appointment reminders
     await scheduleAppointmentReminders();
+
+    // Schedule campaign sender
+    await scheduleScheduledCampaigns();
 
     console.log('[Scheduler] All scheduled jobs initialized');
   } catch (error) {
@@ -100,6 +144,10 @@ function getJobStatus() {
     appointmentReminders: {
       running: jobs.appointmentReminders !== null,
       schedule: process.env.REMINDER_CRON || '0 * * * *'
+    },
+    scheduledCampaigns: {
+      running: jobs.scheduledCampaigns !== null,
+      schedule: '* * * * *' // Every minute
     }
   };
 }
@@ -119,10 +167,26 @@ async function triggerAppointmentRemindersNow() {
   }
 }
 
+/**
+ * Manually trigger campaign sender job
+ */
+async function triggerScheduledCampaignsNow() {
+  console.log('[Scheduler] Manually triggering campaign sender job...');
+  try {
+    await campaignSenderService.processScheduledCampaigns();
+    console.log('[Scheduler] Manual campaign sender job complete');
+  } catch (error) {
+    console.error('[Scheduler] Error in manual campaign sender job:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   initializeScheduledJobs,
   scheduleAppointmentReminders,
+  scheduleScheduledCampaigns,
   stopAllJobs,
   getJobStatus,
-  triggerAppointmentRemindersNow
+  triggerAppointmentRemindersNow,
+  triggerScheduledCampaignsNow
 };

@@ -1,0 +1,497 @@
+/**
+ * CampaignEditorPage Component Tests
+ * Tests for the campaign editor page
+ */
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { BrowserRouter, MemoryRouter, Route, Routes } from 'react-router-dom';
+import CampaignEditorPage from '../CampaignEditorPage';
+import * as campaignService from '../../services/campaignService';
+import { toast } from 'react-toastify';
+
+// Mock react-router-dom
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+    useParams: () => ({ id: undefined })
+  };
+});
+
+// Mock react-i18next
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key, defaultValue) => defaultValue || key
+  })
+}));
+
+// Mock AuthContext
+vi.mock('../../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    hasPermission: (perm) => true
+  })
+}));
+
+// Mock campaign service
+vi.mock('../../services/campaignService');
+
+// Mock Layout
+vi.mock('../../components/layout/Layout', () => ({
+  default: ({ children }) => <div data-testid="layout">{children}</div>
+}));
+
+// Mock AudienceBuilder
+vi.mock('../../components/campaigns/AudienceBuilder', () => ({
+  default: ({ value, onChange }) => (
+    <div data-testid="audience-builder">
+      <button
+        data-testid="add-condition"
+        onClick={() => onChange({ conditions: [{ field: 'test' }], logic: 'AND' })}
+      >
+        Add Condition
+      </button>
+    </div>
+  )
+}));
+
+// Mock AudiencePreview
+vi.mock('../../components/campaigns/AudiencePreview', () => ({
+  default: ({ preview, loading }) => (
+    <div data-testid="audience-preview">
+      {loading ? 'Loading...' : preview ? `${preview.count} patients` : 'No preview'}
+    </div>
+  )
+}));
+
+// Mock CampaignPreview
+vi.mock('../../components/campaigns/CampaignPreview', () => ({
+  default: ({ campaign }) => (
+    <div data-testid="campaign-preview">
+      Preview: {campaign.name}
+    </div>
+  )
+}));
+
+// Mock toast
+vi.mock('react-toastify', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn()
+  }
+}));
+
+const renderComponent = (initialRoute = '/campaigns/new') => {
+  return render(
+    <MemoryRouter initialEntries={[initialRoute]}>
+      <Routes>
+        <Route path="/campaigns/new" element={<CampaignEditorPage />} />
+        <Route path="/campaigns/:id/edit" element={<CampaignEditorPage />} />
+        <Route path="/campaigns" element={<div>Campaigns List</div>} />
+      </Routes>
+    </MemoryRouter>
+  );
+};
+
+describe('CampaignEditorPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    campaignService.createCampaign.mockResolvedValue({ id: '1' });
+    campaignService.updateCampaign.mockResolvedValue({ id: '1' });
+    campaignService.previewAudienceCriteria.mockResolvedValue({ count: 50, patients: [] });
+  });
+
+  describe('Rendering', () => {
+    it('should render the page title for new campaign', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      expect(screen.getByText('New Campaign')).toBeInTheDocument();
+    });
+
+    it('should render step navigation', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      expect(screen.getByText(/Basic Info/)).toBeInTheDocument();
+      expect(screen.getByText(/Content/)).toBeInTheDocument();
+      expect(screen.getByText(/Audience/)).toBeInTheDocument();
+      expect(screen.getByText(/Preview/)).toBeInTheDocument();
+    });
+
+    it('should render form fields in basics step', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      expect(screen.getByLabelText(/Campaign Name/)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Email Subject/)).toBeInTheDocument();
+      expect(screen.getByLabelText(/Campaign Type/)).toBeInTheDocument();
+    });
+
+    it('should render action buttons', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      expect(screen.getByText('Cancel')).toBeInTheDocument();
+      expect(screen.getByText('Save Draft')).toBeInTheDocument();
+    });
+  });
+
+  describe('Step Navigation', () => {
+    it('should start on basics step', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      expect(screen.getByLabelText(/Campaign Name/)).toBeInTheDocument();
+    });
+
+    it('should navigate to content step when next is clicked', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      // Fill required fields
+      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+        target: { value: 'Test Campaign' }
+      });
+      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+        target: { value: 'Test Subject' }
+      });
+
+      // Click next
+      const nextButton = screen.getByText('Next');
+      fireEvent.click(nextButton);
+
+      // Should now show content step
+      await waitFor(() => {
+        expect(screen.getByText('Email Content')).toBeInTheDocument();
+      });
+    });
+
+    it('should disable next button when basics are incomplete', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      const nextButton = screen.getByText('Next');
+      expect(nextButton).toBeDisabled();
+    });
+
+    it('should show checkmark on completed steps', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      // Fill basics
+      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+        target: { value: 'Test Campaign' }
+      });
+      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+        target: { value: 'Test Subject' }
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Next')).not.toBeDisabled();
+      });
+    });
+  });
+
+  describe('Form Validation', () => {
+    it('should validate campaign name is required', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      // Try to save without name
+      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+        target: { value: 'Test Subject' }
+      });
+
+      const saveButton = screen.getByText('Save Draft');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith('Campaign name is required');
+      });
+    });
+
+    it('should validate email subject is required', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      // Fill name but not subject
+      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+        target: { value: 'Test Campaign' }
+      });
+
+      const saveButton = screen.getByText('Save Draft');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith('Email subject is required');
+      });
+    });
+  });
+
+  describe('Campaign Type Selection', () => {
+    it('should have newsletter as default type', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      const typeSelect = screen.getByLabelText(/Campaign Type/);
+      expect(typeSelect.value).toBe('newsletter');
+    });
+
+    it('should allow changing campaign type', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      const typeSelect = screen.getByLabelText(/Campaign Type/);
+      fireEvent.change(typeSelect, { target: { value: 'promotional' } });
+
+      expect(typeSelect.value).toBe('promotional');
+    });
+  });
+
+  describe('Saving Campaign', () => {
+    it('should create new campaign when saving', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      // Fill form
+      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+        target: { value: 'Test Campaign' }
+      });
+      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+        target: { value: 'Test Subject' }
+      });
+
+      // Save
+      const saveButton = screen.getByText('Save Draft');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(campaignService.createCampaign).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: 'Test Campaign',
+            subject: 'Test Subject'
+          })
+        );
+      });
+    });
+
+    it('should show success toast on save', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+        target: { value: 'Test Campaign' }
+      });
+      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+        target: { value: 'Test Subject' }
+      });
+
+      const saveButton = screen.getByText('Save Draft');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith('Campaign created successfully');
+      });
+    });
+
+    it('should show error toast on save failure', async () => {
+      campaignService.createCampaign.mockRejectedValue(new Error('Save failed'));
+
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+        target: { value: 'Test Campaign' }
+      });
+      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+        target: { value: 'Test Subject' }
+      });
+
+      const saveButton = screen.getByText('Save Draft');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith('Failed to save campaign');
+      });
+    });
+
+    it('should navigate to campaigns list after save', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+        target: { value: 'Test Campaign' }
+      });
+      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+        target: { value: 'Test Subject' }
+      });
+
+      const saveButton = screen.getByText('Save Draft');
+      fireEvent.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/campaigns');
+      });
+    });
+  });
+
+  describe('Content Step', () => {
+    const goToContentStep = async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+        target: { value: 'Test Campaign' }
+      });
+      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+        target: { value: 'Test Subject' }
+      });
+      fireEvent.click(screen.getByText('Next'));
+
+      await waitFor(() => {
+        expect(screen.getByText('Email Content')).toBeInTheDocument();
+      });
+    };
+
+    it('should display content textarea', async () => {
+      await goToContentStep();
+
+      expect(screen.getByLabelText(/Email Body/)).toBeInTheDocument();
+    });
+
+    it('should display personalization variables sidebar', async () => {
+      await goToContentStep();
+
+      expect(screen.getByText('Variables de personnalisation')).toBeInTheDocument();
+    });
+
+    it('should display back button', async () => {
+      await goToContentStep();
+
+      expect(screen.getByText('Back')).toBeInTheDocument();
+    });
+  });
+
+  describe('Navigation', () => {
+    it('should navigate back when cancel is clicked', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      const cancelButton = screen.getByText('Cancel');
+      fireEvent.click(cancelButton);
+
+      expect(mockNavigate).toHaveBeenCalledWith('/campaigns');
+    });
+
+    it('should navigate back when back link is clicked', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      const backLink = screen.getByText('Back');
+      fireEvent.click(backLink);
+
+      expect(mockNavigate).toHaveBeenCalledWith('/campaigns');
+    });
+  });
+
+  describe('Sender Selection', () => {
+    it('should have default option for patient dietitian', async () => {
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      const senderSelect = screen.getByLabelText(/Sender/);
+      expect(senderSelect).toBeInTheDocument();
+      expect(screen.getByText(/Use patient's assigned dietitian/)).toBeInTheDocument();
+    });
+  });
+
+  describe('Loading State', () => {
+    it('should show spinner while saving', async () => {
+      campaignService.createCampaign.mockImplementation(
+        () => new Promise(resolve => setTimeout(() => resolve({ id: '1' }), 100))
+      );
+
+      render(
+        <BrowserRouter>
+          <CampaignEditorPage />
+        </BrowserRouter>
+      );
+
+      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+        target: { value: 'Test Campaign' }
+      });
+      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+        target: { value: 'Test Subject' }
+      });
+
+      const saveButton = screen.getByText('Save Draft');
+      fireEvent.click(saveButton);
+
+      // Button should show spinner
+      expect(screen.getByRole('status')).toBeInTheDocument();
+    });
+  });
+});

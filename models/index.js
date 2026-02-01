@@ -52,6 +52,8 @@ db.Ingredient = require('./Ingredient')(sequelize, DataTypes);
 db.RecipeIngredient = require('./RecipeIngredient')(sequelize, DataTypes);
 db.RecipePatientAccess = require('./RecipePatientAccess')(sequelize, DataTypes);
 db.Task = require('./Task')(sequelize, DataTypes);
+db.EmailCampaign = require('./EmailCampaign')(sequelize, DataTypes);
+db.EmailCampaignRecipient = require('./EmailCampaignRecipient')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -710,6 +712,45 @@ db.Task.belongsTo(db.User, {
 db.User.hasMany(db.Task, {
   foreignKey: 'created_by',
   as: 'created_tasks'
+});
+
+// EmailCampaign associations
+db.EmailCampaign.belongsTo(db.User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+db.User.hasMany(db.EmailCampaign, {
+  foreignKey: 'created_by',
+  as: 'created_campaigns'
+});
+
+// EmailCampaign - User (sender) relationship
+db.EmailCampaign.belongsTo(db.User, {
+  foreignKey: 'sender_id',
+  as: 'sender'
+});
+db.User.hasMany(db.EmailCampaign, {
+  foreignKey: 'sender_id',
+  as: 'campaigns_as_sender'
+});
+
+db.EmailCampaign.hasMany(db.EmailCampaignRecipient, {
+  foreignKey: 'campaign_id',
+  as: 'recipients'
+});
+db.EmailCampaignRecipient.belongsTo(db.EmailCampaign, {
+  foreignKey: 'campaign_id',
+  as: 'campaign'
+});
+
+// EmailCampaignRecipient - Patient relationship
+db.EmailCampaignRecipient.belongsTo(db.Patient, {
+  foreignKey: 'patient_id',
+  as: 'patient'
+});
+db.Patient.hasMany(db.EmailCampaignRecipient, {
+  foreignKey: 'patient_id',
+  as: 'campaign_recipients'
 });
 
 module.exports = db;

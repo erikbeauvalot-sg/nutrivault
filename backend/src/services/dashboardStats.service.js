@@ -61,7 +61,7 @@ const getPracticeOverview = async () => {
   // Revenue this month (from billing)
   const revenueThisMonthResult = await db.Billing.findOne({
     attributes: [
-      [db.sequelize.fn('SUM', db.sequelize.col('total_amount')), 'total']
+      [db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'total']
     ],
     where: {
       invoice_date: { [Op.gte]: startOfMonth }
@@ -73,7 +73,7 @@ const getPracticeOverview = async () => {
   // Revenue last month
   const revenueLastMonthResult = await db.Billing.findOne({
     attributes: [
-      [db.sequelize.fn('SUM', db.sequelize.col('total_amount')), 'total']
+      [db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'total']
     ],
     where: {
       invoice_date: {
@@ -142,7 +142,7 @@ const getRevenueChart = async (period = 'monthly') => {
 
       const result = await db.Billing.findOne({
         attributes: [
-          [db.sequelize.fn('SUM', db.sequelize.col('total_amount')), 'revenue'],
+          [db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'revenue'],
           [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'invoices']
         ],
         where: {
@@ -169,7 +169,7 @@ const getRevenueChart = async (period = 'monthly') => {
 
       const result = await db.Billing.findOne({
         attributes: [
-          [db.sequelize.fn('SUM', db.sequelize.col('total_amount')), 'revenue'],
+          [db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'revenue'],
           [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'invoices']
         ],
         where: {
@@ -228,14 +228,14 @@ const getPracticeHealthScore = async () => {
   const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
 
   const revenueThisMonthResult = await db.Billing.findOne({
-    attributes: [[db.sequelize.fn('SUM', db.sequelize.col('total_amount')), 'total']],
+    attributes: [[db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'total']],
     where: { invoice_date: { [Op.gte]: startOfMonth } },
     raw: true
   });
   const revenueThisMonth = parseFloat(revenueThisMonthResult?.total || 0);
 
   const revenueLastMonthResult = await db.Billing.findOne({
-    attributes: [[db.sequelize.fn('SUM', db.sequelize.col('total_amount')), 'total']],
+    attributes: [[db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'total']],
     where: {
       invoice_date: { [Op.gte]: lastMonthStart, [Op.lte]: lastMonthEnd }
     },
@@ -276,7 +276,7 @@ const getPracticeHealthScore = async () => {
 
   // 5. Payment Health Score (0-20) - based on payment rate
   const totalBilledResult = await db.Billing.findOne({
-    attributes: [[db.sequelize.fn('SUM', db.sequelize.col('total_amount')), 'total']],
+    attributes: [[db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'total']],
     where: {
       invoice_date: { [Op.gte]: threeMonthsAgo }
     },

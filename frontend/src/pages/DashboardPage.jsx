@@ -18,7 +18,8 @@ import {
   ActivityFeedWidget,
   TaskManagerWidget,
   PracticeHealthScoreWidget,
-  WhatsNewWidget
+  WhatsNewWidget,
+  CampaignsWidget
 } from '../components/dashboard';
 import api from '../services/api';
 import visitService from '../services/visitService';
@@ -370,6 +371,16 @@ const DashboardPage = () => {
               </Col>
               <Col lg={6}>
                 <TaskManagerWidget />
+              </Col>
+            </Row>
+
+            {/* Campaigns Widget */}
+            <Row className="mb-4">
+              <Col lg={6} className="mb-4 mb-lg-0">
+                <CampaignsWidget />
+              </Col>
+              <Col lg={6}>
+                {/* Placeholder for future widget or leave empty */}
               </Col>
             </Row>
 

@@ -9,3 +9,4 @@ export { default as ActivityFeedWidget } from './ActivityFeedWidget';
 export { default as TaskManagerWidget } from './TaskManagerWidget';
 export { default as PracticeHealthScoreWidget } from './PracticeHealthScoreWidget';
 export { default as WhatsNewWidget } from './WhatsNewWidget';
+export { default as CampaignsWidget } from './CampaignsWidget';

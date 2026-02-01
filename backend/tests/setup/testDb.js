@@ -79,6 +79,9 @@ async function reset() {
     'Ingredient',
     // Task model
     'Task',
+    // Campaign models
+    'EmailCampaignRecipient',
+    'EmailCampaign',
     'Patient',
     'AuditLog',
     'RefreshToken',

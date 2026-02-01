@@ -188,6 +188,10 @@ app.get('/api/patients/:id/recipes', authenticate, requirePermission('recipes.re
 const dashboardRoutes = require('./routes/dashboard');
 app.use('/api/dashboard', dashboardRoutes);
 
+// Campaign routes (protected - RBAC enforced in routes file)
+const campaignRoutes = require('./routes/campaigns');
+app.use('/api/campaigns', campaignRoutes);
+
 // Serve uploaded files (logos, signatures)
 // Use /app in production (Docker), process.cwd() in development
 const uploadsBasePath = process.env.NODE_ENV === 'production' ? '/app/uploads' : path.join(process.cwd(), 'uploads');

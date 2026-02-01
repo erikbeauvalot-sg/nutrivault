@@ -48,7 +48,8 @@ const EditPatientPage = () => {
     email: '',
     phone: '',
     assigned_dietitian_id: '',
-    is_active: true
+    is_active: true,
+    appointment_reminders_enabled: true
   });
 
   useEffect(() => {
@@ -71,7 +72,8 @@ const EditPatientPage = () => {
         email: patientData.email || '',
         phone: patientData.phone || '',
         assigned_dietitian_id: patientData.assigned_dietitian_id || '',
-        is_active: patientData.is_active !== undefined ? patientData.is_active : true
+        is_active: patientData.is_active !== undefined ? patientData.is_active : true,
+        appointment_reminders_enabled: patientData.appointment_reminders_enabled !== undefined ? patientData.appointment_reminders_enabled : true
       });
 
       setError(null);
@@ -243,7 +245,8 @@ const EditPatientPage = () => {
       const basicData = {
         first_name: formData.first_name.trim(),
         last_name: formData.last_name.trim(),
-        is_active: formData.is_active
+        is_active: formData.is_active,
+        appointment_reminders_enabled: formData.appointment_reminders_enabled
       };
 
       // Only include optional fields if they have values
@@ -497,6 +500,19 @@ const EditPatientPage = () => {
                             />
                             <Form.Text className="text-muted">
                               {t('patients.inactivePatientsNote', 'Les patients inactifs n\'apparaissent pas dans les listes par défaut')}
+                            </Form.Text>
+                          </Form.Group>
+
+                          <Form.Group className="mb-3">
+                            <Form.Check
+                              type="checkbox"
+                              name="appointment_reminders_enabled"
+                              label={t('patients.acceptsEmails', 'Accepte les emails')}
+                              checked={formData.appointment_reminders_enabled}
+                              onChange={handleInputChange}
+                            />
+                            <Form.Text className="text-muted">
+                              {t('patients.acceptsEmailsNote', 'Le patient recevra les rappels de rendez-vous et newsletters')}
                             </Form.Text>
                           </Form.Group>
                         </Card.Body>
