@@ -3,8 +3,65 @@
  * Provides release notes and feature highlights for the dashboard
  */
 
+// Get actual version from environment or package.json
+const getActualVersion = () => {
+  // In Docker, APP_VERSION is set from build args
+  if (process.env.APP_VERSION) {
+    return process.env.APP_VERSION;
+  }
+  // Fallback to package.json
+  try {
+    const packageJson = require('../../package.json');
+    return packageJson.version;
+  } catch {
+    return '5.12.0';
+  }
+};
+
 // Current version changelog - human-readable features
 const CHANGELOG = {
+  '5.12.0': {
+    version: '5.12.0',
+    date: '2026-02-01',
+    title: {
+      fr: 'Campagnes Email',
+      en: 'Email Campaigns'
+    },
+    features: [
+      {
+        icon: '📧',
+        title: { fr: 'Campagnes email marketing', en: 'Email Marketing Campaigns' },
+        description: {
+          fr: 'Créez et envoyez des campagnes email personnalisées à vos patients',
+          en: 'Create and send personalized email campaigns to your patients'
+        }
+      },
+      {
+        icon: '📊',
+        title: { fr: 'Statistiques de campagne', en: 'Campaign Statistics' },
+        description: {
+          fr: 'Suivez les taux d\'ouverture et de clics de vos campagnes',
+          en: 'Track open and click rates for your campaigns'
+        }
+      },
+      {
+        icon: '👥',
+        title: { fr: 'Segmentation d\'audience', en: 'Audience Segmentation' },
+        description: {
+          fr: 'Ciblez des groupes de patients spécifiques (actifs, inactifs, récents...)',
+          en: 'Target specific patient groups (active, inactive, recent...)'
+        }
+      },
+      {
+        icon: '⏰',
+        title: { fr: 'Planification d\'envoi', en: 'Scheduled Sending' },
+        description: {
+          fr: 'Planifiez l\'envoi de vos campagnes à une date et heure précises',
+          en: 'Schedule your campaigns to be sent at a specific date and time'
+        }
+      }
+    ]
+  },
   '5.11.0': {
     version: '5.11.0',
     date: '2026-02-02',
@@ -217,17 +274,10 @@ const hasNewFeatures = (lastSeenVersion) => {
 };
 
 /**
- * Get current app version
+ * Get current app version from environment/package.json
  */
 const getCurrentVersion = () => {
-  const versions = Object.keys(CHANGELOG).sort((a, b) => {
-    const [aMajor, aMinor, aPatch] = a.split('.').map(Number);
-    const [bMajor, bMinor, bPatch] = b.split('.').map(Number);
-    if (aMajor !== bMajor) return bMajor - aMajor;
-    if (aMinor !== bMinor) return bMinor - aMinor;
-    return bPatch - aPatch;
-  });
-  return versions[0];
+  return getActualVersion();
 };
 
 module.exports = {
