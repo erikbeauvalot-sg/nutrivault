@@ -192,7 +192,10 @@ function drawHeader(doc, customization, invoice, t) {
       const logoPath = path.join(getUploadsBasePath(), customization.logo_file_path);
       console.log('📷 Logo path:', logoPath, '- exists:', fs.existsSync(logoPath));
       if (fs.existsSync(logoPath)) {
-        doc.image(logoPath, MARGIN, y, { width: 80, height: 40 });
+        // Use fit to maintain aspect ratio within the specified dimensions
+        const logoWidth = customization.logo_width || 150;
+        const logoHeight = customization.logo_height || 80;
+        doc.image(logoPath, MARGIN, y, { fit: [logoWidth, logoHeight] });
       }
     } catch (err) {
       console.error('Error loading logo:', err);
