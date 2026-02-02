@@ -6,15 +6,23 @@
 // Get actual version from environment or package.json
 const getActualVersion = () => {
   // In Docker, APP_VERSION is set from build args
-  if (process.env.APP_VERSION) {
+  // Ignore "latest" as it's the default placeholder
+  if (process.env.APP_VERSION && process.env.APP_VERSION !== 'latest') {
     return process.env.APP_VERSION;
   }
-  // Fallback to package.json
+  // Fallback to package.json (try multiple paths for Docker compatibility)
   try {
+    // In Docker, package.json is at /app/package.json
     const packageJson = require('../../package.json');
     return packageJson.version;
   } catch {
-    return '5.12.0';
+    try {
+      // Alternative path for Docker container
+      const packageJson = require('/app/package.json');
+      return packageJson.version;
+    } catch {
+      return '5.14.0';
+    }
   }
 };
 
