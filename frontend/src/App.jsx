@@ -48,6 +48,7 @@ const AIConfigPage = lazy(() => import('./pages/AIConfigPage'));
 const AnalyticsDashboardPage = lazy(() => import('./pages/AnalyticsDashboardPage'));
 const UserSettingsPage = lazy(() => import('./pages/UserSettingsPage'));
 const SharedDocumentPage = lazy(() => import('./pages/SharedDocumentPage'));
+const MarionDietPage = lazy(() => import('./pages/MarionDietPage'));
 const RecipesPage = lazy(() => import('./pages/RecipesPage'));
 const RecipeDetailPage = lazy(() => import('./pages/RecipeDetailPage'));
 const CampaignsPage = lazy(() => import('./pages/CampaignsPage'));
@@ -95,6 +96,12 @@ function App() {
         <Route
           path="/shared/:token"
           element={<SharedDocumentPage />}
+        />
+
+        {/* Marion Diet Landing Page (Public - No Auth Required) */}
+        <Route
+          path="/mariondiet"
+          element={<MarionDietPage />}
         />
 
         {/* Protected Routes */}
