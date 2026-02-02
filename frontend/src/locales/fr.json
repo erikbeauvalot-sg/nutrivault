@@ -1590,7 +1590,11 @@
     "fieldsCreated": "Champs créés :",
     "fieldsUpdated": "Champs mis à jour :",
     "fieldsSkipped": "Champs ignorés :",
-    "importErrors": "Erreurs :"
+    "importErrors": "Erreurs :",
+    "additionalInfo": "Informations Complémentaires",
+    "visibleOnCreation": "Visible à la création du patient",
+    "visibleOnCreationHelp": "Si coché, ce champ sera affiché dans le formulaire de création rapide de patient",
+    "fieldRequired": "{{field}} est obligatoire"
   },
   "visitTypes": {
     "title": "Types de Consultation",

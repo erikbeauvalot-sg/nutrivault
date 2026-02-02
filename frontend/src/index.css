@@ -824,3 +824,19 @@ html {
     font-size: 0.9rem;
   }
 }
+
+/* QuickPatientModal custom fields column */
+.custom-fields-column {
+  border-left: 1px solid #dee2e6;
+  padding-left: 1rem;
+}
+
+@media (max-width: 767.98px) {
+  .custom-fields-column {
+    border-left: none;
+    border-top: 1px solid #dee2e6;
+    padding-left: 0;
+    padding-top: 1rem;
+    margin-top: 1rem;
+  }
+}

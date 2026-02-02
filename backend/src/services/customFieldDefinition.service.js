@@ -288,6 +288,7 @@ async function createDefinition(user, definitionData, requestMetadata = {}) {
       is_active: definitionData.is_active !== undefined ? definitionData.is_active : true,
       show_in_basic_info: definitionData.show_in_basic_info || false,
       show_in_list: definitionData.show_in_list || false,
+      visible_on_creation: definitionData.visible_on_creation || false,
       formula: definitionData.formula || null,
       dependencies: dependencies,
       decimal_places: definitionData.decimal_places !== undefined ? definitionData.decimal_places : 2,
@@ -360,6 +361,7 @@ async function updateDefinition(user, definitionId, updateData, requestMetadata 
     if (updateData.is_active !== undefined) definition.is_active = updateData.is_active;
     if (updateData.show_in_basic_info !== undefined) definition.show_in_basic_info = updateData.show_in_basic_info;
     if (updateData.show_in_list !== undefined) definition.show_in_list = updateData.show_in_list;
+    if (updateData.visible_on_creation !== undefined) definition.visible_on_creation = updateData.visible_on_creation;
     if (updateData.formula !== undefined) definition.formula = updateData.formula;
     if (updateData.decimal_places !== undefined) definition.decimal_places = updateData.decimal_places;
 
@@ -603,6 +605,7 @@ async function duplicateDefinition(user, definitionId, overrides = {}, requestMe
       is_active: overrides.is_active !== undefined ? overrides.is_active : true,
       show_in_basic_info: overrides.show_in_basic_info !== undefined ? overrides.show_in_basic_info : originalDefinition.show_in_basic_info,
       show_in_list: overrides.show_in_list !== undefined ? overrides.show_in_list : originalDefinition.show_in_list,
+      visible_on_creation: overrides.visible_on_creation !== undefined ? overrides.visible_on_creation : originalDefinition.visible_on_creation,
       select_options: overrides.select_options || originalDefinition.select_options,
       validation_rules: overrides.validation_rules || originalDefinition.validation_rules,
       formula: overrides.formula || originalDefinition.formula,

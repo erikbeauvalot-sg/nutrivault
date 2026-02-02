@@ -1553,7 +1553,11 @@
     "fieldsCreated": "Fields Created:",
     "fieldsUpdated": "Fields Updated:",
     "fieldsSkipped": "Fields Skipped:",
-    "importErrors": "Errors:"
+    "importErrors": "Errors:",
+    "additionalInfo": "Additional Information",
+    "visibleOnCreation": "Visible on Patient Creation",
+    "visibleOnCreationHelp": "If checked, this field will be displayed in the quick patient creation form",
+    "fieldRequired": "{{field}} is required"
   },
   "visitTypes": {
     "title": "Visit Types",

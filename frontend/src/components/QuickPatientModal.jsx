@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Modal, Button, Form, Alert, Spinner } from 'react-bootstrap';
+import { Modal, Button, Form, Alert, Spinner, Row, Col } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import * as patientService from '../services/patientService';
 import { getCategories, updatePatientCustomFields } from '../services/customFieldService';
@@ -53,9 +53,10 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
       const visibleFields = [];
       if (Array.isArray(categories)) {
         categories.forEach(category => {
-          if (category.definitions && Array.isArray(category.definitions)) {
-            category.definitions
-              .filter(def => def.is_active && def.visible_on_creation)
+          const definitions = category.field_definitions || category.definitions || [];
+          if (Array.isArray(definitions)) {
+            definitions
+              .filter(def => def.is_active !== false && def.visible_on_creation)
               .forEach(def => {
                 visibleFields.push({
                   ...def,
@@ -206,8 +207,10 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
     onHide();
   };
 
+  const hasCustomFields = customFields.length > 0;
+
   return (
-    <Modal show={show} onHide={handleClose} centered scrollable>
+    <Modal show={show} onHide={handleClose} centered scrollable size={hasCustomFields ? 'lg' : undefined}>
       <Modal.Header closeButton>
         <Modal.Title>
           {t('patients.quickCreate', 'Quick Patient Creation')}
@@ -227,117 +230,124 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
             {t('patients.quickCreateInfo', 'Enter essential information only. Complete details can be added later.')}
           </Alert>
 
-          <Form.Group className="mb-3">
-            <Form.Label>
-              {t('patients.firstName', 'First Name')} <span className="text-danger">*</span>
-            </Form.Label>
-            <Form.Control
-              type="text"
-              name="first_name"
-              value={formData.first_name}
-              onChange={handleChange}
-              placeholder={t('patients.firstNamePlaceholder', 'Enter first name')}
-              autoFocus
-              disabled={loading}
-              required
-            />
-          </Form.Group>
+          <Row>
+            {/* Standard Fields Column */}
+            <Col md={hasCustomFields ? 6 : 12}>
+              <Form.Group className="mb-3">
+                <Form.Label>
+                  {t('patients.firstName', 'First Name')} <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  name="first_name"
+                  value={formData.first_name}
+                  onChange={handleChange}
+                  placeholder={t('patients.firstNamePlaceholder', 'Enter first name')}
+                  autoFocus
+                  disabled={loading}
+                  required
+                />
+              </Form.Group>
 
-          <Form.Group className="mb-3">
-            <Form.Label>
-              {t('patients.lastName', 'Last Name')} <span className="text-danger">*</span>
-            </Form.Label>
-            <Form.Control
-              type="text"
-              name="last_name"
-              value={formData.last_name}
-              onChange={handleChange}
-              placeholder={t('patients.lastNamePlaceholder', 'Enter last name')}
-              disabled={loading}
-              required
-            />
-          </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>
+                  {t('patients.lastName', 'Last Name')} <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  name="last_name"
+                  value={formData.last_name}
+                  onChange={handleChange}
+                  placeholder={t('patients.lastNamePlaceholder', 'Enter last name')}
+                  disabled={loading}
+                  required
+                />
+              </Form.Group>
 
-          <Alert variant="secondary" className="small mb-3">
-            {t('patients.contactRequired', 'At least one contact method is required (email or phone)')}
-          </Alert>
+              <Alert variant="secondary" className="small mb-3">
+                {t('patients.contactRequired', 'At least one contact method is required (email or phone)')}
+              </Alert>
 
-          <Form.Group className="mb-3">
-            <Form.Label>
-              {t('patients.email', 'Email')}
-            </Form.Label>
-            <Form.Control
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder={t('patients.emailPlaceholder', 'patient@example.com')}
-              disabled={loading}
-              isInvalid={formData.email && emailAvailable === false}
-              isValid={formData.email && emailAvailable === true}
-            />
-            {checkingEmail && formData.email && (
-              <Form.Text className="text-muted">
-                <Spinner animation="border" size="sm" className="me-1" />
-                {t('patients.checkingEmail', 'Checking email availability...')}
-              </Form.Text>
+              <Form.Group className="mb-3">
+                <Form.Label>
+                  {t('patients.email', 'Email')}
+                </Form.Label>
+                <Form.Control
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder={t('patients.emailPlaceholder', 'patient@example.com')}
+                  disabled={loading}
+                  isInvalid={formData.email && emailAvailable === false}
+                  isValid={formData.email && emailAvailable === true}
+                />
+                {checkingEmail && formData.email && (
+                  <Form.Text className="text-muted">
+                    <Spinner animation="border" size="sm" className="me-1" />
+                    {t('patients.checkingEmail', 'Checking email availability...')}
+                  </Form.Text>
+                )}
+                {emailAvailable === false && formData.email && (
+                  <Form.Control.Feedback type="invalid" style={{ display: 'block' }}>
+                    {t('patients.emailTaken', 'This email is already used by another patient')}
+                  </Form.Control.Feedback>
+                )}
+                {emailAvailable === true && formData.email && (
+                  <Form.Control.Feedback type="valid" style={{ display: 'block' }}>
+                    {t('patients.emailAvailable', 'Email is available')}
+                  </Form.Control.Feedback>
+                )}
+                {emailCheckError && (
+                  <Form.Text className="text-danger">
+                    {emailCheckError}
+                  </Form.Text>
+                )}
+              </Form.Group>
+
+              <Form.Group className="mb-3">
+                <Form.Label>
+                  {t('patients.phone', 'Phone Number')}
+                </Form.Label>
+                <Form.Control
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder={t('patients.phonePlaceholder', '+33 6 12 34 56 78')}
+                  disabled={loading}
+                />
+              </Form.Group>
+            </Col>
+
+            {/* Custom Fields Column */}
+            {loadingFields ? (
+              <Col md={6}>
+                <div className="text-center py-3">
+                  <Spinner animation="border" size="sm" />
+                  <span className="ms-2">{t('common.loading', 'Loading...')}</span>
+                </div>
+              </Col>
+            ) : hasCustomFields && (
+              <Col xs={12} md={6} className="custom-fields-column">
+                <h6 className="text-muted mb-3">
+                  {t('customFields.additionalInfo', 'Additional Information')}
+                </h6>
+                {customFields.map(field => (
+                  <Form.Group key={field.id} className="mb-3">
+                    <CustomFieldInput
+                      fieldDefinition={field}
+                      value={fieldValues[field.id] ?? ''}
+                      onChange={(defId, value) => handleFieldChange(field.id, value)}
+                      disabled={loading}
+                    />
+                  </Form.Group>
+                ))}
+              </Col>
             )}
-            {emailAvailable === false && formData.email && (
-              <Form.Control.Feedback type="invalid" style={{ display: 'block' }}>
-                {t('patients.emailTaken', 'This email is already used by another patient')}
-              </Form.Control.Feedback>
-            )}
-            {emailAvailable === true && formData.email && (
-              <Form.Control.Feedback type="valid" style={{ display: 'block' }}>
-                {t('patients.emailAvailable', 'Email is available')}
-              </Form.Control.Feedback>
-            )}
-            {emailCheckError && (
-              <Form.Text className="text-danger">
-                {emailCheckError}
-              </Form.Text>
-            )}
-          </Form.Group>
+          </Row>
 
-          <Form.Group className="mb-3">
-            <Form.Label>
-              {t('patients.phone', 'Phone Number')}
-            </Form.Label>
-            <Form.Control
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              placeholder={t('patients.phonePlaceholder', '+33 6 12 34 56 78')}
-              disabled={loading}
-            />
-          </Form.Group>
-
-          {/* Custom Fields Section */}
-          {loadingFields ? (
-            <div className="text-center py-3">
-              <Spinner animation="border" size="sm" />
-              <span className="ms-2">{t('common.loading', 'Loading...')}</span>
-            </div>
-          ) : customFields.length > 0 && (
-            <div className="border-top pt-3 mt-3">
-              <h6 className="text-muted mb-3">
-                {t('customFields.additionalInfo', 'Additional Information')}
-              </h6>
-              {customFields.map(field => (
-                <Form.Group key={field.id} className="mb-3">
-                  <CustomFieldInput
-                    definition={field}
-                    value={fieldValues[field.id] ?? ''}
-                    onChange={(value) => handleFieldChange(field.id, value)}
-                    disabled={loading}
-                  />
-                </Form.Group>
-              ))}
-            </div>
-          )}
-
-          <Alert variant="success" className="small mb-0">
+          <Alert variant="success" className="small mb-0 mt-3">
             <i className="fas fa-check-circle me-2"></i>
             {t('patients.quickCreateSuccess', 'Patient will be created instantly. You can complete additional details from their profile page.')}
           </Alert>
