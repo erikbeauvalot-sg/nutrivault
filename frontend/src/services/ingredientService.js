@@ -38,11 +38,11 @@ export const searchIngredients = async (query, limit = 10) => {
 };
 
 /**
- * Get ingredient categories
+ * Get legacy ingredient categories (string values for filter dropdown)
  * @returns {Promise<Array>}
  */
 export const getCategories = async () => {
-  const response = await api.get('/ingredients/categories');
+  const response = await api.get('/ingredients/categories-legacy');
   return extractData(response, []);
 };
 

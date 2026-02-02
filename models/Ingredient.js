@@ -25,7 +25,17 @@ module.exports = (sequelize, DataTypes) => {
     },
     category: {
       type: DataTypes.STRING(100),
-      allowNull: true
+      allowNull: true,
+      comment: 'Legacy string category - use category_id instead'
+    },
+    category_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'ingredient_categories',
+        key: 'id'
+      },
+      comment: 'Foreign key to ingredient_categories table'
     },
     default_unit: {
       type: DataTypes.STRING(50),
@@ -106,6 +116,9 @@ module.exports = (sequelize, DataTypes) => {
         fields: ['category']
       },
       {
+        fields: ['category_id']
+      },
+      {
         fields: ['is_active']
       },
       {
@@ -125,6 +138,12 @@ module.exports = (sequelize, DataTypes) => {
     Ingredient.belongsTo(models.User, {
       foreignKey: 'created_by',
       as: 'creator'
+    });
+
+    // Ingredient belongs to a category
+    Ingredient.belongsTo(models.IngredientCategory, {
+      foreignKey: 'category_id',
+      as: 'ingredientCategory'
     });
   };
 

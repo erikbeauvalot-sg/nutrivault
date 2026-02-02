@@ -14,6 +14,7 @@ import RecipeModal from '../components/RecipeModal';
 import RecipeCategoryModal from '../components/RecipeCategoryModal';
 import RecipeShareModal from '../components/RecipeShareModal';
 import IngredientModal from '../components/IngredientModal';
+import IngredientCategoryModal from '../components/IngredientCategoryModal';
 import NutritionDisplay from '../components/NutritionDisplay';
 import ActionButton from '../components/ActionButton';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,6 +27,7 @@ const isAdminOrDietitian = (user) => {
 import * as recipeService from '../services/recipeService';
 import * as recipeCategoryService from '../services/recipeCategoryService';
 import * as ingredientService from '../services/ingredientService';
+import * as ingredientCategoryService from '../services/ingredientCategoryService';
 
 const RecipesPage = () => {
   const { t } = useTranslation();
@@ -75,6 +77,14 @@ const RecipesPage = () => {
   const [editingIngredient, setEditingIngredient] = useState(null);
   const [deletingIngredient, setDeletingIngredient] = useState(null);
   const [viewingNutrition, setViewingNutrition] = useState(null);
+
+  // Ingredient Categories state
+  const [ingredientCategoriesData, setIngredientCategoriesData] = useState([]);
+  const [ingredientCategoriesLoading, setIngredientCategoriesLoading] = useState(false);
+  const [showIngredientCategoryModal, setShowIngredientCategoryModal] = useState(false);
+  const [showDeleteIngredientCategoryModal, setShowDeleteIngredientCategoryModal] = useState(false);
+  const [editingIngredientCategory, setEditingIngredientCategory] = useState(null);
+  const [deletingIngredientCategory, setDeletingIngredientCategory] = useState(null);
 
   // Permissions
   const canCreate = hasPermission('recipes.create');
@@ -136,10 +146,14 @@ const RecipesPage = () => {
 
   const loadIngredientCategories = useCallback(async () => {
     try {
-      const data = await ingredientService.getCategories();
+      setIngredientCategoriesLoading(true);
+      const data = await ingredientCategoryService.getCategories();
       setIngredientCategories(data);
+      setIngredientCategoriesData(data);
     } catch (error) {
       console.error('Error loading ingredient categories:', error);
+    } finally {
+      setIngredientCategoriesLoading(false);
     }
   }, []);
 
@@ -159,6 +173,13 @@ const RecipesPage = () => {
       loadIngredientCategories();
     }
   }, [activeTab, loadIngredients, loadIngredientCategories]);
+
+  // Load ingredient categories when tab is active
+  useEffect(() => {
+    if (activeTab === 'ingredientCategories') {
+      loadIngredientCategories();
+    }
+  }, [activeTab, loadIngredientCategories]);
 
   // Search debounce
   useEffect(() => {
@@ -319,6 +340,41 @@ const RecipesPage = () => {
     loadIngredients();
   };
 
+  // Ingredient Category handlers
+  const handleCreateIngredientCategory = () => {
+    setEditingIngredientCategory(null);
+    setShowIngredientCategoryModal(true);
+  };
+
+  const handleEditIngredientCategory = (category) => {
+    setEditingIngredientCategory(category);
+    setShowIngredientCategoryModal(true);
+  };
+
+  const handleDeleteIngredientCategory = (category) => {
+    setDeletingIngredientCategory(category);
+    setShowDeleteIngredientCategoryModal(true);
+  };
+
+  const confirmDeleteIngredientCategory = async () => {
+    if (!deletingIngredientCategory) return;
+
+    try {
+      await ingredientCategoryService.deleteCategory(deletingIngredientCategory.id);
+      toast.success(t('ingredients.categories.deleted', 'Category deleted successfully'));
+      setShowDeleteIngredientCategoryModal(false);
+      setDeletingIngredientCategory(null);
+      loadIngredientCategoriesData();
+    } catch (error) {
+      console.error('Error deleting ingredient category:', error);
+      toast.error(error.response?.data?.error || t('ingredients.categories.deleteError', 'Failed to delete category'));
+    }
+  };
+
+  const handleIngredientCategorySuccess = () => {
+    loadIngredientCategoriesData();
+  };
+
   const handleDuplicateIngredient = async (ingredient) => {
     try {
       await ingredientService.duplicateIngredient(ingredient.id);
@@ -338,22 +394,41 @@ const RecipesPage = () => {
 
   const hasActiveIngredientFilters = ingredientSearch || selectedIngredientCategory;
 
-  const getIngredientCategoryLabel = (category) => {
-    const labels = {
-      proteins: t('ingredients.categories.proteins', 'Proteins'),
-      grains: t('ingredients.categories.grains', 'Grains'),
-      vegetables: t('ingredients.categories.vegetables', 'Vegetables'),
-      fruits: t('ingredients.categories.fruits', 'Fruits'),
-      dairy: t('ingredients.categories.dairy', 'Dairy'),
-      oils: t('ingredients.categories.oils', 'Oils & Fats'),
-      nuts: t('ingredients.categories.nuts', 'Nuts & Seeds'),
-      legumes: t('ingredients.categories.legumes', 'Legumes'),
-      spices: t('ingredients.categories.spices', 'Spices & Herbs'),
-      condiments: t('ingredients.categories.condiments', 'Condiments'),
-      beverages: t('ingredients.categories.beverages', 'Beverages'),
-      other: t('ingredients.categories.other', 'Other')
-    };
-    return labels[category] || category;
+  const getIngredientCategoryDisplay = (ingredient) => {
+    // First try to use the included ingredientCategory object from API
+    if (ingredient.ingredientCategory) {
+      return {
+        icon: ingredient.ingredientCategory.icon,
+        name: ingredient.ingredientCategory.name,
+        color: ingredient.ingredientCategory.color
+      };
+    }
+    // Fallback: try to look up by category_id
+    if (ingredient.category_id) {
+      const cat = ingredientCategories.find(c => c.id === ingredient.category_id);
+      if (cat) {
+        return { icon: cat.icon, name: cat.name, color: cat.color };
+      }
+    }
+    // Fallback to legacy category string
+    if (ingredient.category) {
+      const legacyLabels = {
+        proteins: { icon: '🥩', name: t('ingredients.categories.proteins', 'Proteins') },
+        grains: { icon: '🌾', name: t('ingredients.categories.grains', 'Grains') },
+        vegetables: { icon: '🥬', name: t('ingredients.categories.vegetables', 'Vegetables') },
+        fruits: { icon: '🍎', name: t('ingredients.categories.fruits', 'Fruits') },
+        dairy: { icon: '🧀', name: t('ingredients.categories.dairy', 'Dairy') },
+        oils: { icon: '🫒', name: t('ingredients.categories.oils', 'Oils & Fats') },
+        nuts: { icon: '🥜', name: t('ingredients.categories.nuts', 'Nuts & Seeds') },
+        legumes: { icon: '🫘', name: t('ingredients.categories.legumes', 'Legumes') },
+        spices: { icon: '🌿', name: t('ingredients.categories.spices', 'Spices & Herbs') },
+        condiments: { icon: '🧂', name: t('ingredients.categories.condiments', 'Condiments') },
+        beverages: { icon: '🥤', name: t('ingredients.categories.beverages', 'Beverages') },
+        other: { icon: '📦', name: t('ingredients.categories.other', 'Other') }
+      };
+      return legacyLabels[ingredient.category] || { icon: '📦', name: ingredient.category };
+    }
+    return null;
   };
 
   const getUnitLabel = (unit) => {
@@ -640,8 +715,8 @@ const RecipesPage = () => {
                     >
                       <option value="">{t('ingredients.allCategories', 'All Categories')}</option>
                       {ingredientCategories.map(cat => (
-                        <option key={cat} value={cat}>
-                          {getIngredientCategoryLabel(cat)}
+                        <option key={cat.id} value={cat.id}>
+                          {cat.icon} {cat.name}
                         </option>
                       ))}
                     </Form.Select>
@@ -715,9 +790,19 @@ const RecipesPage = () => {
                               <strong>{ingredient.name}</strong>
                             </td>
                             <td>
-                              <Badge bg="light" text="dark">
-                                {getIngredientCategoryLabel(ingredient.category)}
-                              </Badge>
+                              {(() => {
+                                const catDisplay = getIngredientCategoryDisplay(ingredient);
+                                return catDisplay ? (
+                                  <Badge
+                                    style={{ backgroundColor: catDisplay.color || '#9e9e9e' }}
+                                    className="text-white"
+                                  >
+                                    {catDisplay.icon} {catDisplay.name}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted">-</span>
+                                );
+                              })()}
                             </td>
                             <td>{getUnitLabel(ingredient.default_unit)}</td>
                             <td>
@@ -827,6 +912,95 @@ const RecipesPage = () => {
               </>
             )}
           </Tab>
+
+          <Tab eventKey="ingredientCategories" title={t('recipes.tabIngredientCategories', 'Ingredient Categories')}>
+            {/* Ingredient Categories Header */}
+            <div className="d-flex justify-content-between align-items-center mb-4">
+              <h5 className="mb-0">{t('ingredients.categories.title', 'Manage Ingredient Categories')}</h5>
+              {canCreate && (
+                <Button variant="primary" onClick={handleCreateIngredientCategory}>
+                  {t('ingredients.categories.create', 'New Category')}
+                </Button>
+              )}
+            </div>
+
+            {/* Ingredient Categories Grid */}
+            {ingredientCategoriesLoading ? (
+              <div className="text-center py-5">
+                <Spinner animation="border" variant="primary" />
+                <p className="mt-3 text-muted">{t('common.loading', 'Loading...')}</p>
+              </div>
+            ) : (
+              <Row className="g-4">
+                {ingredientCategoriesData.map(category => (
+                  <Col key={category.id} xs={12} sm={6} md={4} lg={3}>
+                    <Card className="h-100">
+                      <Card.Body>
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div className="d-flex align-items-center gap-2">
+                            <span
+                              className="d-flex align-items-center justify-content-center rounded"
+                              style={{
+                                width: '40px',
+                                height: '40px',
+                                backgroundColor: category.color || '#27ae60',
+                                fontSize: '1.5rem'
+                              }}
+                            >
+                              {category.icon || '🥬'}
+                            </span>
+                            <div>
+                              <h6 className="mb-0">{category.name}</h6>
+                              {category.description && (
+                                <small className="text-muted">{category.description}</small>
+                              )}
+                            </div>
+                          </div>
+                          {canUpdate && (
+                            <Dropdown align="end">
+                              <Dropdown.Toggle variant="link" size="sm" className="p-0 text-muted">
+                                ...
+                              </Dropdown.Toggle>
+                              <Dropdown.Menu>
+                                <Dropdown.Item onClick={() => handleEditIngredientCategory(category)}>
+                                  {t('common.edit', 'Edit')}
+                                </Dropdown.Item>
+                                {canDelete && (
+                                  <>
+                                    <Dropdown.Divider />
+                                    <Dropdown.Item
+                                      className="text-danger"
+                                      onClick={() => handleDeleteIngredientCategory(category)}
+                                    >
+                                      {t('common.delete', 'Delete')}
+                                    </Dropdown.Item>
+                                  </>
+                                )}
+                              </Dropdown.Menu>
+                            </Dropdown>
+                          )}
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                ))}
+                {ingredientCategoriesData.length === 0 && (
+                  <Col xs={12}>
+                    <Card className="text-center py-4">
+                      <Card.Body>
+                        <p className="text-muted mb-3">{t('ingredients.categories.noCategories', 'No ingredient categories yet')}</p>
+                        {canCreate && (
+                          <Button variant="primary" onClick={handleCreateIngredientCategory}>
+                            {t('ingredients.categories.createFirst', 'Create your first category')}
+                          </Button>
+                        )}
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                )}
+              </Row>
+            )}
+          </Tab>
         </Tabs>
 
         {/* Recipe Modal */}
@@ -930,6 +1104,37 @@ const RecipesPage = () => {
           </Modal.Footer>
         </Modal>
 
+        {/* Ingredient Category Modal */}
+        <IngredientCategoryModal
+          show={showIngredientCategoryModal}
+          onHide={() => setShowIngredientCategoryModal(false)}
+          category={editingIngredientCategory}
+          onSuccess={handleIngredientCategorySuccess}
+        />
+
+        {/* Delete Ingredient Category Confirmation Modal */}
+        <Modal show={showDeleteIngredientCategoryModal} onHide={() => setShowDeleteIngredientCategoryModal(false)} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>{t('ingredients.categories.deleteTitle', 'Delete Ingredient Category')}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <p>
+              {t('ingredients.categories.deleteConfirm', 'Are you sure you want to delete "{{name}}"?', {
+                name: deletingIngredientCategory?.name
+              })}
+            </p>
+            <p className="text-muted small">{t('common.actionCannotBeUndone', 'This action cannot be undone.')}</p>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowDeleteIngredientCategoryModal(false)}>
+              {t('common.cancel', 'Cancel')}
+            </Button>
+            <Button variant="danger" onClick={confirmDeleteIngredientCategory}>
+              {t('common.delete', 'Delete')}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
         {/* Nutrition Modal */}
         <Modal show={showNutritionModal} onHide={() => setShowNutritionModal(false)} centered>
           <Modal.Header closeButton>
@@ -958,7 +1163,19 @@ const RecipesPage = () => {
                 )}
                 <div className="mt-3">
                   <strong>{t('ingredients.category', 'Category')}:</strong>{' '}
-                  {getIngredientCategoryLabel(viewingNutrition.category)}
+                  {(() => {
+                    const catDisplay = getIngredientCategoryDisplay(viewingNutrition);
+                    return catDisplay ? (
+                      <Badge
+                        style={{ backgroundColor: catDisplay.color || '#9e9e9e' }}
+                        className="text-white ms-1"
+                      >
+                        {catDisplay.icon} {catDisplay.name}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted">-</span>
+                    );
+                  })()}
                 </div>
                 <div className="mt-1">
                   <strong>{t('ingredients.unit', 'Default Unit')}:</strong>{' '}

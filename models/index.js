@@ -48,6 +48,7 @@ db.VisitType = require('./VisitType')(sequelize, DataTypes);
 db.DocumentAccessLog = require('./DocumentAccessLog')(sequelize, DataTypes);
 db.RecipeCategory = require('./RecipeCategory')(sequelize, DataTypes);
 db.Recipe = require('./Recipe')(sequelize, DataTypes);
+db.IngredientCategory = require('./IngredientCategory')(sequelize, DataTypes);
 db.Ingredient = require('./Ingredient')(sequelize, DataTypes);
 db.RecipeIngredient = require('./RecipeIngredient')(sequelize, DataTypes);
 db.RecipePatientAccess = require('./RecipePatientAccess')(sequelize, DataTypes);
@@ -638,6 +639,26 @@ db.Ingredient.belongsTo(db.User, {
 db.User.hasMany(db.Ingredient, {
   foreignKey: 'created_by',
   as: 'created_ingredients'
+});
+
+// IngredientCategory - Ingredient relationship
+db.IngredientCategory.hasMany(db.Ingredient, {
+  foreignKey: 'category_id',
+  as: 'ingredients'
+});
+db.Ingredient.belongsTo(db.IngredientCategory, {
+  foreignKey: 'category_id',
+  as: 'ingredientCategory'
+});
+
+// IngredientCategory - User (created_by) relationship
+db.IngredientCategory.belongsTo(db.User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+db.User.hasMany(db.IngredientCategory, {
+  foreignKey: 'created_by',
+  as: 'created_ingredient_categories'
 });
 
 // RecipeIngredient associations

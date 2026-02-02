@@ -22,9 +22,15 @@ async function getIngredients(user, filters = {}, requestMetadata = {}) {
   try {
     const whereClause = { is_active: true };
 
-    // Category filter
+    // Category filter - support both category_id (UUID) and legacy category (string)
     if (filters.category) {
-      whereClause.category = filters.category;
+      // Check if it's a UUID (category_id) or legacy category string
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(filters.category)) {
+        whereClause.category_id = filters.category;
+      } else {
+        whereClause.category = filters.category;
+      }
     }
 
     // Search filter (normalized search)
@@ -53,6 +59,11 @@ async function getIngredients(user, filters = {}, requestMetadata = {}) {
           model: User,
           as: 'creator',
           attributes: ['id', 'username', 'first_name', 'last_name']
+        },
+        {
+          model: db.IngredientCategory,
+          as: 'ingredientCategory',
+          attributes: ['id', 'name', 'icon', 'color']
         }
       ]
     });
@@ -193,6 +204,7 @@ async function createIngredient(ingredientData, user, requestMetadata = {}) {
     const ingredient = await Ingredient.create({
       name: ingredientData.name,
       category: ingredientData.category,
+      category_id: ingredientData.category_id || null,
       default_unit: ingredientData.default_unit || 'g',
       nutrition_per_100g: ingredientData.nutrition_per_100g || {},
       allergens: ingredientData.allergens || [],
@@ -207,6 +219,11 @@ async function createIngredient(ingredientData, user, requestMetadata = {}) {
           model: User,
           as: 'creator',
           attributes: ['id', 'username', 'first_name', 'last_name']
+        },
+        {
+          model: db.IngredientCategory,
+          as: 'ingredientCategory',
+          attributes: ['id', 'name', 'icon', 'color']
         }
       ]
     });
@@ -263,7 +280,7 @@ async function updateIngredient(id, updateData, user, requestMetadata = {}) {
     const beforeState = ingredient.toJSON();
 
     // Update allowed fields
-    const allowedFields = ['name', 'category', 'default_unit', 'nutrition_per_100g', 'allergens'];
+    const allowedFields = ['name', 'category', 'category_id', 'default_unit', 'nutrition_per_100g', 'allergens'];
     allowedFields.forEach(field => {
       if (updateData[field] !== undefined) {
         ingredient[field] = updateData[field];
@@ -279,6 +296,11 @@ async function updateIngredient(id, updateData, user, requestMetadata = {}) {
           model: User,
           as: 'creator',
           attributes: ['id', 'username', 'first_name', 'last_name']
+        },
+        {
+          model: db.IngredientCategory,
+          as: 'ingredientCategory',
+          attributes: ['id', 'name', 'icon', 'color']
         }
       ]
     });

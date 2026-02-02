@@ -3,26 +3,12 @@
  * Modal for creating/editing ingredients
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Modal, Form, Button, Row, Col, Spinner, Badge, InputGroup } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import * as ingredientService from '../services/ingredientService';
-
-const CATEGORIES = [
-  'proteins',
-  'grains',
-  'vegetables',
-  'fruits',
-  'dairy',
-  'oils',
-  'nuts',
-  'legumes',
-  'spices',
-  'condiments',
-  'beverages',
-  'other'
-];
+import * as ingredientCategoryService from '../services/ingredientCategoryService';
 
 const UNITS = ['g', 'kg', 'ml', 'l', 'cup', 'tbsp', 'tsp', 'piece', 'slice'];
 
@@ -46,9 +32,10 @@ const IngredientModal = ({ show, onHide, ingredient, onSuccess, onCreated, initi
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [lookingUp, setLookingUp] = useState(false);
+  const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
-    category: 'other',
+    category_id: '',
     default_unit: 'g',
     nutrition_per_100g: {
       calories: '',
@@ -63,11 +50,60 @@ const IngredientModal = ({ show, onHide, ingredient, onSuccess, onCreated, initi
   });
   const [errors, setErrors] = useState({});
 
+  // Load categories
+  const loadCategories = useCallback(async () => {
+    try {
+      const data = await ingredientCategoryService.getCategories();
+      setCategories(data);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    }
+  }, []);
+
   useEffect(() => {
+    if (show) {
+      loadCategories();
+    }
+  }, [show, loadCategories]);
+
+  useEffect(() => {
+    // Wait for categories to be loaded before setting form data
+    if (categories.length === 0) return;
+
     if (ingredient) {
+      // Get category_id from ingredient or from ingredientCategory object
+      let categoryId = ingredient.category_id || '';
+      if (!categoryId && ingredient.ingredientCategory) {
+        categoryId = ingredient.ingredientCategory.id;
+      }
+      // If still no category_id, try to map from legacy category string
+      if (!categoryId && ingredient.category) {
+        const legacyToKeyword = {
+          proteins: ['protéines', 'proteins'],
+          grains: ['céréales', 'grains'],
+          vegetables: ['légumes', 'vegetables'],
+          fruits: ['fruits'],
+          dairy: ['produits laitiers', 'dairy'],
+          oils: ['huiles', 'oils'],
+          nuts: ['noix', 'nuts'],
+          legumes: ['légumineuses', 'legumes'],
+          spices: ['épices', 'spices'],
+          condiments: ['condiments', 'sauces'],
+          beverages: ['boissons', 'beverages'],
+          other: ['autres', 'other']
+        };
+        const keywords = legacyToKeyword[ingredient.category] || [];
+        const matchedCat = categories.find(c =>
+          keywords.some(kw => c.name.toLowerCase().includes(kw.toLowerCase()))
+        );
+        if (matchedCat) {
+          categoryId = matchedCat.id;
+        }
+      }
+
       setFormData({
         name: ingredient.name || '',
-        category: ingredient.category || 'other',
+        category_id: categoryId,
         default_unit: ingredient.default_unit || 'g',
         nutrition_per_100g: {
           calories: ingredient.nutrition_per_100g?.calories || '',
@@ -81,9 +117,11 @@ const IngredientModal = ({ show, onHide, ingredient, onSuccess, onCreated, initi
         allergens: ingredient.allergens || []
       });
     } else {
+      // Find the "Other" category for default
+      const otherCat = categories.find(c => c.name.toLowerCase().includes('autre') || c.name.toLowerCase().includes('other'));
       setFormData({
         name: initialName || '',
-        category: 'other',
+        category_id: otherCat?.id || '',
         default_unit: 'g',
         nutrition_per_100g: {
           calories: '',
@@ -102,8 +140,9 @@ const IngredientModal = ({ show, onHide, ingredient, onSuccess, onCreated, initi
       }
     }
     setErrors({});
-  }, [ingredient, show, initialName]);
+  }, [ingredient, show, initialName, categories]);
 
+  // Legacy function - kept for backward compatibility during lookup
   const getCategoryLabel = (category) => {
     const labels = {
       proteins: t('ingredients.categories.proteins', 'Proteins'),
@@ -163,9 +202,35 @@ const IngredientModal = ({ show, onHide, ingredient, onSuccess, onCreated, initi
     try {
       const data = await ingredientService.lookupNutrition(nameToSearch);
       if (data) {
+        // Try to map legacy category string to category_id
+        let newCategoryId = formData.category_id;
+        if (data.category && categories.length > 0) {
+          const legacyToName = {
+            proteins: ['protéines', 'proteins'],
+            grains: ['céréales', 'grains'],
+            vegetables: ['légumes', 'vegetables'],
+            fruits: ['fruits'],
+            dairy: ['produits laitiers', 'dairy'],
+            oils: ['huiles', 'oils'],
+            nuts: ['noix', 'nuts'],
+            legumes: ['légumineuses', 'legumes'],
+            spices: ['épices', 'spices'],
+            condiments: ['condiments', 'sauces'],
+            beverages: ['boissons', 'beverages'],
+            other: ['autres', 'other']
+          };
+          const keywords = legacyToName[data.category] || [];
+          const matchedCat = categories.find(c =>
+            keywords.some(kw => c.name.toLowerCase().includes(kw.toLowerCase()))
+          );
+          if (matchedCat) {
+            newCategoryId = matchedCat.id;
+          }
+        }
+
         setFormData(prev => ({
           ...prev,
-          category: data.category || prev.category,
+          category_id: newCategoryId,
           nutrition_per_100g: {
             calories: data.nutrition_per_100g?.calories || prev.nutrition_per_100g.calories,
             protein: data.nutrition_per_100g?.protein || prev.nutrition_per_100g.protein,
@@ -212,7 +277,7 @@ const IngredientModal = ({ show, onHide, ingredient, onSuccess, onCreated, initi
 
       const dataToSubmit = {
         name: formData.name.trim(),
-        category: formData.category,
+        category_id: formData.category_id || null,
         default_unit: formData.default_unit,
         nutrition_per_100g: Object.keys(nutrition).length > 0 ? nutrition : {},
         allergens: formData.allergens.length > 0 ? formData.allergens : []
@@ -292,13 +357,14 @@ const IngredientModal = ({ show, onHide, ingredient, onSuccess, onCreated, initi
               <Form.Group className="mb-3">
                 <Form.Label>{t('ingredients.category', 'Category')}</Form.Label>
                 <Form.Select
-                  name="category"
-                  value={formData.category}
+                  name="category_id"
+                  value={formData.category_id}
                   onChange={handleChange}
                 >
-                  {CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>
-                      {getCategoryLabel(cat)}
+                  <option value="">{t('common.select', 'Select...')}</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.name}
                     </option>
                   ))}
                 </Form.Select>
