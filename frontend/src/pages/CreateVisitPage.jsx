@@ -18,6 +18,61 @@ import { getMeasureDefinitions, logPatientMeasure, getAllMeasureTranslations } f
 import { fetchMeasureTranslations } from '../utils/measureTranslations';
 import { getTimezone } from '../utils/dateUtils';
 import userService from '../services/userService';
+
+/**
+ * Convert a local datetime string (YYYY-MM-DDTHH:mm) to ISO UTC string
+ * The input is interpreted as being in the configured timezone
+ */
+const localDateTimeToUTC = (localDateTimeStr) => {
+  if (!localDateTimeStr) return null;
+
+  // Parse the local datetime components
+  const [datePart, timePart] = localDateTimeStr.split('T');
+  if (!datePart || !timePart) return null;
+
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hours, minutes] = timePart.split(':').map(Number);
+
+  // Create a date string with timezone for proper parsing
+  // We use Intl.DateTimeFormat to get the UTC offset for the configured timezone
+  const timezone = getTimezone();
+
+  // Create a reference date to get the timezone offset
+  const localDate = new Date(year, month - 1, day, hours, minutes, 0);
+
+  // Get the formatted date in the target timezone to calculate offset
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+
+  // Get current UTC offset for the timezone at this date
+  const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
+  const tzParts = formatter.formatToParts(utcDate);
+  const tzHour = parseInt(tzParts.find(p => p.type === 'hour')?.value || '0');
+  const tzMinute = parseInt(tzParts.find(p => p.type === 'minute')?.value || '0');
+
+  // Calculate the offset in minutes
+  const utcMinutes = hours * 60 + minutes;
+  const tzMinutes = tzHour * 60 + tzMinute;
+  let offsetMinutes = tzMinutes - utcMinutes;
+
+  // Adjust for day boundary crossings
+  if (offsetMinutes > 720) offsetMinutes -= 1440;
+  if (offsetMinutes < -720) offsetMinutes += 1440;
+
+  // Create the final UTC date by subtracting the offset
+  const finalUtcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
+  finalUtcDate.setUTCMinutes(finalUtcDate.getUTCMinutes() - offsetMinutes);
+
+  return finalUtcDate.toISOString();
+};
 import CustomFieldInput from '../components/CustomFieldInput';
 
 const CreateVisitPage = () => {
@@ -393,9 +448,9 @@ const CreateVisitPage = () => {
       const { visit_type_id, ...dataWithoutTypeId } = formData;
       const submitData = {
         ...dataWithoutTypeId,
-        visit_date: formData.visit_date + ':00', // Keep as local time (no Z suffix)
+        visit_date: localDateTimeToUTC(formData.visit_date), // Convert local time to UTC
         next_visit_date: formData.next_visit_date && formData.next_visit_date.trim()
-          ? formData.next_visit_date + ':00' // Keep as local time (no Z suffix)
+          ? localDateTimeToUTC(formData.next_visit_date) // Convert local time to UTC
           : null,
         duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null,
         status: completeImmediately ? 'COMPLETED' : formData.status

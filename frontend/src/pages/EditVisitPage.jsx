@@ -16,9 +16,61 @@ import visitTypeService from '../services/visitTypeService';
 import userService from '../services/userService';
 import { getMeasureDefinitions, getMeasuresByVisit, logPatientMeasure, updatePatientMeasure, getAllMeasureTranslations } from '../services/measureService';
 import { fetchMeasureTranslations } from '../utils/measureTranslations';
-import { formatDateTime } from '../utils/dateUtils';
+import { formatDateTime, getTimezone } from '../utils/dateUtils';
 import CustomFieldInput from '../components/CustomFieldInput';
 import ConfirmModal from '../components/ConfirmModal';
+
+/**
+ * Convert a local datetime string (YYYY-MM-DDTHH:mm) to ISO UTC string
+ * The input is interpreted as being in the configured timezone
+ */
+const localDateTimeToUTC = (localDateTimeStr) => {
+  if (!localDateTimeStr) return null;
+
+  // Parse the local datetime components
+  const [datePart, timePart] = localDateTimeStr.split('T');
+  if (!datePart || !timePart) return null;
+
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hours, minutes] = timePart.split(':').map(Number);
+
+  // Create a date string with timezone for proper parsing
+  // We use Intl.DateTimeFormat to get the UTC offset for the configured timezone
+  const timezone = getTimezone();
+
+  // Create a reference date to get the timezone offset
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+
+  // Get current UTC offset for the timezone at this date
+  const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
+  const tzParts = formatter.formatToParts(utcDate);
+  const tzHour = parseInt(tzParts.find(p => p.type === 'hour')?.value || '0');
+  const tzMinute = parseInt(tzParts.find(p => p.type === 'minute')?.value || '0');
+
+  // Calculate the offset in minutes
+  const utcMinutes = hours * 60 + minutes;
+  const tzMinutes = tzHour * 60 + tzMinute;
+  let offsetMinutes = tzMinutes - utcMinutes;
+
+  // Adjust for day boundary crossings
+  if (offsetMinutes > 720) offsetMinutes -= 1440;
+  if (offsetMinutes < -720) offsetMinutes += 1440;
+
+  // Create the final UTC date by subtracting the offset
+  const finalUtcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
+  finalUtcDate.setUTCMinutes(finalUtcDate.getUTCMinutes() - offsetMinutes);
+
+  return finalUtcDate.toISOString();
+};
 
 const EditVisitPage = () => {
   const { t, i18n } = useTranslation();
@@ -62,17 +114,6 @@ const EditVisitPage = () => {
   // Finish visit confirm modal
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
 
-  /**
-   * Format date string for API submission (keep as local time)
-   * @param {string} dateTimeStr - Date string in format 'YYYY-MM-DDTHH:mm'
-   * @returns {string|null} Date string with seconds added (no Z suffix to preserve local time)
-   */
-  const createLocalISOString = (dateTimeStr) => {
-    if (!dateTimeStr) return null;
-    // Add seconds if not present, no Z suffix to keep as local time
-    return dateTimeStr.length === 16 ? dateTimeStr + ':00' : dateTimeStr;
-  };
-
   useEffect(() => {
     if (i18n.resolvedLanguage) {
       fetchVisitData();
@@ -110,17 +151,27 @@ const EditVisitPage = () => {
       setVisit(visitData);
 
       // Pre-populate form with visit data
-      // Convert UTC dates to local time for display
+      // Convert UTC dates to configured timezone for display
       const formatDateForLocalDisplay = (dateStr) => {
         if (!dateStr) return '';
         const date = new Date(dateStr);
-        // Convert to local time and format as YYYY-MM-DDTHH:mm
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
+        const timezone = getTimezone();
+
+        // Use Intl.DateTimeFormat to convert to the configured timezone
+        const formatter = new Intl.DateTimeFormat('en-CA', {
+          timeZone: timezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+
+        const parts = formatter.formatToParts(date);
+        const getValue = (type) => parts.find(p => p.type === type)?.value || '';
+
+        return `${getValue('year')}-${getValue('month')}-${getValue('day')}T${getValue('hour')}:${getValue('minute')}`;
       };
 
       const formattedVisitDate = visitData.visit_date
@@ -452,9 +503,9 @@ const EditVisitPage = () => {
       const submitData = {
         ...formData,
         visit_summary: visitSummary,
-        visit_date: createLocalISOString(formData.visit_date),
+        visit_date: localDateTimeToUTC(formData.visit_date),
         next_visit_date: formData.next_visit_date && formData.next_visit_date.trim()
-          ? createLocalISOString(formData.next_visit_date)
+          ? localDateTimeToUTC(formData.next_visit_date)
           : null,
         duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null
       };
@@ -586,9 +637,9 @@ const EditVisitPage = () => {
       // Step 1: Update visit data
       const submitData = {
         ...formData,
-        visit_date: createLocalISOString(formData.visit_date),
+        visit_date: localDateTimeToUTC(formData.visit_date),
         next_visit_date: formData.next_visit_date && formData.next_visit_date.trim()
-          ? createLocalISOString(formData.next_visit_date)
+          ? localDateTimeToUTC(formData.next_visit_date)
           : null,
         duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null
       };
