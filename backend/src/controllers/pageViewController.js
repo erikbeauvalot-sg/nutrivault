@@ -143,7 +143,10 @@ exports.getPageViewStats = async (req, res, next) => {
 
     if (end_date) {
       where.created_at = where.created_at || {};
-      where.created_at[Op.lte] = new Date(end_date);
+      // Set to end of day (23:59:59.999) to include the entire end date
+      const endOfDay = new Date(end_date);
+      endOfDay.setHours(23, 59, 59, 999);
+      where.created_at[Op.lte] = endOfDay;
     }
 
     // Get total page views
