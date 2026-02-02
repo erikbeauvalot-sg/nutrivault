@@ -223,24 +223,54 @@ const PageViewsAnalytics = ({ pagePath = '/mariondiet' }) => {
         </Col>
       </Row>
 
-      {/* Top Referrers */}
-      {stats?.topReferrers?.length > 0 && (
-        <Card className="mb-4">
-          <Card.Header>
-            <h5 className="mb-0">{t('analytics.topReferrers', 'Top Referrers')}</h5>
-          </Card.Header>
-          <Card.Body>
-            {stats.topReferrers.map((item, index) => (
-              <div key={index} className="d-flex justify-content-between align-items-center mb-2">
-                <span className="text-truncate" style={{ maxWidth: '80%' }}>
-                  {item.referrer || 'Direct'}
-                </span>
-                <Badge bg="primary">{item.count}</Badge>
-              </div>
-            ))}
-          </Card.Body>
-        </Card>
-      )}
+      {/* Top Referrers & Top IPs */}
+      <Row className="mb-4">
+        {stats?.topReferrers?.length > 0 && (
+          <Col md={6}>
+            <Card className="h-100">
+              <Card.Header>
+                <h5 className="mb-0">{t('analytics.topReferrers', 'Top Referrers')}</h5>
+              </Card.Header>
+              <Card.Body>
+                {stats.topReferrers.map((item, index) => (
+                  <div key={index} className="d-flex justify-content-between align-items-center mb-2">
+                    <span className="text-truncate" style={{ maxWidth: '70%' }}>
+                      {item.referrer || 'Direct'}
+                    </span>
+                    <Badge bg="primary">{item.count}</Badge>
+                  </div>
+                ))}
+              </Card.Body>
+            </Card>
+          </Col>
+        )}
+        {stats?.topIPs?.length > 0 && (
+          <Col md={6}>
+            <Card className="h-100">
+              <Card.Header>
+                <h5 className="mb-0">{t('analytics.topIPs', 'Top IPs')}</h5>
+              </Card.Header>
+              <Card.Body>
+                {stats.topIPs.map((item, index) => (
+                  <div key={index} className="d-flex justify-content-between align-items-center mb-2">
+                    <span className="font-monospace">
+                      {item.ip_address}
+                    </span>
+                    <div>
+                      <Badge bg="secondary" className="me-1" title="Hits">
+                        {item.count} hits
+                      </Badge>
+                      <Badge bg="info" title="Unique visitors">
+                        {item.unique_visitors} vis.
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </Card.Body>
+            </Card>
+          </Col>
+        )}
+      </Row>
 
       {/* Recent Views */}
       <Card>

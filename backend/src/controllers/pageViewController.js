@@ -212,6 +212,23 @@ exports.getPageViewStats = async (req, res, next) => {
       raw: true
     });
 
+    // Get top IPs
+    const topIPs = await db.PageView.findAll({
+      where: {
+        ...where,
+        ip_address: { [Op.ne]: null }
+      },
+      attributes: [
+        'ip_address',
+        [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count'],
+        [db.sequelize.fn('COUNT', db.sequelize.fn('DISTINCT', db.sequelize.col('visitor_id'))), 'unique_visitors']
+      ],
+      group: ['ip_address'],
+      order: [[db.sequelize.fn('COUNT', db.sequelize.col('id')), 'DESC']],
+      limit: 10,
+      raw: true
+    });
+
     // Get views over time
     let dateFormat;
     if (db.sequelize.getDialect() === 'sqlite') {
@@ -303,6 +320,7 @@ exports.getPageViewStats = async (req, res, next) => {
         viewsByBrowser,
         viewsByPage,
         topReferrers,
+        topIPs,
         viewsOverTime,
         utmStats
       }
