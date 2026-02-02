@@ -185,6 +185,7 @@ const generateInvoicePDF = async (invoiceId, userId, language = 'fr') => {
 function drawHeader(doc, customization, invoice, t) {
   const primaryColor = customization.primary_color || '#3498db';
   let y = MARGIN;
+  let logoBottomY = y; // Track where logo ends
 
   // LEFT: Logo + Business name
   if (customization.show_logo && customization.logo_file_path) {
@@ -196,17 +197,19 @@ function drawHeader(doc, customization, invoice, t) {
         const logoWidth = customization.logo_width || 150;
         const logoHeight = customization.logo_height || 80;
         doc.image(logoPath, MARGIN, y, { fit: [logoWidth, logoHeight] });
+        logoBottomY = y + logoHeight; // Position below the logo
       }
     } catch (err) {
       console.error('Error loading logo:', err);
     }
   }
 
-  // Title
+  // Title - positioned below the logo with some padding
+  const titleY = logoBottomY + 10;
   doc.fontSize(22)
      .fillColor(primaryColor)
      .font('Helvetica-Bold')
-     .text(t.invoice, MARGIN, y + 45);
+     .text(t.invoice, MARGIN, titleY);
 
   // RIGHT: Contact info
   if (customization.show_contact_info) {
@@ -240,7 +243,8 @@ function drawHeader(doc, customization, invoice, t) {
     }
   }
 
-  doc.y = y + 90; // Increased spacing
+  // Set y position below title (title is ~25px height)
+  doc.y = titleY + 35;
 }
 
 /**
