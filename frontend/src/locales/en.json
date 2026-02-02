@@ -2295,6 +2295,21 @@
         "title": "Change Password",
         "description": "Update your account password for security."
       }
+    },
+    "websites": {
+      "sectionTitle": "Websites",
+      "title": "My Websites",
+      "description": "Add your professional websites, blogs, or social media links.",
+      "placeholder": "https://example.com",
+      "add": "Add",
+      "remove": "Remove",
+      "noWebsites": "No websites added yet.",
+      "invalidUrl": "Please enter a valid URL",
+      "duplicate": "This website is already in your list",
+      "help": "Enter a full URL (e.g., https://www.mysite.com)",
+      "saved": "Websites saved successfully",
+      "saveError": "Failed to save websites",
+      "loadError": "Failed to load websites"
     }
   },
   "invoiceCustomization": {

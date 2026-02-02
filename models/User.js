@@ -98,6 +98,24 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       defaultValue: 'primary',
       comment: 'Google Calendar ID to sync with (default: primary)'
+    },
+    // Websites for dietitians
+    websites: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: [],
+      comment: 'Array of website URLs associated with the user',
+      get() {
+        const value = this.getDataValue('websites');
+        if (typeof value === 'string') {
+          try {
+            return JSON.parse(value);
+          } catch (e) {
+            return [];
+          }
+        }
+        return value || [];
+      }
     }
   }, {
     tableName: 'users',

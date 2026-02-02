@@ -153,7 +153,27 @@ const updateUserValidation = [
   body('language_preference')
     .optional()
     .isIn(['fr', 'en'])
-    .withMessage('Language preference must be either "fr" or "en"')
+    .withMessage('Language preference must be either "fr" or "en"'),
+
+  body('websites')
+    .optional()
+    .isArray()
+    .withMessage('Websites must be an array')
+    .custom((value) => {
+      if (Array.isArray(value)) {
+        for (const url of value) {
+          if (typeof url !== 'string' || url.trim() === '') {
+            throw new Error('Each website must be a non-empty string');
+          }
+          try {
+            new URL(url);
+          } catch {
+            throw new Error(`Invalid URL: ${url}`);
+          }
+        }
+      }
+      return true;
+    })
 ];
 
 /**

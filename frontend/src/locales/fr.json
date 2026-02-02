@@ -2434,6 +2434,21 @@
         "title": "Changer le mot de passe",
         "description": "Mettez à jour le mot de passe de votre compte pour la sécurité."
       }
+    },
+    "websites": {
+      "sectionTitle": "Sites Internet",
+      "title": "Mes sites internet",
+      "description": "Ajoutez vos sites web professionnels, blogs ou liens vers vos réseaux sociaux.",
+      "placeholder": "https://exemple.com",
+      "add": "Ajouter",
+      "remove": "Supprimer",
+      "noWebsites": "Aucun site internet ajouté.",
+      "invalidUrl": "Veuillez entrer une URL valide",
+      "duplicate": "Ce site est déjà dans votre liste",
+      "help": "Entrez une URL complète (ex: https://www.monsite.com)",
+      "saved": "Sites internet enregistrés avec succès",
+      "saveError": "Échec de l'enregistrement des sites internet",
+      "loadError": "Échec du chargement des sites internet"
     }
   },
   "invoiceCustomization": {
