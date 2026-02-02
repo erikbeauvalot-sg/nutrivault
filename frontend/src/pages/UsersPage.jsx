@@ -280,7 +280,12 @@ const UsersPage = () => {
               /* Mobile Card View */
               <div className="user-cards-container">
                 {users.map(usr => (
-                  <Card key={usr.id} className="user-card mb-3">
+                  <Card
+                    key={usr.id}
+                    className="user-card mb-3"
+                    onClick={() => handleViewClick(usr.id)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <Card.Body>
                       <div className="d-flex justify-content-between align-items-start mb-2">
                         <div>
@@ -310,7 +315,7 @@ const UsersPage = () => {
                         )}
                       </div>
 
-                      <div className="action-buttons mt-3">
+                      <div className="action-buttons mt-3" onClick={(e) => e.stopPropagation()}>
                         <ActionButton
                           action="edit"
                           onClick={() => handleEditClick(usr.id)}
