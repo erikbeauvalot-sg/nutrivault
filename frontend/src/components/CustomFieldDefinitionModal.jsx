@@ -94,7 +94,8 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       display_order: 0,
       is_active: true,
       show_in_basic_info: false,
-      show_in_list: false
+      show_in_list: false,
+      visible_on_creation: false
     }
   });
 
@@ -148,7 +149,8 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
         display_order: definition.display_order || 0,
         is_active: definition.is_active !== undefined ? definition.is_active : true,
         show_in_basic_info: definition.show_in_basic_info || false,
-        show_in_list: definition.show_in_list || false
+        show_in_list: definition.show_in_list || false,
+        visible_on_creation: definition.visible_on_creation || false
       });
       setSelectedFieldType(definition.field_type || 'text');
       setSelectOptions(definition.select_options || []);
@@ -168,7 +170,8 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
         display_order: 0,
         is_active: true,
         show_in_basic_info: false,
-        show_in_list: false
+        show_in_list: false,
+        visible_on_creation: false
       });
       setSelectedFieldType('text');
       setSelectOptions([]);
@@ -733,8 +736,17 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
                   label="Show in List View"
                   {...register('show_in_list')}
                 />
-                <Form.Text className="text-muted d-block">
+                <Form.Text className="text-muted d-block mb-3">
                   If checked, this field will appear as a column in patient list (max 5 fields)
+                </Form.Text>
+
+                <Form.Check
+                  type="checkbox"
+                  label={t('customFields.visibleOnCreation', 'Visible on Patient Creation')}
+                  {...register('visible_on_creation')}
+                />
+                <Form.Text className="text-muted d-block">
+                  {t('customFields.visibleOnCreationHelp', 'If checked, this field will be shown in the patient creation modal')}
                 </Form.Text>
               </Form.Group>
             </Col>

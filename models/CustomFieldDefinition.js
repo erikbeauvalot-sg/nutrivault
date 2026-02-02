@@ -105,6 +105,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: false
     },
+    visible_on_creation: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
     // Calculated field properties
     formula: {
       type: DataTypes.TEXT,

@@ -2,16 +2,19 @@
  * QuickPatientModal Component
  * Simplified patient creation modal for rapid workflow
  * Only requires essential fields - details can be completed later
+ * Supports custom fields marked as "visible on creation"
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal, Button, Form, Alert, Spinner } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import * as patientService from '../services/patientService';
+import { getCategories, updatePatientCustomFields } from '../services/customFieldService';
 import useEmailCheck from '../hooks/useEmailCheck';
+import CustomFieldInput from './CustomFieldInput';
 
 const QuickPatientModal = ({ show, onHide, onSuccess }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -21,6 +24,11 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Custom fields state
+  const [customFields, setCustomFields] = useState([]);
+  const [fieldValues, setFieldValues] = useState({});
+  const [loadingFields, setLoadingFields] = useState(false);
+
   // Email availability check with debouncing
   const { checking: checkingEmail, available: emailAvailable, error: emailCheckError } = useEmailCheck(
     formData.email,
@@ -29,11 +37,58 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
     500
   );
 
+  // Fetch custom fields marked as visible_on_creation
+  useEffect(() => {
+    if (show) {
+      fetchCustomFields();
+    }
+  }, [show, i18n.resolvedLanguage]);
+
+  const fetchCustomFields = async () => {
+    try {
+      setLoadingFields(true);
+      const categories = await getCategories();
+
+      // Flatten all definitions and filter by visible_on_creation
+      const visibleFields = [];
+      if (Array.isArray(categories)) {
+        categories.forEach(category => {
+          if (category.definitions && Array.isArray(category.definitions)) {
+            category.definitions
+              .filter(def => def.is_active && def.visible_on_creation)
+              .forEach(def => {
+                visibleFields.push({
+                  ...def,
+                  category_name: category.name
+                });
+              });
+          }
+        });
+      }
+
+      // Sort by display_order
+      visibleFields.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+
+      setCustomFields(visibleFields);
+    } catch (err) {
+      console.error('Error fetching custom fields:', err);
+    } finally {
+      setLoadingFields(false);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  const handleFieldChange = (definitionId, value) => {
+    setFieldValues(prev => ({
+      ...prev,
+      [definitionId]: value
     }));
   };
 
@@ -64,6 +119,17 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
       }
     }
 
+    // Validate required custom fields
+    for (const field of customFields) {
+      if (field.is_required) {
+        const value = fieldValues[field.id];
+        if (value === undefined || value === null || value === '') {
+          setError(t('customFields.fieldRequired', '{{field}} is required', { field: field.field_label }));
+          return false;
+        }
+      }
+    }
+
     return true;
   };
 
@@ -87,19 +153,34 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
       };
 
       const response = await patientService.createPatient(patientData);
+      const createdPatient = response.data;
+
+      // Save custom field values if any
+      if (createdPatient && createdPatient.id && Object.keys(fieldValues).length > 0) {
+        try {
+          const fieldsToSave = Object.entries(fieldValues)
+            .filter(([_, value]) => value !== null && value !== undefined && value !== '')
+            .map(([definitionId, value]) => ({
+              field_definition_id: definitionId,
+              value
+            }));
+
+          if (fieldsToSave.length > 0) {
+            await updatePatientCustomFields(createdPatient.id, fieldsToSave);
+          }
+        } catch (cfErr) {
+          console.error('Error saving custom fields:', cfErr);
+          // Don't fail patient creation if custom fields fail
+        }
+      }
 
       // Success
       if (onSuccess) {
-        onSuccess(response.data);
+        onSuccess(createdPatient);
       }
 
       // Reset form and close
-      setFormData({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: ''
-      });
+      resetForm();
       onHide();
     } catch (err) {
       setError(err.response?.data?.error || err.message || t('patients.createError', 'Failed to create patient'));
@@ -109,14 +190,19 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
     }
   };
 
-  const handleClose = () => {
+  const resetForm = () => {
     setFormData({
       first_name: '',
       last_name: '',
       email: '',
       phone: ''
     });
+    setFieldValues({});
     setError(null);
+  };
+
+  const handleClose = () => {
+    resetForm();
     onHide();
   };
 
@@ -124,7 +210,7 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
     <Modal show={show} onHide={handleClose} centered scrollable>
       <Modal.Header closeButton>
         <Modal.Title>
-          ⚡ {t('patients.quickCreate', 'Quick Patient Creation')}
+          {t('patients.quickCreate', 'Quick Patient Creation')}
         </Modal.Title>
       </Modal.Header>
 
@@ -227,6 +313,30 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
             />
           </Form.Group>
 
+          {/* Custom Fields Section */}
+          {loadingFields ? (
+            <div className="text-center py-3">
+              <Spinner animation="border" size="sm" />
+              <span className="ms-2">{t('common.loading', 'Loading...')}</span>
+            </div>
+          ) : customFields.length > 0 && (
+            <div className="border-top pt-3 mt-3">
+              <h6 className="text-muted mb-3">
+                {t('customFields.additionalInfo', 'Additional Information')}
+              </h6>
+              {customFields.map(field => (
+                <Form.Group key={field.id} className="mb-3">
+                  <CustomFieldInput
+                    definition={field}
+                    value={fieldValues[field.id] ?? ''}
+                    onChange={(value) => handleFieldChange(field.id, value)}
+                    disabled={loading}
+                  />
+                </Form.Group>
+              ))}
+            </div>
+          )}
+
           <Alert variant="success" className="small mb-0">
             <i className="fas fa-check-circle me-2"></i>
             {t('patients.quickCreateSuccess', 'Patient will be created instantly. You can complete additional details from their profile page.')}
@@ -248,9 +358,7 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
                 {t('common.creating', 'Creating...')}
               </>
             ) : (
-              <>
-                ⚡ {t('patients.createQuick', 'Create Quick Patient')}
-              </>
+              t('patients.createQuick', 'Create Patient')
             )}
           </Button>
         </Modal.Footer>
