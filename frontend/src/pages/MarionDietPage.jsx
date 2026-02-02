@@ -16,6 +16,7 @@ const MarionDietPage = () => {
     message: ''
   });
   const [formStatus, setFormStatus] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Color palette - exactement comme le site original
   const colors = {
@@ -322,6 +323,12 @@ const MarionDietPage = () => {
           .nav-links { display: none !important; }
           .section-flex { flex-direction: column !important; }
           .section-flex > div { max-width: 100% !important; }
+          .mobile-menu-btn { display: flex !important; }
+          .desktop-social { display: none !important; }
+        }
+        @media (min-width: 769px) {
+          .mobile-menu-btn { display: none !important; }
+          .mobile-menu-overlay { display: none !important; }
         }
         .testimonials-scroll::-webkit-scrollbar {
           height: 8px;
@@ -384,7 +391,7 @@ const MarionDietPage = () => {
             </a>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div className="desktop-social" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <a href="https://www.instagram.com/marion_dieteticienne/" target="_blank" rel="noopener noreferrer" style={{ color: colors.forest, transition: 'color 0.3s', display: 'flex', alignItems: 'center' }} onMouseOver={(e) => e.currentTarget.style.color = colors.wine} onMouseOut={(e) => e.currentTarget.style.color = colors.forest}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
           </a>
@@ -399,7 +406,101 @@ const MarionDietPage = () => {
             </svg>
           </a>
         </div>
+        {/* Mobile hamburger button */}
+        <button
+          className="mobile-menu-btn"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          style={{
+            display: 'none',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '0.5rem',
+            color: colors.forest,
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          aria-label="Menu"
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {mobileMenuOpen ? (
+              <>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </>
+            ) : (
+              <>
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </>
+            )}
+          </svg>
+        </button>
       </nav>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="mobile-menu-overlay"
+          style={{
+            position: 'fixed',
+            top: '65px',
+            left: 0,
+            right: 0,
+            backgroundColor: colors.white,
+            zIndex: 999,
+            boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+            padding: '1rem 0',
+            borderBottom: `2px solid ${colors.forest}`
+          }}
+        >
+          {[
+            { label: 'Accueil', id: 'accueil' },
+            { label: 'Accompagnements diététiques', id: 'accompagnements' },
+            { label: 'Ateliers nutrition', id: 'ateliers' },
+            { label: 'Contact', id: 'contact' }
+          ].map((item) => (
+            <a
+              key={item.id}
+              href={`#${item.id}`}
+              onClick={(e) => {
+                scrollToSection(e, item.id);
+                setMobileMenuOpen(false);
+              }}
+              style={{
+                display: 'block',
+                padding: '1rem 2rem',
+                color: colors.forest,
+                textDecoration: 'none',
+                fontSize: '1.1rem',
+                fontFamily: "'Lato', sans-serif",
+                fontWeight: '500',
+                borderBottom: `1px solid ${colors.cream}`,
+                transition: 'background-color 0.3s'
+              }}
+            >
+              {item.label}
+            </a>
+          ))}
+          {/* Social links in mobile menu */}
+          <div style={{ display: 'flex', gap: '1.5rem', padding: '1rem 2rem', justifyContent: 'center' }}>
+            <a href="https://www.instagram.com/marion_dieteticienne/" target="_blank" rel="noopener noreferrer" style={{ color: colors.forest }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+            </a>
+            <a href="https://www.linkedin.com/in/marion-beauvalot/" target="_blank" rel="noopener noreferrer" style={{ color: colors.forest }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+            </a>
+            <a href="https://www.doctolib.fr/dieteticien/suresnes/marion-beauvalot" target="_blank" rel="noopener noreferrer" style={{ color: colors.forest }}>
+              <svg width="26" height="26" viewBox="0 0 100 100" fill="none">
+                <rect width="100" height="100" rx="20" fill="#107ACA"/>
+                <path d="M25 30h15c11 0 20 9 20 20s-9 20-20 20H25V30zm10 32h5c5.5 0 10-4.5 10-10s-4.5-10-10-10h-5v20z" fill="white"/>
+                <circle cx="65" cy="50" r="8" fill="white"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section - Fond beige/crème avec texte vert foncé */}
       <section id="accueil" style={{
