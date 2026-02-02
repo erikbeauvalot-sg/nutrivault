@@ -192,6 +192,10 @@ app.use('/api/dashboard', dashboardRoutes);
 const campaignRoutes = require('./routes/campaigns');
 app.use('/api/campaigns', campaignRoutes);
 
+// Page Views routes (partially public - tracking is public, stats require auth)
+const pageViewsRoutes = require('./routes/pageViews');
+app.use('/api/page-views', pageViewsRoutes);
+
 // Serve uploaded files (logos, signatures)
 // Use /app in production (Docker), process.cwd() in development
 const uploadsBasePath = process.env.NODE_ENV === 'production' ? '/app/uploads' : path.join(process.cwd(), 'uploads');

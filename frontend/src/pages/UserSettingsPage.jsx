@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import Layout from '../components/layout/Layout';
 import GoogleCalendarSettings from '../components/GoogleCalendarSettings';
 import ChangePasswordModal from '../components/ChangePasswordModal';
-import UserWebsitesManager from '../components/UserWebsitesManager';
 
 /**
  * User Settings Page
@@ -26,16 +25,6 @@ const UserSettingsPage = () => {
                 <div className="settings-section card">
                   <div className="card-body">
                     <GoogleCalendarSettings />
-                  </div>
-                </div>
-
-                {/* Websites Settings */}
-                <div className="settings-section card">
-                  <div className="card-header">
-                    <h3>{t('settings.websites.sectionTitle', 'Websites')}</h3>
-                  </div>
-                  <div className="card-body">
-                    <UserWebsitesManager />
                   </div>
                 </div>
 

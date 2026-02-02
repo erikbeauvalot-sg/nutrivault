@@ -2310,7 +2310,38 @@
       "saved": "Websites saved successfully",
       "saveError": "Failed to save websites",
       "loadError": "Failed to load websites"
+    },
+    "analytics": {
+      "sectionTitle": "Page Analytics"
     }
+  },
+  "analytics": {
+    "pageViews": {
+      "title": "Page Analytics",
+      "description": "Track visits to your public landing page"
+    },
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "period": "Group by",
+    "hourly": "Hourly",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "totalViews": "Total Views",
+    "uniqueVisitors": "Unique Visitors",
+    "avgViewsPerVisitor": "Views/Visitor",
+    "deviceTypes": "Devices",
+    "browsers": "Browsers",
+    "topReferrers": "Top Referrers",
+    "recentViews": "Recent Views",
+    "noData": "No data available",
+    "noRecentViews": "No recent views",
+    "date": "Date",
+    "device": "Device",
+    "browser": "Browser",
+    "referrer": "Referrer",
+    "direct": "Direct",
+    "loadError": "Failed to load analytics"
   },
   "invoiceCustomization": {
     "title": "Invoice Customization",

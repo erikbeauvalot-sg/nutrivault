@@ -2,31 +2,44 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Form, Button, Badge, InputGroup, Alert, Spinner } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
-import { updateUser, getCurrentUser } from '../services/userService';
+import { updateUser, getUserById } from '../services/userService';
 import { toast } from 'react-toastify';
 
 /**
  * UserWebsitesManager Component
- * Allows users to manage their website URLs
+ * Allows users to manage website URLs
+ * @param {string} userId - Optional user ID to manage (for admin editing another user)
  */
-const UserWebsitesManager = () => {
+const UserWebsitesManager = ({ userId }) => {
   const { t } = useTranslation();
-  const { user, refreshUser } = useAuth();
+  const { user: currentUser, refreshUser } = useAuth();
   const [websites, setWebsites] = useState([]);
   const [newWebsite, setNewWebsite] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
+  // Determine which user's websites to manage
+  const targetUserId = userId || currentUser?.id;
+  const isOwnProfile = !userId || userId === currentUser?.id;
+
   useEffect(() => {
-    loadUserWebsites();
-  }, []);
+    if (targetUserId) {
+      loadUserWebsites();
+    }
+  }, [targetUserId]);
 
   const loadUserWebsites = async () => {
     setLoading(true);
     try {
-      const userData = await getCurrentUser();
-      setWebsites(userData.websites || []);
+      if (isOwnProfile && currentUser) {
+        // Use current user data from context
+        setWebsites(currentUser.websites || []);
+      } else {
+        // Fetch the target user's data
+        const userData = await getUserById(targetUserId);
+        setWebsites(userData.websites || []);
+      }
     } catch (err) {
       console.error('Error loading websites:', err);
       setError(t('settings.websites.loadError', 'Failed to load websites'));
@@ -56,9 +69,9 @@ const UserWebsitesManager = () => {
     setSaving(true);
     setError(null);
     try {
-      await updateUser(user.id, { websites: newWebsites });
+      await updateUser(targetUserId, { websites: newWebsites });
       setWebsites(newWebsites);
-      if (refreshUser) {
+      if (isOwnProfile && refreshUser) {
         await refreshUser();
       }
       toast.success(t('settings.websites.saved', 'Websites saved successfully'));
@@ -117,9 +130,6 @@ const UserWebsitesManager = () => {
 
   return (
     <div className="websites-manager">
-      <h4 className="mb-3">
-        {t('settings.websites.title', 'My Websites')}
-      </h4>
       <p className="text-muted mb-3">
         {t('settings.websites.description', 'Add your professional websites, blogs, or social media links.')}
       </p>

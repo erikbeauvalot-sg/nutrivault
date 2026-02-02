@@ -301,10 +301,10 @@ async function updateUser(user, userId, updateData, requestMetadata = {}) {
 
     if (isAdmin) {
       // Admin can update all fields except password (use separate endpoint)
-      allowedFields = ['username', 'email', 'role_id', 'first_name', 'last_name', 'phone', 'is_active', 'language_preference'];
+      allowedFields = ['username', 'email', 'role_id', 'first_name', 'last_name', 'phone', 'is_active', 'language_preference', 'websites'];
     } else {
       // Regular users can only update their own basic info
-      allowedFields = ['first_name', 'last_name', 'phone', 'email', 'language_preference'];
+      allowedFields = ['first_name', 'last_name', 'phone', 'email', 'language_preference', 'websites'];
     }
 
     // Check if email is being changed and if it's already taken

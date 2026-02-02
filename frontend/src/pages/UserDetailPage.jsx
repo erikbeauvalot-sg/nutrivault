@@ -16,6 +16,8 @@ import visitService from '../services/visitService';
 import UserModal from '../components/UserModal';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import ConfirmModal from '../components/ConfirmModal';
+import UserWebsitesManager from '../components/UserWebsitesManager';
+import PageViewsAnalytics from '../components/PageViewsAnalytics';
 
 const UserDetailPage = () => {
   const { t } = useTranslation();
@@ -36,19 +38,27 @@ const UserDetailPage = () => {
   const [dietitianPatients, setDietitianPatients] = useState([]);
   const [visitsLoading, setVisitsLoading] = useState(false);
 
-  // Redirect if not admin
+  // Check access: Admin can view any user, Dietitian can only view their own profile
+  const currentUserRole = typeof currentUser?.role === 'string' ? currentUser.role : currentUser?.role?.name;
+  const isAdmin = currentUserRole === 'ADMIN';
+  const isOwnProfile = currentUser?.id === id;
+  const canAccess = isAdmin || isOwnProfile;
+
+  // Redirect if no access
   useEffect(() => {
-    if (currentUser && currentUser.role !== 'ADMIN') {
+    if (currentUser && !canAccess) {
       navigate('/dashboard');
     }
-  }, [currentUser, navigate]);
+  }, [currentUser, canAccess, navigate]);
 
   useEffect(() => {
-    if (id && currentUser?.role === 'ADMIN') {
+    if (id && canAccess) {
       fetchUser();
-      fetchRoles();
+      if (isAdmin) {
+        fetchRoles();
+      }
     }
-  }, [id, currentUser]);
+  }, [id, canAccess, isAdmin]);
 
   // Fetch dietitian data when user is loaded and is a dietitian
   useEffect(() => {
@@ -215,7 +225,7 @@ const UserDetailPage = () => {
     return <Badge bg={variants[status] || 'secondary'}>{t(`visits.${status?.toLowerCase()}`, status)}</Badge>;
   };
 
-  if (currentUser && currentUser.role !== 'ADMIN') {
+  if (currentUser && !canAccess) {
     return null;
   }
 
@@ -293,40 +303,46 @@ const UserDetailPage = () => {
                 <div className="text-muted">@{user.username}</div>
               </div>
               <div className="action-buttons">
-                <ActionButton
-                  action="edit"
-                  onClick={() => setShowEditModal(true)}
-                  title={t('common.edit')}
-                />
+                {isAdmin && (
+                  <ActionButton
+                    action="edit"
+                    onClick={() => setShowEditModal(true)}
+                    title={t('common.edit')}
+                  />
+                )}
                 <ActionButton
                   action="reset-password"
                   onClick={() => setShowPasswordModal(true)}
                   title={t('users.resetPassword')}
                 />
-                <ActionButton
-                  action={user.is_active ? 'disable' : 'enable'}
-                  onClick={handleToggleStatus}
-                  disabled={user.id === currentUser.id}
-                  title={
-                    user.id === currentUser.id
-                      ? t('users.cannotToggleOwnStatus')
-                      : user.is_active
-                      ? t('users.deactivate')
-                      : t('users.activate')
-                  }
-                />
-                <ActionButton
-                  action="delete"
-                  onClick={handleDelete}
-                  disabled={user.id === currentUser.id || user.is_active}
-                  title={
-                    user.id === currentUser.id
-                      ? t('users.cannotDeleteOwnAccount')
-                      : user.is_active
-                      ? t('users.mustDeactivateBeforeDelete')
-                      : t('users.deleteUser', 'Delete User')
-                  }
-                />
+                {isAdmin && (
+                  <>
+                    <ActionButton
+                      action={user.is_active ? 'disable' : 'enable'}
+                      onClick={handleToggleStatus}
+                      disabled={user.id === currentUser.id}
+                      title={
+                        user.id === currentUser.id
+                          ? t('users.cannotToggleOwnStatus')
+                          : user.is_active
+                          ? t('users.deactivate')
+                          : t('users.activate')
+                      }
+                    />
+                    <ActionButton
+                      action="delete"
+                      onClick={handleDelete}
+                      disabled={user.id === currentUser.id || user.is_active}
+                      title={
+                        user.id === currentUser.id
+                          ? t('users.cannotDeleteOwnAccount')
+                          : user.is_active
+                          ? t('users.mustDeactivateBeforeDelete')
+                          : t('users.deleteUser', 'Delete User')
+                      }
+                    />
+                  </>
+                )}
               </div>
             </div>
           </Col>
@@ -621,6 +637,38 @@ const UserDetailPage = () => {
                         </div>
                       </>
                     )}
+                  </Card.Body>
+                </Card>
+              </Col>
+            </Row>
+
+            {/* Websites Section */}
+            <Row className="mb-4">
+              <Col>
+                <Card>
+                  <Card.Header className="bg-info text-white">
+                    <h5 className="mb-0">
+                      🌐 {t('settings.websites.sectionTitle', 'Websites')}
+                    </h5>
+                  </Card.Header>
+                  <Card.Body>
+                    <UserWebsitesManager userId={user.id} />
+                  </Card.Body>
+                </Card>
+              </Col>
+            </Row>
+
+            {/* Page Analytics Section */}
+            <Row className="mb-4">
+              <Col>
+                <Card>
+                  <Card.Header className="bg-secondary text-white">
+                    <h5 className="mb-0">
+                      📊 {t('settings.analytics.sectionTitle', 'Page Analytics')}
+                    </h5>
+                  </Card.Header>
+                  <Card.Body>
+                    <PageViewsAnalytics pagePath="/mariondiet" />
                   </Card.Body>
                 </Card>
               </Col>

@@ -54,6 +54,7 @@ db.RecipePatientAccess = require('./RecipePatientAccess')(sequelize, DataTypes);
 db.Task = require('./Task')(sequelize, DataTypes);
 db.EmailCampaign = require('./EmailCampaign')(sequelize, DataTypes);
 db.EmailCampaignRecipient = require('./EmailCampaignRecipient')(sequelize, DataTypes);
+db.PageView = require('./PageView')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship

@@ -4,6 +4,8 @@
  */
 
 import { useEffect, useState } from 'react';
+import CookieConsentBanner from '../components/CookieConsentBanner';
+import { trackPageView, hasAnalyticsConsent } from '../services/analyticsService';
 
 const MarionDietPage = () => {
   const [formData, setFormData] = useState({
@@ -246,6 +248,20 @@ const MarionDietPage = () => {
       }
     }
   }, []);
+
+  // Analytics - Track page view if consent is given
+  useEffect(() => {
+    if (hasAnalyticsConsent()) {
+      trackPageView('/mariondiet');
+    }
+  }, []);
+
+  // Handle cookie consent callback - track page if user accepts
+  const handleCookieConsent = (consent) => {
+    if (consent) {
+      trackPageView('/mariondiet');
+    }
+  };
 
   const scrollToSection = (e, sectionId) => {
     e.preventDefault();
@@ -2234,6 +2250,9 @@ const MarionDietPage = () => {
           © 2025 Marion Beauvalot - Diététicienne-Nutritionniste à Suresnes
         </p>
       </footer>
+
+      {/* Cookie Consent Banner */}
+      <CookieConsentBanner onConsent={handleCookieConsent} />
     </div>
   );
 };

@@ -2449,7 +2449,38 @@
       "saved": "Sites internet enregistrés avec succès",
       "saveError": "Échec de l'enregistrement des sites internet",
       "loadError": "Échec du chargement des sites internet"
+    },
+    "analytics": {
+      "sectionTitle": "Analytiques de page"
     }
+  },
+  "analytics": {
+    "pageViews": {
+      "title": "Analytiques de page",
+      "description": "Suivez les visites sur votre page d'atterrissage publique"
+    },
+    "startDate": "Date de début",
+    "endDate": "Date de fin",
+    "period": "Grouper par",
+    "hourly": "Par heure",
+    "daily": "Par jour",
+    "weekly": "Par semaine",
+    "monthly": "Par mois",
+    "totalViews": "Vues totales",
+    "uniqueVisitors": "Visiteurs uniques",
+    "avgViewsPerVisitor": "Vues/Visiteur",
+    "deviceTypes": "Appareils",
+    "browsers": "Navigateurs",
+    "topReferrers": "Principales sources",
+    "recentViews": "Vues récentes",
+    "noData": "Aucune donnée disponible",
+    "noRecentViews": "Aucune vue récente",
+    "date": "Date",
+    "device": "Appareil",
+    "browser": "Navigateur",
+    "referrer": "Source",
+    "direct": "Direct",
+    "loadError": "Échec du chargement des analytiques"
   },
   "invoiceCustomization": {
     "title": "Personnalisation des factures",
