@@ -55,7 +55,8 @@ exports.getAllVisits = async (req, res, next) => {
         page: result.page,
         limit: result.limit,
         totalPages: result.totalPages
-      }
+      },
+      customFieldDefinitions: result.customFieldDefinitions || []
     });
   } catch (error) {
     next(error);

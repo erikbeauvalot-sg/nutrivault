@@ -37,6 +37,7 @@ const VisitsPage = () => {
     limit: 20
   });
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0 });
+  const [customFieldDefinitions, setCustomFieldDefinitions] = useState([]);
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'timeline'
   const [showExportModal, setShowExportModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -135,13 +136,15 @@ const VisitsPage = () => {
   const fetchVisits = async () => {
     try {
       setLoading(true);
-      const { data, pagination: paginationData } = await visitService.getVisits(filters);
+      const { data, pagination: paginationData, customFieldDefinitions: fieldDefs } = await visitService.getVisits(filters);
       setVisits(Array.isArray(data) ? data : []);
       setPagination(paginationData || { total: 0, totalPages: 0 });
+      setCustomFieldDefinitions(fieldDefs || []);
       setError(null);
     } catch (err) {
       setError(err.response?.data?.error || t('visits.failedToLoad'));
       setVisits([]);
+      setCustomFieldDefinitions([]);
     } finally {
       setLoading(false);
     }
@@ -208,6 +211,22 @@ const VisitsPage = () => {
   const canEdit = (visit) => {
     const canEditResult = user.role === 'ADMIN' || user.role === 'ASSISTANT' || (user.role === 'DIETITIAN' && visit.dietitian_id === user.id);
     return canEditResult;
+  };
+
+  const formatCustomFieldValue = (value, fieldType) => {
+    if (value === null || value === undefined || value === '') {
+      return '-';
+    }
+    if (fieldType === 'boolean') {
+      return value ? t('common.yes') : t('common.no');
+    }
+    if (fieldType === 'date') {
+      return formatDate(value);
+    }
+    if (Array.isArray(value)) {
+      return value.join(', ');
+    }
+    return String(value);
   };
 
   return (
@@ -381,6 +400,15 @@ const VisitsPage = () => {
                               ⏱️ {visit.duration_minutes} min
                             </div>
                           )}
+                          {customFieldDefinitions.map(field => {
+                            const value = visit.custom_field_values?.[field.field_name];
+                            if (value === null || value === undefined || value === '') return null;
+                            return (
+                              <div key={field.id} className="small text-muted mb-1">
+                                <strong>{field.field_label}:</strong> {formatCustomFieldValue(value, field.field_type)}
+                              </div>
+                            );
+                          })}
                         </div>
 
                         {canEdit(visit) && (
@@ -414,6 +442,9 @@ const VisitsPage = () => {
                           <th>{t('visits.type')}</th>
                           <th>{t('visits.status')}</th>
                           <th>{t('visits.duration')}</th>
+                          {customFieldDefinitions.map(field => (
+                            <th key={field.id}>{field.field_label}</th>
+                          ))}
                           <th>{t('visits.actions')}</th>
                         </tr>
                       </thead>
@@ -448,6 +479,14 @@ const VisitsPage = () => {
                             <td>{visit.visit_type || '-'}</td>
                             <td>{getStatusBadge(visit.status)}</td>
                             <td>{visit.duration_minutes ? `${visit.duration_minutes} min` : '-'}</td>
+                            {customFieldDefinitions.map(field => (
+                              <td key={field.id}>
+                                {formatCustomFieldValue(
+                                  visit.custom_field_values?.[field.field_name],
+                                  field.field_type
+                                )}
+                              </td>
+                            ))}
                             <td onClick={(e) => e.stopPropagation()}>
                               <div className="action-buttons">
                                 {canEdit(visit) && (

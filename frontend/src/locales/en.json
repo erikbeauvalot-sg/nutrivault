@@ -1557,6 +1557,8 @@
     "additionalInfo": "Additional Information",
     "visibleOnCreation": "Visible on Patient Creation",
     "visibleOnCreationHelp": "If checked, this field will be displayed in the quick patient creation form",
+    "showInVisitList": "Show in Visits List",
+    "showInVisitListHelp": "If checked, this field will appear as a column in the visits list",
     "fieldRequired": "{{field}} is required"
   },
   "visitTypes": {

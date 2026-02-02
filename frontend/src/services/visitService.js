@@ -22,7 +22,8 @@ export const getVisits = async (filters = {}) => {
   const response = await api.get(`/visits?${params.toString()}`);
   return {
     data: extractData(response, []),
-    pagination: extractPagination(response)
+    pagination: extractPagination(response),
+    customFieldDefinitions: response.data?.customFieldDefinitions || []
   };
 };
 

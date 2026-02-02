@@ -289,6 +289,7 @@ async function createDefinition(user, definitionData, requestMetadata = {}) {
       show_in_basic_info: definitionData.show_in_basic_info || false,
       show_in_list: definitionData.show_in_list || false,
       visible_on_creation: definitionData.visible_on_creation || false,
+      show_in_visit_list: definitionData.show_in_visit_list || false,
       formula: definitionData.formula || null,
       dependencies: dependencies,
       decimal_places: definitionData.decimal_places !== undefined ? definitionData.decimal_places : 2,
@@ -362,6 +363,7 @@ async function updateDefinition(user, definitionId, updateData, requestMetadata 
     if (updateData.show_in_basic_info !== undefined) definition.show_in_basic_info = updateData.show_in_basic_info;
     if (updateData.show_in_list !== undefined) definition.show_in_list = updateData.show_in_list;
     if (updateData.visible_on_creation !== undefined) definition.visible_on_creation = updateData.visible_on_creation;
+    if (updateData.show_in_visit_list !== undefined) definition.show_in_visit_list = updateData.show_in_visit_list;
     if (updateData.formula !== undefined) definition.formula = updateData.formula;
     if (updateData.decimal_places !== undefined) definition.decimal_places = updateData.decimal_places;
 
@@ -606,6 +608,7 @@ async function duplicateDefinition(user, definitionId, overrides = {}, requestMe
       show_in_basic_info: overrides.show_in_basic_info !== undefined ? overrides.show_in_basic_info : originalDefinition.show_in_basic_info,
       show_in_list: overrides.show_in_list !== undefined ? overrides.show_in_list : originalDefinition.show_in_list,
       visible_on_creation: overrides.visible_on_creation !== undefined ? overrides.visible_on_creation : originalDefinition.visible_on_creation,
+      show_in_visit_list: overrides.show_in_visit_list !== undefined ? overrides.show_in_visit_list : originalDefinition.show_in_visit_list,
       select_options: overrides.select_options || originalDefinition.select_options,
       validation_rules: overrides.validation_rules || originalDefinition.validation_rules,
       formula: overrides.formula || originalDefinition.formula,

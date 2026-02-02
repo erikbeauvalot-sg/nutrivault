@@ -50,7 +50,13 @@ const definitionSchema = (t) => yup.object().shape({
     .typeError(t('forms.mustBeNumber'))
     .integer(t('forms.mustBeInteger'))
     .min(0, t('forms.minValue', { value: 0 }))
-    .nullable()
+    .nullable(),
+  is_required: yup.boolean(),
+  is_active: yup.boolean(),
+  show_in_basic_info: yup.boolean(),
+  show_in_list: yup.boolean(),
+  visible_on_creation: yup.boolean(),
+  show_in_visit_list: yup.boolean()
 });
 
 const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSuccess }) => {
@@ -95,7 +101,8 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       is_active: true,
       show_in_basic_info: false,
       show_in_list: false,
-      visible_on_creation: false
+      visible_on_creation: false,
+      show_in_visit_list: false
     }
   });
 
@@ -150,7 +157,8 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
         is_active: definition.is_active !== undefined ? definition.is_active : true,
         show_in_basic_info: definition.show_in_basic_info || false,
         show_in_list: definition.show_in_list || false,
-        visible_on_creation: definition.visible_on_creation || false
+        visible_on_creation: definition.visible_on_creation || false,
+        show_in_visit_list: definition.show_in_visit_list || false
       });
       setSelectedFieldType(definition.field_type || 'text');
       setSelectOptions(definition.select_options || []);
@@ -171,7 +179,8 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
         is_active: true,
         show_in_basic_info: false,
         show_in_list: false,
-        visible_on_creation: false
+        visible_on_creation: false,
+        show_in_visit_list: false
       });
       setSelectedFieldType('text');
       setSelectOptions([]);
@@ -745,8 +754,17 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
                   label={t('customFields.visibleOnCreation', 'Visible on Patient Creation')}
                   {...register('visible_on_creation')}
                 />
-                <Form.Text className="text-muted d-block">
+                <Form.Text className="text-muted d-block mb-3">
                   {t('customFields.visibleOnCreationHelp', 'If checked, this field will be shown in the patient creation modal')}
+                </Form.Text>
+
+                <Form.Check
+                  type="checkbox"
+                  label={t('customFields.showInVisitList', 'Show in Visits List')}
+                  {...register('show_in_visit_list')}
+                />
+                <Form.Text className="text-muted d-block">
+                  {t('customFields.showInVisitListHelp', 'If checked, this field will appear as a column in the visits list')}
                 </Form.Text>
               </Form.Group>
             </Col>

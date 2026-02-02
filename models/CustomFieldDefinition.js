@@ -110,6 +110,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: false
     },
+    show_in_visit_list: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
     // Calculated field properties
     formula: {
       type: DataTypes.TEXT,

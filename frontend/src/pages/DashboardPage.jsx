@@ -43,6 +43,7 @@ const DashboardPage = () => {
     loading: true,
   });
   const [todaysVisits, setTodaysVisits] = useState([]);
+  const [customFieldDefinitions, setCustomFieldDefinitions] = useState([]);
   const [loadingVisits, setLoadingVisits] = useState(true);
   const [showQuickPatientModal, setShowQuickPatientModal] = useState(false);
 
@@ -126,7 +127,7 @@ const DashboardPage = () => {
       const startDate = startOfDay(today).toISOString();
       const endDate = endOfDay(today).toISOString();
 
-      const { data: visitsData } = await visitService.getVisits({
+      const { data: visitsData, customFieldDefinitions: fieldDefs } = await visitService.getVisits({
         start_date: startDate,
         end_date: endDate,
         limit: 100
@@ -138,8 +139,10 @@ const DashboardPage = () => {
       visits.sort((a, b) => new Date(a.visit_date) - new Date(b.visit_date));
 
       setTodaysVisits(visits);
+      setCustomFieldDefinitions(fieldDefs || []);
     } catch (error) {
       setTodaysVisits([]);
+      setCustomFieldDefinitions([]);
     } finally {
       setLoadingVisits(false);
     }
@@ -151,6 +154,22 @@ const DashboardPage = () => {
 
     // Navigate to the patient detail page
     navigate(`/patients/${patient.id}`);
+  };
+
+  const formatCustomFieldValue = (value, fieldType) => {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+    if (fieldType === 'boolean') {
+      return value ? t('common.yes') : t('common.no');
+    }
+    if (fieldType === 'date') {
+      return format(new Date(value), 'dd/MM/yyyy');
+    }
+    if (Array.isArray(value)) {
+      return value.join(', ');
+    }
+    return String(value);
   };
 
   return (
@@ -311,34 +330,63 @@ const DashboardPage = () => {
                         <p>{t('dashboard.noAppointmentsToday')}</p>
                       </div>
                     ) : (
-                      <ListGroup variant="flush">
-                        {todaysVisits.map((visit) => (
-                          <ListGroup.Item
-                            key={visit.id}
-                            action
-                            onClick={() => navigate(`/visits/${visit.id}/edit`)}
-                            className="d-flex justify-content-between align-items-start"
-                          >
-                            <div className="flex-grow-1">
-                              <div className="fw-bold">
-                                {format(new Date(visit.visit_date), 'HH:mm')} - {visit.patient?.first_name} {visit.patient?.last_name}
-                              </div>
-                              <div className="text-muted small">
-                                {visit.visit_type || t('visits.visit')} ({visit.duration_minutes || 30} {t('visits.min')})
-                              </div>
-                            </div>
-                            <Badge
-                              bg={
-                                visit.status === 'COMPLETED' ? 'success' :
-                                visit.status === 'SCHEDULED' ? 'info' :
-                                visit.status === 'CANCELLED' ? 'secondary' : 'danger'
-                              }
-                            >
-                              {t(`visits.${visit.status.toLowerCase()}`)}
-                            </Badge>
-                          </ListGroup.Item>
-                        ))}
-                      </ListGroup>
+                      <div className="table-responsive">
+                        <table className="table table-hover mb-0">
+                          <thead className="table-light">
+                            <tr>
+                              <th style={{ width: '60px' }}>{t('visits.time', 'Heure')}</th>
+                              <th style={{ width: '180px' }}>{t('visits.patient', 'Patient')}</th>
+                              <th>{t('visits.type', 'Type')}</th>
+                              <th style={{ width: '50px', paddingRight: '25px' }} className="text-center">{t('visits.durationShort', 'Durée')}</th>
+                              {customFieldDefinitions.map(field => (
+                                <th key={field.id} style={{ paddingLeft: '15px' }}>{field.field_label}</th>
+                              ))}
+                              <th style={{ width: '90px' }} className="text-end">{t('visits.status', 'Statut')}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {todaysVisits.map((visit) => (
+                              <tr
+                                key={visit.id}
+                                onClick={() => navigate(`/visits/${visit.id}/edit`)}
+                                style={{ cursor: 'pointer' }}
+                              >
+                                <td className="fw-bold text-primary">
+                                  {format(new Date(visit.visit_date), 'HH:mm')}
+                                </td>
+                                <td className="fw-bold">
+                                  {visit.patient?.first_name} {visit.patient?.last_name}
+                                </td>
+                                <td className="text-muted" style={{ whiteSpace: 'nowrap' }}>
+                                  {visit.visit_type || t('visits.visit')}
+                                </td>
+                                <td className="text-muted text-center" style={{ paddingRight: '25px' }}>
+                                  {visit.duration_minutes || 30}'
+                                </td>
+                                {customFieldDefinitions.map(field => (
+                                  <td key={field.id} style={{ paddingLeft: '15px' }}>
+                                    {formatCustomFieldValue(
+                                      visit.custom_field_values?.[field.field_name],
+                                      field.field_type
+                                    ) || '-'}
+                                  </td>
+                                ))}
+                                <td className="text-end">
+                                  <Badge
+                                    bg={
+                                      visit.status === 'COMPLETED' ? 'success' :
+                                      visit.status === 'SCHEDULED' ? 'info' :
+                                      visit.status === 'CANCELLED' ? 'secondary' : 'danger'
+                                    }
+                                  >
+                                    {t(`visits.${visit.status.toLowerCase()}`)}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     )}
                   </Card.Body>
                 </Card>

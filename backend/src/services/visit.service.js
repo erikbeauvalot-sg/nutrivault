@@ -10,6 +10,10 @@ const Visit = db.Visit;
 const Patient = db.Patient;
 const User = db.User;
 const Role = db.Role;
+const CustomFieldDefinition = db.CustomFieldDefinition;
+const VisitCustomFieldValue = db.VisitCustomFieldValue;
+const PatientCustomFieldValue = db.PatientCustomFieldValue;
+const CustomFieldCategory = db.CustomFieldCategory;
 const auditService = require('./audit.service');
 const billingService = require('./billing.service');
 const emailService = require('./email.service');
@@ -127,6 +131,110 @@ async function getVisits(user, filters = {}, requestMetadata = {}) {
       ]
     });
 
+    // Get custom field definitions with show_in_visit_list: true
+    const visitListFields = await CustomFieldDefinition.findAll({
+      where: {
+        is_active: true,
+        show_in_visit_list: true
+      },
+      include: [{
+        model: CustomFieldCategory,
+        as: 'category',
+        where: { is_active: true },
+        required: true
+      }],
+      order: [['display_order', 'ASC']]
+    });
+
+    // If there are fields to display in the visit list, get values for all visits
+    let visitsWithCustomFields = rows;
+    if (visitListFields.length > 0 && rows.length > 0) {
+      const visitIds = rows.map(v => v.id);
+      const patientIds = rows.map(v => v.patient_id).filter(Boolean);
+      const fieldDefinitionIds = visitListFields.map(f => f.id);
+
+      // Separate fields by storage level (patient vs visit)
+      const patientLevelFieldIds = visitListFields
+        .filter(f => f.category && (f.category.entity_types || ['patient']).includes('patient'))
+        .map(f => f.id);
+      const visitLevelFieldIds = visitListFields
+        .filter(f => f.category && !(f.category.entity_types || ['patient']).includes('patient'))
+        .map(f => f.id);
+
+      // Get patient-level values (shared fields)
+      const patientFieldValues = patientLevelFieldIds.length > 0 && patientIds.length > 0
+        ? await PatientCustomFieldValue.findAll({
+            where: {
+              patient_id: { [Op.in]: patientIds },
+              field_definition_id: { [Op.in]: patientLevelFieldIds }
+            },
+            include: [{
+              model: CustomFieldDefinition,
+              as: 'field_definition',
+              attributes: ['field_name', 'field_type', 'allow_multiple']
+            }]
+          })
+        : [];
+
+      // Get visit-level values (visit-specific fields)
+      const visitFieldValues = visitLevelFieldIds.length > 0
+        ? await VisitCustomFieldValue.findAll({
+            where: {
+              visit_id: { [Op.in]: visitIds },
+              field_definition_id: { [Op.in]: visitLevelFieldIds }
+            },
+            include: [{
+              model: CustomFieldDefinition,
+              as: 'field_definition',
+              attributes: ['field_name', 'field_type', 'allow_multiple']
+            }]
+          })
+        : [];
+
+      // Build maps for quick lookup
+      const patientValuesMap = {};
+      patientFieldValues.forEach(v => {
+        const key = `${v.patient_id}_${v.field_definition_id}`;
+        patientValuesMap[key] = v;
+      });
+
+      const visitValuesMap = {};
+      visitFieldValues.forEach(v => {
+        const key = `${v.visit_id}_${v.field_definition_id}`;
+        visitValuesMap[key] = v;
+      });
+
+      // Attach custom field values to each visit
+      visitsWithCustomFields = rows.map(visit => {
+        const visitJson = visit.toJSON ? visit.toJSON() : visit;
+        const customFieldValues = {};
+
+        visitListFields.forEach(field => {
+          const isPatientLevel = field.category && (field.category.entity_types || ['patient']).includes('patient');
+          let value = null;
+
+          if (isPatientLevel && visitJson.patient_id) {
+            const patientValue = patientValuesMap[`${visitJson.patient_id}_${field.id}`];
+            if (patientValue) {
+              value = patientValue.getValue(field.field_type, field.allow_multiple);
+            }
+          } else {
+            const visitValue = visitValuesMap[`${visitJson.id}_${field.id}`];
+            if (visitValue) {
+              value = visitValue.getValue(field.field_type, field.allow_multiple);
+            }
+          }
+
+          customFieldValues[field.field_name] = value;
+        });
+
+        return {
+          ...visitJson,
+          custom_field_values: customFieldValues
+        };
+      });
+    }
+
     // Audit log
     await auditService.log({
       user_id: user.id,
@@ -140,11 +248,17 @@ async function getVisits(user, filters = {}, requestMetadata = {}) {
     });
 
     return {
-      visits: rows,
+      visits: visitsWithCustomFields,
       total: count,
       page,
       limit,
-      totalPages: Math.ceil(count / limit)
+      totalPages: Math.ceil(count / limit),
+      customFieldDefinitions: visitListFields.map(f => ({
+        id: f.id,
+        field_name: f.field_name,
+        field_label: f.field_label,
+        field_type: f.field_type
+      }))
     };
   } catch (error) {
     console.error('Error in getVisits:', error);
