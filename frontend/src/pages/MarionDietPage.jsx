@@ -194,7 +194,7 @@ const MarionDietPage = () => {
               'name': 'Première consultation',
               'description': 'Bilan initial complet - 1 heure'
             },
-            'price': '65',
+            'price': '70',
             'priceCurrency': 'EUR'
           },
           {
@@ -204,7 +204,7 @@ const MarionDietPage = () => {
               'name': 'Consultation de suivi',
               'description': 'Ajustement et progression - 30 minutes'
             },
-            'price': '50',
+            'price': '65',
             'priceCurrency': 'EUR'
           }
         ]
@@ -1223,7 +1223,7 @@ const MarionDietPage = () => {
                   fontWeight: '700',
                   marginBottom: '0.5rem'
                 }}>
-                  65€
+                70€
                 </div>
                 <p style={{
                   color: colors.wine,
@@ -1274,7 +1274,7 @@ const MarionDietPage = () => {
                   fontWeight: '700',
                   marginBottom: '0.5rem'
                 }}>
-                  50€
+                  65€
                 </div>
                 <p style={{
                   color: colors.wine,
@@ -1325,7 +1325,7 @@ const MarionDietPage = () => {
                   fontWeight: '700',
                   marginBottom: '0.5rem'
                 }}>
-                  50€
+                  65€
                 </div>
                 <p style={{
                   color: colors.wine,
