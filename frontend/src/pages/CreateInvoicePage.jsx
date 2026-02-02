@@ -138,7 +138,9 @@ const CreateInvoicePage = () => {
       const result = await createInvoice(submitData);
 
       // Navigate to the created invoice detail page
-      navigate(`/billing/${result.id}`, {
+      // result.data contains the invoice object from the API response
+      const invoiceId = result.data?.id || result.id;
+      navigate(`/billing/${invoiceId}`, {
         state: { message: t('billing.invoiceCreated', 'Invoice created successfully') }
       });
     } catch (err) {
