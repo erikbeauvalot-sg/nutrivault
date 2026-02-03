@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import QuickPatientModal from '../components/QuickPatientModal';
+import CreateVisitModal from '../components/CreateVisitModal';
 import AlertsWidget from '../components/AlertsWidget';
 import MeasureAlertsWidget from '../components/MeasureAlertsWidget';
 import {
@@ -46,6 +47,7 @@ const DashboardPage = () => {
   const [customFieldDefinitions, setCustomFieldDefinitions] = useState([]);
   const [loadingVisits, setLoadingVisits] = useState(true);
   const [showQuickPatientModal, setShowQuickPatientModal] = useState(false);
+  const [showCreateVisitModal, setShowCreateVisitModal] = useState(false);
 
   useEffect(() => {
     fetchStats();
@@ -216,7 +218,7 @@ const DashboardPage = () => {
                 <Button
                   variant="primary"
                   className="w-100 py-3"
-                  onClick={() => navigate('/visits/create')}
+                  onClick={() => setShowCreateVisitModal(true)}
                 >
                   <div className="h4 mb-1">📅</div>
                   <div>{t('dashboard.scheduleVisit')}</div>
@@ -477,6 +479,16 @@ const DashboardPage = () => {
         show={showQuickPatientModal}
         onHide={() => setShowQuickPatientModal(false)}
         onSuccess={handleQuickPatientCreated}
+      />
+
+      <CreateVisitModal
+        show={showCreateVisitModal}
+        onHide={() => setShowCreateVisitModal(false)}
+        onSuccess={() => {
+          setShowCreateVisitModal(false);
+          fetchTodaysVisits();
+          fetchStats();
+        }}
       />
     </Layout>
   );

@@ -1,17 +1,18 @@
 /**
  * AgendaPage Component
- * Calendar/Agenda view for managing visit appointments
+ * Split layout: sidebar (toolbar + today's schedule) | calendar
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { Container, Card, Alert, Spinner, Button, Badge, ListGroup } from 'react-bootstrap';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Container, Alert, Spinner, Badge, Card, ListGroup, Button } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, format } from 'date-fns';
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, format } from 'date-fns';
 import Layout from '../components/layout/Layout';
 import CalendarView from '../components/CalendarView';
 import AgendaToolbar from '../components/AgendaToolbar';
 import VisitEventModal from '../components/VisitEventModal';
+import CreateVisitModal from '../components/CreateVisitModal';
 import visitService from '../services/visitService';
 import './AgendaPage.css';
 
@@ -19,38 +20,40 @@ const AgendaPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [visits, setVisits] = useState([]);
+  const [todaysVisits, setTodaysVisits] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [view, setView] = useState('day');
+  const [view, setView] = useState('week');
   const [date, setDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showEventModal, setShowEventModal] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createModalDate, setCreateModalDate] = useState(null);
 
-  // Handle responsive layout
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Fetch visits when view or date changes
+  // Fetch calendar visits when view or date changes
   useEffect(() => {
     fetchCalendarVisits();
   }, [view, date]);
 
+  // Fetch today's visits once on mount
+  useEffect(() => {
+    fetchTodaysVisits();
+  }, []);
+
   const getDateRange = useCallback(() => {
     let start, end;
-
     switch (view) {
       case 'day':
-        start = new Date(date);
-        start.setHours(0, 0, 0, 0);
-        end = new Date(date);
-        end.setHours(23, 59, 59, 999);
+        start = startOfDay(date);
+        end = endOfDay(date);
         break;
       case 'week':
         start = startOfWeek(date);
@@ -64,7 +67,6 @@ const AgendaPage = () => {
         start = startOfWeek(date);
         end = endOfWeek(date);
     }
-
     return { start, end };
   }, [view, date]);
 
@@ -72,16 +74,13 @@ const AgendaPage = () => {
     try {
       setLoading(true);
       const { start, end } = getDateRange();
-
       const filters = {
         start_date: start.toISOString(),
         end_date: end.toISOString(),
-        limit: 1000 // Get all visits in the date range
+        limit: 1000
       };
-
       const { data } = await visitService.getVisits(filters);
       const visitsArray = Array.isArray(data) ? data : [];
-
       setVisits(visitsArray);
       setEvents(transformVisitsToEvents(visitsArray));
       setError(null);
@@ -94,12 +93,30 @@ const AgendaPage = () => {
     }
   };
 
+  const fetchTodaysVisits = async () => {
+    try {
+      const today = new Date();
+      const start = startOfDay(today);
+      const end = endOfDay(today);
+      const { data } = await visitService.getVisits({
+        start_date: start.toISOString(),
+        end_date: end.toISOString(),
+        limit: 100
+      });
+      const arr = Array.isArray(data) ? data : [];
+      // Sort by visit_date ascending
+      arr.sort((a, b) => new Date(a.visit_date) - new Date(b.visit_date));
+      setTodaysVisits(arr);
+    } catch {
+      setTodaysVisits([]);
+    }
+  };
+
   const transformVisitsToEvents = (visits) => {
     return visits.map(visit => {
       const startDate = new Date(visit.visit_date);
       const duration = visit.duration_minutes || 30;
       const endDate = new Date(startDate.getTime() + duration * 60000);
-
       return {
         id: visit.id,
         title: `${visit.patient?.first_name || ''} ${visit.patient?.last_name || ''}`.trim() || t('visits.unknown'),
@@ -110,11 +127,29 @@ const AgendaPage = () => {
           status: visit.status,
           visitType: visit.visit_type,
           patientName: `${visit.patient?.first_name || ''} ${visit.patient?.last_name || ''}`.trim() || t('visits.unknown'),
-          duration: duration
+          duration
         }
       };
     });
   };
+
+  // Stats computed from both today's visits and all calendar visits
+  const stats = useMemo(() => {
+    const todayTotal = todaysVisits.length;
+    const completed = todaysVisits.filter(v => v.status === 'COMPLETED').length;
+    const noShows = todaysVisits.filter(v => v.status === 'NO_SHOW').length;
+    // "This week" counts all visits currently fetched when in week view,
+    // otherwise count visits from the current week range
+    const now = new Date();
+    const weekStart = startOfWeek(now);
+    const weekEnd = endOfWeek(now);
+    const thisWeek = visits.filter(v => {
+      const d = new Date(v.visit_date);
+      return d >= weekStart && d <= weekEnd;
+    }).length;
+
+    return { todayTotal, completed, thisWeek, noShows };
+  }, [todaysVisits, visits]);
 
   const handleEventClick = (event) => {
     setSelectedEvent(event);
@@ -122,100 +157,134 @@ const AgendaPage = () => {
   };
 
   const handleSelectSlot = (slotInfo) => {
-    // Navigate to create visit page with pre-filled date/time
-    const visitDate = slotInfo.start.toISOString();
-    navigate('/visits/create', { state: { prefilledDate: visitDate } });
+    setCreateModalDate(slotInfo.start.toISOString());
+    setShowCreateModal(true);
   };
 
-  const handleViewChange = (newView) => {
-    setView(newView);
-  };
+  const handleViewChange = (newView) => setView(newView);
 
-  const handleNavigate = (action, newDate) => {
-    // Handle calls from react-big-calendar (action is a Date object)
+  const handleNavigate = (action) => {
     if (action instanceof Date) {
       setDate(action);
       return;
     }
-
-    // Handle calls from custom AgendaToolbar (action is a string)
     if (action === 'TODAY') {
       setDate(new Date());
     } else if (action === 'PREV') {
-      const newCurrentDate = new Date(date);
-      switch (view) {
-        case 'day':
-          newCurrentDate.setDate(date.getDate() - 1);
-          break;
-        case 'week':
-          newCurrentDate.setDate(date.getDate() - 7);
-          break;
-        case 'month':
-          newCurrentDate.setMonth(date.getMonth() - 1);
-          break;
-        default:
-          newCurrentDate.setDate(date.getDate() - 7);
-      }
-      setDate(newCurrentDate);
+      const d = new Date(date);
+      if (view === 'day') d.setDate(d.getDate() - 1);
+      else if (view === 'week') d.setDate(d.getDate() - 7);
+      else if (view === 'month') d.setMonth(d.getMonth() - 1);
+      else d.setDate(d.getDate() - 7);
+      setDate(d);
     } else if (action === 'NEXT') {
-      const newCurrentDate = new Date(date);
-      switch (view) {
-        case 'day':
-          newCurrentDate.setDate(date.getDate() + 1);
-          break;
-        case 'week':
-          newCurrentDate.setDate(date.getDate() + 7);
-          break;
-        case 'month':
-          newCurrentDate.setMonth(date.getMonth() + 1);
-          break;
-        default:
-          newCurrentDate.setDate(date.getDate() + 7);
-      }
-      setDate(newCurrentDate);
-    } else if (newDate) {
-      setDate(newDate);
+      const d = new Date(date);
+      if (view === 'day') d.setDate(d.getDate() + 1);
+      else if (view === 'week') d.setDate(d.getDate() + 7);
+      else if (view === 'month') d.setMonth(d.getMonth() + 1);
+      else d.setDate(d.getDate() + 7);
+      setDate(d);
     }
   };
 
   const handleCreateVisit = () => {
-    navigate('/visits/create');
+    setCreateModalDate(null);
+    setShowCreateModal(true);
+  };
+
+  const handleVisitCreated = () => {
+    fetchCalendarVisits();
+    fetchTodaysVisits();
   };
 
   const getStatusBadge = (status) => {
     const variants = {
-      SCHEDULED: 'info',
-      COMPLETED: 'success',
-      CANCELLED: 'secondary',
-      NO_SHOW: 'danger'
+      SCHEDULED: 'info', COMPLETED: 'success', CANCELLED: 'secondary', NO_SHOW: 'danger'
     };
     const statusText = {
-      SCHEDULED: t('visits.scheduled'),
-      COMPLETED: t('visits.completed'),
-      CANCELLED: t('visits.cancelled'),
-      NO_SHOW: t('visits.noShow')
+      SCHEDULED: t('visits.scheduled'), COMPLETED: t('visits.completed'),
+      CANCELLED: t('visits.cancelled'), NO_SHOW: t('visits.noShow')
     };
     return <Badge bg={variants[status] || 'secondary'}>{statusText[status] || status}</Badge>;
   };
 
-  const formatDateTime = (dateString) => {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return format(date, 'PPp');
-  };
+  // ── Stats Row ───────────────────────────────────
+  const renderStats = () => (
+    <div className="agenda-stats">
+      <div className="agenda-stat-card">
+        <div className="agenda-stat-icon agenda-stat-icon--today">&#9679;</div>
+        <div>
+          <div className="agenda-stat-value">{stats.todayTotal}</div>
+          <div className="agenda-stat-label">{t('agenda.todayCount')}</div>
+        </div>
+      </div>
+      <div className="agenda-stat-card">
+        <div className="agenda-stat-icon agenda-stat-icon--completed">&#10003;</div>
+        <div>
+          <div className="agenda-stat-value">{stats.completed}</div>
+          <div className="agenda-stat-label">{t('agenda.completedCount')}</div>
+        </div>
+      </div>
+      <div className="agenda-stat-card">
+        <div className="agenda-stat-icon agenda-stat-icon--week">&#9733;</div>
+        <div>
+          <div className="agenda-stat-value">{stats.thisWeek}</div>
+          <div className="agenda-stat-label">{t('agenda.upcomingWeek')}</div>
+        </div>
+      </div>
+      <div className="agenda-stat-card">
+        <div className="agenda-stat-icon agenda-stat-icon--noshow">&#10007;</div>
+        <div>
+          <div className="agenda-stat-value">{stats.noShows}</div>
+          <div className="agenda-stat-label">{t('agenda.noShowCount')}</div>
+        </div>
+      </div>
+    </div>
+  );
 
-  // Mobile list view
+  // ── Today's Schedule Panel ──────────────────────
+  const renderTodayPanel = () => (
+    <div className="agenda-today-panel">
+      <div className="agenda-today-header">
+        {t('agenda.todaysSchedule')}
+      </div>
+      <div className="agenda-today-list">
+        {todaysVisits.length === 0 ? (
+          <div className="agenda-today-empty">
+            {t('agenda.noAppointmentsToday')}
+          </div>
+        ) : (
+          todaysVisits.map(visit => (
+            <div
+              key={visit.id}
+              className="agenda-today-item"
+              onClick={() => navigate(`/visits/${visit.id}`)}
+            >
+              <span className="agenda-today-time">
+                {format(new Date(visit.visit_date), 'HH:mm')}
+              </span>
+              <span className="agenda-today-name">
+                {visit.patient?.first_name} {visit.patient?.last_name}
+              </span>
+              <span className="agenda-today-duration">
+                {visit.duration_minutes || 30}{t('agenda.minutesShort')}
+              </span>
+              <span className={`agenda-today-dot agenda-today-dot--${visit.status}`} />
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
+  // ── Mobile List View ────────────────────────────
   const renderMobileListView = () => {
-    // Group visits by date
     const groupedVisits = visits.reduce((acc, visit) => {
       const dateKey = format(new Date(visit.visit_date), 'yyyy-MM-dd');
-      if (!acc[dateKey]) {
-        acc[dateKey] = [];
-      }
+      if (!acc[dateKey]) acc[dateKey] = [];
       acc[dateKey].push(visit);
       return acc;
     }, {});
-
     const sortedDates = Object.keys(groupedVisits).sort();
 
     if (sortedDates.length === 0) {
@@ -250,9 +319,7 @@ const AgendaPage = () => {
                         {visit.duration_minutes || 30} {t('visits.min')}
                       </div>
                     </div>
-                    <div>
-                      {getStatusBadge(visit.status)}
-                    </div>
+                    <div>{getStatusBadge(visit.status)}</div>
                   </div>
                 </ListGroup.Item>
               ))}
@@ -266,20 +333,16 @@ const AgendaPage = () => {
   return (
     <Layout>
       <Container fluid className="agenda-page py-4">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h2>{t('agenda.title')}</h2>
-          {!isMobile && (
-            <Button variant="success" onClick={handleCreateVisit}>
-              + {t('visits.createVisit')}
-            </Button>
-          )}
-        </div>
+        <h2 className="mb-3">{t('agenda.title')}</h2>
 
         {error && (
           <Alert variant="danger" dismissible onClose={() => setError(null)}>
             {error}
           </Alert>
         )}
+
+        {/* Stats row — always visible */}
+        {renderStats()}
 
         {loading ? (
           <div className="text-center py-5">
@@ -288,17 +351,21 @@ const AgendaPage = () => {
             </Spinner>
           </div>
         ) : (
-          <Card>
-            <Card.Body>
-              {!isMobile ? (
-                <>
-                  {/* <AgendaToolbar
+          <>
+            {/* Desktop: split layout */}
+            {!isMobile && (
+              <div className="agenda-split">
+                <div className="agenda-sidebar">
+                  <AgendaToolbar
                     view={view}
                     onViewChange={handleViewChange}
                     date={date}
                     onNavigate={handleNavigate}
-                    onCreateVisit={isMobile ? handleCreateVisit : null}
-                  /> */}
+                    onCreateVisit={handleCreateVisit}
+                  />
+                  {renderTodayPanel()}
+                </div>
+                <div className="agenda-main">
                   <CalendarView
                     events={events}
                     onEventClick={handleEventClick}
@@ -308,26 +375,36 @@ const AgendaPage = () => {
                     date={date}
                     onNavigate={handleNavigate}
                   />
-                </>
-              ) : (
-                <>
-                  <div className="mb-3 d-flex justify-content-between align-items-center">
-                    <h5 className="mb-0">{t('agenda.listView')}</h5>
-                    <Button variant="success" size="sm" onClick={handleCreateVisit}>
-                      + {t('visits.createVisit')}
-                    </Button>
-                  </div>
-                  {renderMobileListView()}
-                </>
-              )}
-            </Card.Body>
-          </Card>
+                </div>
+              </div>
+            )}
+
+            {/* Mobile: create button + list view */}
+            {isMobile && (
+              <div className="agenda-mobile-section">
+                <Button
+                  className="agenda-mobile-create agenda-toolbar-create mb-3"
+                  onClick={handleCreateVisit}
+                >
+                  + {t('agenda.newAppointment')}
+                </Button>
+                {renderMobileListView()}
+              </div>
+            )}
+          </>
         )}
 
         <VisitEventModal
           show={showEventModal}
           onHide={() => setShowEventModal(false)}
           event={selectedEvent}
+        />
+
+        <CreateVisitModal
+          show={showCreateModal}
+          onHide={() => setShowCreateModal(false)}
+          onSuccess={handleVisitCreated}
+          prefilledDate={createModalDate}
         />
       </Container>
     </Layout>

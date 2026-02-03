@@ -24,8 +24,8 @@
 
   /* Generic Mobile Card */
   .list-card-mobile {
-    background: #fff;
-    border: 1px solid #dee2e6;
+    background: var(--nv-warm-50);
+    border: 1px solid var(--nv-warm-200);
     border-radius: 0.5rem;
     padding: 1rem;
     margin-bottom: 0.75rem;
@@ -34,11 +34,11 @@
   }
 
   .list-card-mobile:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
 
   .list-card-mobile:active {
-    background: #f8f9fa;
+    background: var(--nv-warm-100);
   }
 
   /* Card Header */
@@ -54,13 +54,13 @@
     font-weight: 600;
     font-size: 1rem;
     margin: 0;
-    color: #212529;
+    color: var(--nv-warm-800);
     word-break: break-word;
   }
 
   .list-card-subtitle {
     font-size: 0.85rem;
-    color: #6c757d;
+    color: var(--nv-warm-500);
     margin-top: 0.25rem;
   }
 
@@ -78,7 +78,7 @@
 
   .list-card-label {
     font-size: 0.8rem;
-    color: #6c757d;
+    color: var(--nv-warm-500);
     min-width: 70px;
   }
 
@@ -101,7 +101,7 @@
     justify-content: flex-end;
     gap: 0.5rem;
     padding-top: 0.75rem;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--nv-warm-200);
     margin-top: 0.5rem;
   }
 
@@ -114,7 +114,7 @@
   /* Code styling in cards */
   .list-card-mobile code {
     font-size: 0.8rem;
-    background: #f8f9fa;
+    background: var(--nv-warm-100);
     padding: 0.1rem 0.3rem;
     border-radius: 0.25rem;
   }
@@ -122,5 +122,5 @@
 
 /* Clickable row hover effect for desktop tables */
 .clickable-row:hover {
-  background-color: rgba(0, 123, 255, 0.05) !important;
+  background-color: var(--nv-warm-ghost) !important;
 }

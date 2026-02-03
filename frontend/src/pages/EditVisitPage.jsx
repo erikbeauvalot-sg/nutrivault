@@ -954,7 +954,7 @@ const EditVisitPage = () => {
                     <Col xs={12} md={6}>
                       <Card className="mb-3">
                         <Card.Header className="bg-info text-white">
-                          <h6 className="mb-0">Status & Schedule</h6>
+                          <h6 className="mb-0">{t('visits.statusAndSchedule', 'Statut & Planification')}</h6>
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">

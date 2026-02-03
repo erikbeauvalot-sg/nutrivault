@@ -23,6 +23,7 @@ import SharingHistory from '../components/SharingHistory';
 import PatientHealthScore from '../components/PatientHealthScore';
 import ActionButton from '../components/ActionButton';
 import ConfirmModal from '../components/ConfirmModal';
+import CreateVisitModal from '../components/CreateVisitModal';
 import customFieldService from '../services/customFieldService';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import { getBMICategory, calculateBMI } from '../utils/bmiUtils';
@@ -79,6 +80,7 @@ const PatientDetailPage = () => {
   const [invoiceToDelete, setInvoiceToDelete] = useState(null);
   const [patientRecipes, setPatientRecipes] = useState([]);
   const [recipesLoading, setRecipesLoading] = useState(false);
+  const [showCreateVisitModal, setShowCreateVisitModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -386,7 +388,7 @@ const PatientDetailPage = () => {
   };
 
   const handleAddVisit = () => {
-    navigate('/visits/create', { state: { selectedPatient: patient } });
+    setShowCreateVisitModal(true);
   };
 
   const handleAddPayment = () => {
@@ -1389,6 +1391,16 @@ const PatientDetailPage = () => {
           message={t('billing.confirmDeleteInvoice')}
           confirmLabel={t('common.delete', 'Delete')}
           variant="danger"
+        />
+
+        <CreateVisitModal
+          show={showCreateVisitModal}
+          onHide={() => setShowCreateVisitModal(false)}
+          onSuccess={() => {
+            setShowCreateVisitModal(false);
+            fetchPatientDetails();
+          }}
+          selectedPatient={patient}
         />
 
       </Container>

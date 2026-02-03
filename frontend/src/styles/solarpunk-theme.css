@@ -1,0 +1,86 @@
+/* ============================================
+   SOLARPUNK DESIGN TOKENS
+   NutriVault theme — warm earth primary, slate blue & gold accents
+   Bricolage Grotesque (display) + JetBrains Mono (technical)
+   ============================================ */
+
+:root {
+  /* ---- Color Palette ---- */
+  /* Slate blue — accent (navbar, primary buttons, focus rings) */
+  --nv-slate:          #4a6572;
+  --nv-slate-mid:      #5a7a88;
+  --nv-slate-bright:   #6a8e9e;
+  --nv-slate-pale:     rgba(74, 101, 114, 0.12);
+  --nv-slate-ghost:    rgba(74, 101, 114, 0.06);
+
+  /* Navy — dark accents (navbar background) */
+  --nv-navy-dark:      #2e3e46;
+  --nv-navy-deep:      #1e2c32;
+
+  /* Gold — secondary accent */
+  --nv-gold:           #c4a434;
+  --nv-gold-muted:     rgba(196, 164, 52, 0.7);
+  --nv-gold-faint:     rgba(196, 164, 52, 0.15);
+
+  /* Parchment — light surfaces */
+  --nv-parchment:      #e8dfc4;
+  --nv-parchment-light:#f5f2e8;
+  --nv-parchment-dark: #d4cbb0;
+
+  /* Warm neutral scale — primary UI color */
+  --nv-warm-50:        #faf8f2;
+  --nv-warm-100:       #f5f2e8;
+  --nv-warm-200:       #e8e2d0;
+  --nv-warm-300:       #d4cbb0;
+  --nv-warm-400:       #b8a88a;
+  --nv-warm-500:       #8c7e66;
+  --nv-warm-600:       #6b5e48;
+  --nv-warm-700:       #4a4032;
+  --nv-warm-800:       #2e2820;
+  --nv-warm-900:       #1a1610;
+  --nv-warm-ghost:     rgba(74, 64, 50, 0.05);
+
+  /* Semantic colors */
+  --nv-danger:         #c8503c;
+  --nv-danger-pale:    rgba(200, 80, 60, 0.12);
+  --nv-info:           #3a8a8c;
+  --nv-info-pale:      rgba(58, 138, 140, 0.12);
+  --nv-warning:        #c4a434;
+  --nv-warning-pale:   rgba(196, 164, 52, 0.12);
+  --nv-success:        #4b8c50;
+  --nv-success-pale:   rgba(75, 140, 80, 0.12);
+
+  /* ---- Typography ---- */
+  --nv-font-display:   'Bricolage Grotesque', sans-serif;
+  --nv-font-mono:      'JetBrains Mono', monospace;
+
+  /* ---- Bootstrap Variable Overrides ---- */
+  --bs-primary:        #4a6572;
+  --bs-primary-rgb:    74, 101, 114;
+  --bs-primary-text-emphasis: #fff;
+  --bs-secondary:      #8c7e66;
+  --bs-secondary-rgb:  140, 126, 102;
+  --bs-success:        #4b8c50;
+  --bs-success-rgb:    75, 140, 80;
+  --bs-info:           #3a8a8c;
+  --bs-info-rgb:       58, 138, 140;
+  --bs-warning:        #c4a434;
+  --bs-warning-rgb:    196, 164, 52;
+  --bs-danger:         #c8503c;
+  --bs-danger-rgb:     200, 80, 60;
+  --bs-light:          #faf8f2;
+  --bs-light-rgb:      250, 248, 242;
+  --bs-dark:           #1e2c32;
+  --bs-dark-rgb:       30, 44, 50;
+
+  --bs-body-font-family: 'Bricolage Grotesque', sans-serif;
+  --bs-body-bg:        #faf8f2;
+  --bs-body-color:     #2e2820;
+
+  --bs-border-color:   #e8e2d0;
+
+  --bs-link-color:     #6b5e48;
+  --bs-link-color-rgb: 107, 94, 72;
+  --bs-link-hover-color: #4a4032;
+  --bs-link-hover-color-rgb: 74, 64, 50;
+}

@@ -45,7 +45,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className={`sidebar bg-light border-end ${isOpen ? 'show' : ''}`}>
+    <div className={`sidebar ${isOpen ? 'show' : ''}`}>
       <Nav className="flex-column">
         {menuItems.map((item) => (
           <Nav.Link

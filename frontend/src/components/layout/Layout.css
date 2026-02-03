@@ -13,7 +13,7 @@
 .layout-content {
   flex: 1;
   padding: 2rem;
-  background-color: #f8f9fa;
+  background-color: var(--nv-parchment-light);
   overflow-y: auto;
 }
 
@@ -34,7 +34,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(26, 47, 26, 0.4);
     z-index: 1040;
   }
 }

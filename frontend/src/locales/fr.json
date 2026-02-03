@@ -575,7 +575,15 @@
     "quickCreate": "Planification rapide",
     "goToDate": "Aller à la date",
     "listView": "Vue liste",
-    "calendarView": "Vue calendrier"
+    "calendarView": "Vue calendrier",
+    "todaysSchedule": "Programme du jour",
+    "todayCount": "Aujourd'hui",
+    "completedCount": "Terminés",
+    "upcomingWeek": "Cette semaine",
+    "noShowCount": "Absences",
+    "noAppointmentsToday": "Aucun rendez-vous aujourd'hui",
+    "minutesShort": "min",
+    "newAppointment": "Nouveau rendez-vous"
   },
   "visits": {
     "title": "Consultations",
@@ -673,6 +681,7 @@
     "na": "N/A",
     "unknown": "Inconnu",
     "backToVisits": "Retour aux consultations",
+    "statusAndSchedule": "Statut & Planification",
     "loadingDetails": "Chargement des détails de la consultation...",
     "errorLoadingVisit": "Erreur de chargement de la consultation",
     "visitNotFound": "Consultation non trouvée",

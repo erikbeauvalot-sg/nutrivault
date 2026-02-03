@@ -17,6 +17,7 @@ import { formatDate as utilFormatDate, formatTime as utilFormatTime } from '../u
 import ExportModal from '../components/ExportModal';
 import ActionButton from '../components/ActionButton';
 import ConfirmModal from '../components/ConfirmModal';
+import CreateVisitModal from '../components/CreateVisitModal';
 import api from '../services/api';
 import './VisitsPage.css';
 
@@ -45,6 +46,8 @@ const VisitsPage = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const hasSyncedRef = useRef(false);
   const isMobile = useIsMobile();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createModalPatient, setCreateModalPatient] = useState(null);
 
   // Initialize filters from URL parameters
   useEffect(() => {
@@ -81,13 +84,23 @@ const VisitsPage = () => {
     fetchVisits();
   }, [filters]);
 
-  // Handle patient selection from navigation state (from patients page)
+  // Handle patient selection from navigation state (from patients page or alerts)
   useEffect(() => {
     if (location.state?.selectedPatient) {
-      // Navigate to create visit page with pre-selected patient
-      navigate('/visits/create', { state: { selectedPatient: location.state.selectedPatient } });
+      setCreateModalPatient(location.state.selectedPatient);
+      setShowCreateModal(true);
+      // Clear the state so it doesn't re-trigger
+      navigate(location.pathname + location.search, { replace: true, state: {} });
+    } else if (location.state?.openCreateModal) {
+      // From AlertsWidget - open modal, optionally with patient
+      if (location.state.patientId) {
+        // We'll set patient_id but not the full object - modal handles it via dropdown
+        setCreateModalPatient({ id: location.state.patientId });
+      }
+      setShowCreateModal(true);
+      navigate(location.pathname + location.search, { replace: true, state: {} });
     }
-  }, [location.state, navigate]);
+  }, [location.state]);
 
   // Sync with Google Calendar on page load (once per session)
   useEffect(() => {
@@ -173,7 +186,8 @@ const VisitsPage = () => {
   };
 
   const handleCreateClick = () => {
-    navigate('/visits/create');
+    setCreateModalPatient(null);
+    setShowCreateModal(true);
   };
 
   const handleViewClick = (visitId) => {
@@ -641,6 +655,16 @@ const VisitsPage = () => {
           message={t('visits.confirmDelete')}
           confirmLabel={t('common.delete', 'Delete')}
           variant="danger"
+        />
+
+        <CreateVisitModal
+          show={showCreateModal}
+          onHide={() => {
+            setShowCreateModal(false);
+            setCreateModalPatient(null);
+          }}
+          onSuccess={() => fetchVisits()}
+          selectedPatient={createModalPatient}
         />
       </Container>
     </Layout>

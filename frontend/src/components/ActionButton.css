@@ -33,7 +33,7 @@
 }
 
 .clickable-row:hover {
-  background-color: rgba(0, 123, 255, 0.075) !important;
+  background-color: var(--nv-warm-ghost) !important;
 }
 
 /* Clickable card styles */
@@ -43,7 +43,7 @@
 }
 
 .clickable-card:hover {
-  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.08);
   transform: translateY(-1px);
 }
 

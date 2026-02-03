@@ -56,7 +56,7 @@ const AlertsWidget = () => {
         navigate(`/visits/${alert.visit_id}/edit`);
         break;
       case 'schedule_visit':
-        navigate(`/visits/create?patient_id=${alert.patient_id}`);
+        navigate('/visits', { state: { openCreateModal: true, patientId: alert.patient_id } });
         break;
       default:
         break;

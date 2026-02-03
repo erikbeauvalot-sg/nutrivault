@@ -78,3 +78,31 @@ This script automatically:
 4. Executes `./scripts/deploy.sh [VERSION]` on the server
 
 **DO NOT** run `docker-compose build/up` locally for production deployment!
+
+
+<use_interesting_fonts>
+Typography instantly signals quality. Avoid using boring, generic fonts.
+
+Never use: Inter, Roboto, Open Sans, Lato, default system fonts
+
+Here are some examples of good, impactful choices:
+- Code aesthetic: JetBrains Mono, Fira Code, Space Grotesk
+- Editorial: Playfair Display, Crimson Pro
+- Technical: IBM Plex family, Source Sans 3
+- Distinctive: Bricolage Grotesque, Newsreader
+
+Pairing principle: High contrast = interesting. Display + monospace, serif + geometric sans, variable font across weights.
+
+Use extremes: 100/200 weight vs 800/900, not 400 vs 600. Size jumps of 3x+, not 1.5x.
+
+Pick one distinctive font, use it decisively. Load from Google Fonts.
+</use_interesting_fonts>
+
+<always_use_solarpunk_theme>
+Always design with Solarpunk aesthetic:
+- Warm, optimistic color palettes (neutral bleu, golds, earth tones)
+- Organic shapes mixed with technical elements
+- Nature-inspired patterns and textures
+- Bright, hopeful atmosphere
+- Retro-futuristic typography
+</always_use_solarpunk_theme>

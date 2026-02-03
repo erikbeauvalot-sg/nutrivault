@@ -561,7 +561,15 @@
     "quickCreate": "Quick Schedule",
     "goToDate": "Go to Date",
     "listView": "List View",
-    "calendarView": "Calendar View"
+    "calendarView": "Calendar View",
+    "todaysSchedule": "Today's Schedule",
+    "todayCount": "Today",
+    "completedCount": "Completed",
+    "upcomingWeek": "This Week",
+    "noShowCount": "No-Shows",
+    "noAppointmentsToday": "No appointments today",
+    "minutesShort": "min",
+    "newAppointment": "New Appointment"
   },
   "visits": {
     "title": "Visits",
@@ -658,6 +666,7 @@
     "na": "N/A",
     "unknown": "Unknown",
     "backToVisits": "Back to Visits",
+    "statusAndSchedule": "Status & Schedule",
     "loadingDetails": "Loading visit details...",
     "errorLoadingVisit": "Error Loading Visit",
     "visitNotFound": "Visit Not Found",

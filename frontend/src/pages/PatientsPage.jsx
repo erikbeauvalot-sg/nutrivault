@@ -13,6 +13,7 @@ import { PageHeader, PageError } from '../components/common';
 import PatientList from '../components/PatientList';
 import ExportModal from '../components/ExportModal';
 import QuickPatientModal from '../components/QuickPatientModal';
+import CreateVisitModal from '../components/CreateVisitModal';
 import ConfirmModal from '../components/ConfirmModal';
 import { getPatients, deletePatient } from '../services/patientService';
 
@@ -28,6 +29,8 @@ const PatientsPage = () => {
   const [showQuickPatientModal, setShowQuickPatientModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState(null);
+  const [showCreateVisitModal, setShowCreateVisitModal] = useState(false);
+  const [createVisitPatient, setCreateVisitPatient] = useState(null);
 
   // Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -118,8 +121,8 @@ const PatientsPage = () => {
   };
 
   const handleScheduleVisit = (patient) => {
-    // Navigate directly to visit creation page with patient pre-selected
-    navigate('/visits/create', { state: { selectedPatient: patient } });
+    setCreateVisitPatient(patient);
+    setShowCreateVisitModal(true);
   };
 
   const handleSearchChange = (search) => {
@@ -169,7 +172,7 @@ const PatientsPage = () => {
 
         <PageError error={error} onDismiss={() => setError(null)} />
 
-        <div className="bg-white p-4 rounded shadow-sm">
+        <div className="p-4 rounded shadow-sm" style={{ background: 'var(--nv-warm-50)' }}>
           <PatientList
             patients={patients}
             loading={loading}
@@ -213,6 +216,19 @@ const PatientsPage = () => {
         message={t('patients.confirmDelete')}
         confirmLabel={t('common.delete', 'Delete')}
         variant="danger"
+      />
+
+      <CreateVisitModal
+        show={showCreateVisitModal}
+        onHide={() => {
+          setShowCreateVisitModal(false);
+          setCreateVisitPatient(null);
+        }}
+        onSuccess={() => {
+          setShowCreateVisitModal(false);
+          setCreateVisitPatient(null);
+        }}
+        selectedPatient={createVisitPatient}
       />
     </Layout>
   );

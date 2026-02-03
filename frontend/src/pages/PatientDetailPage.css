@@ -39,17 +39,17 @@
   }
 
   .visit-card-mobile {
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--nv-warm-200);
     border-radius: 8px;
     padding: 1rem;
     margin-bottom: 1rem;
-    background-color: #fff;
+    background-color: var(--nv-warm-50);
     cursor: pointer;
     transition: box-shadow 0.2s;
   }
 
   .visit-card-mobile:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
 
   .visit-card-header {
@@ -63,7 +63,7 @@
 
   .visit-card-date {
     font-weight: 600;
-    color: #212529;
+    color: var(--nv-warm-800);
     font-size: 1rem;
   }
 
@@ -83,13 +83,13 @@
 
   .visit-card-label {
     font-weight: 600;
-    color: #6c757d;
+    color: var(--nv-warm-500);
     min-width: 80px;
     margin-right: 0.5rem;
   }
 
   .visit-card-value {
-    color: #212529;
+    color: var(--nv-warm-800);
     flex: 1;
   }
 
@@ -97,7 +97,7 @@
     display: flex;
     gap: 0.5rem;
     padding-top: 0.75rem;
-    border-top: 1px solid #dee2e6;
+    border-top: 1px solid var(--nv-warm-200);
   }
 
   .visit-card-actions .btn {

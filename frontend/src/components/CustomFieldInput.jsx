@@ -84,73 +84,18 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
         );
 
       case 'date': {
-        // Get date format from validation_rules, default to DD/MM/YYYY
-        const dateFormat = validation_rules?.dateFormat || 'DD/MM/YYYY';
-        const placeholder = dateFormat.toLowerCase();
-
-        // Convert stored ISO format (YYYY-MM-DD) to display format
-        const formatDateForDisplay = (isoDate) => {
-          if (!isoDate) return '';
-          const parts = isoDate.split('-');
-          if (parts.length !== 3) return isoDate;
-
-          const [year, month, day] = parts;
-          switch (dateFormat) {
-            case 'MM/DD/YYYY':
-              return `${month}/${day}/${year}`;
-            case 'YYYY-MM-DD':
-              return isoDate;
-            case 'DD/MM/YYYY':
-            default:
-              return `${day}/${month}/${year}`;
-          }
-        };
-
-        // Convert display format to ISO format (YYYY-MM-DD) for storage
-        const parseDisplayDate = (displayDate) => {
-          if (!displayDate) return '';
-          const cleaned = displayDate.replace(/[^\d]/g, ''); // Remove non-digits
-
-          if (cleaned.length !== 8) return displayDate; // Invalid format
-
-          let year, month, day;
-          switch (dateFormat) {
-            case 'MM/DD/YYYY':
-              month = cleaned.substring(0, 2);
-              day = cleaned.substring(2, 4);
-              year = cleaned.substring(4, 8);
-              break;
-            case 'YYYY-MM-DD':
-              year = cleaned.substring(0, 4);
-              month = cleaned.substring(4, 6);
-              day = cleaned.substring(6, 8);
-              break;
-            case 'DD/MM/YYYY':
-            default:
-              day = cleaned.substring(0, 2);
-              month = cleaned.substring(2, 4);
-              year = cleaned.substring(4, 8);
-          }
-
-          return `${year}-${month}-${day}`;
-        };
-
         const handleDateChange = (e) => {
-          const inputValue = e.target.value;
-          const isoDate = parseDisplayDate(inputValue);
-          onChange(fieldDefinition.definition_id, isoDate);
+          onChange(fieldDefinition.definition_id, e.target.value || '');
         };
 
         return (
           <Form.Control
-            type="text"
+            type="date"
             id={field_name}
-            value={formatDateForDisplay(value) || ''}
+            value={value || ''}
             onChange={handleDateChange}
             disabled={disabled}
             isInvalid={!!error}
-            placeholder={placeholder}
-            maxLength={10}
           />
         );
       }
@@ -299,14 +244,7 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
     );
   }
 
-  // Build help text with date format if applicable
   let displayHelpText = help_text;
-  if (field_type === 'date') {
-    const dateFormat = validation_rules?.dateFormat || 'DD/MM/YYYY';
-    displayHelpText = help_text
-      ? `${help_text} (Format: ${dateFormat})`
-      : `Format: ${dateFormat}`;
-  }
 
   return (
     <Form.Group className="mb-3">
