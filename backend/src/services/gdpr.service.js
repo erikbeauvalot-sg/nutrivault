@@ -7,7 +7,7 @@
  */
 
 const db = require('../../../models');
-const { Patient, User, Visit, VisitMeasurement, Billing, Payment, InvoiceEmail, Document, AuditLog } = db;
+const { Patient, User, Visit, PatientMeasure, Billing, Payment, InvoiceEmail, Document, AuditLog } = db;
 const auditService = require('./audit.service');
 
 /**
@@ -34,8 +34,8 @@ async function exportPatientData(patientId, user, requestMetadata = {}) {
           as: 'visits',
           include: [
             {
-              model: VisitMeasurement,
-              as: 'measurements'
+              model: PatientMeasure,
+              as: 'measures'
             },
             {
               model: User,
