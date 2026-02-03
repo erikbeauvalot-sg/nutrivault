@@ -28,6 +28,48 @@ const getActualVersion = () => {
 
 // Current version changelog - human-readable features
 const CHANGELOG = {
+  '5.16.0': {
+    version: '5.16.0',
+    date: '2026-02-03',
+    title: {
+      fr: 'Système de thèmes',
+      en: 'Theme System'
+    },
+    features: [
+      {
+        icon: '🎨',
+        title: { fr: 'Gestion des thèmes', en: 'Theme Management' },
+        description: {
+          fr: 'Créez, modifiez et personnalisez vos thèmes de couleurs depuis une page dédiée',
+          en: 'Create, edit and customize your color themes from a dedicated page'
+        }
+      },
+      {
+        icon: '🔄',
+        title: { fr: 'Export & import de thèmes', en: 'Theme Export & Import' },
+        description: {
+          fr: 'Exportez vos thèmes en JSON et importez-les sur d\'autres instances',
+          en: 'Export your themes as JSON and import them on other instances'
+        }
+      },
+      {
+        icon: '👁️',
+        title: { fr: 'Aperçu en temps réel', en: 'Live Preview' },
+        description: {
+          fr: 'Visualisez les changements de couleurs en direct dans l\'éditeur de thème',
+          en: 'See color changes in real-time in the theme editor'
+        }
+      },
+      {
+        icon: '🔐',
+        title: { fr: 'Permissions par thème', en: 'Theme Permissions' },
+        description: {
+          fr: 'Contrôle d\'accès granulaire : lecture, création, modification, suppression, export et import',
+          en: 'Granular access control: read, create, update, delete, export and import'
+        }
+      }
+    ]
+  },
   '5.12.0': {
     version: '5.12.0',
     date: '2026-02-01',
