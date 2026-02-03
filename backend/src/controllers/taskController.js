@@ -26,11 +26,10 @@ const getTasks = async (req, res) => {
       patient_id,
       due_before,
       due_after,
-      include_completed: include_completed === 'true',
-      assigned_to: req.user.id // Only show tasks assigned to current user
+      include_completed: include_completed === 'true'
     };
 
-    const tasks = await taskService.getTasks(filters);
+    const tasks = await taskService.getTasks(req.user, filters);
 
     res.json({
       success: true,
@@ -52,7 +51,7 @@ const getTasks = async (req, res) => {
 const getTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const task = await taskService.getTaskById(id);
+    const task = await taskService.getTaskById(id, req.user);
 
     if (!task) {
       return res.status(404).json({
@@ -132,7 +131,7 @@ const updateTask = async (req, res) => {
     if (patient_id !== undefined) updateData.patient_id = patient_id;
     if (assigned_to !== undefined) updateData.assigned_to = assigned_to;
 
-    const task = await taskService.updateTask(id, updateData);
+    const task = await taskService.updateTask(id, updateData, req.user);
 
     res.json({
       success: true,
@@ -160,7 +159,7 @@ const updateTask = async (req, res) => {
 const completeTask = async (req, res) => {
   try {
     const { id } = req.params;
-    const task = await taskService.completeTask(id);
+    const task = await taskService.completeTask(id, req.user);
 
     res.json({
       success: true,
@@ -188,7 +187,7 @@ const completeTask = async (req, res) => {
 const deleteTask = async (req, res) => {
   try {
     const { id } = req.params;
-    await taskService.deleteTask(id);
+    await taskService.deleteTask(id, req.user);
 
     res.json({
       success: true,
@@ -215,7 +214,7 @@ const deleteTask = async (req, res) => {
  */
 const getTaskStats = async (req, res) => {
   try {
-    const stats = await taskService.getTaskStats(req.user.id);
+    const stats = await taskService.getTaskStats(req.user);
 
     res.json({
       success: true,
@@ -236,7 +235,7 @@ const getTaskStats = async (req, res) => {
  */
 const getTasksDueSoon = async (req, res) => {
   try {
-    const tasks = await taskService.getTasksDueSoon(req.user.id);
+    const tasks = await taskService.getTasksDueSoon(req.user);
 
     res.json({
       success: true,

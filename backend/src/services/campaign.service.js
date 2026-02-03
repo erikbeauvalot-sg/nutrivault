@@ -7,6 +7,7 @@ const { Op } = require('sequelize');
 const db = require('../../../models');
 const { EmailCampaign, EmailCampaignRecipient, User, Patient } = db;
 const audienceSegmentService = require('./audienceSegment.service');
+const { getScopedDietitianIds } = require('../helpers/scopeHelper');
 
 /**
  * Create a new campaign
@@ -42,6 +43,14 @@ async function updateCampaign(id, data, user) {
 
   if (!campaign) {
     throw new Error('Campaign not found');
+  }
+
+  // RBAC: Check access
+  const hasAccess = await canAccessCampaign(campaign, user);
+  if (!hasAccess) {
+    const error = new Error('Access denied');
+    error.statusCode = 403;
+    throw error;
   }
 
   if (!campaign.canEdit()) {
@@ -82,6 +91,14 @@ async function deleteCampaign(id, user) {
     throw new Error('Campaign not found');
   }
 
+  // RBAC: Check access
+  const hasAccess = await canAccessCampaign(campaign, user);
+  if (!hasAccess) {
+    const error = new Error('Access denied');
+    error.statusCode = 403;
+    throw error;
+  }
+
   if (campaign.status === 'sending') {
     throw new Error('Cannot delete a campaign that is currently sending');
   }
@@ -91,11 +108,26 @@ async function deleteCampaign(id, user) {
 }
 
 /**
+ * Check if user can access a campaign (by created_by scoping)
+ * @param {Object} campaign - Campaign object
+ * @param {Object} user - Authenticated user
+ * @returns {Promise<boolean>}
+ */
+async function canAccessCampaign(campaign, user) {
+  if (!user) return true; // No user context (internal call)
+  const dietitianIds = await getScopedDietitianIds(user);
+  if (dietitianIds === null) return true; // ADMIN
+  if (dietitianIds.length === 0) return false;
+  return dietitianIds.includes(campaign.created_by);
+}
+
+/**
  * Get a single campaign by ID
  * @param {string} id - Campaign ID
+ * @param {Object} user - Authenticated user (optional, for RBAC)
  * @returns {Promise<Object>} Campaign with stats
  */
-async function getCampaign(id) {
+async function getCampaign(id, user = null) {
   const campaign = await EmailCampaign.findByPk(id, {
     include: [
       {
@@ -115,6 +147,16 @@ async function getCampaign(id) {
     throw new Error('Campaign not found');
   }
 
+  // RBAC: Check access
+  if (user) {
+    const hasAccess = await canAccessCampaign(campaign, user);
+    if (!hasAccess) {
+      const error = new Error('Access denied');
+      error.statusCode = 403;
+      throw error;
+    }
+  }
+
   // Get recipient stats
   const stats = await getRecipientStats(id);
 
@@ -128,14 +170,27 @@ async function getCampaign(id) {
  * Get campaigns list with filters and pagination
  * @param {Object} filters - Filter options
  * @param {Object} pagination - Pagination options
+ * @param {Object} user - Authenticated user object
  * @returns {Promise<Object>} Campaigns list with pagination info
  */
-async function getCampaigns(filters = {}, pagination = {}) {
+async function getCampaigns(filters = {}, pagination = {}, user = null) {
   const { status, campaign_type, search } = filters;
   const { page = 1, limit = 20 } = pagination;
   const offset = (page - 1) * limit;
 
   const where = { is_active: true };
+
+  // RBAC: Scope campaigns by creator
+  // DIETITIAN sees only their own campaigns; ASSISTANT sees linked dietitians' campaigns; ADMIN sees all
+  if (user) {
+    const dietitianIds = await getScopedDietitianIds(user);
+    if (dietitianIds !== null) {
+      if (dietitianIds.length === 0) {
+        return { campaigns: [], pagination: { total: 0, page, limit, totalPages: 0 } };
+      }
+      where.created_by = { [Op.in]: dietitianIds };
+    }
+  }
 
   if (status) {
     where.status = status;

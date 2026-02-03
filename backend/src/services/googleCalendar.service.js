@@ -862,24 +862,16 @@ async function validateCalendarAccess(user, calendarId) {
  * @param {Object} options - Sync options
  * @param {Date} options.since - Sync visits since this date
  * @param {string} options.calendarId - Google Calendar ID
- * @param {boolean} options.syncAllDietitians - If true and user is admin, sync all dietitians' visits
  * @returns {Promise<Object>} Sync results
  */
 async function syncVisitsToCalendar(userId, options = {}) {
-  const user = await User.findByPk(userId, {
-    include: [{
-      model: db.Role,
-      as: 'role'
-    }]
-  });
+  const user = await User.findByPk(userId);
   if (!user || !user.google_access_token) {
     throw new Error('User not connected to Google Calendar');
   }
 
   const since = options.since || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // Last 30 days
   const calendarId = options.calendarId || user.google_calendar_id || 'primary';
-  const isAdmin = user.role && user.role.name === 'ADMIN';
-  const syncAllDietitians = options.syncAllDietitians && isAdmin;
 
   // Validate calendar access before proceeding
   const calendarAccessible = await validateCalendarAccess(user, calendarId);
@@ -887,20 +879,16 @@ async function syncVisitsToCalendar(userId, options = {}) {
     throw new Error(`Calendar ${calendarId} is not accessible. Please check that the calendar exists and you have write access to it.`);
   }
 
-  // Build where clause for visits
+  // Build where clause for visits - always filter by this user's own visits
   const whereClause = {
     visit_date: {
       [db.Sequelize.Op.gte]: since
     },
     status: {
       [db.Sequelize.Op.in]: ['SCHEDULED', 'COMPLETED']
-    }
+    },
+    dietitian_id: userId
   };
-
-  // If not syncing all dietitians, filter by current user
-  if (!syncAllDietitians) {
-    whereClause.dietitian_id = userId;
-  }
 
   // Get visits that need to be synced
   const visits = await Visit.findAll({
@@ -927,29 +915,14 @@ async function syncVisitsToCalendar(userId, options = {}) {
     try {
       console.log(`🔄 [SOURCE: NutriVault] Processing visit ${visit.id} (${visit.patient?.first_name} ${visit.patient?.last_name}) for sync to Google Calendar`);
 
-      // For admin syncing all dietitians, use the admin's Google Calendar
-      // For regular sync, use the current user's calendar
-      const calendarUser = syncAllDietitians ? user : user;
-      const eventCalendarId = syncAllDietitians ? (user.google_calendar_id || 'primary') : calendarId;
-
-      // Skip if the calendar user (admin for global sync) doesn't have Google Calendar enabled
-      if (!calendarUser.google_access_token) {
-        results.events.push({
-          visitId: visit.id,
-          error: `Calendar user ${calendarUser.username} not connected to Google Calendar`,
-          status: 'skipped'
-        });
-        continue;
-      }
-
       // Check for conflicts: if Google Calendar event exists and was modified more recently than the visit, skip sync
       if (visit.google_event_id) {
         try {
-          const oauth2Client = getOAuth2Client(calendarUser);
+          const oauth2Client = getOAuth2Client(user);
           const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
           const existingEvent = await calendar.events.get({
-            calendarId: eventCalendarId,
+            calendarId,
             eventId: visit.google_event_id
           });
 
@@ -1002,12 +975,12 @@ async function syncVisitsToCalendar(userId, options = {}) {
         }
       }
 
-      const event = await createOrUpdateCalendarEvent(visit, calendarUser, eventCalendarId, syncAllDietitians);
+      const event = await createOrUpdateCalendarEvent(visit, user, calendarId);
       results.synced++;
       results.events.push({
         visitId: visit.id,
         eventId: event.id,
-        dietitian: calendarUser.username,
+        dietitian: user.username,
         status: 'synced'
       });
 
@@ -1021,8 +994,8 @@ async function syncVisitsToCalendar(userId, options = {}) {
         changes: {
           action: 'SYNC_VISIT',
           visit_id: visit.id,
-          calendar_id: eventCalendarId,
-          dietitian_id: calendarUser.id
+          calendar_id: calendarId,
+          dietitian_id: user.id
         }
       });
     } catch (error) {

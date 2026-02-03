@@ -10,9 +10,9 @@ import { toast } from 'react-toastify';
  * Allows users to manage website URLs
  * @param {string} userId - Optional user ID to manage (for admin editing another user)
  */
-const UserWebsitesManager = ({ userId }) => {
+const UserWebsitesManager = ({ userId, readOnly = false }) => {
   const { t } = useTranslation();
-  const { user: currentUser, refreshUser } = useAuth();
+  const { user: currentUser, updateUser: updateAuthUser } = useAuth();
   const [websites, setWebsites] = useState([]);
   const [newWebsite, setNewWebsite] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,14 +32,8 @@ const UserWebsitesManager = ({ userId }) => {
   const loadUserWebsites = async () => {
     setLoading(true);
     try {
-      if (isOwnProfile && currentUser) {
-        // Use current user data from context
-        setWebsites(currentUser.websites || []);
-      } else {
-        // Fetch the target user's data
-        const userData = await getUserById(targetUserId);
-        setWebsites(userData.websites || []);
-      }
+      const userData = await getUserById(targetUserId);
+      setWebsites(userData.websites || []);
     } catch (err) {
       console.error('Error loading websites:', err);
       setError(t('settings.websites.loadError', 'Failed to load websites'));
@@ -71,8 +65,8 @@ const UserWebsitesManager = ({ userId }) => {
     try {
       await updateUser(targetUserId, { websites: newWebsites });
       setWebsites(newWebsites);
-      if (isOwnProfile && refreshUser) {
-        await refreshUser();
+      if (isOwnProfile && updateAuthUser) {
+        updateAuthUser({ websites: newWebsites });
       }
       toast.success(t('settings.websites.saved', 'Websites saved successfully'));
     } catch (err) {
@@ -164,14 +158,16 @@ const UserWebsitesManager = ({ userId }) => {
                 >
                   {getDisplayUrl(url)}
                 </a>
-                <button
-                  type="button"
-                  className="btn-close btn-close-white ms-1"
-                  style={{ fontSize: '0.6rem' }}
-                  onClick={() => handleRemoveWebsite(url)}
-                  disabled={saving}
-                  aria-label={t('settings.websites.remove', 'Remove')}
-                />
+                {!readOnly && (
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white ms-1"
+                    style={{ fontSize: '0.6rem' }}
+                    onClick={() => handleRemoveWebsite(url)}
+                    disabled={saving}
+                    aria-label={t('settings.websites.remove', 'Remove')}
+                  />
+                )}
               </Badge>
             ))}
           </div>
@@ -179,31 +175,33 @@ const UserWebsitesManager = ({ userId }) => {
       </div>
 
       {/* Add website form */}
-      <Form onSubmit={handleAddWebsite}>
-        <InputGroup>
-          <Form.Control
-            type="text"
-            placeholder={t('settings.websites.placeholder', 'https://example.com')}
-            value={newWebsite}
-            onChange={(e) => setNewWebsite(e.target.value)}
-            disabled={saving}
-          />
-          <Button
-            type="submit"
-            variant="outline-primary"
-            disabled={saving || !newWebsite.trim()}
-          >
-            {saving ? (
-              <Spinner animation="border" size="sm" />
-            ) : (
-              t('settings.websites.add', 'Add')
-            )}
-          </Button>
-        </InputGroup>
-        <Form.Text className="text-muted">
-          {t('settings.websites.help', 'Enter a full URL (e.g., https://www.mysite.com)')}
-        </Form.Text>
-      </Form>
+      {!readOnly && (
+        <Form onSubmit={handleAddWebsite}>
+          <InputGroup>
+            <Form.Control
+              type="text"
+              placeholder={t('settings.websites.placeholder', 'https://example.com')}
+              value={newWebsite}
+              onChange={(e) => setNewWebsite(e.target.value)}
+              disabled={saving}
+            />
+            <Button
+              type="submit"
+              variant="outline-primary"
+              disabled={saving || !newWebsite.trim()}
+            >
+              {saving ? (
+                <Spinner animation="border" size="sm" />
+              ) : (
+                t('settings.websites.add', 'Add')
+              )}
+            </Button>
+          </InputGroup>
+          <Form.Text className="text-muted">
+            {t('settings.websites.help', 'Enter a full URL (e.g., https://www.mysite.com)')}
+          </Form.Text>
+        </Form>
+      )}
     </div>
   );
 };

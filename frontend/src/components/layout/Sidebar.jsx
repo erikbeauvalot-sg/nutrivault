@@ -29,14 +29,14 @@ const Sidebar = ({ isOpen, onClose }) => {
       { path: '/settings/themes', icon: '🎨', label: t('navigation.themes', 'Themes') }
     ] : []),
     ...(user?.role === 'ADMIN' ? [
-      { path: '/settings', icon: '⚙️', label: t('navigation.settings', 'Settings') },
       { path: '/settings/custom-fields', icon: '🔧', label: t('navigation.customFields') },
       { path: '/settings/measures', icon: '📏', label: t('navigation.measures') },
       { path: '/settings/email-templates', icon: '✉️', label: t('navigation.emailTemplates', 'Email Templates') },
       // { path: '/settings/billing-templates', icon: '📋', label: t('navigation.billingTemplates', 'Billing Templates') }, // TODO: Not used yet
       { path: '/settings/invoice-customization', icon: '🖼️', label: t('navigation.invoiceCustomization', 'Invoice Customization') },
       { path: '/settings/roles', icon: '🔐', label: t('navigation.roles', 'Manage Roles') },
-      { path: '/settings/ai-config', icon: '🤖', label: t('navigation.aiConfig', 'AI Configuration') }
+      { path: '/settings/ai-config', icon: '🤖', label: t('navigation.aiConfig', 'AI Configuration') },
+      { path: '/settings/scheduled-tasks', icon: '⏱️', label: t('navigation.scheduledTasks', 'Scheduled Tasks') }
     ] : []),
   ];
 

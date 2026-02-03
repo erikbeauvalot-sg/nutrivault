@@ -336,7 +336,7 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
                 {customFields.map(field => (
                   <Form.Group key={field.id} className="mb-3">
                     <CustomFieldInput
-                      fieldDefinition={field}
+                      fieldDefinition={{ ...field, definition_id: field.id }}
                       value={fieldValues[field.id] ?? ''}
                       onChange={(defId, value) => handleFieldChange(field.id, value)}
                       disabled={loading}

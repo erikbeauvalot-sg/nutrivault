@@ -356,4 +356,38 @@ router.put(
   userController.toggleUserStatus
 );
 
+// === Supervisor management (assistant-dietitian links) ===
+
+// GET /api/users/:id/supervisors - Get supervisors for a user
+router.get(
+  '/:id/supervisors',
+  authenticate,
+  uuidParamValidation,
+  validate,
+  checkOwnerOrAdmin,
+  userController.getSupervisors
+);
+
+// POST /api/users/:id/supervisors - Add a supervisor link
+router.post(
+  '/:id/supervisors',
+  authenticate,
+  requireRole('ADMIN'),
+  uuidParamValidation,
+  body('dietitian_id').isUUID().withMessage('dietitian_id must be a valid UUID'),
+  validate,
+  userController.addSupervisor
+);
+
+// DELETE /api/users/:id/supervisors/:dietitianId - Remove a supervisor link
+router.delete(
+  '/:id/supervisors/:dietitianId',
+  authenticate,
+  requireRole('ADMIN'),
+  uuidParamValidation,
+  param('dietitianId').isUUID().withMessage('dietitianId must be a valid UUID'),
+  validate,
+  userController.removeSupervisor
+);
+
 module.exports = router;

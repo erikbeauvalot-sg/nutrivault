@@ -8,6 +8,7 @@ import { Container, Alert, Spinner, Badge, Card, ListGroup, Button } from 'react
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, format } from 'date-fns';
+import { fr, enUS } from 'date-fns/locale';
 import Layout from '../components/layout/Layout';
 import CalendarView from '../components/CalendarView';
 import AgendaToolbar from '../components/AgendaToolbar';
@@ -17,7 +18,8 @@ import visitService from '../services/visitService';
 import './AgendaPage.css';
 
 const AgendaPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const dateFnsLocale = i18n.language?.startsWith('fr') ? fr : enUS;
   const navigate = useNavigate();
   const [visits, setVisits] = useState([]);
   const [todaysVisits, setTodaysVisits] = useState([]);
@@ -300,7 +302,7 @@ const AgendaPage = () => {
         {sortedDates.map(dateKey => (
           <Card key={dateKey} className="mb-3">
             <Card.Header>
-              <strong>{format(new Date(dateKey), 'EEEE, MMMM d, yyyy')}</strong>
+              <strong>{format(new Date(dateKey), 'EEEE d MMMM yyyy', { locale: dateFnsLocale })}</strong>
             </Card.Header>
             <ListGroup variant="flush">
               {groupedVisits[dateKey].map(visit => (
@@ -313,7 +315,7 @@ const AgendaPage = () => {
                   <div className="d-flex justify-content-between align-items-start">
                     <div className="flex-grow-1">
                       <div className="fw-bold">
-                        {format(new Date(visit.visit_date), 'p')} - {visit.patient?.first_name} {visit.patient?.last_name}
+                        {format(new Date(visit.visit_date), 'HH:mm', { locale: dateFnsLocale })} - {visit.patient?.first_name} {visit.patient?.last_name}
                       </div>
                       <div className="text-muted small">
                         {visit.duration_minutes || 30} {t('visits.min')}

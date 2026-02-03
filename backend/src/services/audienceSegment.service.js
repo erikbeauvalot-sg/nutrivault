@@ -41,11 +41,11 @@ const SEGMENT_FIELDS = {
     field: 'language_preference',
     options: ['fr', 'en', 'es', 'nl', 'de']
   },
-  // Assigned dietitian
-  assigned_dietitian_id: {
+  // Linked dietitian (via M2M patient_dietitians)
+  linked_dietitian_id: {
     type: 'string',
-    label: 'Diététicien assigné',
-    field: 'assigned_dietitian_id',
+    label: 'Diététicien lié',
+    field: 'linked_dietitian_id',
     isRelation: true
   },
   // Tags
@@ -168,7 +168,7 @@ function buildCustomFieldCondition(customFieldId, operator, value) {
  * @param {Object} criteria - Audience criteria object
  * @returns {Object} Sequelize query options
  */
-function buildAudienceQuery(criteria) {
+async function buildAudienceQuery(criteria) {
   const { conditions = [], logic = 'AND' } = criteria;
 
   if (!conditions || conditions.length === 0) {
@@ -218,14 +218,18 @@ function buildAudienceQuery(criteria) {
       continue;
     }
 
-    // Handle assigned_dietitian_id
-    if (field === 'assigned_dietitian_id') {
-      if (operator === 'equals') {
-        whereConditions.push({ assigned_dietitian_id: value });
+    // Handle linked_dietitian_id via M2M patient_dietitians
+    if (field === 'linked_dietitian_id' || field === 'assigned_dietitian_id') {
+      const dietitianValues = Array.isArray(value) ? value : [value];
+      const linkedPatients = await db.PatientDietitian.findAll({
+        where: { dietitian_id: { [Op.in]: dietitianValues } },
+        attributes: ['patient_id']
+      });
+      const linkedIds = [...new Set(linkedPatients.map(l => l.patient_id))];
+      if (operator === 'equals' || operator === 'in') {
+        whereConditions.push({ id: { [Op.in]: linkedIds } });
       } else if (operator === 'not_equals') {
-        whereConditions.push({ assigned_dietitian_id: { [Op.ne]: value } });
-      } else if (operator === 'in') {
-        whereConditions.push({ assigned_dietitian_id: { [Op.in]: Array.isArray(value) ? value : [value] } });
+        whereConditions.push({ id: { [Op.notIn]: linkedIds } });
       }
       continue;
     }
@@ -281,7 +285,7 @@ function buildAudienceQuery(criteria) {
  */
 async function getPatientsBySegment(criteria, options = {}) {
   const { limit = 100, offset = 0 } = options;
-  const queryOptions = buildAudienceQuery(criteria);
+  const queryOptions = await buildAudienceQuery(criteria);
 
   // Handle computed field conditions (last_visit_date, visit_count)
   const { conditions = [] } = criteria;
@@ -329,7 +333,7 @@ async function getPatientsBySegment(criteria, options = {}) {
  * @returns {Promise<number>} Count of matching patients
  */
 async function countPatientsBySegment(criteria) {
-  const queryOptions = buildAudienceQuery(criteria);
+  const queryOptions = await buildAudienceQuery(criteria);
 
   // Handle computed field conditions
   const { conditions = [] } = criteria;

@@ -111,6 +111,52 @@
   }
 }
 
+/* Drag handle */
+.drag-handle {
+  cursor: grab;
+  color: var(--nv-warm-300);
+  padding: 4px 6px;
+  font-size: 1.1rem;
+  user-select: none;
+  border-radius: 4px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+}
+.drag-handle:hover {
+  color: var(--nv-warm-600);
+  background-color: var(--nv-warm-100);
+}
+.drag-handle:active {
+  cursor: grabbing;
+  color: var(--nv-warm-700);
+  background-color: var(--nv-warm-200);
+}
+
+/* Row being dragged (desktop) */
+.dragging-row {
+  background: #fff !important;
+  border-left: 4px solid #d4a843 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
+}
+.dragging-row td {
+  background: #fff !important;
+}
+
+/* Card being dragged (mobile) */
+.dragging-card {
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+  border-left: 4px solid #d4a843 !important;
+  transform: rotate(1deg);
+}
+
+/* Drop zone highlight */
+.droppable-active {
+  background-color: rgba(212, 168, 67, 0.04);
+  border-radius: 4px;
+}
+
 /* Clickable row hover effect for desktop */
 .clickable-row:hover {
   background-color: var(--nv-warm-ghost);

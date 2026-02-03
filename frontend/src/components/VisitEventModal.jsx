@@ -7,9 +7,11 @@ import { Modal, Badge, Button, Row, Col } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { fr, enUS } from 'date-fns/locale';
 
 const VisitEventModal = ({ show, onHide, event }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const dateFnsLocale = i18n.language?.startsWith('fr') ? fr : enUS;
   const navigate = useNavigate();
 
   if (!event) return null;
@@ -44,7 +46,7 @@ const VisitEventModal = ({ show, onHide, event }) => {
   };
 
   const formatDateTime = (date) => {
-    return format(new Date(date), 'PPP p');
+    return format(new Date(date), 'PPP HH:mm', { locale: dateFnsLocale });
   };
 
   const handleViewDetails = () => {

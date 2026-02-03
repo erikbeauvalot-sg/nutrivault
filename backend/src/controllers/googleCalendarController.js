@@ -8,6 +8,7 @@
 const googleCalendarService = require('../services/googleCalendar.service');
 const autoSyncService = require('../services/autoSync.service');
 const auditService = require('../services/audit.service');
+const db = require('../../../models');
 
 /**
  * Get Google OAuth authorization URL
@@ -118,25 +119,16 @@ exports.getCalendars = async (req, res) => {
 exports.syncToCalendar = async (req, res) => {
   try {
     const { user } = req;
-    const { since, calendarId, syncAllDietitians } = req.body;
-
-    // Check if user is admin when trying to sync all dietitians
-    if (syncAllDietitians && user.role.name !== 'ADMIN') {
-      return res.status(403).json({
-        success: false,
-        error: 'Only administrators can sync visits from all dietitians'
-      });
-    }
+    const { since, calendarId } = req.body;
 
     const results = await autoSyncService.forceSyncVisitsToCalendar(user, {
       since: since ? new Date(since) : undefined,
-      calendarId,
-      syncAllDietitians: syncAllDietitians && user.role.name === 'ADMIN'
+      calendarId
     });
 
     res.json({
       success: true,
-      message: `Synced ${results.synced} visits to Google Calendar`,
+      message: `Synced ${results.totalSynced} visits to Google Calendar`,
       data: results
     });
   } catch (error) {
@@ -518,5 +510,253 @@ exports.getConflictDetails = async (req, res) => {
       success: false,
       error: 'Failed to get conflict details'
     });
+  }
+};
+
+// ==========================================
+// Admin Calendar Management Endpoints
+// ==========================================
+
+/**
+ * List all dietitians with their calendar connection status
+ */
+exports.getAdminDietitiansList = async (req, res) => {
+  try {
+    const { Op } = require('sequelize');
+    const dietitians = await db.User.findAll({
+      include: [{
+        model: db.Role,
+        as: 'role',
+        where: { name: { [Op.in]: ['DIETITIAN', 'ADMIN'] } }
+      }],
+      attributes: ['id', 'username', 'first_name', 'last_name', 'email',
+        'google_calendar_sync_enabled', 'google_calendar_id',
+        'google_access_token', 'google_token_expiry'],
+      where: { is_active: true }
+    });
+
+    const list = dietitians.map(d => ({
+      id: d.id,
+      username: d.username,
+      name: `${d.first_name || ''} ${d.last_name || ''}`.trim() || d.username,
+      email: d.email,
+      role: d.role?.name,
+      connected: !!d.google_access_token,
+      calendar_id: d.google_calendar_id || 'primary',
+      sync_enabled: d.google_calendar_sync_enabled || false,
+      has_token: !!d.google_access_token,
+      token_expiry: d.google_token_expiry
+    }));
+
+    res.json({ success: true, data: list });
+  } catch (error) {
+    console.error('Error getting admin dietitians list:', error);
+    res.status(500).json({ success: false, error: 'Failed to get dietitians list' });
+  }
+};
+
+/**
+ * Generate OAuth URL for a specific dietitian (admin acting on behalf)
+ */
+exports.getAdminAuthUrl = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const targetUser = await db.User.findByPk(userId);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const authUrl = googleCalendarService.getAuthUrl(userId);
+    res.json({
+      success: true,
+      data: { authUrl, userId, username: targetUser.username }
+    });
+  } catch (error) {
+    console.error('Error generating admin auth URL:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate authorization URL' });
+  }
+};
+
+/**
+ * Get sync status for a specific dietitian
+ */
+exports.getAdminSyncStatus = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const targetUser = await db.User.findByPk(userId);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        userId: targetUser.id,
+        username: targetUser.username,
+        google_calendar_sync_enabled: targetUser.google_calendar_sync_enabled || false,
+        google_calendar_id: targetUser.google_calendar_id || 'primary',
+        connected: !!targetUser.google_access_token
+      }
+    });
+  } catch (error) {
+    console.error('Error getting admin sync status:', error);
+    res.status(500).json({ success: false, error: 'Failed to get sync status' });
+  }
+};
+
+/**
+ * Get sync stats for a specific dietitian
+ */
+exports.getAdminSyncStats = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const stats = await googleCalendarService.getSyncStats(userId);
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    console.error('Error getting admin sync stats:', error);
+    res.status(500).json({ success: false, error: 'Failed to get sync statistics' });
+  }
+};
+
+/**
+ * Trigger sync for a specific dietitian
+ */
+exports.adminSyncForDietitian = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const targetUser = await db.User.findByPk(userId, {
+      include: [{ model: db.Role, as: 'role' }]
+    });
+    if (!targetUser || !targetUser.google_access_token) {
+      return res.status(400).json({ success: false, error: 'User not connected to Google Calendar' });
+    }
+
+    const results = await autoSyncService.forceSyncVisitsToCalendar(targetUser);
+
+    await auditService.log({
+      user_id: req.user.id,
+      username: req.user.username,
+      action: 'UPDATE',
+      resource_type: 'GoogleCalendarSync',
+      resource_id: userId,
+      changes: { action: 'ADMIN_SYNC_FOR_DIETITIAN', target_user: targetUser.username }
+    });
+
+    res.json({
+      success: true,
+      message: `Synced ${results.totalSynced} visits for ${targetUser.username}`,
+      data: results
+    });
+  } catch (error) {
+    console.error('Error syncing for dietitian:', error);
+    res.status(500).json({ success: false, error: 'Failed to sync for dietitian' });
+  }
+};
+
+/**
+ * Sync all connected dietitians
+ */
+exports.adminSyncAll = async (req, res) => {
+  try {
+    const results = await autoSyncService.syncAllConnectedDietitians();
+
+    await auditService.log({
+      user_id: req.user.id,
+      username: req.user.username,
+      action: 'UPDATE',
+      resource_type: 'GoogleCalendarSync',
+      resource_id: 'all',
+      changes: { action: 'ADMIN_SYNC_ALL_DIETITIANS', successful: results.successful, failed: results.failed }
+    });
+
+    res.json({
+      success: true,
+      message: `Synced ${results.successful} dietitians, ${results.failed} failed`,
+      data: results
+    });
+  } catch (error) {
+    console.error('Error syncing all dietitians:', error);
+    res.status(500).json({ success: false, error: 'Failed to sync all dietitians' });
+  }
+};
+
+/**
+ * Disconnect a specific dietitian's calendar
+ */
+exports.adminDisconnect = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    await googleCalendarService.disconnectCalendar(userId);
+
+    await auditService.log({
+      user_id: req.user.id,
+      username: req.user.username,
+      action: 'UPDATE',
+      resource_type: 'GoogleCalendarSync',
+      resource_id: userId,
+      changes: { action: 'ADMIN_DISCONNECT_DIETITIAN' }
+    });
+
+    res.json({ success: true, message: 'Calendar disconnected successfully' });
+  } catch (error) {
+    console.error('Error disconnecting dietitian calendar:', error);
+    res.status(500).json({ success: false, error: 'Failed to disconnect calendar' });
+  }
+};
+
+/**
+ * Update calendar settings for a specific dietitian
+ */
+exports.adminUpdateSettings = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { calendarId, syncEnabled } = req.body;
+
+    const targetUser = await db.User.findByPk(userId);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const updateData = {};
+    if (calendarId !== undefined) updateData.google_calendar_id = calendarId;
+    if (syncEnabled !== undefined) updateData.google_calendar_sync_enabled = syncEnabled;
+
+    await targetUser.update(updateData);
+
+    await auditService.log({
+      user_id: req.user.id,
+      username: req.user.username,
+      action: 'UPDATE',
+      resource_type: 'User',
+      resource_id: userId,
+      changes: { action: 'ADMIN_UPDATE_CALENDAR_SETTINGS', ...updateData }
+    });
+
+    res.json({
+      success: true,
+      message: 'Settings updated',
+      data: {
+        google_calendar_sync_enabled: targetUser.google_calendar_sync_enabled,
+        google_calendar_id: targetUser.google_calendar_id
+      }
+    });
+  } catch (error) {
+    console.error('Error updating dietitian calendar settings:', error);
+    res.status(500).json({ success: false, error: 'Failed to update settings' });
+  }
+};
+
+/**
+ * Get calendar list for a specific dietitian (admin)
+ */
+exports.adminGetCalendars = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const calendars = await googleCalendarService.getUserCalendars(userId);
+    res.json({ success: true, data: calendars });
+  } catch (error) {
+    console.error('Error getting calendars for user:', error);
+    const statusCode = error.message === 'User not connected to Google Calendar' ? 400 : 500;
+    res.status(statusCode).json({ success: false, error: error.message || 'Failed to get calendars' });
   }
 };

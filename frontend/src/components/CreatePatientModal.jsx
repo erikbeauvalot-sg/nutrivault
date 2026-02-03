@@ -6,7 +6,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Modal, Button, Form, Row, Col, ProgressBar, Alert, Spinner } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import userService from '../services/userService';
 import PatientTagsManager from './PatientTagsManager';
 import customFieldService from '../services/customFieldService';
 import CustomFieldInput from './CustomFieldInput';
@@ -17,7 +16,7 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [dietitians, setDietitians] = useState([]);
+  // dietitians list no longer needed (auto-linked on creation)
 
   // Email validation state
   const [emailValidation, setEmailValidation] = useState({
@@ -38,7 +37,6 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
     last_name: '',
     email: '',
     phone: '',
-    assigned_dietitian_id: '',
     tags: []
   });
 
@@ -47,7 +45,6 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
 
   useEffect(() => {
     if (show) {
-      fetchDietitians();
       fetchCustomFields();
     }
   }, [show]);
@@ -60,17 +57,6 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
       }
     };
   }, []);
-
-  const fetchDietitians = async () => {
-    try {
-      const response = await userService.getDietitians();
-      const data = response.data?.data || response.data || [];
-      setDietitians(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('Failed to fetch dietitians:', err);
-      setDietitians([]);
-    }
-  };
 
   const fetchCustomFields = async () => {
     try {
@@ -257,7 +243,6 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
         last_name: formData.last_name,
         email: formData.email || null,
         phone: formData.phone || null,
-        assigned_dietitian_id: formData.assigned_dietitian_id || null,
         tags: formData.tags
       };
 
@@ -296,7 +281,6 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
       last_name: '',
       email: '',
       phone: '',
-      assigned_dietitian_id: '',
       tags: []
     });
     setFieldValues({});
@@ -388,25 +372,9 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
               </Form.Group>
             </Col>
           </Row>
-          <Form.Group className="mb-3">
-            <Form.Label>Diététicien assigné</Form.Label>
-            <Form.Select
-              name="assigned_dietitian_id"
-              value={formData.assigned_dietitian_id}
-              onChange={handleInputChange}
-            >
-              <option value="">Sélectionner un diététicien (optionnel)</option>
-              {dietitians.map(dietitian => (
-                <option key={dietitian.id} value={dietitian.id}>
-                  {dietitian.first_name} {dietitian.last_name}
-                  {dietitian.email && ` (${dietitian.email})`}
-                </option>
-              ))}
-            </Form.Select>
-            <Form.Text className="text-muted">
-              Laisser vide pour assigner plus tard
-            </Form.Text>
-          </Form.Group>
+          <Form.Text className="text-muted d-block mt-2">
+            Vous serez automatiquement lié à ce patient en tant que diététicien.
+          </Form.Text>
         </div>
       );
     } else if (currentStep > 1 && currentStep <= customFieldCategories.length + 1) {

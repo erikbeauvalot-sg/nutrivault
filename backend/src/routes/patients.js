@@ -282,6 +282,51 @@ router.delete(
 );
 
 /**
+ * Patient-Dietitian Link Routes (M2M)
+ */
+
+/**
+ * GET /api/patients/:id/dietitians - List dietitians linked to a patient
+ * Requires: patients.read permission
+ */
+router.get(
+  '/:id/dietitians',
+  authenticate,
+  requirePermission('patients.read'),
+  param('id').isUUID().withMessage('Patient ID must be a valid UUID'),
+  validate,
+  patientController.getPatientDietitians
+);
+
+/**
+ * POST /api/patients/:id/dietitians - Add a dietitian link
+ * Requires: patients.update permission
+ */
+router.post(
+  '/:id/dietitians',
+  authenticate,
+  requirePermission('patients.update'),
+  param('id').isUUID().withMessage('Patient ID must be a valid UUID'),
+  body('dietitian_id').isUUID().withMessage('dietitian_id must be a valid UUID'),
+  validate,
+  patientController.addPatientDietitian
+);
+
+/**
+ * DELETE /api/patients/:id/dietitians/:dietitianId - Remove a dietitian link
+ * Requires: patients.update permission (ADMIN only enforced in controller)
+ */
+router.delete(
+  '/:id/dietitians/:dietitianId',
+  authenticate,
+  requirePermission('patients.update'),
+  param('id').isUUID().withMessage('Patient ID must be a valid UUID'),
+  param('dietitianId').isUUID().withMessage('Dietitian ID must be a valid UUID'),
+  validate,
+  patientController.removePatientDietitian
+);
+
+/**
  * Patient CRUD Routes
  * NOTE: These parameterized routes come AFTER specific routes
  */

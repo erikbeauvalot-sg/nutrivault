@@ -57,6 +57,8 @@ db.EmailCampaign = require('./EmailCampaign')(sequelize, DataTypes);
 db.EmailCampaignRecipient = require('./EmailCampaignRecipient')(sequelize, DataTypes);
 db.PageView = require('./PageView')(sequelize, DataTypes);
 db.Theme = require('./Theme')(sequelize, DataTypes);
+db.UserSupervisor = require('./UserSupervisor')(sequelize, DataTypes);
+db.PatientDietitian = require('./PatientDietitian')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -794,6 +796,54 @@ db.User.belongsTo(db.Theme, {
 db.Theme.hasMany(db.User, {
   foreignKey: 'theme_id',
   as: 'users'
+});
+
+// UserSupervisor associations (assistant-dietitian links)
+db.UserSupervisor.belongsTo(db.User, {
+  foreignKey: 'assistant_id',
+  as: 'assistant'
+});
+db.UserSupervisor.belongsTo(db.User, {
+  foreignKey: 'dietitian_id',
+  as: 'dietitian'
+});
+db.User.hasMany(db.UserSupervisor, {
+  foreignKey: 'assistant_id',
+  as: 'supervisor_links'
+});
+db.User.hasMany(db.UserSupervisor, {
+  foreignKey: 'dietitian_id',
+  as: 'assistant_links'
+});
+
+// PatientDietitian associations (M2M: patient ↔ dietitian)
+db.PatientDietitian.belongsTo(db.Patient, {
+  foreignKey: 'patient_id',
+  as: 'patient'
+});
+db.PatientDietitian.belongsTo(db.User, {
+  foreignKey: 'dietitian_id',
+  as: 'dietitian'
+});
+db.Patient.hasMany(db.PatientDietitian, {
+  foreignKey: 'patient_id',
+  as: 'dietitian_links'
+});
+db.User.hasMany(db.PatientDietitian, {
+  foreignKey: 'dietitian_id',
+  as: 'patient_links'
+});
+db.Patient.belongsToMany(db.User, {
+  through: db.PatientDietitian,
+  foreignKey: 'patient_id',
+  otherKey: 'dietitian_id',
+  as: 'dietitians'
+});
+db.User.belongsToMany(db.Patient, {
+  through: db.PatientDietitian,
+  foreignKey: 'dietitian_id',
+  otherKey: 'patient_id',
+  as: 'linked_patients'
 });
 
 module.exports = db;

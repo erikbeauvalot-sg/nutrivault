@@ -17,6 +17,7 @@ const auditService = require('./audit.service');
 const translationService = require('./customFieldTranslation.service');
 const formulaEngine = require('./formulaEngine.service');
 const { Op } = db.Sequelize;
+const { canAccessVisit } = require('../helpers/scopeHelper');
 
 /**
  * Check if a category's data should be stored at patient level (shared)
@@ -36,30 +37,14 @@ function isPatientLevelCategory(category) {
  * @returns {Promise<boolean>} True if user has access
  */
 async function checkVisitAccess(user, visitId) {
-  if (user.role.name === 'ADMIN') {
-    return true;
-  }
-
-  if (user.role.name === 'DIETITIAN') {
-    const visit = await Visit.findByPk(visitId, {
-      include: [{
-        model: Patient,
-        as: 'patient'
-      }]
-    });
-
-    if (!visit) {
-      return false;
-    }
-
-    // Dietitian can access if they're assigned to the patient OR if they're the visit dietitian
-    return visit.patient && (
-      visit.patient.assigned_dietitian_id === user.id ||
-      visit.dietitian_id === user.id
-    );
-  }
-
-  return false;
+  const visit = await Visit.findByPk(visitId, {
+    include: [{
+      model: Patient,
+      as: 'patient'
+    }]
+  });
+  if (!visit) return false;
+  return canAccessVisit(user, visit);
 }
 
 /**

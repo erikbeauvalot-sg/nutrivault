@@ -6,6 +6,8 @@
  */
 
 const patientService = require('../services/patient.service');
+const db = require('../../../models');
+const { ensurePatientDietitianLink, canAccessPatient } = require('../helpers/scopeHelper');
 
 /**
  * Extract request metadata for audit logging
@@ -167,6 +169,119 @@ exports.checkEmailAvailability = async (req, res, next) => {
       success: true,
       available: isAvailable,
       email: email.toLowerCase().trim()
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/patients/:id/dietitians - List dietitians linked to a patient
+ */
+exports.getPatientDietitians = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const links = await db.PatientDietitian.findAll({
+      where: { patient_id: id },
+      include: [{
+        model: db.User,
+        as: 'dietitian',
+        attributes: ['id', 'username', 'first_name', 'last_name', 'email']
+      }],
+      order: [['created_at', 'ASC']]
+    });
+
+    res.json({
+      success: true,
+      data: links.map(l => ({
+        id: l.id,
+        dietitian: l.dietitian,
+        linked_at: l.created_at
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/patients/:id/dietitians - Add a dietitian link
+ */
+exports.addPatientDietitian = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { dietitian_id } = req.body;
+    const user = req.user;
+
+    // Only ADMIN or the dietitian themselves can add a link
+    const roleName = user.role?.name || user.role;
+    if (roleName !== 'ADMIN' && dietitian_id !== user.id) {
+      const error = new Error('Only ADMIN or the dietitian themselves can add a link');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // Verify patient exists
+    const patient = await db.Patient.findByPk(id);
+    if (!patient) {
+      const error = new Error('Patient not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Verify dietitian exists
+    const dietitian = await db.User.findByPk(dietitian_id);
+    if (!dietitian) {
+      const error = new Error('Dietitian not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const link = await ensurePatientDietitianLink(id, dietitian_id);
+
+    res.status(201).json({
+      success: true,
+      data: link,
+      message: 'Dietitian linked to patient'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/patients/:id/dietitians/:dietitianId - Remove a dietitian link
+ */
+exports.removePatientDietitian = async (req, res, next) => {
+  try {
+    const { id, dietitianId } = req.params;
+    const user = req.user;
+
+    // Only ADMIN can remove links
+    const roleName = user.role?.name || user.role;
+    if (roleName !== 'ADMIN') {
+      const error = new Error('Only ADMIN can remove dietitian links');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const deleted = await db.PatientDietitian.destroy({
+      where: {
+        patient_id: id,
+        dietitian_id: dietitianId
+      }
+    });
+
+    if (!deleted) {
+      const error = new Error('Link not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    res.json({
+      success: true,
+      message: 'Dietitian link removed'
     });
   } catch (error) {
     next(error);

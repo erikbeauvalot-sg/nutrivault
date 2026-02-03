@@ -21,7 +21,16 @@ import ExportCustomFieldsModal from '../components/ExportCustomFieldsModal';
 import ImportCustomFieldsModal from '../components/ImportCustomFieldsModal';
 import ActionButton from '../components/ActionButton';
 import ConfirmModal from '../components/ConfirmModal';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import './CustomFieldsPage.css';
+
+// Helper to reorder an array after drag
+const reorder = (list, startIndex, endIndex) => {
+  const result = Array.from(list);
+  const [removed] = result.splice(startIndex, 1);
+  result.splice(endIndex, 0, removed);
+  return result;
+};
 
 const CustomFieldsPage = () => {
   const { t } = useTranslation();
@@ -217,6 +226,76 @@ const CustomFieldsPage = () => {
     }
   };
 
+  // Reorder handlers
+  const handleMoveCategory = async (category, direction) => {
+    const sorted = [...categories].sort((a, b) => a.display_order - b.display_order);
+    const index = sorted.findIndex(c => c.id === category.id);
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= sorted.length) return;
+
+    const order = sorted.map((cat, i) => {
+      if (i === index) return { id: cat.id, display_order: sorted[targetIndex].display_order };
+      if (i === targetIndex) return { id: cat.id, display_order: sorted[index].display_order };
+      return { id: cat.id, display_order: cat.display_order };
+    });
+
+    try {
+      await customFieldService.reorderCategories(order);
+      await fetchData();
+    } catch (err) {
+      setError(err.response?.data?.error || t('customFields.reorderError', 'Failed to reorder items'));
+    }
+  };
+
+  const handleMoveDefinition = async (definition, direction) => {
+    const sorted = [...filteredDefinitions].sort((a, b) => a.display_order - b.display_order);
+    const index = sorted.findIndex(d => d.id === definition.id);
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= sorted.length) return;
+
+    const order = sorted.map((def, i) => {
+      if (i === index) return { id: def.id, display_order: sorted[targetIndex].display_order };
+      if (i === targetIndex) return { id: def.id, display_order: sorted[index].display_order };
+      return { id: def.id, display_order: def.display_order };
+    });
+
+    try {
+      await customFieldService.reorderFields(order);
+      await fetchData();
+    } catch (err) {
+      setError(err.response?.data?.error || t('customFields.reorderError', 'Failed to reorder items'));
+    }
+  };
+
+  // Drag-and-drop handlers
+  const handleCategoryDragEnd = async (result) => {
+    if (!result.destination || result.source.index === result.destination.index) return;
+
+    const reordered = reorder(filteredCategories, result.source.index, result.destination.index);
+    const order = reordered.map((cat, i) => ({ id: cat.id, display_order: i + 1 }));
+
+    try {
+      await customFieldService.reorderCategories(order);
+      await fetchData();
+    } catch (err) {
+      setError(err.response?.data?.error || t('customFields.reorderError', 'Failed to reorder items'));
+    }
+  };
+
+  const handleDefinitionDragEnd = async (result) => {
+    if (!result.destination || result.source.index === result.destination.index) return;
+
+    const reordered = reorder(filteredDefinitions, result.source.index, result.destination.index);
+    const order = reordered.map((def, i) => ({ id: def.id, display_order: i + 1 }));
+
+    try {
+      await customFieldService.reorderFields(order);
+      await fetchData();
+    } catch (err) {
+      setError(err.response?.data?.error || t('customFields.reorderError', 'Failed to reorder items'));
+    }
+  };
+
   // Visit Type handlers
   const handleCreateVisitType = () => {
     setSelectedVisitType(null);
@@ -345,20 +424,24 @@ const CustomFieldsPage = () => {
       });
     }
 
-    return filtered;
+    return [...filtered].sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
   }, [definitions, searchQuery, selectedCategories]);
 
   // Filter categories based on search query
   const filteredCategories = useMemo(() => {
-    if (!searchQuery.trim()) return categories;
+    let filtered = categories;
 
-    const query = searchQuery.toLowerCase();
-    return categories.filter(cat => {
-      return (
-        cat.name?.toLowerCase().includes(query) ||
-        cat.description?.toLowerCase().includes(query)
-      );
-    });
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(cat => {
+        return (
+          cat.name?.toLowerCase().includes(query) ||
+          cat.description?.toLowerCase().includes(query)
+        );
+      });
+    }
+
+    return [...filtered].sort((a, b) => a.display_order - b.display_order);
   }, [categories, searchQuery]);
 
   // Highlight matching text
@@ -488,12 +571,13 @@ const CustomFieldsPage = () => {
                     {t('customFields.noCategoriesFound', 'No categories found matching your search.')}
                   </Alert>
                 ) : (
-                  <>
+                  <DragDropContext onDragEnd={handleCategoryDragEnd}>
                     {/* Desktop Table View */}
                     <div className="custom-fields-table-desktop">
                       <Table striped bordered hover>
                         <thead>
                           <tr>
+                            <th style={{ width: '40px' }}></th>
                             <th>{t('customFields.categoryName', 'Name')}</th>
                             <th>{t('customFields.categoryDescription', 'Description')}</th>
                             <th>{t('customFields.displayOrder', 'Order')}</th>
@@ -503,163 +587,125 @@ const CustomFieldsPage = () => {
                             <th>{t('customFields.actions', 'Actions')}</th>
                           </tr>
                         </thead>
-                        <tbody>
-                          {filteredCategories.map((category) => {
-                            const entityTypes = category.entity_types || ['patient'];
-                            const hasPatient = entityTypes.includes('patient');
-                            const hasVisit = entityTypes.includes('visit');
-                            const fieldCount = category.field_definitions?.length || 0;
+                        <Droppable droppableId="categories-table">
+                          {(provided, snapshot) => (
+                            <tbody ref={provided.innerRef} {...provided.droppableProps} className={snapshot.isDraggingOver ? 'droppable-active' : ''}>
+                              {filteredCategories.map((category, index) => {
+                                const entityTypes = category.entity_types || ['patient'];
+                                const hasPatient = entityTypes.includes('patient');
+                                const hasVisit = entityTypes.includes('visit');
+                                const fieldCount = category.field_definitions?.length || 0;
 
-                            return (
-                              <tr
-                                key={category.id}
-                                onClick={() => navigate(`/settings/custom-fields/categories/${category.id}/view`)}
-                                className="clickable-row"
-                                style={{ cursor: 'pointer' }}
-                              >
-                                <td>
-                                  <strong>{highlightText(category.name, searchQuery)}</strong>
-                                </td>
-                                <td>
-                                  {category.description ? (
-                                    highlightText(category.description, searchQuery)
-                                  ) : (
-                                    <span className="text-muted">-</span>
-                                  )}
-                                </td>
-                                <td>
-                                  <Badge bg="light" text="dark">{category.display_order}</Badge>
-                                </td>
-                                <td>
-                                  {hasPatient && (
-                                    <Badge bg="primary" className="me-1">
-                                      👤 Patient
-                                    </Badge>
-                                  )}
-                                  {hasVisit && (
-                                    <Badge bg="info">
-                                      📅 Visit
-                                    </Badge>
-                                  )}
-                                </td>
-                                <td>
-                                  {category.is_active ? (
-                                    <Badge bg="success">{t('common.active', 'Active')}</Badge>
-                                  ) : (
-                                    <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>
-                                  )}
-                                </td>
-                                <td>
-                                  <Badge bg="secondary">
-                                    {fieldCount} {t('customFields.fields', 'fields')}
-                                  </Badge>
-                                </td>
-                                <td onClick={(e) => e.stopPropagation()}>
-                                  <div className="action-buttons">
-                                    <ActionButton
-                                      action="duplicate"
-                                      onClick={() => handleDuplicateCategory(category)}
-                                      title={t('common.duplicate', 'Duplicate')}
-                                    />
-                                    <ActionButton
-                                      action="edit"
-                                      onClick={() => handleEditCategory(category)}
-                                      title={t('common.edit', 'Edit')}
-                                    />
-                                    {fieldCount === 0 ? (
-                                      <ActionButton
-                                        action="delete"
-                                        onClick={() => handleDeleteCategory(category)}
-                                        title={category.is_active ? t('common.deactivate', 'Deactivate') : t('common.deletePermanently', 'Delete permanently')}
-                                      />
-                                    ) : (
-                                      <ActionButton
-                                        action="delete"
-                                        disabled={true}
-                                        title={t('customFields.cannotDeleteCategoryWithFields', 'Cannot delete category with fields')}
-                                      />
+                                return (
+                                  <Draggable key={category.id} draggableId={String(category.id)} index={index}>
+                                    {(provided, snapshot) => (
+                                      <tr
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        onClick={() => navigate(`/settings/custom-fields/categories/${category.id}/view`)}
+                                        className={`clickable-row ${snapshot.isDragging ? 'dragging-row' : ''}`}
+                                        style={{ ...provided.draggableProps.style, cursor: 'pointer' }}
+                                      >
+                                        <td onClick={(e) => e.stopPropagation()} style={{ width: '40px' }}>
+                                          <span className="drag-handle" {...provided.dragHandleProps} title={t('common.dragToReorder', 'Drag to reorder')}>☰</span>
+                                        </td>
+                                        <td><strong>{highlightText(category.name, searchQuery)}</strong></td>
+                                        <td>{category.description ? highlightText(category.description, searchQuery) : <span className="text-muted">-</span>}</td>
+                                        <td onClick={(e) => e.stopPropagation()}>
+                                          <div className="d-flex align-items-center gap-1">
+                                            <Button variant="outline-secondary" size="sm" className="p-0 px-1" disabled={index === 0} onClick={() => handleMoveCategory(category, 'up')} title={t('common.moveUp', 'Move up')}>▲</Button>
+                                            <Badge bg="light" text="dark">{category.display_order}</Badge>
+                                            <Button variant="outline-secondary" size="sm" className="p-0 px-1" disabled={index === filteredCategories.length - 1} onClick={() => handleMoveCategory(category, 'down')} title={t('common.moveDown', 'Move down')}>▼</Button>
+                                          </div>
+                                        </td>
+                                        <td>
+                                          {hasPatient && <Badge bg="primary" className="me-1">👤 Patient</Badge>}
+                                          {hasVisit && <Badge bg="info">📅 Visit</Badge>}
+                                        </td>
+                                        <td>{category.is_active ? <Badge bg="success">{t('common.active', 'Active')}</Badge> : <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>}</td>
+                                        <td><Badge bg="secondary">{fieldCount} {t('customFields.fields', 'fields')}</Badge></td>
+                                        <td onClick={(e) => e.stopPropagation()}>
+                                          <div className="action-buttons">
+                                            <ActionButton action="duplicate" onClick={() => handleDuplicateCategory(category)} title={t('common.duplicate', 'Duplicate')} />
+                                            <ActionButton action="edit" onClick={() => handleEditCategory(category)} title={t('common.edit', 'Edit')} />
+                                            {fieldCount === 0 ? (
+                                              <ActionButton action="delete" onClick={() => handleDeleteCategory(category)} title={category.is_active ? t('common.deactivate', 'Deactivate') : t('common.deletePermanently', 'Delete permanently')} />
+                                            ) : (
+                                              <ActionButton action="delete" disabled={true} title={t('customFields.cannotDeleteCategoryWithFields', 'Cannot delete category with fields')} />
+                                            )}
+                                          </div>
+                                        </td>
+                                      </tr>
                                     )}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
+                                  </Draggable>
+                                );
+                              })}
+                              {provided.placeholder}
+                            </tbody>
+                          )}
+                        </Droppable>
                       </Table>
                     </div>
 
                     {/* Mobile Card View */}
                     <div className="custom-fields-cards-mobile">
-                      {filteredCategories.map((category) => {
-                        const entityTypes = category.entity_types || ['patient'];
-                        const hasPatient = entityTypes.includes('patient');
-                        const hasVisit = entityTypes.includes('visit');
-                        const fieldCount = category.field_definitions?.length || 0;
+                      <Droppable droppableId="categories-cards">
+                        {(provided, snapshot) => (
+                          <div ref={provided.innerRef} {...provided.droppableProps} className={snapshot.isDraggingOver ? 'droppable-active' : ''}>
+                            {filteredCategories.map((category, index) => {
+                              const entityTypes = category.entity_types || ['patient'];
+                              const hasPatient = entityTypes.includes('patient');
+                              const hasVisit = entityTypes.includes('visit');
+                              const fieldCount = category.field_definitions?.length || 0;
 
-                        return (
-                          <div
-                            key={category.id}
-                            className="category-card-mobile"
-                            onClick={() => navigate(`/settings/custom-fields/categories/${category.id}/view`)}
-                          >
-                            <div className="card-mobile-header">
-                              <div>
-                                <h6 className="card-mobile-title">
-                                  📁 {highlightText(category.name, searchQuery)}
-                                </h6>
-                                {category.description && (
-                                  <div className="card-mobile-subtitle">
-                                    {highlightText(category.description, searchQuery)}
-                                  </div>
-                                )}
-                              </div>
-                              {category.is_active ? (
-                                <Badge bg="success">{t('common.active', 'Active')}</Badge>
-                              ) : (
-                                <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>
-                              )}
-                            </div>
-
-                            <div className="card-mobile-badges">
-                              {hasPatient && (
-                                <Badge bg="primary" className="me-1">👤 Patient</Badge>
-                              )}
-                              {hasVisit && (
-                                <Badge bg="info" className="me-1">📅 Visit</Badge>
-                              )}
-                              <Badge bg="secondary">
-                                {fieldCount} {t('customFields.fields', 'fields')}
-                              </Badge>
-                            </div>
-
-                            <div
-                              className="card-mobile-actions"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <ActionButton
-                                action="edit"
-                                onClick={() => handleEditCategory(category)}
-                                title={t('common.edit', 'Edit')}
-                              />
-                              {fieldCount === 0 ? (
-                                <ActionButton
-                                  action="delete"
-                                  onClick={() => handleDeleteCategory(category)}
-                                  title={category.is_active ? t('common.deactivate', 'Deactivate') : t('common.deletePermanently', 'Delete permanently')}
-                                />
-                              ) : (
-                                <ActionButton
-                                  action="delete"
-                                  disabled={true}
-                                  title={t('customFields.cannotDeleteCategoryWithFields', 'Cannot delete category with fields')}
-                                />
-                              )}
-                            </div>
+                              return (
+                                <Draggable key={category.id} draggableId={`card-${category.id}`} index={index}>
+                                  {(provided, snapshot) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      className={`category-card-mobile ${snapshot.isDragging ? 'dragging-card' : ''}`}
+                                      onClick={() => navigate(`/settings/custom-fields/categories/${category.id}/view`)}
+                                    >
+                                      <div className="card-mobile-header">
+                                        <div className="d-flex align-items-start gap-2">
+                                          <span className="drag-handle" {...provided.dragHandleProps} onClick={(e) => e.stopPropagation()} title={t('common.dragToReorder', 'Drag to reorder')}>☰</span>
+                                          <div>
+                                            <h6 className="card-mobile-title">📁 {highlightText(category.name, searchQuery)}</h6>
+                                            {category.description && <div className="card-mobile-subtitle">{highlightText(category.description, searchQuery)}</div>}
+                                          </div>
+                                        </div>
+                                        {category.is_active ? <Badge bg="success">{t('common.active', 'Active')}</Badge> : <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>}
+                                      </div>
+                                      <div className="card-mobile-badges">
+                                        {hasPatient && <Badge bg="primary" className="me-1">👤 Patient</Badge>}
+                                        {hasVisit && <Badge bg="info" className="me-1">📅 Visit</Badge>}
+                                        <Badge bg="secondary">{fieldCount} {t('customFields.fields', 'fields')}</Badge>
+                                        <span onClick={(e) => e.stopPropagation()} className="d-inline-flex align-items-center gap-1">
+                                          <Button variant="outline-secondary" size="sm" className="p-0 px-1" disabled={index === 0} onClick={() => handleMoveCategory(category, 'up')} title={t('common.moveUp', 'Move up')}>▲</Button>
+                                          <Badge bg="light" text="dark">{category.display_order}</Badge>
+                                          <Button variant="outline-secondary" size="sm" className="p-0 px-1" disabled={index === filteredCategories.length - 1} onClick={() => handleMoveCategory(category, 'down')} title={t('common.moveDown', 'Move down')}>▼</Button>
+                                        </span>
+                                      </div>
+                                      <div className="card-mobile-actions" onClick={(e) => e.stopPropagation()}>
+                                        <ActionButton action="edit" onClick={() => handleEditCategory(category)} title={t('common.edit', 'Edit')} />
+                                        {fieldCount === 0 ? (
+                                          <ActionButton action="delete" onClick={() => handleDeleteCategory(category)} title={category.is_active ? t('common.deactivate', 'Deactivate') : t('common.deletePermanently', 'Delete permanently')} />
+                                        ) : (
+                                          <ActionButton action="delete" disabled={true} title={t('customFields.cannotDeleteCategoryWithFields', 'Cannot delete category with fields')} />
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </Draggable>
+                              );
+                            })}
+                            {provided.placeholder}
                           </div>
-                        );
-                      })}
+                        )}
+                      </Droppable>
                     </div>
-                  </>
+                  </DragDropContext>
                 )}
               </Card.Body>
             </Card>
@@ -799,12 +845,13 @@ const CustomFieldsPage = () => {
                     {t('customFields.noFieldsFound', 'No fields found matching your filters.')}
                   </Alert>
                 ) : (
-                  <>
+                  <DragDropContext onDragEnd={handleDefinitionDragEnd}>
                     {/* Desktop Table View */}
                     <div className="custom-fields-table-desktop">
                       <Table striped bordered hover>
                         <thead>
                           <tr>
+                            <th style={{ width: '40px' }}></th>
                             <th>{t('customFields.fieldName', 'Field Name')}</th>
                             <th>{t('customFields.fieldLabel', 'Label')}</th>
                             <th>{t('customFields.fieldType', 'Type')}</th>
@@ -815,139 +862,104 @@ const CustomFieldsPage = () => {
                             <th>{t('customFields.actions', 'Actions')}</th>
                           </tr>
                         </thead>
-                        <tbody>
-                          {filteredDefinitions.map((definition) => (
-                            <tr
-                              key={definition.id}
-                              onClick={() => navigate(`/settings/custom-fields/definitions/${definition.id}/view`)}
-                              className="clickable-row"
-                              style={{ cursor: 'pointer' }}
-                            >
-                              <td>
-                                <code>{highlightText(definition.field_name, searchQuery)}</code>
-                              </td>
-                              <td>
-                                <strong>{highlightText(definition.field_label, searchQuery)}</strong>
-                              </td>
-                              <td>
-                                <Badge bg={getFieldTypeBadgeVariant(definition.field_type)}>
-                                  {getFieldTypeIcon(definition.field_type)} {definition.field_type}
-                                </Badge>
-                              </td>
-                              <td>
-                                {definition.category?.name ? (
-                                  <Badge bg="light" text="dark">
-                                    {highlightText(definition.category.name, searchQuery)}
-                                  </Badge>
-                                ) : (
-                                  <span className="text-muted">{t('common.unknown', 'Unknown')}</span>
-                                )}
-                              </td>
-                              <td>
-                                <Badge bg="info" text="dark">
-                                  {definition.display_order || 0}
-                                </Badge>
-                              </td>
-                              <td>
-                                {definition.is_required ? (
-                                  <Badge bg="warning" text="dark">{t('common.yes', 'Yes')}</Badge>
-                                ) : (
-                                  <Badge bg="secondary">{t('common.no', 'No')}</Badge>
-                                )}
-                              </td>
-                              <td>
-                                {definition.is_active ? (
-                                  <Badge bg="success">{t('common.active', 'Active')}</Badge>
-                                ) : (
-                                  <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>
-                                )}
-                              </td>
-                              <td onClick={(e) => e.stopPropagation()}>
-                                <div className="action-buttons">
-                                  <ActionButton
-                                    action="duplicate"
-                                    onClick={() => handleDuplicateDefinition(definition)}
-                                    title={t('common.duplicate', 'Duplicate')}
-                                  />
-                                  <ActionButton
-                                    action="edit"
-                                    onClick={() => handleEditDefinition(definition)}
-                                    title={t('common.edit', 'Edit')}
-                                  />
-                                  <ActionButton
-                                    action="delete"
-                                    onClick={() => handleDeleteDefinition(definition.id)}
-                                    title={t('common.delete', 'Delete')}
-                                  />
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
+                        <Droppable droppableId="definitions-table">
+                          {(provided, snapshot) => (
+                            <tbody ref={provided.innerRef} {...provided.droppableProps} className={snapshot.isDraggingOver ? 'droppable-active' : ''}>
+                              {filteredDefinitions.map((definition, index) => (
+                                <Draggable key={definition.id} draggableId={String(definition.id)} index={index}>
+                                  {(provided, snapshot) => (
+                                    <tr
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      onClick={() => navigate(`/settings/custom-fields/definitions/${definition.id}/view`)}
+                                      className={`clickable-row ${snapshot.isDragging ? 'dragging-row' : ''}`}
+                                      style={{ ...provided.draggableProps.style, cursor: 'pointer' }}
+                                    >
+                                      <td onClick={(e) => e.stopPropagation()} style={{ width: '40px' }}>
+                                        <span className="drag-handle" {...provided.dragHandleProps} title={t('common.dragToReorder', 'Drag to reorder')}>☰</span>
+                                      </td>
+                                      <td><code>{highlightText(definition.field_name, searchQuery)}</code></td>
+                                      <td><strong>{highlightText(definition.field_label, searchQuery)}</strong></td>
+                                      <td><Badge bg={getFieldTypeBadgeVariant(definition.field_type)}>{getFieldTypeIcon(definition.field_type)} {definition.field_type}</Badge></td>
+                                      <td>{definition.category?.name ? <Badge bg="light" text="dark">{highlightText(definition.category.name, searchQuery)}</Badge> : <span className="text-muted">{t('common.unknown', 'Unknown')}</span>}</td>
+                                      <td onClick={(e) => e.stopPropagation()}>
+                                        <div className="d-flex align-items-center gap-1">
+                                          <Button variant="outline-secondary" size="sm" className="p-0 px-1" disabled={index === 0} onClick={() => handleMoveDefinition(definition, 'up')} title={t('common.moveUp', 'Move up')}>▲</Button>
+                                          <Badge bg="info" text="dark">{definition.display_order || 0}</Badge>
+                                          <Button variant="outline-secondary" size="sm" className="p-0 px-1" disabled={index === filteredDefinitions.length - 1} onClick={() => handleMoveDefinition(definition, 'down')} title={t('common.moveDown', 'Move down')}>▼</Button>
+                                        </div>
+                                      </td>
+                                      <td>{definition.is_required ? <Badge bg="warning" text="dark">{t('common.yes', 'Yes')}</Badge> : <Badge bg="secondary">{t('common.no', 'No')}</Badge>}</td>
+                                      <td>{definition.is_active ? <Badge bg="success">{t('common.active', 'Active')}</Badge> : <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>}</td>
+                                      <td onClick={(e) => e.stopPropagation()}>
+                                        <div className="action-buttons">
+                                          <ActionButton action="duplicate" onClick={() => handleDuplicateDefinition(definition)} title={t('common.duplicate', 'Duplicate')} />
+                                          <ActionButton action="edit" onClick={() => handleEditDefinition(definition)} title={t('common.edit', 'Edit')} />
+                                          <ActionButton action="delete" onClick={() => handleDeleteDefinition(definition.id)} title={t('common.delete', 'Delete')} />
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </Draggable>
+                              ))}
+                              {provided.placeholder}
+                            </tbody>
+                          )}
+                        </Droppable>
                       </Table>
                     </div>
 
                     {/* Mobile Card View */}
                     <div className="custom-fields-cards-mobile">
-                      {filteredDefinitions.map((definition) => (
-                        <div
-                          key={definition.id}
-                          className="field-card-mobile"
-                          onClick={() => navigate(`/settings/custom-fields/definitions/${definition.id}/view`)}
-                        >
-                          <div className="card-mobile-header">
-                            <div>
-                              <h6 className="card-mobile-title">
-                                <span className="field-type-icon">{getFieldTypeIcon(definition.field_type)}</span>
-                                {highlightText(definition.field_label, searchQuery)}
-                              </h6>
-                              <div className="card-mobile-subtitle">
-                                <code>{highlightText(definition.field_name, searchQuery)}</code>
-                              </div>
-                            </div>
-                            {definition.is_active ? (
-                              <Badge bg="success">{t('common.active', 'Active')}</Badge>
-                            ) : (
-                              <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>
-                            )}
+                      <Droppable droppableId="definitions-cards">
+                        {(provided, snapshot) => (
+                          <div ref={provided.innerRef} {...provided.droppableProps} className={snapshot.isDraggingOver ? 'droppable-active' : ''}>
+                            {filteredDefinitions.map((definition, index) => (
+                              <Draggable key={definition.id} draggableId={`card-${definition.id}`} index={index}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    className={`field-card-mobile ${snapshot.isDragging ? 'dragging-card' : ''}`}
+                                    onClick={() => navigate(`/settings/custom-fields/definitions/${definition.id}/view`)}
+                                  >
+                                    <div className="card-mobile-header">
+                                      <div className="d-flex align-items-start gap-2">
+                                        <span className="drag-handle" {...provided.dragHandleProps} onClick={(e) => e.stopPropagation()} title={t('common.dragToReorder', 'Drag to reorder')}>☰</span>
+                                        <div>
+                                          <h6 className="card-mobile-title">
+                                            <span className="field-type-icon">{getFieldTypeIcon(definition.field_type)}</span>
+                                            {highlightText(definition.field_label, searchQuery)}
+                                          </h6>
+                                          <div className="card-mobile-subtitle"><code>{highlightText(definition.field_name, searchQuery)}</code></div>
+                                        </div>
+                                      </div>
+                                      {definition.is_active ? <Badge bg="success">{t('common.active', 'Active')}</Badge> : <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>}
+                                    </div>
+                                    <div className="card-mobile-badges">
+                                      <Badge bg={getFieldTypeBadgeVariant(definition.field_type)}>{definition.field_type}</Badge>
+                                      {definition.category?.name && <Badge bg="light" text="dark">{highlightText(definition.category.name, searchQuery)}</Badge>}
+                                      <span onClick={(e) => e.stopPropagation()} className="d-inline-flex align-items-center gap-1">
+                                        <Button variant="outline-secondary" size="sm" className="p-0 px-1" disabled={index === 0} onClick={() => handleMoveDefinition(definition, 'up')} title={t('common.moveUp', 'Move up')}>▲</Button>
+                                        <Badge bg="info" text="dark">{definition.display_order || 0}</Badge>
+                                        <Button variant="outline-secondary" size="sm" className="p-0 px-1" disabled={index === filteredDefinitions.length - 1} onClick={() => handleMoveDefinition(definition, 'down')} title={t('common.moveDown', 'Move down')}>▼</Button>
+                                      </span>
+                                      {definition.is_required && <Badge bg="warning" text="dark">{t('customFields.required', 'Required')}</Badge>}
+                                    </div>
+                                    <div className="card-mobile-actions" onClick={(e) => e.stopPropagation()}>
+                                      <ActionButton action="edit" onClick={() => handleEditDefinition(definition)} title={t('common.edit', 'Edit')} />
+                                      <ActionButton action="delete" onClick={() => handleDeleteDefinition(definition.id)} title={t('common.delete', 'Delete')} />
+                                    </div>
+                                  </div>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
                           </div>
-
-                          <div className="card-mobile-badges">
-                            <Badge bg={getFieldTypeBadgeVariant(definition.field_type)}>
-                              {definition.field_type}
-                            </Badge>
-                            {definition.category?.name && (
-                              <Badge bg="light" text="dark">
-                                {highlightText(definition.category.name, searchQuery)}
-                              </Badge>
-                            )}
-                            <Badge bg="info" text="dark">
-                              {t('customFields.order', 'Order')}: {definition.display_order || 0}
-                            </Badge>
-                            {definition.is_required && (
-                              <Badge bg="warning" text="dark">{t('customFields.required', 'Required')}</Badge>
-                            )}
-                          </div>
-
-                          <div
-                            className="card-mobile-actions"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ActionButton
-                              action="edit"
-                              onClick={() => handleEditDefinition(definition)}
-                              title={t('common.edit', 'Edit')}
-                            />
-                            <ActionButton
-                              action="delete"
-                              onClick={() => handleDeleteDefinition(definition.id)}
-                              title={t('common.delete', 'Delete')}
-                            />
-                          </div>
-                        </div>
-                      ))}
+                        )}
+                      </Droppable>
                     </div>
-                  </>
+                  </DragDropContext>
                 )}
               </Card.Body>
             </Card>

@@ -15,13 +15,12 @@ import SyncConflictModal from './SyncConflictModal';
  */
 const GoogleCalendarSettings = () => {
   const { t } = useTranslation();
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [calendars, setCalendars] = useState([]);
   const [selectedCalendar, setSelectedCalendar] = useState('primary');
   const [syncEnabled, setSyncEnabled] = useState(false);
-  const [syncAllDietitians, setSyncAllDietitians] = useState(false);
   const [showDisconnectModal, setShowDisconnectModal] = useState(false);
 
   // Sync issues state
@@ -199,8 +198,7 @@ const GoogleCalendarSettings = () => {
     try {
       setIsLoading(true);
       const response = await api.post('/calendar/sync-to-calendar', {
-        calendarId: selectedCalendar,
-        syncAllDietitians: isAdmin && syncAllDietitians
+        calendarId: selectedCalendar
       });
 
       if (response.data.success) {
@@ -318,26 +316,6 @@ const GoogleCalendarSettings = () => {
               {t('googleCalendar.autoSyncDescription')}
             </small>
           </div>
-
-          {isAdmin && (
-            <div className="form-group">
-              <div className="form-check">
-                <input
-                  type="checkbox"
-                  id="sync-all-dietitians"
-                  checked={syncAllDietitians}
-                  onChange={(e) => setSyncAllDietitians(e.target.checked)}
-                  className="form-check-input"
-                />
-                <label htmlFor="sync-all-dietitians" className="form-check-label">
-                  {t('googleCalendar.syncAllDietitians')}
-                </label>
-              </div>
-              <small className="form-text text-muted">
-                {t('googleCalendar.syncAllDietitiansDescription')}
-              </small>
-            </div>
-          )}
 
           {isConnected && (
             <div className="alert alert-info">

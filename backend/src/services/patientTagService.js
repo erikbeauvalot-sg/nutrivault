@@ -1,5 +1,6 @@
 const db = require('../../../models');
 const { Op } = require('sequelize');
+const { canAccessPatient, getScopedPatientIds } = require('../helpers/scopeHelper');
 
 /**
  * Patient Tag Service
@@ -23,8 +24,9 @@ class PatientTagService {
       throw error;
     }
 
-    // Check if user can access this patient
-    if (user.role.name !== 'ADMIN' && patient.assigned_dietitian_id !== user.id) {
+    // Check if user can access this patient (via M2M link)
+    const hasAccess = await canAccessPatient(user, patient);
+    if (!hasAccess) {
       const error = new Error('Access denied to patient');
       error.statusCode = 403;
       throw error;
@@ -80,8 +82,9 @@ class PatientTagService {
       throw error;
     }
 
-    // Check if user can access this patient
-    if (user.role.name !== 'ADMIN' && patient.assigned_dietitian_id !== user.id) {
+    // Check if user can access this patient (via M2M link)
+    const hasAccess = await canAccessPatient(user, patient);
+    if (!hasAccess) {
       const error = new Error('Access denied to patient');
       error.statusCode = 403;
       throw error;
@@ -132,8 +135,9 @@ class PatientTagService {
       throw error;
     }
 
-    // Check if user can access this patient
-    if (user.role.name !== 'ADMIN' && patient.assigned_dietitian_id !== user.id) {
+    // Check if user can access this patient (via M2M link)
+    const hasAccess = await canAccessPatient(user, patient);
+    if (!hasAccess) {
       const error = new Error('Access denied to patient');
       error.statusCode = 403;
       throw error;
@@ -157,18 +161,10 @@ class PatientTagService {
     // Only show tags for patients the user can access
     let whereCondition = {};
 
-    if (user.role.name !== 'ADMIN') {
-      // For non-admin users, only show tags from their assigned patients
-      const patientIds = await db.Patient.findAll({
-        where: {
-          assigned_dietitian_id: user.id,
-          is_active: true
-        },
-        attributes: ['id']
-      });
-
-      const ids = patientIds.map(p => p.id);
-      whereCondition.patient_id = { [Op.in]: ids };
+    const scopedIds = await getScopedPatientIds(user);
+    if (scopedIds !== null) {
+      // Non-admin: only show tags from linked patients
+      whereCondition.patient_id = { [Op.in]: scopedIds };
     }
 
     const tags = await db.PatientTag.findAll({
@@ -198,8 +194,9 @@ class PatientTagService {
       throw error;
     }
 
-    // Check if user can access this patient
-    if (user.role.name !== 'ADMIN' && patient.assigned_dietitian_id !== user.id) {
+    // Check if user can access this patient (via M2M link)
+    const hasAccess = await canAccessPatient(user, patient);
+    if (!hasAccess) {
       const error = new Error('Access denied to patient');
       error.statusCode = 403;
       throw error;

@@ -13,7 +13,7 @@ const whatsNewService = require('../services/whatsNew.service');
  */
 const getOverview = async (req, res) => {
   try {
-    const overview = await dashboardStatsService.getPracticeOverview();
+    const overview = await dashboardStatsService.getPracticeOverview(req.user);
     res.json({
       success: true,
       data: overview
@@ -34,7 +34,7 @@ const getOverview = async (req, res) => {
 const getRevenueChart = async (req, res) => {
   try {
     const { period = 'monthly' } = req.query;
-    const data = await dashboardStatsService.getRevenueChart(period);
+    const data = await dashboardStatsService.getRevenueChart(req.user, period);
     res.json({
       success: true,
       data
@@ -54,7 +54,7 @@ const getRevenueChart = async (req, res) => {
  */
 const getHealthScore = async (req, res) => {
   try {
-    const score = await dashboardStatsService.getPracticeHealthScore();
+    const score = await dashboardStatsService.getPracticeHealthScore(req.user);
     res.json({
       success: true,
       data: score

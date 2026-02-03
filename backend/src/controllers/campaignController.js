@@ -22,7 +22,7 @@ exports.getAllCampaigns = async (req, res, next) => {
       limit: parseInt(req.query.limit) || 20
     };
 
-    const result = await campaignService.getCampaigns(filters, pagination);
+    const result = await campaignService.getCampaigns(filters, pagination, req.user);
 
     res.json({
       success: true,
@@ -56,7 +56,7 @@ exports.getSegmentFields = async (req, res, next) => {
 exports.getCampaignById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const campaign = await campaignService.getCampaign(id);
+    const campaign = await campaignService.getCampaign(id, req.user);
 
     res.json({
       success: true,

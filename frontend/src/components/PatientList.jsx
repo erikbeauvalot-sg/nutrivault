@@ -118,7 +118,7 @@ function PatientList({
             displayPatients.map(patient => (
               <Card
                 key={patient.id}
-                className="patient-card mb-3"
+                className={`patient-card mb-3${patient.is_linked === false ? ' opacity-75' : ''}`}
                 onClick={() => onViewDetails && onViewDetails(patient)}
                 style={{ cursor: onViewDetails ? 'pointer' : 'default' }}
               >
@@ -127,10 +127,15 @@ function PatientList({
                     <div>
                       <h6 className="mb-1">
                         <strong>{patient.first_name} {patient.last_name}</strong>
+                        {patient.is_linked === false && (
+                          <Badge bg="outline-secondary" className="ms-2 border" text="dark" style={{ fontSize: '0.65em' }}>
+                            {t('patients.notLinked', 'Non lié')}
+                          </Badge>
+                        )}
                       </h6>
                       {patient.assigned_dietitian && (
                         <div className="text-muted small">
-                          👨‍⚕️ {patient.assigned_dietitian.first_name} {patient.assigned_dietitian.last_name}
+                          {patient.assigned_dietitian.first_name} {patient.assigned_dietitian.last_name}
                         </div>
                       )}
                     </div>
@@ -231,15 +236,20 @@ function PatientList({
                   <tr
                     key={patient.id}
                     onClick={() => onViewDetails && onViewDetails(patient)}
-                    style={{ cursor: onViewDetails ? 'pointer' : 'default' }}
+                    style={{ cursor: onViewDetails ? 'pointer' : 'default', opacity: patient.is_linked === false ? 0.7 : 1 }}
                     className="patient-row"
                   >
                     <td>
                       <div>
                         <strong>{patient.first_name} {patient.last_name}</strong>
+                        {patient.is_linked === false && (
+                          <Badge bg="light" text="dark" className="ms-2 border" style={{ fontSize: '0.65em' }}>
+                            {t('patients.notLinked', 'Non lié')}
+                          </Badge>
+                        )}
                         {patient.assigned_dietitian && (
                           <div className="text-muted small">
-                            👨‍⚕️ {patient.assigned_dietitian.first_name} {patient.assigned_dietitian.last_name}
+                            {patient.assigned_dietitian.first_name} {patient.assigned_dietitian.last_name}
                           </div>
                         )}
                       </div>

@@ -215,10 +215,17 @@ async function generateMeasureAlert(patientMeasure, measureDef, user) {
  */
 async function sendAlertEmail(alert, patientMeasure, measureDef, patient) {
   try {
-    // Get the practitioner assigned to the patient
-    const practitioner = patient.assigned_dietitian_id
-      ? await User.findByPk(patient.assigned_dietitian_id)
-      : null;
+    // Get all practitioners linked to the patient via M2M
+    const links = await db.PatientDietitian.findAll({
+      where: { patient_id: patient.id },
+      attributes: ['dietitian_id']
+    });
+    let practitioner = null;
+    if (links.length > 0) {
+      // Use the first linked dietitian (or assigned_dietitian_id as fallback)
+      const dietitianId = patient.assigned_dietitian_id || links[0].dietitian_id;
+      practitioner = await User.findByPk(dietitianId);
+    }
 
     if (!practitioner || !practitioner.email) {
       console.log('⚠️  No practitioner email available for alert notification');

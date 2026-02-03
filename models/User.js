@@ -105,6 +105,13 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: 'User selected theme ID'
     },
+    // Landing page slug for dietitians (e.g. '/mariondiet')
+    landing_page_slug: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      defaultValue: null,
+      comment: 'Internal app path for the dietitian landing page (e.g. /mariondiet)'
+    },
     // Websites for dietitians
     websites: {
       type: DataTypes.JSON,

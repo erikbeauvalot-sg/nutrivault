@@ -19,6 +19,7 @@ const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { Op } = db.Sequelize;
+const { getScopedDietitianIds } = require('../helpers/scopeHelper');
 
 const SALT_ROUNDS = 10;
 
@@ -267,13 +268,25 @@ async function getDocuments(user, filters = {}, requestMetadata = {}) {
       ];
     }
 
-    // RBAC: Apply role-based filtering
-    if (user && user.role) {
-      if (user.role.name === 'VIEWER') {
-        // VIEWER can only see documents they uploaded or public documents
-        whereClause.uploaded_by = user.id;
+    // RBAC: Scope documents by uploader
+    // DIETITIAN sees only their own uploads; ASSISTANT sees linked dietitians' uploads; ADMIN sees all
+    const dietitianIds = await getScopedDietitianIds(user);
+    if (dietitianIds !== null) {
+      if (dietitianIds.length === 0) {
+        return { documents: [], total: 0, page: 1, limit: 20, totalPages: 0 };
       }
-      // ADMIN, DIETITIAN, ASSISTANT can see all documents
+      const scopeCondition = { uploaded_by: { [Op.in]: dietitianIds } };
+      // Merge with existing search OR if any
+      if (whereClause[Op.or]) {
+        const searchOr = whereClause[Op.or];
+        delete whereClause[Op.or];
+        whereClause[Op.and] = [
+          { [Op.or]: searchOr },
+          scopeCondition
+        ];
+      } else {
+        Object.assign(whereClause, scopeCondition);
+      }
     }
 
     const page = parseInt(filters.page) || 1;
@@ -569,10 +582,22 @@ async function searchDocuments(user, filters = {}, requestMetadata = {}) {
       ];
     }
 
-    // RBAC: Apply role-based filtering
-    if (user && user.role) {
-      if (user.role.name === 'VIEWER') {
-        whereClause.uploaded_by = user.id;
+    // RBAC: Scope by uploader (same as getDocuments)
+    const dietitianIds = await getScopedDietitianIds(user);
+    if (dietitianIds !== null) {
+      if (dietitianIds.length === 0) {
+        return { documents: [], total: 0, page: 1, limit: 20, totalPages: 0 };
+      }
+      const scopeCondition = { uploaded_by: { [Op.in]: dietitianIds } };
+      if (whereClause[Op.or]) {
+        const searchOr = whereClause[Op.or];
+        delete whereClause[Op.or];
+        whereClause[Op.and] = [
+          { [Op.or]: searchOr },
+          scopeCondition
+        ];
+      } else {
+        Object.assign(whereClause, scopeCondition);
       }
     }
 
@@ -1550,7 +1575,7 @@ async function getPatientDocumentShares(patientId, user, requestMetadata = {}) {
         {
           model: Document,
           as: 'document',
-          attributes: ['id', 'file_name', 'original_name', 'mime_type', 'file_size', 'description']
+          attributes: ['id', 'file_name', 'mime_type', 'file_size', 'description']
         },
         {
           model: User,

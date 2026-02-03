@@ -7,6 +7,7 @@
  */
 
 const googleCalendarService = require('./googleCalendar.service');
+const db = require('../../../models');
 
 // Cache to track last sync time per user
 const lastSyncCache = new Map();
@@ -52,19 +53,10 @@ async function autoSyncVisitsToCalendar(user, options = {}) {
 
     console.log(`🔄 Auto-syncing visits to Google Calendar for user ${user.username}`);
 
-    // Determine if admin should sync all dietitians
-    const isAdmin = user.role && user.role.name === 'ADMIN';
-    const syncAllDietitians = isAdmin && options.syncAllDietitians !== false;
-
     const params = {
       since: options.since || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days by default
       calendarId: user.google_calendar_id || 'primary'
     };
-
-    // Only pass syncAllDietitians if it's true (admins only)
-    if (syncAllDietitians) {
-      params.syncAllDietitians = syncAllDietitians;
-    }
 
     const result = await googleCalendarService.syncVisitsToCalendar(user.id, params);
 
@@ -138,9 +130,6 @@ async function forceSyncVisitsToCalendar(user, options = {}) {
       totalErrors: 0
     };
 
-    // Determine sync parameters
-    const isAdmin = user.role && user.role.name === 'ADMIN';
-    const syncAllDietitians = isAdmin && options.syncAllDietitians !== false;
     const since = options.since || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // Last 7 days
 
     // Step 1: Sync from Google Calendar to NutriVault
@@ -163,10 +152,6 @@ async function forceSyncVisitsToCalendar(user, options = {}) {
         since,
         calendarId: options.calendarId || user.google_calendar_id || 'primary'
       };
-
-      if (syncAllDietitians) {
-        params.syncAllDietitians = syncAllDietitians;
-      }
 
       results.visitsToCalendar = await googleCalendarService.syncVisitsToCalendar(user.id, params);
       console.log(`✅ Force synced ${results.visitsToCalendar.synced} visits to Google Calendar`);
@@ -252,9 +237,6 @@ async function bidirectionalSync(user, options = {}) {
       totalConflicts: 0
     };
 
-    // Determine sync parameters
-    const isAdmin = user.role && user.role.name === 'ADMIN';
-    const syncAllDietitians = isAdmin && options.syncAllDietitians !== false;
     const since = options.since || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // Last 7 days
 
     // Step 0: Check for deleted events in Google Calendar
@@ -285,16 +267,10 @@ async function bidirectionalSync(user, options = {}) {
     // Step 2: Sync from NutriVault to Google Calendar (push changes to Google)
     try {
       console.log(`📤 Syncing from NutriVault to Google Calendar for user ${user.username}`);
-      const params = {
+      results.visitsToCalendar = await googleCalendarService.syncVisitsToCalendar(user.id, {
         since,
         calendarId: user.google_calendar_id || 'primary'
-      };
-
-      if (syncAllDietitians) {
-        params.syncAllDietitians = syncAllDietitians;
-      }
-
-      results.visitsToCalendar = await googleCalendarService.syncVisitsToCalendar(user.id, params);
+      });
       console.log(`✅ Synced ${results.visitsToCalendar.synced} visits to Google Calendar`);
     } catch (error) {
       console.error(`❌ Visits-to-calendar sync failed for user ${user.username}:`, error.message);
@@ -389,6 +365,70 @@ async function smartSyncVisit(user, visit) {
 }
 
 /**
+ * Sync all connected dietitians' calendars individually
+ * Each dietitian's visits sync to their own calendar using their own tokens
+ * @returns {Promise<Object>} Aggregated per-dietitian results
+ */
+async function syncAllConnectedDietitians() {
+  const { Op } = require('sequelize');
+
+  // Find all dietitians with calendar sync enabled and valid tokens
+  const dietitians = await db.User.findAll({
+    where: {
+      google_calendar_sync_enabled: true,
+      google_access_token: {
+        [Op.ne]: null
+      }
+    },
+    include: [{
+      model: db.Role,
+      as: 'role',
+      where: { name: 'DIETITIAN' }
+    }]
+  });
+
+  const results = {
+    totalDietitians: dietitians.length,
+    successful: 0,
+    failed: 0,
+    perDietitian: []
+  };
+
+  for (const dietitian of dietitians) {
+    try {
+      console.log(`🔄 Syncing calendar for dietitian ${dietitian.username}`);
+      const syncResult = await googleCalendarService.syncVisitsToCalendar(dietitian.id, {
+        since: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        calendarId: dietitian.google_calendar_id || 'primary'
+      });
+
+      results.successful++;
+      results.perDietitian.push({
+        userId: dietitian.id,
+        username: dietitian.username,
+        name: `${dietitian.first_name} ${dietitian.last_name}`,
+        status: 'success',
+        synced: syncResult.synced,
+        errors: syncResult.errors
+      });
+    } catch (error) {
+      console.error(`❌ Sync failed for dietitian ${dietitian.username}:`, error.message);
+      results.failed++;
+      results.perDietitian.push({
+        userId: dietitian.id,
+        username: dietitian.username,
+        name: `${dietitian.first_name} ${dietitian.last_name}`,
+        status: 'error',
+        error: error.message
+      });
+    }
+  }
+
+  console.log(`✅ Sync all dietitians complete: ${results.successful} successful, ${results.failed} failed`);
+  return results;
+}
+
+/**
  * Get last sync time for a user
  * @param {string} userId - User ID
  * @returns {Date|null} Last sync time or null
@@ -412,6 +452,7 @@ module.exports = {
   forceSyncVisitsToCalendar,
   bidirectionalSync,
   smartSyncVisit,
+  syncAllConnectedDietitians,
   getLastSyncTime,
   clearSyncCache,
   SYNC_COOLDOWN_MS

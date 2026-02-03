@@ -12,7 +12,7 @@ import visitService from '../services/visitService';
 import visitCustomFieldService from '../services/visitCustomFieldService';
 import visitTypeService from '../services/visitTypeService';
 import { getPatients } from '../services/patientService';
-import { getCategories } from '../services/customFieldService';
+import { getCategories, getPatientCustomFields } from '../services/customFieldService';
 import { getTimezone } from '../utils/dateUtils';
 import userService from '../services/userService';
 import CustomFieldInput from './CustomFieldInput';
@@ -104,9 +104,14 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
   }, [i18n.resolvedLanguage]);
 
   const applyDefaults = () => {
+    // DIETITIAN always uses their own ID; ASSISTANT/ADMIN can default to patient's dietitian
+    const defaultDietitianId = user?.role === 'DIETITIAN'
+      ? user.id
+      : (selectedPatient?.assigned_dietitian?.id || user?.id || '');
+
     const defaults = {
       patient_id: selectedPatient?.id || '',
-      dietitian_id: selectedPatient?.assigned_dietitian?.id || user?.id || '',
+      dietitian_id: defaultDietitianId,
       visit_date: '',
       visit_type_id: '',
       visit_type: '',
@@ -193,6 +198,7 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
         display_order: category.display_order,
         color: category.color || '#3498db',
         visit_types: category.visit_types || null,
+        entity_types: category.entity_types || ['patient'],
         fields: (category.field_definitions || [])
           .filter(def => def.is_active !== false && def.visible_on_creation)
           .map(def => {
@@ -229,6 +235,60 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
       console.error('Error fetching visit custom field categories:', err);
     }
   };
+
+  // Pre-populate custom fields with patient's existing values when patient changes
+  useEffect(() => {
+    // Reset field values when patient changes
+    setFieldValues({});
+    if (!formData.patient_id || customFieldCategories.length === 0) return;
+
+    const fetchExistingValues = async () => {
+      try {
+        const language = i18n.resolvedLanguage || i18n.language || 'fr';
+        const patientFields = await getPatientCustomFields(formData.patient_id, language);
+
+        if (!patientFields || !Array.isArray(patientFields)) return;
+
+        // Build a map of definition_id -> value from patient's existing data
+        const existingValues = {};
+        patientFields.forEach(category => {
+          (category.fields || []).forEach(field => {
+            if (field.value !== null && field.value !== undefined && field.value !== '') {
+              existingValues[field.definition_id] = field.value;
+            }
+          });
+        });
+
+        // Only pre-fill fields that are shown in the visit creation form
+        // and belong to patient-level categories (entity_types includes 'patient')
+        const patientLevelFieldIds = new Set();
+        customFieldCategories.forEach(cat => {
+          let entityTypes = cat.entity_types || ['patient'];
+          if (typeof entityTypes === 'string') {
+            try { entityTypes = JSON.parse(entityTypes); } catch { entityTypes = ['patient']; }
+          }
+          if (Array.isArray(entityTypes) && entityTypes.includes('patient')) {
+            (cat.fields || []).forEach(f => patientLevelFieldIds.add(f.definition_id));
+          }
+        });
+
+        const prefilled = {};
+        for (const [defId, value] of Object.entries(existingValues)) {
+          if (patientLevelFieldIds.has(defId)) {
+            prefilled[defId] = value;
+          }
+        }
+
+        if (Object.keys(prefilled).length > 0) {
+          setFieldValues(prev => ({ ...prefilled, ...prev }));
+        }
+      } catch (err) {
+        console.error('Error fetching patient custom field values:', err);
+      }
+    };
+
+    fetchExistingValues();
+  }, [formData.patient_id, customFieldCategories]);
 
   const handleCustomFieldChange = (definitionId, value) => {
     setFieldValues(prev => ({ ...prev, [definitionId]: value }));
@@ -388,6 +448,9 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
   const canCreateVisit = user?.role === 'ADMIN' || user?.role === 'DIETITIAN' || user?.role === 'ASSISTANT';
   if (!canCreateVisit) return null;
 
+  // DIETITIAN cannot choose another dietitian — they are always the assigned dietitian
+  const canChooseDietitian = user?.role === 'ADMIN' || user?.role === 'ASSISTANT';
+
   const dtParts = extractDateTimeParts(formData.visit_date);
 
   return (
@@ -431,23 +494,32 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
                 <Form.Label>
                   {t('visits.dietitian', 'Dietitian')} <span className="text-danger">*</span>
                 </Form.Label>
-                <Form.Select
-                  name="dietitian_id"
-                  value={formData.dietitian_id}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                  required
-                >
-                  <option value="">{t('visits.selectDietitian', 'Select a dietitian')}</option>
-                  {dietitians.map(d => {
-                    const displayName = d.first_name || d.last_name
-                      ? `${d.first_name || ''} ${d.last_name || ''}`.trim()
-                      : d.username;
-                    return (
-                      <option key={d.id} value={d.id}>{displayName}</option>
-                    );
-                  })}
-                </Form.Select>
+                {canChooseDietitian ? (
+                  <Form.Select
+                    name="dietitian_id"
+                    value={formData.dietitian_id}
+                    onChange={handleInputChange}
+                    disabled={loading}
+                    required
+                  >
+                    <option value="">{t('visits.selectDietitian', 'Select a dietitian')}</option>
+                    {dietitians.map(d => {
+                      const displayName = d.first_name || d.last_name
+                        ? `${d.first_name || ''} ${d.last_name || ''}`.trim()
+                        : d.username;
+                      return (
+                        <option key={d.id} value={d.id}>{displayName}</option>
+                      );
+                    })}
+                  </Form.Select>
+                ) : (
+                  <Form.Control
+                    type="text"
+                    value={`${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || ''}
+                    disabled
+                    readOnly
+                  />
+                )}
               </Form.Group>
 
               <Form.Group className="mb-3">

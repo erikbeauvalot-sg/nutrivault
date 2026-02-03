@@ -12,6 +12,7 @@ const Ingredient = db.Ingredient;
 const User = db.User;
 const auditService = require('./audit.service');
 const { Op } = db.Sequelize;
+const { getScopedDietitianIds } = require('../helpers/scopeHelper');
 
 /**
  * Get all recipes with filtering and pagination
@@ -38,6 +39,31 @@ async function getRecipes(user, filters = {}, requestMetadata = {}) {
     // Difficulty filter
     if (filters.difficulty) {
       whereClause.difficulty = filters.difficulty;
+    }
+
+    // RBAC: Scope recipes by creator for non-admin users
+    const dietitianIds = await getScopedDietitianIds(user);
+    if (dietitianIds !== null && dietitianIds.length > 0) {
+      // Dietitians/assistants see their own recipes + published recipes from others
+      if (!filters.created_by) {
+        whereClause[Op.or] = whereClause[Op.or] || [];
+        const scopeOr = [
+          { created_by: { [Op.in]: dietitianIds } },
+          { status: 'published' }
+        ];
+        if (whereClause[Op.or].length > 0) {
+          const existing = whereClause[Op.or];
+          delete whereClause[Op.or];
+          whereClause[Op.and] = whereClause[Op.and] || [];
+          whereClause[Op.and].push({ [Op.or]: existing });
+          whereClause[Op.and].push({ [Op.or]: scopeOr });
+        } else {
+          whereClause[Op.or] = scopeOr;
+        }
+      }
+    } else if (dietitianIds !== null && dietitianIds.length === 0) {
+      // VIEWER: only published recipes
+      whereClause.status = 'published';
     }
 
     // Created by filter (my recipes)

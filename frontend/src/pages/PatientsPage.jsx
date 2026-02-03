@@ -113,10 +113,18 @@ const PatientsPage = () => {
   };
 
   const handleEditPatient = (patient) => {
+    if (patient.is_linked === false && user?.role !== 'ADMIN') {
+      setError(t('patients.accessDenied', 'Vous n\'avez pas accès aux détails de ce patient.'));
+      return;
+    }
     navigate(`/patients/${patient.id}/edit`);
   };
 
   const handleViewDetails = (patient) => {
+    if (patient.is_linked === false && user?.role !== 'ADMIN') {
+      setError(t('patients.accessDenied', 'Vous n\'avez pas accès aux détails de ce patient. Créez une visite pour établir un lien.'));
+      return;
+    }
     navigate(`/patients/${patient.id}`);
   };
 

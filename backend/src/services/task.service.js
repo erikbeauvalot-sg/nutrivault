@@ -5,11 +5,12 @@
 
 const db = require('../../../models');
 const { Op } = db.Sequelize;
+const { getScopedPatientIds, getScopedDietitianIds } = require('../helpers/scopeHelper');
 
 /**
- * Get all tasks with optional filters
+ * Get all tasks with optional filters, scoped by user role
  */
-const getTasks = async (filters = {}) => {
+const getTasks = async (user, filters = {}) => {
   const {
     status,
     priority,
@@ -48,6 +49,23 @@ const getTasks = async (filters = {}) => {
     where.due_date = { ...where.due_date, [Op.gte]: due_after };
   }
 
+  // RBAC: Scope tasks by user role
+  const dietitianIds = await getScopedDietitianIds(user);
+  if (dietitianIds !== null) {
+    if (dietitianIds.length === 0) return [];
+    const patientIds = await getScopedPatientIds(user);
+    // Tasks assigned to the user, created by the user, or linked to their patients
+    const scopeConditions = [
+      { assigned_to: { [Op.in]: dietitianIds } },
+      { created_by: { [Op.in]: dietitianIds } }
+    ];
+    if (patientIds && patientIds.length > 0) {
+      scopeConditions.push({ patient_id: { [Op.in]: patientIds } });
+    }
+    where[Op.and] = where[Op.and] || [];
+    where[Op.and].push({ [Op.or]: scopeConditions });
+  }
+
   const tasks = await db.Task.findAll({
     where,
     include: [
@@ -80,14 +98,14 @@ const getTasks = async (filters = {}) => {
 /**
  * Get a single task by ID
  */
-const getTaskById = async (id) => {
-  return db.Task.findOne({
+const getTaskById = async (id, user) => {
+  const task = await db.Task.findOne({
     where: { id, is_active: true },
     include: [
       {
         model: db.Patient,
         as: 'patient',
-        attributes: ['id', 'first_name', 'last_name']
+        attributes: ['id', 'first_name', 'last_name', 'assigned_dietitian_id']
       },
       {
         model: db.User,
@@ -101,6 +119,29 @@ const getTaskById = async (id) => {
       }
     ]
   });
+
+  if (!task) return null;
+
+  // RBAC: Check access
+  if (user) {
+    const dietitianIds = await getScopedDietitianIds(user);
+    if (dietitianIds !== null) {
+      const isAssigned = dietitianIds.includes(task.assigned_to);
+      const isCreator = dietitianIds.includes(task.created_by);
+      let isPatientLinked = false;
+      if (task.patient) {
+        const link = await db.PatientDietitian.findOne({
+          where: { patient_id: task.patient.id, dietitian_id: { [db.Sequelize.Op.in]: dietitianIds } }
+        });
+        isPatientLinked = !!link;
+      }
+      if (!isAssigned && !isCreator && !isPatientLinked) {
+        return null;
+      }
+    }
+  }
+
+  return task;
 };
 
 /**
@@ -119,26 +160,22 @@ const createTask = async (data, userId) => {
 /**
  * Update a task
  */
-const updateTask = async (id, data) => {
-  const task = await db.Task.findOne({
-    where: { id, is_active: true }
-  });
+const updateTask = async (id, data, user) => {
+  const task = await getTaskById(id, user);
 
   if (!task) {
     throw new Error('Task not found');
   }
 
   await task.update(data);
-  return getTaskById(task.id);
+  return getTaskById(task.id, user);
 };
 
 /**
  * Mark a task as completed
  */
-const completeTask = async (id) => {
-  const task = await db.Task.findOne({
-    where: { id, is_active: true }
-  });
+const completeTask = async (id, user) => {
+  const task = await getTaskById(id, user);
 
   if (!task) {
     throw new Error('Task not found');
@@ -149,16 +186,14 @@ const completeTask = async (id) => {
     completed_at: new Date()
   });
 
-  return getTaskById(task.id);
+  return getTaskById(task.id, user);
 };
 
 /**
  * Soft delete a task
  */
-const deleteTask = async (id) => {
-  const task = await db.Task.findOne({
-    where: { id, is_active: true }
-  });
+const deleteTask = async (id, user) => {
+  const task = await getTaskById(id, user);
 
   if (!task) {
     throw new Error('Task not found');
@@ -169,12 +204,26 @@ const deleteTask = async (id) => {
 };
 
 /**
- * Get task statistics
+ * Get task statistics, scoped by user
  */
-const getTaskStats = async (userId = null) => {
+const getTaskStats = async (user) => {
   const where = { is_active: true };
-  if (userId) {
-    where.assigned_to = userId;
+
+  // RBAC: Scope by user
+  const dietitianIds = await getScopedDietitianIds(user);
+  if (dietitianIds !== null) {
+    if (dietitianIds.length === 0) {
+      return { pending: 0, inProgress: 0, completedToday: 0, overdue: 0, urgent: 0, total: 0 };
+    }
+    const patientIds = await getScopedPatientIds(user);
+    const scopeConditions = [
+      { assigned_to: { [Op.in]: dietitianIds } },
+      { created_by: { [Op.in]: dietitianIds } }
+    ];
+    if (patientIds && patientIds.length > 0) {
+      scopeConditions.push({ patient_id: { [Op.in]: patientIds } });
+    }
+    where[Op.or] = scopeConditions;
   }
 
   const pending = await db.Task.count({
@@ -222,9 +271,9 @@ const getTaskStats = async (userId = null) => {
 };
 
 /**
- * Get tasks due soon (within the next 3 days)
+ * Get tasks due soon (within the next 3 days), scoped by user
  */
-const getTasksDueSoon = async (userId = null) => {
+const getTasksDueSoon = async (user) => {
   const where = {
     is_active: true,
     status: { [Op.in]: ['pending', 'in_progress'] },
@@ -234,8 +283,19 @@ const getTasksDueSoon = async (userId = null) => {
     }
   };
 
-  if (userId) {
-    where.assigned_to = userId;
+  // RBAC: Scope by user
+  const dietitianIds = await getScopedDietitianIds(user);
+  if (dietitianIds !== null) {
+    if (dietitianIds.length === 0) return [];
+    const patientIds = await getScopedPatientIds(user);
+    const scopeConditions = [
+      { assigned_to: { [Op.in]: dietitianIds } },
+      { created_by: { [Op.in]: dietitianIds } }
+    ];
+    if (patientIds && patientIds.length > 0) {
+      scopeConditions.push({ patient_id: { [Op.in]: patientIds } });
+    }
+    where[Op.and] = [{ [Op.or]: scopeConditions }];
   }
 
   return db.Task.findAll({

@@ -11,6 +11,7 @@ const User = db.User;
 const Role = db.Role;
 const auditService = require('./audit.service');
 const { Op } = db.Sequelize;
+const { getScopedDietitianIds, canAccessPatient, ensurePatientDietitianLink } = require('../helpers/scopeHelper');
 
 /**
  * Get all patients with filtering and pagination
@@ -29,15 +30,11 @@ async function getPatients(user, filters = {}, requestMetadata = {}) {
   try {
     const whereClause = { is_active: true };
 
-    // RBAC: In POC system, all authenticated users can see all active patients
-    // (Original restrictive logic commented out for POC purposes)
-    // if (user && user.role && user.role.name === 'DIETITIAN') {
-    //   whereClause.assigned_dietitian_id = user.id;
-    // }
+    // No RBAC scoping on the list — all authenticated users see all patients.
+    // The is_linked flag tells the frontend whether the user has detail access.
 
     // Apply additional filters
     if (filters.search) {
-      // Sanitize search input to prevent LIKE injection
       const sanitizedSearch = filters.search.replace(/[%_]/g, '\\$&');
       whereClause[Op.or] = [
         { first_name: { [Op.like]: `%${sanitizedSearch}%` } },
@@ -48,12 +45,20 @@ async function getPatients(user, filters = {}, requestMetadata = {}) {
     }
 
     if (filters.is_active !== undefined && filters.is_active !== '') {
-      // Convert string to boolean for database query
       whereClause.is_active = filters.is_active === 'true' || filters.is_active === true;
     }
 
+    // Filter by linked dietitian (replaces old assigned_dietitian_id filter)
     if (filters.assigned_dietitian_id) {
-      whereClause.assigned_dietitian_id = filters.assigned_dietitian_id;
+      const linkedPatientIds = await db.PatientDietitian.findAll({
+        where: { dietitian_id: filters.assigned_dietitian_id },
+        attributes: ['patient_id']
+      });
+      const ids = linkedPatientIds.map(l => l.patient_id);
+      if (ids.length === 0) {
+        return { patients: [], total: 0, page: 1, limit: 20, totalPages: 0 };
+      }
+      whereClause.id = { [Op.in]: ids };
     }
 
     // Pagination
@@ -75,6 +80,21 @@ async function getPatients(user, filters = {}, requestMetadata = {}) {
       ]
     });
 
+    // Compute is_linked for each patient
+    const dietitianIds = await getScopedDietitianIds(user);
+    let linkedPatientIdSet = null;
+    if (dietitianIds !== null && rows.length > 0) {
+      const patientIds = rows.map(p => p.id);
+      const links = await db.PatientDietitian.findAll({
+        where: {
+          patient_id: { [Op.in]: patientIds },
+          dietitian_id: { [Op.in]: dietitianIds }
+        },
+        attributes: ['patient_id']
+      });
+      linkedPatientIdSet = new Set(links.map(l => l.patient_id));
+    }
+
     // Fetch custom fields marked as "show_in_list" for patients
     const CustomFieldDefinition = db.CustomFieldDefinition;
     const PatientCustomFieldValue = db.PatientCustomFieldValue;
@@ -86,7 +106,7 @@ async function getPatients(user, filters = {}, requestMetadata = {}) {
       },
       attributes: ['id', 'field_name', 'field_label', 'field_type'],
       order: [['display_order', 'ASC']],
-      limit: 5 // Max 5 custom fields in list view
+      limit: 5
     });
 
     // Attach custom field values to each patient
@@ -94,7 +114,6 @@ async function getPatients(user, filters = {}, requestMetadata = {}) {
       const fieldIds = listFields.map(f => f.id);
       const patientIds = rows.map(p => p.id);
 
-      // Fetch all custom field values for these patients and fields
       const values = await PatientCustomFieldValue.findAll({
         where: {
           patient_id: patientIds,
@@ -102,20 +121,16 @@ async function getPatients(user, filters = {}, requestMetadata = {}) {
         }
       });
 
-      // Build a map for quick lookup: patientId -> { defId -> valueObject }
       const valueMap = {};
       values.forEach(v => {
         if (!valueMap[v.patient_id]) valueMap[v.patient_id] = {};
         valueMap[v.patient_id][v.field_definition_id] = v;
       });
 
-      // Attach custom fields to each patient
       rows.forEach(patient => {
         patient.dataValues.custom_fields = listFields.map(field => {
           const valueObj = valueMap[patient.id]?.[field.id];
-          // Use the model's getValue method to get the correct value based on field type
           const value = valueObj ? valueObj.getValue(field.field_type) : null;
-
           return {
             definition_id: field.id,
             field_name: field.field_name,
@@ -126,6 +141,14 @@ async function getPatients(user, filters = {}, requestMetadata = {}) {
         });
       });
     }
+
+    // Add is_linked flag to each patient
+    rows.forEach(patient => {
+      // ADMIN (dietitianIds === null) → always linked
+      patient.dataValues.is_linked = linkedPatientIdSet === null
+        ? true
+        : linkedPatientIdSet.has(patient.id);
+    });
 
     // Audit log
     await auditService.log({
@@ -140,7 +163,6 @@ async function getPatients(user, filters = {}, requestMetadata = {}) {
       request_method: requestMetadata.method,
       request_path: requestMetadata.path,
       status_code: 200,
-      // status_code: 200
     });
 
     return {
@@ -151,7 +173,6 @@ async function getPatients(user, filters = {}, requestMetadata = {}) {
       totalPages: Math.ceil(count / limit)
     };
   } catch (error) {
-    // Audit log failure
     await auditService.log({
       user_id: user.id,
       username: user.username,
@@ -159,7 +180,6 @@ async function getPatients(user, filters = {}, requestMetadata = {}) {
       resource_type: 'patients',
       status_code: 500,
       error_message: error.message,
-      // status_code: 500,
       ip_address: requestMetadata.ip,
       user_agent: requestMetadata.userAgent,
       request_method: requestMetadata.method,
@@ -204,13 +224,13 @@ async function getPatientById(patientId, user, requestMetadata = {}) {
       throw error;
     }
 
-    // RBAC: In POC system, DIETITIANS can access all patients
-    // (Original restrictive logic commented out for POC purposes)
-    // if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
-    //   const error = new Error('Access denied. You can only access your assigned patients');
-    //   error.statusCode = 403;
-    //   throw error;
-    // }
+    // RBAC: Check scoped access to this patient
+    const hasAccess = await canAccessPatient(user, patient);
+    if (!hasAccess) {
+      const error = new Error('Access denied. You can only access your assigned patients');
+      error.statusCode = 403;
+      throw error;
+    }
 
     // Audit log
     await auditService.log({
@@ -279,13 +299,24 @@ async function getPatientDetails(patientId, user, requestMetadata = {}) {
       throw error;
     }
 
-    // RBAC: In POC system, DIETITIANS can access all patients
-    // (Original restrictive logic commented out for POC purposes)
-    // if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
-    //   const error = new Error('Access denied. You can only access your assigned patients');
-    //   error.statusCode = 403;
-    //   throw error;
-    // }
+    // RBAC: Check scoped access to this patient
+    const hasAccess = await canAccessPatient(user, patient);
+    if (!hasAccess) {
+      const error = new Error('Access denied. You can only access your assigned patients');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // Fetch linked dietitians via M2M
+    const dietitianLinks = await db.PatientDietitian.findAll({
+      where: { patient_id: patientId },
+      include: [{
+        model: User,
+        as: 'dietitian',
+        attributes: ['id', 'username', 'first_name', 'last_name', 'email']
+      }]
+    });
+    patient.dataValues.linked_dietitians = dietitianLinks.map(link => link.dietitian).filter(Boolean);
 
     // Fetch visits separately to ensure all visits are included
     const visits = await db.Visit.findAll({
@@ -343,33 +374,27 @@ async function getPatientDetails(patientId, user, requestMetadata = {}) {
  */
 async function createPatient(patientData, user, requestMetadata = {}) {
   try {
-    // Validate assigned_dietitian_id if provided
-    if (patientData.assigned_dietitian_id) {
-      const dietitian = await User.findOne({
-        where: { id: patientData.assigned_dietitian_id },
-        include: [{ model: Role, as: 'role' }]
-      });
-
-      if (!dietitian) {
-        const error = new Error('Assigned dietitian not found');
-        error.statusCode = 400;
-        throw error;
-      }
-
-      // Only non-admin users are restricted to assigning DIETITIAN role users
-      // Admins can assign any active user
-      if (user.role.name !== 'ADMIN' && dietitian.role.name !== 'DIETITIAN') {
-        const error = new Error('Assigned user must have DIETITIAN role');
-        error.statusCode = 400;
-        throw error;
-      }
-    }
-
     // Extract tags from patient data if present
-    const { tags, ...patientFields } = patientData;
+    const { tags, assigned_dietitian_id, ...patientFields } = patientData;
+
+    // Keep assigned_dietitian_id for backwards compatibility (still stored in column)
+    if (assigned_dietitian_id) {
+      patientFields.assigned_dietitian_id = assigned_dietitian_id;
+    }
 
     // Create patient
     const patient = await Patient.create(patientFields);
+
+    // Auto-create M2M link for the creator if they are a DIETITIAN
+    const roleName = user.role?.name || user.role;
+    if (roleName === 'DIETITIAN') {
+      await ensurePatientDietitianLink(patient.id, user.id);
+    }
+
+    // Also create M2M link for the assigned_dietitian_id if provided and different from creator
+    if (assigned_dietitian_id && assigned_dietitian_id !== user.id) {
+      await ensurePatientDietitianLink(patient.id, assigned_dietitian_id);
+    }
 
     // Handle tags if provided
     if (tags && Array.isArray(tags) && tags.length > 0) {
@@ -380,7 +405,6 @@ async function createPatient(patientData, user, requestMetadata = {}) {
             await patientTagService.addTag(patient.id, tagName.trim(), user, requestMetadata);
           } catch (tagError) {
             console.warn(`Failed to add tag "${tagName}" to patient:`, tagError.message);
-            // Continue with other tags, don't fail the entire patient creation
           }
         }
       }
@@ -399,7 +423,6 @@ async function createPatient(patientData, user, requestMetadata = {}) {
       request_method: requestMetadata.method,
       request_path: requestMetadata.path,
       status_code: 200,
-      // status_code: 200
     });
 
     return patient;
@@ -481,30 +504,13 @@ async function updatePatient(patientId, updateData, user, requestMetadata = {}) 
     //   throw error;
     // }
 
-    // Validate assigned_dietitian_id if being updated
-    if (updateData.assigned_dietitian_id && updateData.assigned_dietitian_id !== patient.assigned_dietitian_id) {
-      const dietitian = await User.findOne({
-        where: { id: updateData.assigned_dietitian_id },
-        include: [{ model: Role, as: 'role' }]
-      });
-
-      if (!dietitian) {
-        const error = new Error('Assigned dietitian not found');
-        error.statusCode = 400;
-        throw error;
-      }
-
-      // Only non-admin users are restricted to assigning DIETITIAN role users
-      // Admins can assign any active user
-      if (user.role.name !== 'ADMIN' && dietitian.role.name !== 'DIETITIAN') {
-        const error = new Error('Assigned user must have DIETITIAN role');
-        error.statusCode = 400;
-        throw error;
-      }
-    }
-
     // Extract tags from update data if present
     const { tags, ...patientFields } = updateData;
+
+    // If assigned_dietitian_id is being set, also create M2M link
+    if (patientFields.assigned_dietitian_id && patientFields.assigned_dietitian_id !== patient.assigned_dietitian_id) {
+      await ensurePatientDietitianLink(patientId, patientFields.assigned_dietitian_id);
+    }
 
     // Capture before state
     const beforeData = patient.toJSON();

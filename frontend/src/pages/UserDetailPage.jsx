@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Button, Badge, Alert, Spinner, Table } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Badge, Alert, Spinner, Table, Form } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
@@ -18,6 +18,9 @@ import ChangePasswordModal from '../components/ChangePasswordModal';
 import ConfirmModal from '../components/ConfirmModal';
 import UserWebsitesManager from '../components/UserWebsitesManager';
 import PageViewsAnalytics from '../components/PageViewsAnalytics';
+import { toast } from 'react-toastify';
+import api from '../services/api';
+import * as calendarAdmin from '../services/calendarAdminService';
 
 const UserDetailPage = () => {
   const { t } = useTranslation();
@@ -37,6 +40,19 @@ const UserDetailPage = () => {
   const [dietitianVisits, setDietitianVisits] = useState([]);
   const [dietitianPatients, setDietitianPatients] = useState([]);
   const [visitsLoading, setVisitsLoading] = useState(false);
+
+  // Supervisor links (for ASSISTANT role)
+  const [supervisors, setSupervisors] = useState([]);
+  const [allDietitians, setAllDietitians] = useState([]);
+  const [selectedDietitianId, setSelectedDietitianId] = useState('');
+  const [supervisorsLoading, setSupervisorsLoading] = useState(false);
+
+  // Google Calendar data
+  const [calendarStatus, setCalendarStatus] = useState(null);
+  const [calendarStats, setCalendarStats] = useState(null);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [calendarSyncing, setCalendarSyncing] = useState(false);
+  const [calendarList, setCalendarList] = useState([]);
 
   const currentUserRole = typeof currentUser?.role === 'string' ? currentUser.role : currentUser?.role?.name;
   const isAdmin = currentUserRole === 'ADMIN';
@@ -63,6 +79,14 @@ const UserDetailPage = () => {
   useEffect(() => {
     if (user && user.role?.name === 'DIETITIAN') {
       fetchDietitianData();
+      if (isAdmin || isOwnProfile) {
+        fetchCalendarStatus();
+      }
+    }
+    // Fetch supervisor links when user is an assistant
+    if (user && user.role?.name === 'ASSISTANT' && isAdmin) {
+      fetchSupervisors();
+      fetchAllDietitians();
     }
   }, [user]);
 
@@ -85,6 +109,194 @@ const UserDetailPage = () => {
       setRoles(Array.isArray(rolesList) ? rolesList : []);
     } catch (err) {
       // Error fetching roles
+    }
+  };
+
+  const fetchSupervisors = async () => {
+    try {
+      setSupervisorsLoading(true);
+      const res = await api.get(`/users/${id}/supervisors`);
+      if (res.data.success) {
+        setSupervisors(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching supervisors:', err);
+    } finally {
+      setSupervisorsLoading(false);
+    }
+  };
+
+  const fetchAllDietitians = async () => {
+    try {
+      const res = await api.get('/users/list/dietitians');
+      if (res.data.success) {
+        setAllDietitians(res.data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching dietitians:', err);
+    }
+  };
+
+  const handleAddSupervisor = async () => {
+    if (!selectedDietitianId) return;
+    try {
+      await api.post(`/users/${id}/supervisors`, { dietitian_id: selectedDietitianId });
+      toast.success(t('users.supervisorAdded', 'Supervisor link added'));
+      setSelectedDietitianId('');
+      fetchSupervisors();
+    } catch (err) {
+      toast.error(err.response?.data?.error || t('common.error'));
+    }
+  };
+
+  const handleRemoveSupervisor = async (dietitianId) => {
+    try {
+      await api.delete(`/users/${id}/supervisors/${dietitianId}`);
+      toast.success(t('users.supervisorRemoved', 'Supervisor link removed'));
+      fetchSupervisors();
+    } catch (err) {
+      toast.error(err.response?.data?.error || t('common.error'));
+    }
+  };
+
+  const fetchCalendarStatus = async () => {
+    try {
+      setCalendarLoading(true);
+      let status = null;
+
+      if (isOwnProfile) {
+        // Personal endpoints
+        const res = await api.get('/calendar/sync-status');
+        if (res.data.success) {
+          status = {
+            connected: res.data.data.google_calendar_sync_enabled || !!res.data.data.google_calendar_id,
+            sync_enabled: res.data.data.google_calendar_sync_enabled,
+            calendar_id: res.data.data.google_calendar_id || 'primary'
+          };
+        }
+      } else {
+        // Admin endpoints
+        const res = await calendarAdmin.getDietitianCalendarStatuses();
+        if (res.data.success) {
+          status = res.data.data.find(d => d.id === id) || null;
+        }
+      }
+
+      setCalendarStatus(status);
+
+      if (status?.connected) {
+        // Fetch stats and calendar list independently
+        try {
+          const statsRes = isOwnProfile
+            ? await api.get('/calendar/sync-stats')
+            : await calendarAdmin.getSyncStatsForDietitian(id);
+          if (statsRes.data.success) setCalendarStats(statsRes.data.data);
+        } catch { /* ignore stats error */ }
+        try {
+          const calRes = isOwnProfile
+            ? await api.get('/calendar/calendars')
+            : await calendarAdmin.getCalendarsForDietitian(id);
+          if (calRes.data.success) setCalendarList(calRes.data.data || []);
+        } catch { /* ignore calendars error */ }
+      }
+    } catch (err) {
+      console.error('Error fetching calendar status:', err);
+    } finally {
+      setCalendarLoading(false);
+    }
+  };
+
+  const handleCalendarConnect = async () => {
+    try {
+      const res = isOwnProfile
+        ? await api.get('/calendar/auth-url')
+        : await calendarAdmin.getAuthUrlForDietitian(id);
+      if (res.data.success) {
+        const authWindow = window.open(
+          res.data.data.authUrl,
+          'google-calendar-auth',
+          'width=600,height=700,scrollbars=yes,resizable=yes'
+        );
+        const checkAuth = setInterval(async () => {
+          try {
+            if (authWindow.closed) {
+              clearInterval(checkAuth);
+              await fetchCalendarStatus();
+              toast.success(t('googleCalendar.success.connected', 'Calendar connected'));
+            }
+          } catch {
+            clearInterval(checkAuth);
+          }
+        }, 1000);
+        setTimeout(() => {
+          clearInterval(checkAuth);
+          if (!authWindow.closed) authWindow.close();
+        }, 300000);
+      }
+    } catch (err) {
+      toast.error(t('googleCalendar.errors.getAuthUrl', 'Failed to get auth URL'));
+    }
+  };
+
+  const handleCalendarSync = async () => {
+    try {
+      setCalendarSyncing(true);
+      const res = isOwnProfile
+        ? await api.post('/calendar/sync-to-calendar', { calendarId: calendarStatus?.calendar_id || 'primary' })
+        : await calendarAdmin.syncForDietitian(id);
+      if (res.data.success) {
+        toast.success(t('googleCalendar.admin.syncSuccess', 'Sync completed'));
+        await fetchCalendarStatus();
+      }
+    } catch (err) {
+      toast.error(t('googleCalendar.admin.syncError', 'Sync failed'));
+    } finally {
+      setCalendarSyncing(false);
+    }
+  };
+
+  const handleCalendarDisconnect = async () => {
+    try {
+      if (isOwnProfile) {
+        await api.delete('/calendar/disconnect');
+      } else {
+        await calendarAdmin.disconnectDietitian(id);
+      }
+      toast.success(t('googleCalendar.success.disconnected', 'Calendar disconnected'));
+      setCalendarStatus(prev => prev ? { ...prev, connected: false } : null);
+      setCalendarStats(null);
+      setCalendarList([]);
+    } catch (err) {
+      toast.error(t('googleCalendar.errors.disconnect', 'Failed to disconnect'));
+    }
+  };
+
+  const handleCalendarToggleSync = async () => {
+    if (!calendarStatus) return;
+    const newSyncEnabled = !calendarStatus.sync_enabled;
+    try {
+      if (isOwnProfile) {
+        await api.put('/calendar/settings', { calendarId: calendarStatus.calendar_id, syncEnabled: newSyncEnabled });
+      } else {
+        await calendarAdmin.updateDietitianSettings(id, { syncEnabled: newSyncEnabled });
+      }
+      setCalendarStatus(prev => prev ? { ...prev, sync_enabled: newSyncEnabled } : null);
+    } catch (err) {
+      toast.error(t('googleCalendar.errors.updateSettings', 'Failed to update settings'));
+    }
+  };
+
+  const handleCalendarChange = async (calendarId) => {
+    try {
+      if (isOwnProfile) {
+        await api.put('/calendar/settings', { calendarId, syncEnabled: calendarStatus?.sync_enabled });
+      } else {
+        await calendarAdmin.updateDietitianSettings(id, { calendarId });
+      }
+      setCalendarStatus(prev => prev ? { ...prev, calendar_id: calendarId } : null);
+      toast.success(t('googleCalendar.admin.calendarChanged', 'Calendar updated'));
+    } catch (err) {
+      toast.error(t('googleCalendar.errors.updateSettings', 'Failed to update settings'));
     }
   };
 
@@ -276,6 +488,7 @@ const UserDetailPage = () => {
   }
 
   const isDietitian = user.role?.name === 'DIETITIAN';
+  const isAssistant = user.role?.name === 'ASSISTANT';
 
   return (
     <Layout>
@@ -641,6 +854,146 @@ const UserDetailPage = () => {
               </Col>
             </Row>
 
+            {/* Google Calendar Section */}
+            {(isAdmin || isOwnProfile) && (
+              <Row className="mb-4">
+                <Col>
+                  <Card>
+                    <Card.Header className="bg-warning text-dark">
+                      <div className="d-flex justify-content-between align-items-center">
+                        <h5 className="mb-0">
+                          📅 {t('googleCalendar.title', 'Google Calendar')}
+                        </h5>
+                        {calendarStatus && (
+                          <Badge bg={calendarStatus.connected ? 'success' : 'secondary'}>
+                            {calendarStatus.connected
+                              ? t('googleCalendar.admin.connected', 'Connected')
+                              : t('googleCalendar.admin.notConnected', 'Not Connected')
+                            }
+                          </Badge>
+                        )}
+                      </div>
+                    </Card.Header>
+                    <Card.Body>
+                      {calendarLoading ? (
+                        <div className="text-center py-3">
+                          <Spinner animation="border" size="sm" />
+                        </div>
+                      ) : !calendarStatus ? (
+                        <div className="text-muted text-center py-3">
+                          {t('googleCalendar.admin.noData', 'No calendar data available')}
+                        </div>
+                      ) : calendarStatus.connected ? (
+                        <>
+                          <Row className="mb-3">
+                            <Col sm={6}>
+                              <div className="d-flex justify-content-between align-items-center mb-2">
+                                <span className="text-muted small">{t('googleCalendar.admin.autoSync', 'Auto-sync')}</span>
+                                <div className="form-check form-switch mb-0">
+                                  <input
+                                    className="form-check-input"
+                                    type="checkbox"
+                                    checked={calendarStatus.sync_enabled}
+                                    onChange={handleCalendarToggleSync}
+                                  />
+                                </div>
+                              </div>
+                              <div className="d-flex justify-content-between align-items-center mb-2">
+                                <span className="text-muted small">{t('googleCalendar.admin.calendarId', 'Calendar')}</span>
+                                {calendarList.length > 0 ? (
+                                  <Form.Select
+                                    size="sm"
+                                    style={{ maxWidth: 220 }}
+                                    value={calendarStatus.calendar_id || 'primary'}
+                                    onChange={(e) => handleCalendarChange(e.target.value)}
+                                  >
+                                    {calendarList.map((cal) => (
+                                      <option key={cal.id} value={cal.id}>
+                                        {cal.summary || cal.id}
+                                        {cal.primary ? ` (${t('googleCalendar.primaryCalendar', 'Primary')})` : ''}
+                                      </option>
+                                    ))}
+                                  </Form.Select>
+                                ) : (
+                                  <span className="small">
+                                    {calendarStatus.calendar_id === 'primary'
+                                      ? t('googleCalendar.primaryCalendar', 'Primary')
+                                      : calendarStatus.calendar_id}
+                                  </span>
+                                )}
+                              </div>
+                            </Col>
+                            <Col sm={6}>
+                              {calendarStats && (
+                                <>
+                                  <div className="d-flex justify-content-between mb-2">
+                                    <span className="text-muted small">{t('googleCalendar.syncStats.synced', 'Synced')}</span>
+                                    <span className="small text-success fw-bold">{calendarStats.totalWithGoogle || 0}</span>
+                                  </div>
+                                  <div className="d-flex justify-content-between mb-2">
+                                    <span className="text-muted small">{t('googleCalendar.syncStats.pending', 'Pending')}</span>
+                                    <span className="small text-warning fw-bold">{calendarStats.byStatus?.pending_to_google || 0}</span>
+                                  </div>
+                                  <div className="d-flex justify-content-between mb-2">
+                                    <span className="text-muted small">{t('googleCalendar.syncStats.issues', 'Issues')}</span>
+                                    <span className="small text-danger fw-bold">
+                                      {(calendarStats.byStatus?.conflict || 0) + (calendarStats.byStatus?.error || 0)}
+                                    </span>
+                                  </div>
+                                  {calendarStats.lastSyncAt && (
+                                    <div className="d-flex justify-content-between">
+                                      <span className="text-muted small">{t('googleCalendar.admin.lastSync', 'Last sync')}</span>
+                                      <span className="small">{new Date(calendarStats.lastSyncAt).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </Col>
+                          </Row>
+                          <div className="d-flex gap-2">
+                            <ActionButton
+                              onClick={handleCalendarSync}
+                              disabled={calendarSyncing}
+                              className="btn-sm btn-outline-primary"
+                              title={t('googleCalendar.admin.syncNow', 'Sync Now')}
+                            >
+                              {calendarSyncing ? (
+                                <Spinner animation="border" size="sm" />
+                              ) : (
+                                t('googleCalendar.admin.syncNow', 'Sync Now')
+                              )}
+                            </ActionButton>
+                            <ActionButton
+                              onClick={handleCalendarDisconnect}
+                              className="btn-sm btn-outline-danger"
+                              title={t('googleCalendar.disconnect', 'Disconnect')}
+                            >
+                              {t('googleCalendar.disconnect', 'Disconnect')}
+                            </ActionButton>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center py-2">
+                          <p className="text-muted small mb-3">
+                            {isOwnProfile
+                              ? t('googleCalendar.notConnected', 'Google Calendar is not connected.')
+                              : t('googleCalendar.admin.notConnectedDesc', 'Google Calendar is not connected for this dietitian.')}
+                          </p>
+                          <ActionButton
+                            onClick={handleCalendarConnect}
+                            className="btn-sm btn-outline-success"
+                            title={t('googleCalendar.connect', 'Connect')}
+                          >
+                            {t('googleCalendar.connect', 'Connect')}
+                          </ActionButton>
+                        </div>
+                      )}
+                    </Card.Body>
+                  </Card>
+                </Col>
+              </Row>
+            )}
+
             {/* Websites Section */}
             <Row className="mb-4">
               <Col>
@@ -651,27 +1004,114 @@ const UserDetailPage = () => {
                     </h5>
                   </Card.Header>
                   <Card.Body>
-                    <UserWebsitesManager userId={user.id} />
+                    <UserWebsitesManager userId={user.id} readOnly={!isAdmin && !isOwnProfile} />
                   </Card.Body>
                 </Card>
               </Col>
             </Row>
 
-            {/* Page Analytics Section */}
-            <Row className="mb-4">
-              <Col>
-                <Card>
-                  <Card.Header className="bg-secondary text-white">
-                    <h5 className="mb-0">
-                      📊 {t('settings.analytics.sectionTitle', 'Page Analytics')}
-                    </h5>
-                  </Card.Header>
-                  <Card.Body>
-                    <PageViewsAnalytics pagePath="/mariondiet" />
-                  </Card.Body>
-                </Card>
-              </Col>
-            </Row>
+            {/* Supervisor Links Section — only for ASSISTANT role, admin view */}
+            {isAssistant && isAdmin && (
+              <Row className="mb-4">
+                <Col>
+                  <Card>
+                    <Card.Header className="bg-primary text-white">
+                      <h5 className="mb-0">
+                        {t('users.supervisors.title', 'Dietitians linked')}
+                      </h5>
+                    </Card.Header>
+                    <Card.Body>
+                      <p className="text-muted mb-3">
+                        {t('users.supervisors.description', 'This assistant can access data from the following dietitians:')}
+                      </p>
+
+                      {supervisorsLoading ? (
+                        <Spinner animation="border" size="sm" />
+                      ) : (
+                        <>
+                          {supervisors.length > 0 ? (
+                            <Table size="sm" hover>
+                              <thead>
+                                <tr>
+                                  <th>{t('users.name')}</th>
+                                  <th>{t('users.email')}</th>
+                                  <th></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {supervisors.map(s => (
+                                  <tr key={s.id}>
+                                    <td>{s.dietitian?.first_name} {s.dietitian?.last_name}</td>
+                                    <td>{s.dietitian?.email}</td>
+                                    <td className="text-end">
+                                      <Button
+                                        variant="outline-danger"
+                                        size="sm"
+                                        onClick={() => handleRemoveSupervisor(s.dietitian_id)}
+                                      >
+                                        {t('common.remove', 'Remove')}
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </Table>
+                          ) : (
+                            <Alert variant="info" className="mb-3">
+                              {t('users.supervisors.none', 'No dietitian linked yet. This assistant cannot access any patient data.')}
+                            </Alert>
+                          )}
+
+                          <div className="d-flex gap-2 align-items-center mt-2">
+                            <Form.Select
+                              size="sm"
+                              value={selectedDietitianId}
+                              onChange={(e) => setSelectedDietitianId(e.target.value)}
+                              style={{ maxWidth: 300 }}
+                            >
+                              <option value="">{t('users.supervisors.selectDietitian', '-- Select a dietitian --')}</option>
+                              {allDietitians
+                                .filter(d => !supervisors.some(s => s.dietitian_id === d.id))
+                                .map(d => (
+                                  <option key={d.id} value={d.id}>
+                                    {d.first_name} {d.last_name}
+                                  </option>
+                                ))}
+                            </Form.Select>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={handleAddSupervisor}
+                              disabled={!selectedDietitianId}
+                            >
+                              {t('common.add', 'Add')}
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </Card.Body>
+                  </Card>
+                </Col>
+              </Row>
+            )}
+
+            {/* Page Analytics Section — only for own profile or admin, and only if user has a landing page */}
+            {(isAdmin || isOwnProfile) && user.landing_page_slug && (
+              <Row className="mb-4">
+                <Col>
+                  <Card>
+                    <Card.Header className="bg-secondary text-white">
+                      <h5 className="mb-0">
+                        📊 {t('settings.analytics.sectionTitle', 'Page Analytics')}
+                      </h5>
+                    </Card.Header>
+                    <Card.Body>
+                      <PageViewsAnalytics pagePath={user.landing_page_slug} />
+                    </Card.Body>
+                  </Card>
+                </Col>
+              </Row>
+            )}
           </>
         )}
 

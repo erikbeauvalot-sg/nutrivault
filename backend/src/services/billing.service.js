@@ -16,6 +16,7 @@ const auditService = require('./audit.service');
 const emailService = require('./email.service');
 const { generateInvoicePDF } = require('./invoicePDF.service');
 const { Op } = db.Sequelize;
+const { applyPatientScope, getScopedPatientIds } = require('../helpers/scopeHelper');
 
 /**
  * Get all invoices with filtering and pagination
@@ -36,20 +37,16 @@ async function getInvoices(user, filters = {}, requestMetadata = {}) {
   try {
     const whereClause = { is_active: true };
 
-    // RBAC: Apply role-based filtering
-    if (user && user.role) {
-      if (user.role.name === 'VIEWER') {
-        // VIEWER can only see their own invoices if they have any
-        // For now, VIEWER role doesn't create invoices, so return empty
-        return {
-          invoices: [],
-          total: 0,
-          page: filters.page || 1,
-          limit: filters.limit || 20,
-          totalPages: 0
-        };
-      }
-      // ADMIN, DIETITIAN, ASSISTANT can see all invoices
+    // RBAC: Scope invoices by patient access
+    const hasAccess = await applyPatientScope(whereClause, user);
+    if (!hasAccess) {
+      return {
+        invoices: [],
+        total: 0,
+        page: filters.page || 1,
+        limit: filters.limit || 20,
+        totalPages: 0
+      };
     }
 
     // Apply filters
@@ -191,14 +188,15 @@ async function getInvoiceById(invoiceId, user, requestMetadata = {}) {
       throw error;
     }
 
-    // RBAC: Check if user can view this invoice
-    if (user && user.role) {
-      if (user.role.name === 'VIEWER') {
+    // RBAC: Check scoped access to this invoice via patient
+    if (invoice.patient) {
+      const { canAccessPatient } = require('../helpers/scopeHelper');
+      const hasPatientAccess = await canAccessPatient(user, invoice.patient);
+      if (!hasPatientAccess) {
         const error = new Error('Access denied');
         error.statusCode = 403;
         throw error;
       }
-      // ADMIN, DIETITIAN, ASSISTANT can view all invoices
     }
 
     // Audit log

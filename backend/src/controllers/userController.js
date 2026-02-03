@@ -6,6 +6,7 @@
  */
 
 const userService = require('../services/user.service');
+const db = require('../../../models');
 
 /**
  * Extract request metadata for audit logging
@@ -239,6 +240,97 @@ exports.getRoles = async (req, res, next) => {
     });
   } catch (error) {
     console.error('🔥 Error in getRoles:', error.message);
+    next(error);
+  }
+};
+
+/**
+ * GET /api/users/:id/supervisors - Get supervisor links for a user
+ */
+exports.getSupervisors = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const links = await db.UserSupervisor.findAll({
+      where: { assistant_id: id },
+      include: [
+        {
+          model: db.User,
+          as: 'dietitian',
+          attributes: ['id', 'username', 'first_name', 'last_name', 'email']
+        }
+      ]
+    });
+
+    res.json({
+      success: true,
+      data: links.map(l => ({
+        id: l.id,
+        dietitian_id: l.dietitian_id,
+        dietitian: l.dietitian,
+        created_at: l.created_at
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching supervisors:', error.message);
+    next(error);
+  }
+};
+
+/**
+ * POST /api/users/:id/supervisors - Add a supervisor link
+ */
+exports.addSupervisor = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { dietitian_id } = req.body;
+
+    // Check dietitian exists
+    const dietitian = await db.User.findByPk(dietitian_id);
+    if (!dietitian) {
+      return res.status(404).json({ success: false, error: 'Dietitian not found' });
+    }
+
+    // Check no duplicate
+    const existing = await db.UserSupervisor.findOne({
+      where: { assistant_id: id, dietitian_id }
+    });
+    if (existing) {
+      return res.status(409).json({ success: false, error: 'Supervisor link already exists' });
+    }
+
+    const link = await db.UserSupervisor.create({
+      assistant_id: id,
+      dietitian_id
+    });
+
+    res.status(201).json({
+      success: true,
+      data: { id: link.id, assistant_id: id, dietitian_id }
+    });
+  } catch (error) {
+    console.error('Error adding supervisor:', error.message);
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/users/:id/supervisors/:dietitianId - Remove a supervisor link
+ */
+exports.removeSupervisor = async (req, res, next) => {
+  try {
+    const { id, dietitianId } = req.params;
+
+    const deleted = await db.UserSupervisor.destroy({
+      where: { assistant_id: id, dietitian_id: dietitianId }
+    });
+
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Supervisor link not found' });
+    }
+
+    res.json({ success: true, message: 'Supervisor link removed' });
+  } catch (error) {
+    console.error('Error removing supervisor:', error.message);
     next(error);
   }
 };

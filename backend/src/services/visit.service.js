@@ -18,6 +18,7 @@ const auditService = require('./audit.service');
 const billingService = require('./billing.service');
 const emailService = require('./email.service');
 const { Op } = db.Sequelize;
+const { getScopedDietitianIds, canAccessVisit, ensurePatientDietitianLink } = require('../helpers/scopeHelper');
 
 /**
  * Get all visits with filtering and pagination
@@ -39,22 +40,15 @@ async function getVisits(user, filters = {}, requestMetadata = {}) {
   try {
     const whereClause = {};
 
-    // RBAC: In POC system, all authenticated users can see all visits
-    // (Original restrictive logic commented out for POC purposes)
-    // if (user && user.role && user.role.name === 'DIETITIAN') {
-    //   // Get patients assigned to this dietitian
-    //   const assignedPatients = await Patient.findAll({
-    //     where: { assigned_dietitian_id: user.id, is_active: true },
-    //     attributes: ['id']
-    //   });
-    //   const patientIds = assignedPatients.map(p => p.id);
-
-    //   // Can see visits where they're the dietitian OR visits for their assigned patients
-    //   whereClause[Op.or] = [
-    //     { dietitian_id: user.id },
-    //     { patient_id: { [Op.in]: patientIds } }
-    //   ];
-    // }
+    // RBAC: Scope visits by dietitian
+    // DIETITIAN only sees their own visits; ASSISTANT sees linked dietitians' visits; ADMIN sees all
+    const dietitianIds = await getScopedDietitianIds(user);
+    if (dietitianIds !== null) {
+      if (dietitianIds.length === 0) {
+        return { visits: [], total: 0, page: 1, limit: 20, totalPages: 0 };
+      }
+      whereClause.dietitian_id = { [Op.in]: dietitianIds };
+    }
 
     // Apply additional filters
     if (filters.patient_id) {
@@ -301,16 +295,12 @@ async function getVisitById(user, visitId, requestMetadata = {}) {
       throw error;
     }
 
-    // RBAC: Check if user is authorized to view this visit
-    if (user.role.name === 'DIETITIAN') {
-      const isAssignedDietitian = visit.dietitian_id === user.id;
-      const isPatientsDietitian = visit.patient.assigned_dietitian_id === user.id;
-      
-      if (!isAssignedDietitian && !isPatientsDietitian) {
-        const error = new Error('Access denied: You can only view visits for your assigned patients');
-        error.statusCode = 403;
-        throw error;
-      }
+    // RBAC: Check scoped access to this visit
+    const hasAccess = await canAccessVisit(user, visit);
+    if (!hasAccess) {
+      const error = new Error('Access denied: You can only view visits for your assigned patients');
+      error.statusCode = 403;
+      throw error;
     }
 
     // Audit log
@@ -344,6 +334,12 @@ async function getVisitById(user, visitId, requestMetadata = {}) {
  */
 async function createVisit(user, visitData, requestMetadata = {}) {
   try {
+    // RBAC: DIETITIAN must be the dietitian on their own visits
+    const roleName = user.role.name || user.role;
+    if (roleName === 'DIETITIAN') {
+      visitData.dietitian_id = user.id;
+    }
+
     // Validate patient exists and is active
     const patient = await Patient.findByPk(visitData.patient_id);
     if (!patient || !patient.is_active) {
@@ -379,6 +375,13 @@ async function createVisit(user, visitData, requestMetadata = {}) {
       // Clinical fields now managed via custom fields
       next_visit_date: visitData.next_visit_date
     });
+
+    // Auto-create patient ↔ dietitian M2M link
+    try {
+      await ensurePatientDietitianLink(visitData.patient_id, visitData.dietitian_id);
+    } catch (linkError) {
+      console.warn('Failed to auto-create patient-dietitian link:', linkError.message);
+    }
 
     // Fetch with associations
     const createdVisit = await Visit.findByPk(visit.id, {

@@ -433,20 +433,15 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
                   </Col>
                 </Row>
                 <Form.Group className="mb-3">
-                  <Form.Label>Diététicien assigné</Form.Label>
-                  <Form.Select
-                    name="assigned_dietitian_id"
-                    value={formData.assigned_dietitian_id}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Sélectionner un diététicien (optionnel)</option>
-                    {dietitians.map(dietitian => (
-                      <option key={dietitian.id} value={dietitian.id}>
-                        {dietitian.first_name} {dietitian.last_name}
-                        {dietitian.email && ` (${dietitian.email})`}
-                      </option>
-                    ))}
-                  </Form.Select>
+                  <Form.Label>{t('patients.linkedDietitians', 'Diététiciens liés')}</Form.Label>
+                  <Form.Text className="d-block text-muted mb-1">
+                    {t('patients.linkedDietitiansInfo', 'Les diététiciens sont liés automatiquement lors des visites. Gérez les liens depuis la fiche patient.')}
+                  </Form.Text>
+                  {patient?.assigned_dietitian && (
+                    <div className="small">
+                      {patient.assigned_dietitian.first_name} {patient.assigned_dietitian.last_name}
+                    </div>
+                  )}
                 </Form.Group>
                 <Form.Group className="mb-3">
                   <Form.Label>Tags patient</Form.Label>

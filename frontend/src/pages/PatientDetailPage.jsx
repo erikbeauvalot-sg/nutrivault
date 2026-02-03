@@ -36,6 +36,7 @@ import * as patientService from '../services/patientService';
 import * as documentService from '../services/documentService';
 import visitService from '../services/visitService';
 import * as recipeService from '../services/recipeService';
+import userService from '../services/userService';
 import './PatientDetailPage.css';
 
 const PatientDetailPage = () => {
@@ -81,6 +82,9 @@ const PatientDetailPage = () => {
   const [patientRecipes, setPatientRecipes] = useState([]);
   const [recipesLoading, setRecipesLoading] = useState(false);
   const [showCreateVisitModal, setShowCreateVisitModal] = useState(false);
+  const [allDietitians, setAllDietitians] = useState([]);
+  const [addingDietitian, setAddingDietitian] = useState(false);
+  const [selectedNewDietitianId, setSelectedNewDietitianId] = useState('');
 
   useEffect(() => {
     if (id) {
@@ -99,15 +103,57 @@ const PatientDetailPage = () => {
     }
   }, [id, i18n.resolvedLanguage, i18n.language]);
 
+  const [accessDenied, setAccessDenied] = useState(false);
+
+  // Fetch all dietitians for ADMIN management
+  useEffect(() => {
+    if (user?.role === 'ADMIN') {
+      userService.getDietitians()
+        .then(data => setAllDietitians(Array.isArray(data) ? data : []))
+        .catch(() => setAllDietitians([]));
+    }
+  }, [user?.role]);
+
+  const handleAddDietitian = async () => {
+    if (!selectedNewDietitianId || !patient?.id) return;
+    setAddingDietitian(true);
+    try {
+      await api.post(`/patients/${patient.id}/dietitians`, { dietitian_id: selectedNewDietitianId });
+      setSelectedNewDietitianId('');
+      await fetchPatientDetails();
+    } catch (err) {
+      console.error('Error adding dietitian:', err);
+      setError(err.response?.data?.error || 'Erreur lors de l\'ajout du diététicien');
+    } finally {
+      setAddingDietitian(false);
+    }
+  };
+
+  const handleRemoveDietitian = async (dietitianId) => {
+    if (!patient?.id) return;
+    try {
+      await api.delete(`/patients/${patient.id}/dietitians/${dietitianId}`);
+      await fetchPatientDetails();
+    } catch (err) {
+      console.error('Error removing dietitian:', err);
+      setError(err.response?.data?.error || 'Erreur lors du retrait du diététicien');
+    }
+  };
+
   const fetchPatientDetails = async () => {
     try {
       setLoading(true);
+      setAccessDenied(false);
       const patientData = await patientService.getPatientDetails(id);
       setPatient(patientData);
       setVisits(patientData?.visits || []);
       setError(null);
     } catch (err) {
-      setError(t('patients.failedToLoad') + ': ' + (err.response?.data?.error || err.message));
+      if (err.response?.status === 403) {
+        setAccessDenied(true);
+      } else {
+        setError(t('patients.failedToLoad') + ': ' + (err.response?.data?.error || err.message));
+      }
     } finally {
       setLoading(false);
     }
@@ -470,6 +516,22 @@ const PatientDetailPage = () => {
     );
   }
 
+  if (accessDenied) {
+    return (
+      <Layout>
+        <Container fluid>
+          <Alert variant="warning" className="mt-4">
+            <Alert.Heading>{t('patients.accessDeniedTitle', 'Accès refusé')}</Alert.Heading>
+            <p>{t('patients.accessDeniedMessage', 'Vous n\'êtes pas lié à ce patient. Créez une visite pour ce patient ou demandez à un administrateur de vous lier.')}</p>
+            <Button variant="outline-warning" onClick={handleBack}>
+              {t('patients.backToPatients')}
+            </Button>
+          </Alert>
+        </Container>
+      </Layout>
+    );
+  }
+
   if (error) {
     return (
       <Layout>
@@ -682,11 +744,62 @@ const PatientDetailPage = () => {
                           {patient.appointment_reminders_enabled ? t('common.yes', 'Oui') : t('common.no', 'Non')}
                         </Badge>
                       </Col>
-                      {patient.assigned_dietitian && (
-                        <Col xs={12}>
-                          <strong>{t('patients.assignedDietitian', 'Assigned Dietitian')}:</strong> {patient.assigned_dietitian.first_name} {patient.assigned_dietitian.last_name}
-                        </Col>
-                      )}
+                      <Col xs={12} className="mt-2">
+                        <strong>{t('patients.linkedDietitians', 'Linked Dietitians')}:</strong>{' '}
+                        {patient.linked_dietitians && patient.linked_dietitians.length > 0 ? (
+                          <div className="d-flex flex-wrap gap-2 mt-1 align-items-center">
+                            {patient.linked_dietitians.map(d => (
+                              <Badge key={d.id} bg="info" className="d-flex align-items-center gap-1 py-1 px-2">
+                                {d.first_name} {d.last_name}
+                                {user?.role === 'ADMIN' && (
+                                  <span
+                                    role="button"
+                                    className="ms-1 opacity-75"
+                                    style={{ cursor: 'pointer', fontSize: '0.85em' }}
+                                    onClick={() => handleRemoveDietitian(d.id)}
+                                    title={t('common.remove', 'Remove')}
+                                  >
+                                    &times;
+                                  </span>
+                                )}
+                              </Badge>
+                            ))}
+                            {user?.role === 'ADMIN' && (
+                              <div className="d-flex gap-1 align-items-center">
+                                <Form.Select
+                                  size="sm"
+                                  value={selectedNewDietitianId}
+                                  onChange={(e) => setSelectedNewDietitianId(e.target.value)}
+                                  style={{ width: '180px' }}
+                                  disabled={addingDietitian}
+                                >
+                                  <option value="">{t('patients.addDietitian', '+ Add...')}</option>
+                                  {allDietitians
+                                    .filter(d => !patient.linked_dietitians.some(ld => ld.id === d.id))
+                                    .map(d => (
+                                      <option key={d.id} value={d.id}>
+                                        {d.first_name} {d.last_name}
+                                      </option>
+                                    ))
+                                  }
+                                </Form.Select>
+                                {selectedNewDietitianId && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline-primary"
+                                    onClick={handleAddDietitian}
+                                    disabled={addingDietitian}
+                                  >
+                                    {addingDietitian ? <Spinner animation="border" size="sm" /> : '+'}
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted">{t('patients.noDietitianLinked', 'No dietitian linked')}</span>
+                        )}
+                      </Col>
                     </Row>
                   </Card.Body>
                 </Card>

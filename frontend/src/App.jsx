@@ -45,7 +45,6 @@ const BillingTemplatesPage = lazy(() => import('./pages/BillingTemplatesPage'));
 const InvoiceCustomizationPage = lazy(() => import('./pages/InvoiceCustomizationPage'));
 const AIConfigPage = lazy(() => import('./pages/AIConfigPage'));
 const AnalyticsDashboardPage = lazy(() => import('./pages/AnalyticsDashboardPage'));
-const UserSettingsPage = lazy(() => import('./pages/UserSettingsPage'));
 const SharedDocumentPage = lazy(() => import('./pages/SharedDocumentPage'));
 const MarionDietPage = lazy(() => import('./pages/MarionDietPage'));
 const RecipesPage = lazy(() => import('./pages/RecipesPage'));
@@ -54,6 +53,7 @@ const CampaignsPage = lazy(() => import('./pages/CampaignsPage'));
 const CampaignEditorPage = lazy(() => import('./pages/CampaignEditorPage'));
 const CampaignStatsPage = lazy(() => import('./pages/CampaignStatsPage'));
 const ThemeManagementPage = lazy(() => import('./pages/ThemeManagementPage'));
+const ScheduledTasksPage = lazy(() => import('./pages/ScheduledTasksPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -366,6 +366,16 @@ function App() {
         }
       />
 
+
+      <Route
+        path="/settings/scheduled-tasks"
+        element={
+          <ProtectedRoute>
+            <ScheduledTasksPage />
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/analytics"
         element={
@@ -375,14 +385,6 @@ function App() {
         }
       />
 
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <UserSettingsPage />
-          </ProtectedRoute>
-        }
-      />
 
       <Route
         path="/recipes"

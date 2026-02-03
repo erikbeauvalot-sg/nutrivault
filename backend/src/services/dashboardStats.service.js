@@ -1,15 +1,55 @@
 /**
  * Dashboard Statistics Service
  * Provides KPIs and metrics for the "Mon Cabinet" dashboard
+ * All queries are scoped by user role (ADMIN sees all, DIETITIAN sees own data)
  */
 
 const db = require('../../../models');
 const { Op } = db.Sequelize;
+const { getScopedPatientIds, getScopedDietitianIds } = require('../helpers/scopeHelper');
+
+/**
+ * Build patient scope where clause for counts
+ */
+async function buildPatientWhere(user, baseWhere = {}) {
+  const patientIds = await getScopedPatientIds(user);
+  if (patientIds === null) return baseWhere; // ADMIN
+  return { ...baseWhere, id: { [Op.in]: patientIds } };
+}
+
+/**
+ * Build visit scope where clause
+ */
+async function buildVisitWhere(user, baseWhere = {}) {
+  const dietitianIds = await getScopedDietitianIds(user);
+  if (dietitianIds === null) return baseWhere; // ADMIN
+  if (dietitianIds.length === 0) return { ...baseWhere, id: null }; // impossible match
+  const patientIds = await getScopedPatientIds(user);
+  return {
+    ...baseWhere,
+    [Op.or]: [
+      { dietitian_id: { [Op.in]: dietitianIds } },
+      ...(patientIds && patientIds.length > 0
+        ? [{ patient_id: { [Op.in]: patientIds } }]
+        : [])
+    ]
+  };
+}
+
+/**
+ * Build billing scope where clause (via patient)
+ */
+async function buildBillingWhere(user, baseWhere = {}) {
+  const patientIds = await getScopedPatientIds(user);
+  if (patientIds === null) return baseWhere; // ADMIN
+  if (patientIds.length === 0) return { ...baseWhere, id: null };
+  return { ...baseWhere, patient_id: { [Op.in]: patientIds } };
+}
 
 /**
  * Get practice overview KPIs
  */
-const getPracticeOverview = async () => {
+const getPracticeOverview = async (user) => {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -17,45 +57,45 @@ const getPracticeOverview = async () => {
 
   // Total active patients
   const totalPatients = await db.Patient.count({
-    where: { is_active: true }
+    where: await buildPatientWhere(user, { is_active: true })
   });
 
   // New patients this month
   const newPatientsThisMonth = await db.Patient.count({
-    where: {
+    where: await buildPatientWhere(user, {
       is_active: true,
       created_at: { [Op.gte]: startOfMonth }
-    }
+    })
   });
 
   // New patients last month
   const newPatientsLastMonth = await db.Patient.count({
-    where: {
+    where: await buildPatientWhere(user, {
       is_active: true,
       created_at: {
         [Op.gte]: startOfLastMonth,
         [Op.lte]: endOfLastMonth
       }
-    }
+    })
   });
 
   // Visits this month
   const visitsThisMonth = await db.Visit.count({
-    where: {
+    where: await buildVisitWhere(user, {
       visit_date: { [Op.gte]: startOfMonth },
       status: { [Op.in]: ['COMPLETED', 'SCHEDULED'] }
-    }
+    })
   });
 
   // Visits last month
   const visitsLastMonth = await db.Visit.count({
-    where: {
+    where: await buildVisitWhere(user, {
       visit_date: {
         [Op.gte]: startOfLastMonth,
         [Op.lte]: endOfLastMonth
       },
       status: { [Op.in]: ['COMPLETED', 'SCHEDULED'] }
-    }
+    })
   });
 
   // Revenue this month (from billing)
@@ -63,9 +103,9 @@ const getPracticeOverview = async () => {
     attributes: [
       [db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'total']
     ],
-    where: {
+    where: await buildBillingWhere(user, {
       invoice_date: { [Op.gte]: startOfMonth }
-    },
+    }),
     raw: true
   });
   const revenueThisMonth = parseFloat(revenueThisMonthResult?.total || 0);
@@ -75,12 +115,12 @@ const getPracticeOverview = async () => {
     attributes: [
       [db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'total']
     ],
-    where: {
+    where: await buildBillingWhere(user, {
       invoice_date: {
         [Op.gte]: startOfLastMonth,
         [Op.lte]: endOfLastMonth
       }
-    },
+    }),
     raw: true
   });
   const revenueLastMonth = parseFloat(revenueLastMonthResult?.total || 0);
@@ -90,9 +130,9 @@ const getPracticeOverview = async () => {
     attributes: [
       [db.sequelize.fn('SUM', db.sequelize.col('amount_due')), 'total']
     ],
-    where: {
+    where: await buildBillingWhere(user, {
       payment_status: { [Op.in]: ['PENDING', 'PARTIAL'] }
-    },
+    }),
     raw: true
   });
   const outstandingAmount = parseFloat(outstandingResult?.total || 0);
@@ -100,10 +140,10 @@ const getPracticeOverview = async () => {
   // Patient retention rate (patients with visits in last 3 months / total patients)
   const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
   const patientsWithRecentVisits = await db.Visit.count({
-    where: {
+    where: await buildVisitWhere(user, {
       visit_date: { [Op.gte]: threeMonthsAgo },
       status: 'COMPLETED'
-    },
+    }),
     distinct: true,
     col: 'patient_id'
   });
@@ -130,7 +170,7 @@ const getPracticeOverview = async () => {
 /**
  * Get revenue chart data for the last 12 months
  */
-const getRevenueChart = async (period = 'monthly') => {
+const getRevenueChart = async (user, period = 'monthly') => {
   const now = new Date();
   const data = [];
 
@@ -145,12 +185,12 @@ const getRevenueChart = async (period = 'monthly') => {
           [db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'revenue'],
           [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'invoices']
         ],
-        where: {
+        where: await buildBillingWhere(user, {
           invoice_date: {
             [Op.gte]: startDate,
             [Op.lte]: endDate
           }
-        },
+        }),
         raw: true
       });
 
@@ -172,12 +212,12 @@ const getRevenueChart = async (period = 'monthly') => {
           [db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'revenue'],
           [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'invoices']
         ],
-        where: {
+        where: await buildBillingWhere(user, {
           invoice_date: {
             [Op.gte]: quarterStart,
             [Op.lte]: quarterEnd
           }
-        },
+        }),
         raw: true
       });
 
@@ -197,7 +237,7 @@ const getRevenueChart = async (period = 'monthly') => {
  * Calculate practice health score (0-100)
  * Based on multiple factors
  */
-const getPracticeHealthScore = async () => {
+const getPracticeHealthScore = async (user) => {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
@@ -210,12 +250,14 @@ const getPracticeHealthScore = async () => {
   let paymentScore = 0;
 
   // 1. Patient Growth Score (0-20)
-  const totalPatients = await db.Patient.count({ where: { is_active: true } });
+  const totalPatients = await db.Patient.count({
+    where: await buildPatientWhere(user, { is_active: true })
+  });
   const newPatientsThisMonth = await db.Patient.count({
-    where: {
+    where: await buildPatientWhere(user, {
       is_active: true,
       created_at: { [Op.gte]: startOfMonth }
-    }
+    })
   });
 
   if (totalPatients > 0) {
@@ -229,16 +271,16 @@ const getPracticeHealthScore = async () => {
 
   const revenueThisMonthResult = await db.Billing.findOne({
     attributes: [[db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'total']],
-    where: { invoice_date: { [Op.gte]: startOfMonth } },
+    where: await buildBillingWhere(user, { invoice_date: { [Op.gte]: startOfMonth } }),
     raw: true
   });
   const revenueThisMonth = parseFloat(revenueThisMonthResult?.total || 0);
 
   const revenueLastMonthResult = await db.Billing.findOne({
     attributes: [[db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'total']],
-    where: {
+    where: await buildBillingWhere(user, {
       invoice_date: { [Op.gte]: lastMonthStart, [Op.lte]: lastMonthEnd }
-    },
+    }),
     raw: true
   });
   const revenueLastMonth = parseFloat(revenueLastMonthResult?.total || 0);
@@ -252,10 +294,10 @@ const getPracticeHealthScore = async () => {
 
   // 3. Patient Retention Score (0-20)
   const patientsWithRecentVisits = await db.Visit.count({
-    where: {
+    where: await buildVisitWhere(user, {
       visit_date: { [Op.gte]: threeMonthsAgo },
       status: 'COMPLETED'
-    },
+    }),
     distinct: true,
     col: 'patient_id'
   });
@@ -267,28 +309,39 @@ const getPracticeHealthScore = async () => {
 
   // 4. Activity Score (0-20) - based on visits completed this month
   const visitsThisMonth = await db.Visit.count({
-    where: {
+    where: await buildVisitWhere(user, {
       visit_date: { [Op.gte]: startOfMonth },
       status: 'COMPLETED'
-    }
+    })
   });
   activityScore = Math.min(20, visitsThisMonth); // 1 point per visit, max 20
 
   // 5. Payment Health Score (0-20) - based on payment rate
   const totalBilledResult = await db.Billing.findOne({
     attributes: [[db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'total']],
-    where: {
+    where: await buildBillingWhere(user, {
       invoice_date: { [Op.gte]: threeMonthsAgo }
-    },
+    }),
     raw: true
   });
   const totalBilled = parseFloat(totalBilledResult?.total || 0);
 
+  // For payments, scope by billing's patient scope
+  const patientIds = await getScopedPatientIds(user);
+  let paymentWhere = { payment_date: { [Op.gte]: threeMonthsAgo } };
+  if (patientIds !== null) {
+    // Join through billing to scope payments
+    const scopedBillingIds = await db.Billing.findAll({
+      where: await buildBillingWhere(user, {}),
+      attributes: ['id'],
+      raw: true
+    });
+    paymentWhere.billing_id = { [Op.in]: scopedBillingIds.map(b => b.id) };
+  }
+
   const totalPaidResult = await db.Payment.findOne({
     attributes: [[db.sequelize.fn('SUM', db.sequelize.col('amount')), 'total']],
-    where: {
-      payment_date: { [Op.gte]: threeMonthsAgo }
-    },
+    where: paymentWhere,
     raw: true
   });
   const totalPaid = parseFloat(totalPaidResult?.total || 0);

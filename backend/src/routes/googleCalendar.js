@@ -37,6 +37,17 @@ router.put('/settings', authenticate, googleCalendarController.updateSettings);
 // Disconnect Google Calendar
 router.delete('/disconnect', authenticate, googleCalendarController.disconnect);
 
+// === Admin calendar management routes ===
+router.get('/admin/dietitians', authenticate, requireAnyRole(['ADMIN']), googleCalendarController.getAdminDietitiansList);
+router.get('/admin/auth-url/:userId', authenticate, requireAnyRole(['ADMIN']), googleCalendarController.getAdminAuthUrl);
+router.get('/admin/sync-status/:userId', authenticate, requireAnyRole(['ADMIN']), googleCalendarController.getAdminSyncStatus);
+router.get('/admin/sync-stats/:userId', authenticate, requireAnyRole(['ADMIN']), googleCalendarController.getAdminSyncStats);
+router.get('/admin/calendars/:userId', authenticate, requireAnyRole(['ADMIN']), googleCalendarController.adminGetCalendars);
+router.put('/admin/settings/:userId', authenticate, requireAnyRole(['ADMIN']), googleCalendarController.adminUpdateSettings);
+router.post('/admin/sync/:userId', authenticate, requireAnyRole(['ADMIN']), googleCalendarController.adminSyncForDietitian);
+router.post('/admin/sync-all', authenticate, requireAnyRole(['ADMIN']), googleCalendarController.adminSyncAll);
+router.delete('/admin/disconnect/:userId', authenticate, requireAnyRole(['ADMIN']), googleCalendarController.adminDisconnect);
+
 // === New endpoints for sync issues and conflict resolution ===
 
 // Get sync issues (conflicts and errors)

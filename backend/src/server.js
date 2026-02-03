@@ -192,6 +192,10 @@ app.use('/api/themes', themeRoutes);
 const dashboardRoutes = require('./routes/dashboard');
 app.use('/api/dashboard', dashboardRoutes);
 
+// Scheduler routes (protected - Admin only)
+const schedulerRoutes = require('./routes/scheduler');
+app.use('/api/scheduler', schedulerRoutes);
+
 // Campaign routes (protected - RBAC enforced in routes file)
 const campaignRoutes = require('./routes/campaigns');
 app.use('/api/campaigns', campaignRoutes);

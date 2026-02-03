@@ -256,10 +256,6 @@ const EditPatientPage = () => {
       if (formData.phone && formData.phone.trim()) {
         basicData.phone = formData.phone.trim();
       }
-      if (formData.assigned_dietitian_id && formData.assigned_dietitian_id.trim()) {
-        basicData.assigned_dietitian_id = formData.assigned_dietitian_id.trim();
-      }
-
       await api.put(`/patients/${id}`, basicData);
 
       // Update custom fields - only include fields with non-empty values
@@ -471,22 +467,9 @@ const EditPatientPage = () => {
                         </Card.Header>
                         <Card.Body>
                           <Form.Group className="mb-3">
-                            <Form.Label>{t('patients.assignedDietitian', 'Diététicien assigné')}</Form.Label>
-                            <Form.Select
-                              name="assigned_dietitian_id"
-                              value={formData.assigned_dietitian_id}
-                              onChange={handleInputChange}
-                            >
-                              <option value="">{t('patients.selectDietitianOptional', 'Sélectionner un diététicien (optionnel)')}</option>
-                              {dietitians.map(dietitian => (
-                                <option key={dietitian.id} value={dietitian.id}>
-                                  {dietitian.first_name} {dietitian.last_name}
-                                  {dietitian.email && ` (${dietitian.email})`}
-                                </option>
-                              ))}
-                            </Form.Select>
-                            <Form.Text className="text-muted">
-                              {t('patients.assignLaterHelp', 'Laisser vide pour assigner plus tard')}
+                            <Form.Label>{t('patients.linkedDietitians', 'Diététiciens liés')}</Form.Label>
+                            <Form.Text className="d-block text-muted">
+                              {t('patients.linkedDietitiansInfo', 'Les diététiciens sont liés automatiquement lors des visites. Gérez les liens depuis la fiche patient.')}
                             </Form.Text>
                           </Form.Group>
 

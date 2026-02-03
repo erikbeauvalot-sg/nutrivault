@@ -4,6 +4,7 @@ const PDFDocument = require('pdfkit');
 const { Op } = require('sequelize');
 const db = require('../../../models');
 const { formatDate, formatDateTime } = require('../utils/timezone');
+const { getScopedPatientIds } = require('../helpers/scopeHelper');
 
 /**
  * Export Service
@@ -26,9 +27,11 @@ class ExportService {
       whereClause.is_active = filters.is_active === 'true' || filters.is_active === true;
     }
 
-    // RBAC: Dietitians can only export assigned patients
-    if (user.role?.name === 'DIETITIAN') {
-      whereClause.assigned_dietitian_id = user.id;
+    // RBAC: Scope patients via M2M links
+    const scopedPatientIds = await getScopedPatientIds(user);
+    if (scopedPatientIds !== null) {
+      if (scopedPatientIds.length === 0) throw new Error('No linked patients found');
+      whereClause.id = { [Op.in]: scopedPatientIds };
     }
 
     // Fetch patients with related data
@@ -78,18 +81,11 @@ class ExportService {
       whereClause.status = filters.status;
     }
 
-    // RBAC: Dietitians can only export visits for assigned patients
-    if (user.role?.name === 'DIETITIAN') {
-      const assignedPatientIds = await db.Patient.findAll({
-        where: { assigned_dietitian_id: user.id },
-        attributes: ['id']
-      }).then(patients => patients.map(p => p.id));
-
-      if (assignedPatientIds.length === 0) {
-        throw new Error('No assigned patients found');
-      }
-
-      whereClause.patient_id = { [Op.in]: assignedPatientIds };
+    // RBAC: Scope visits via M2M patient links
+    const scopedVisitPatientIds = await getScopedPatientIds(user);
+    if (scopedVisitPatientIds !== null) {
+      if (scopedVisitPatientIds.length === 0) throw new Error('No linked patients found');
+      whereClause.patient_id = { [Op.in]: scopedVisitPatientIds };
     }
 
     // Fetch visits with related data
@@ -146,18 +142,11 @@ class ExportService {
       whereClause.status = filters.status;
     }
 
-    // RBAC: Dietitians can only export billing for assigned patients
-    if (user.role?.name === 'DIETITIAN') {
-      const assignedPatientIds = await db.Patient.findAll({
-        where: { assigned_dietitian_id: user.id },
-        attributes: ['id']
-      }).then(patients => patients.map(p => p.id));
-
-      if (assignedPatientIds.length === 0) {
-        throw new Error('No assigned patients found');
-      }
-
-      whereClause.patient_id = { [Op.in]: assignedPatientIds };
+    // RBAC: Scope billing via M2M patient links
+    const scopedBillingPatientIds = await getScopedPatientIds(user);
+    if (scopedBillingPatientIds !== null) {
+      if (scopedBillingPatientIds.length === 0) throw new Error('No linked patients found');
+      whereClause.patient_id = { [Op.in]: scopedBillingPatientIds };
     }
 
     // Fetch billing records with related data

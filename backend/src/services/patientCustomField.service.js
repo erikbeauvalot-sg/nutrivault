@@ -17,6 +17,7 @@ const auditService = require('./audit.service');
 const translationService = require('./customFieldTranslation.service');
 const formulaEngine = require('./formulaEngine.service');
 const { Op } = db.Sequelize;
+const { canAccessPatient } = require('../helpers/scopeHelper');
 
 /**
  * Fetch latest measure values for a patient
@@ -91,16 +92,9 @@ async function getLatestMeasureValues(patientId) {
  * @returns {Promise<boolean>} True if user has access
  */
 async function checkPatientAccess(user, patientId) {
-  if (user.role.name === 'ADMIN') {
-    return true;
-  }
-
-  if (user.role.name === 'DIETITIAN') {
-    const patient = await Patient.findByPk(patientId);
-    return patient && patient.assigned_dietitian_id === user.id;
-  }
-
-  return false;
+  const patient = await Patient.findByPk(patientId);
+  if (!patient) return false;
+  return canAccessPatient(user, patient);
 }
 
 /**
