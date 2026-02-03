@@ -20,7 +20,7 @@ import './UsersPage.css';
 
 const UsersPage = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -42,19 +42,24 @@ const UsersPage = () => {
   const [userToDelete, setUserToDelete] = useState(null);
   const isMobile = useIsMobile();
 
-  // Redirect if not admin
+  const isAdmin = user?.role === 'ADMIN';
+  const canViewUsers = isAdmin || hasPermission('users.read');
+
+  // Redirect if no access
   useEffect(() => {
-    if (user && user.role !== 'ADMIN') {
+    if (user && !canViewUsers) {
       navigate('/dashboard');
     }
-  }, [user, navigate]);
+  }, [user, canViewUsers, navigate]);
 
   useEffect(() => {
-    if (user && user.role === 'ADMIN') {
+    if (user && canViewUsers) {
       fetchUsers();
-      fetchRoles();
+      if (isAdmin) {
+        fetchRoles();
+      }
     }
-  }, [filters, user]);
+  }, [filters, user, canViewUsers, isAdmin]);
 
   const fetchUsers = async () => {
     try {
@@ -182,8 +187,8 @@ const UsersPage = () => {
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  // Redirect early if not admin
-  if (user && user.role !== 'ADMIN') {
+  // Redirect early if no access
+  if (user && !canViewUsers) {
     return null;
   }
 
@@ -192,14 +197,14 @@ const UsersPage = () => {
       <Container fluid>
         <PageHeader
           title={t('users.title')}
-          actions={[
+          actions={isAdmin ? [
             {
               label: t('users.createUser'),
               onClick: handleCreateClick,
               variant: 'primary',
               icon: 'bi-plus-circle'
             }
-          ]}
+          ] : []}
         />
 
         <PageError error={error} onDismiss={() => setError(null)} />
@@ -315,42 +320,44 @@ const UsersPage = () => {
                         )}
                       </div>
 
-                      <div className="action-buttons mt-3" onClick={(e) => e.stopPropagation()}>
-                        <ActionButton
-                          action="edit"
-                          onClick={() => handleEditClick(usr.id)}
-                          title={t('common.edit', 'Edit')}
-                        />
-                        <ActionButton
-                          action={usr.is_active ? 'disable' : 'enable'}
-                          onClick={() => handleToggleStatus(usr.id)}
-                          disabled={usr.id === user.id}
-                          title={
-                            usr.id === user.id
-                              ? t('users.cannotToggleOwnStatus')
-                              : usr.is_active
-                              ? t('users.deactivate')
-                              : t('users.activate')
-                          }
-                        />
-                        <ActionButton
-                          action="reset-password"
-                          onClick={() => handlePasswordClick(usr)}
-                          title={t('users.resetPassword')}
-                        />
-                        <ActionButton
-                          action="delete"
-                          onClick={() => handleDelete(usr.id)}
-                          disabled={usr.id === user.id || usr.is_active}
-                          title={
-                            usr.id === user.id
-                              ? t('users.cannotDeleteOwnAccount')
-                              : usr.is_active
-                              ? t('users.mustDeactivateBeforeDelete')
-                              : t('users.deleteUser')
-                          }
-                        />
-                      </div>
+                      {isAdmin && (
+                        <div className="action-buttons mt-3" onClick={(e) => e.stopPropagation()}>
+                          <ActionButton
+                            action="edit"
+                            onClick={() => handleEditClick(usr.id)}
+                            title={t('common.edit', 'Edit')}
+                          />
+                          <ActionButton
+                            action={usr.is_active ? 'disable' : 'enable'}
+                            onClick={() => handleToggleStatus(usr.id)}
+                            disabled={usr.id === user.id}
+                            title={
+                              usr.id === user.id
+                                ? t('users.cannotToggleOwnStatus')
+                                : usr.is_active
+                                ? t('users.deactivate')
+                                : t('users.activate')
+                            }
+                          />
+                          <ActionButton
+                            action="reset-password"
+                            onClick={() => handlePasswordClick(usr)}
+                            title={t('users.resetPassword')}
+                          />
+                          <ActionButton
+                            action="delete"
+                            onClick={() => handleDelete(usr.id)}
+                            disabled={usr.id === user.id || usr.is_active}
+                            title={
+                              usr.id === user.id
+                                ? t('users.cannotDeleteOwnAccount')
+                                : usr.is_active
+                                ? t('users.mustDeactivateBeforeDelete')
+                                : t('users.deleteUser')
+                            }
+                          />
+                        </div>
+                      )}
                     </Card.Body>
                   </Card>
                 ))}
@@ -368,7 +375,7 @@ const UsersPage = () => {
                         <th>{t('users.role')}</th>
                         <th>{t('users.status')}</th>
                         <th>{t('users.lastLogin')}</th>
-                        <th>{t('users.actions')}</th>
+                        {isAdmin && <th>{t('users.actions')}</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -393,44 +400,46 @@ const UsersPage = () => {
                               <div><Badge bg="warning" className="mt-1">⚠️ {usr.failed_login_attempts} failed attempts</Badge></div>
                             )}
                           </td>
-                          <td onClick={(e) => e.stopPropagation()}>
-                            <div className="action-buttons">
-                              <ActionButton
-                                action="edit"
-                                onClick={() => handleEditClick(usr.id)}
-                                title={t('common.edit', 'Edit')}
-                              />
-                              <ActionButton
-                                action={usr.is_active ? 'disable' : 'enable'}
-                                onClick={() => handleToggleStatus(usr.id)}
-                                disabled={usr.id === user.id}
-                                title={
-                                  usr.id === user.id
-                                    ? t('users.cannotToggleOwnStatus')
-                                    : usr.is_active
-                                    ? t('users.deactivate')
-                                    : t('users.activate')
-                                }
-                              />
-                              <ActionButton
-                                action="reset-password"
-                                onClick={() => handlePasswordClick(usr)}
-                                title={t('users.resetPassword')}
-                              />
-                              <ActionButton
-                                action="delete"
-                                onClick={() => handleDelete(usr.id)}
-                                disabled={usr.id === user.id || usr.is_active}
-                                title={
-                                  usr.id === user.id
-                                    ? t('users.cannotDeleteOwnAccount')
-                                    : usr.is_active
-                                    ? t('users.mustDeactivateBeforeDelete')
-                                    : t('users.deleteUser')
-                                }
-                              />
-                            </div>
-                          </td>
+                          {isAdmin && (
+                            <td onClick={(e) => e.stopPropagation()}>
+                              <div className="action-buttons">
+                                <ActionButton
+                                  action="edit"
+                                  onClick={() => handleEditClick(usr.id)}
+                                  title={t('common.edit', 'Edit')}
+                                />
+                                <ActionButton
+                                  action={usr.is_active ? 'disable' : 'enable'}
+                                  onClick={() => handleToggleStatus(usr.id)}
+                                  disabled={usr.id === user.id}
+                                  title={
+                                    usr.id === user.id
+                                      ? t('users.cannotToggleOwnStatus')
+                                      : usr.is_active
+                                      ? t('users.deactivate')
+                                      : t('users.activate')
+                                  }
+                                />
+                                <ActionButton
+                                  action="reset-password"
+                                  onClick={() => handlePasswordClick(usr)}
+                                  title={t('users.resetPassword')}
+                                />
+                                <ActionButton
+                                  action="delete"
+                                  onClick={() => handleDelete(usr.id)}
+                                  disabled={usr.id === user.id || usr.is_active}
+                                  title={
+                                    usr.id === user.id
+                                      ? t('users.cannotDeleteOwnAccount')
+                                      : usr.is_active
+                                      ? t('users.mustDeactivateBeforeDelete')
+                                      : t('users.deleteUser')
+                                  }
+                                />
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -466,7 +475,7 @@ const UsersPage = () => {
           onHide={() => setShowPasswordModal(false)}
           userId={selectedUser?.id}
           username={selectedUser?.username}
-          isAdmin={user?.role === 'ADMIN'}
+          isAdmin={isAdmin}
           onSuccess={handlePasswordSuccess}
         />
 

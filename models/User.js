@@ -99,6 +99,12 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 'primary',
       comment: 'Google Calendar ID to sync with (default: primary)'
     },
+    // Theme preference
+    theme_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      comment: 'User selected theme ID'
+    },
     // Websites for dietitians
     websites: {
       type: DataTypes.JSON,

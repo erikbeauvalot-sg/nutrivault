@@ -80,7 +80,8 @@
     "analytics": "Analytique",
     "logout": "Déconnexion",
     "profile": "Profil",
-    "campaigns": "Campagnes"
+    "campaigns": "Campagnes",
+    "themes": "Thèmes"
   },
   "recipes": {
     "title": "Recettes",
@@ -2463,6 +2464,10 @@
   },
   "settings": {
     "title": "Paramètres",
+    "theme": {
+      "title": "Thème",
+      "description": "Choisissez un thème de couleurs pour l'interface."
+    },
     "account": {
       "title": "Paramètres du compte",
       "password": {
@@ -2760,5 +2765,45 @@
     "min": "Min",
     "max": "Max",
     "statusLabel": "Statut"
+  },
+  "themes": {
+    "title": "Gestion des thèmes",
+    "selectTheme": "Thème",
+    "createTheme": "Nouveau thème",
+    "editTheme": "Modifier le thème",
+    "name": "Nom",
+    "namePlaceholder": "Nom du thème",
+    "nameRequired": "Le nom du thème est requis",
+    "description": "Description",
+    "descriptionPlaceholder": "Description optionnelle",
+    "preview": "Aperçu",
+    "system": "Système",
+    "active": "Actif",
+    "created": "Thème créé",
+    "updated": "Thème mis à jour",
+    "duplicated": "Thème dupliqué",
+    "deleted": "Thème supprimé",
+    "saveFailed": "Échec de l'enregistrement du thème",
+    "duplicateFailed": "Échec de la duplication du thème",
+    "deleteFailed": "Échec de la suppression du thème",
+    "confirmDelete": "Supprimer le thème",
+    "deleteWarning": "Êtes-vous sûr de vouloir supprimer le thème « {{name}} » ? Les utilisateurs utilisant ce thème seront basculés vers le thème par défaut.",
+    "export": "Exporter",
+    "exportAll": "Tout exporter",
+    "import": "Importer",
+    "exportSuccess": "Thèmes exportés avec succès",
+    "importSuccess": "Thèmes importés avec succès",
+    "importFailed": "Échec de l'importation des thèmes",
+    "invalidFile": "Fichier invalide : doit être un export JSON de thèmes",
+    "importResults": "{{created}} créé(s), {{skipped}} ignoré(s)",
+    "group": {
+      "primary": "Primaire (Ardoise)",
+      "dark": "Sombre (Marine)",
+      "accent": "Accent (Or)",
+      "surfaces": "Surfaces (Parchemin)",
+      "warmScale": "Échelle chaude",
+      "semantic": "Couleurs sémantiques",
+      "bootstrap": "Remplacements Bootstrap"
+    }
   }
 }

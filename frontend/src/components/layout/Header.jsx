@@ -8,6 +8,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../LanguageSelector';
+import ThemeSelector from '../ThemeSelector';
 
 const Header = ({ onToggleSidebar }) => {
   const { user, logout } = useAuth();
@@ -44,6 +45,9 @@ const Header = ({ onToggleSidebar }) => {
             <Nav.Link as={Link} to="/patients">{t('navigation.patients')}</Nav.Link>
           </Nav>
           <Nav className="align-items-center">
+            <div className="me-2">
+              <ThemeSelector />
+            </div>
             <div className="me-3">
               <LanguageSelector />
             </div>

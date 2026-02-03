@@ -12,7 +12,7 @@ import './Sidebar.css';
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
 
   const menuItems = [
     { path: '/dashboard', icon: '📊', label: t('navigation.dashboard') },
@@ -24,14 +24,17 @@ const Sidebar = ({ isOpen, onClose }) => {
     { path: '/billing', icon: '💰', label: t('navigation.billing') },
     { path: '/documents', icon: '📄', label: t('documents.title'), disabled: false },
     { path: '/analytics', icon: '📈', label: t('analytics.title', 'Analytics') },
-    { path: '/settings', icon: '⚙️', label: t('navigation.settings', 'Settings') },
     { path: '/users', icon: '👤', label: t('navigation.users') },
+    ...(hasPermission('themes.read') ? [
+      { path: '/settings/themes', icon: '🎨', label: t('navigation.themes', 'Themes') }
+    ] : []),
     ...(user?.role === 'ADMIN' ? [
+      { path: '/settings', icon: '⚙️', label: t('navigation.settings', 'Settings') },
       { path: '/settings/custom-fields', icon: '🔧', label: t('navigation.customFields') },
       { path: '/settings/measures', icon: '📏', label: t('navigation.measures') },
       { path: '/settings/email-templates', icon: '✉️', label: t('navigation.emailTemplates', 'Email Templates') },
       // { path: '/settings/billing-templates', icon: '📋', label: t('navigation.billingTemplates', 'Billing Templates') }, // TODO: Not used yet
-      { path: '/settings/invoice-customization', icon: '🎨', label: t('navigation.invoiceCustomization', 'Invoice Customization') },
+      { path: '/settings/invoice-customization', icon: '🖼️', label: t('navigation.invoiceCustomization', 'Invoice Customization') },
       { path: '/settings/roles', icon: '🔐', label: t('navigation.roles', 'Manage Roles') },
       { path: '/settings/ai-config', icon: '🤖', label: t('navigation.aiConfig', 'AI Configuration') }
     ] : []),

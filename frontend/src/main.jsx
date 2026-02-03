@@ -2,6 +2,7 @@ import React, { Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 import App from './App'
 import './index.css'
 import './i18n'
@@ -17,7 +18,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     }>
       <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <AuthProvider>
-          <App />
+          <ThemeProvider>
+            <App />
+          </ThemeProvider>
         </AuthProvider>
       </BrowserRouter>
     </Suspense>

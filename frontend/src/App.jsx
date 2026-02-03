@@ -53,6 +53,7 @@ const RecipeDetailPage = lazy(() => import('./pages/RecipeDetailPage'));
 const CampaignsPage = lazy(() => import('./pages/CampaignsPage'));
 const CampaignEditorPage = lazy(() => import('./pages/CampaignEditorPage'));
 const CampaignStatsPage = lazy(() => import('./pages/CampaignStatsPage'));
+const ThemeManagementPage = lazy(() => import('./pages/ThemeManagementPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -343,6 +344,15 @@ function App() {
         element={
           <ProtectedRoute permission="billing.update">
             <InvoiceCustomizationPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/themes"
+        element={
+          <ProtectedRoute>
+            <ThemeManagementPage />
           </ProtectedRoute>
         }
       />

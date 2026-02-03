@@ -56,6 +56,7 @@ db.Task = require('./Task')(sequelize, DataTypes);
 db.EmailCampaign = require('./EmailCampaign')(sequelize, DataTypes);
 db.EmailCampaignRecipient = require('./EmailCampaignRecipient')(sequelize, DataTypes);
 db.PageView = require('./PageView')(sequelize, DataTypes);
+db.Theme = require('./Theme')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -773,6 +774,26 @@ db.EmailCampaignRecipient.belongsTo(db.Patient, {
 db.Patient.hasMany(db.EmailCampaignRecipient, {
   foreignKey: 'patient_id',
   as: 'campaign_recipients'
+});
+
+// Theme - User (created_by) relationship
+db.Theme.belongsTo(db.User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+db.User.hasMany(db.Theme, {
+  foreignKey: 'created_by',
+  as: 'created_themes'
+});
+
+// User - Theme (selected theme) relationship
+db.User.belongsTo(db.Theme, {
+  foreignKey: 'theme_id',
+  as: 'theme'
+});
+db.Theme.hasMany(db.User, {
+  foreignKey: 'theme_id',
+  as: 'users'
 });
 
 module.exports = db;

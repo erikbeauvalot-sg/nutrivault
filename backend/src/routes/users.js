@@ -236,13 +236,18 @@ const queryValidation = [
 ];
 
 /**
- * Middleware to check if user is owner or admin
+ * Middleware to check if user is owner, admin, or has users.read permission
  */
 const checkOwnerOrAdmin = (req, res, next) => {
   const user = req.user;
   const targetUserId = req.params.id;
 
-  if (user.role.name === 'ADMIN' || user.id === targetUserId) {
+  const isOwner = user.id === targetUserId;
+  const isAdminRole = user.role && user.role.name === 'ADMIN';
+  const canReadUsers = user.role && user.role.permissions &&
+    user.role.permissions.some(p => p.code === 'users.read');
+
+  if (isAdminRole || isOwner || canReadUsers) {
     next();
   } else {
     res.status(403).json({

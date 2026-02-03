@@ -128,7 +128,8 @@ class AuthService {
           username: user.username,
           email: user.email,
           role: user.role.name,
-          permissions: user.role.permissions.map(p => p.code)
+          permissions: user.role.permissions.map(p => p.code),
+          theme_id: user.theme_id || null
         },
         ...tokens
       };
@@ -257,7 +258,8 @@ class AuthService {
         username: user.username,
         email: user.email,
         role: user.role.name,
-        permissions: user.role.permissions.map(p => p.code)
+        permissions: user.role.permissions.map(p => p.code),
+        theme_id: user.theme_id || null
       },
       ...newTokens
     };

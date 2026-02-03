@@ -184,6 +184,10 @@ app.delete('/api/recipe-access/:id', authenticate, requirePermission('recipes.sh
 app.put('/api/recipe-access/:id', authenticate, requirePermission('recipes.share'), recipeController.updateShareNotes);
 app.get('/api/patients/:id/recipes', authenticate, requirePermission('recipes.read'), recipeController.getPatientRecipes);
 
+// Theme routes (protected - RBAC enforced in routes file)
+const themeRoutes = require('./routes/themes');
+app.use('/api/themes', themeRoutes);
+
 // Dashboard routes (protected - authentication required)
 const dashboardRoutes = require('./routes/dashboard');
 app.use('/api/dashboard', dashboardRoutes);

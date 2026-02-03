@@ -150,8 +150,10 @@ async function getUserById(user, userId, requestMetadata = {}) {
       throw error;
     }
 
-    // RBAC: Admin can view any user, users can view own profile
-    if (user.role.name !== 'ADMIN' && user.id !== userId) {
+    // RBAC: Admin can view any user, users can view own profile, or users with users.read permission
+    const canReadUsers = user.role.permissions &&
+      user.role.permissions.some(p => p.code === 'users.read');
+    if (user.role.name !== 'ADMIN' && user.id !== userId && !canReadUsers) {
       const error = new Error('Access denied: You can only view your own profile');
       error.statusCode = 403;
       throw error;

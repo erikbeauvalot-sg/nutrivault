@@ -21,7 +21,7 @@ import PageViewsAnalytics from '../components/PageViewsAnalytics';
 
 const UserDetailPage = () => {
   const { t } = useTranslation();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, hasPermission } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -38,11 +38,10 @@ const UserDetailPage = () => {
   const [dietitianPatients, setDietitianPatients] = useState([]);
   const [visitsLoading, setVisitsLoading] = useState(false);
 
-  // Check access: Admin can view any user, Dietitian can only view their own profile
   const currentUserRole = typeof currentUser?.role === 'string' ? currentUser.role : currentUser?.role?.name;
   const isAdmin = currentUserRole === 'ADMIN';
   const isOwnProfile = currentUser?.id === id;
-  const canAccess = isAdmin || isOwnProfile;
+  const canAccess = isAdmin || isOwnProfile || hasPermission('users.read');
 
   // Redirect if no access
   useEffect(() => {

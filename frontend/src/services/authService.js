@@ -76,10 +76,15 @@ export const refreshToken = async () => {
 
     // Backend returns data nested in response.data.data (if following same pattern)
     const data = response.data.data || response.data;
-    const { accessToken, refreshToken: newRefreshToken } = data;
+    const { accessToken, refreshToken: newRefreshToken, user } = data;
 
     // Update stored tokens
     tokenStorage.setTokens(accessToken, newRefreshToken, tokenStorage.isRemembered());
+
+    // Update stored user if returned (keeps theme_id and other fields fresh)
+    if (user) {
+      tokenStorage.setUser(user, tokenStorage.isRemembered());
+    }
 
     return accessToken;
   } catch (error) {

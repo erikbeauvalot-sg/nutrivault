@@ -92,6 +92,7 @@ async function reset() {
     'InvoiceCustomization',
     'AIPrompt',
     'SystemSetting',
+    'Theme',
     'RolePermission',
     'User',
     'Permission',

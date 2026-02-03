@@ -72,7 +72,8 @@
     "logout": "Logout",
     "profile": "Profile",
     "settings": "Settings",
-    "campaigns": "Campaigns"
+    "campaigns": "Campaigns",
+    "themes": "Themes"
   },
   "recipes": {
     "title": "Recipes",
@@ -2324,6 +2325,10 @@
   },
   "settings": {
     "title": "Settings",
+    "theme": {
+      "title": "Theme",
+      "description": "Choose a color theme for the interface."
+    },
     "account": {
       "title": "Account Settings",
       "password": {
@@ -2621,5 +2626,45 @@
     "min": "Min",
     "max": "Max",
     "statusLabel": "Status"
+  },
+  "themes": {
+    "title": "Theme Management",
+    "selectTheme": "Theme",
+    "createTheme": "New Theme",
+    "editTheme": "Edit Theme",
+    "name": "Name",
+    "namePlaceholder": "Theme name",
+    "nameRequired": "Theme name is required",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional description",
+    "preview": "Preview",
+    "system": "System",
+    "active": "Active",
+    "created": "Theme created",
+    "updated": "Theme updated",
+    "duplicated": "Theme duplicated",
+    "deleted": "Theme deleted",
+    "saveFailed": "Failed to save theme",
+    "duplicateFailed": "Failed to duplicate theme",
+    "deleteFailed": "Failed to delete theme",
+    "confirmDelete": "Delete Theme",
+    "deleteWarning": "Are you sure you want to delete the theme \"{{name}}\"? Users with this theme will be switched to the default theme.",
+    "export": "Export",
+    "exportAll": "Export All",
+    "import": "Import",
+    "exportSuccess": "Themes exported successfully",
+    "importSuccess": "Themes imported successfully",
+    "importFailed": "Failed to import themes",
+    "invalidFile": "Invalid file: must be a JSON theme export",
+    "importResults": "{{created}} created, {{skipped}} skipped",
+    "group": {
+      "primary": "Primary (Slate)",
+      "dark": "Dark (Navy)",
+      "accent": "Accent (Gold)",
+      "surfaces": "Surfaces (Parchment)",
+      "warmScale": "Warm Scale",
+      "semantic": "Semantic Colors",
+      "bootstrap": "Bootstrap Overrides"
+    }
   }
 }

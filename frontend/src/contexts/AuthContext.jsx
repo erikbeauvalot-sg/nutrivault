@@ -3,8 +3,9 @@
  * Provides global authentication state and methods to all components
  */
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import * as authService from '../services/authService';
+import * as tokenStorage from '../utils/tokenStorage';
 
 export const AuthContext = createContext(null);
 
@@ -67,6 +68,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
+   * Update user data in state and storage (e.g. after changing theme preference)
+   */
+  const updateUser = useCallback((updates) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...updates };
+      tokenStorage.setUser(updated, tokenStorage.isRemembered());
+      return updated;
+    });
+  }, []);
+
+  /**
    * Check if user has a specific permission
    * @param {string} permission - Permission code to check
    * @returns {boolean} True if user has the permission
@@ -107,6 +120,7 @@ export const AuthProvider = ({ children }) => {
     hasPermission,
     hasRole,
     isAdmin,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
