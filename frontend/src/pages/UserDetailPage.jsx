@@ -1095,24 +1095,25 @@ const UserDetailPage = () => {
               </Row>
             )}
 
-            {/* Page Analytics Section — only for own profile or admin, and only if user has a landing page */}
-            {(isAdmin || isOwnProfile) && user.landing_page_slug && (
-              <Row className="mb-4">
-                <Col>
-                  <Card>
-                    <Card.Header className="bg-secondary text-white">
-                      <h5 className="mb-0">
-                        📊 {t('settings.analytics.sectionTitle', 'Page Analytics')}
-                      </h5>
-                    </Card.Header>
-                    <Card.Body>
-                      <PageViewsAnalytics pagePath={user.landing_page_slug} />
-                    </Card.Body>
-                  </Card>
-                </Col>
-              </Row>
-            )}
           </>
+        )}
+
+        {/* Page Analytics Section — only for own profile or admin, and only if user has a landing page */}
+        {(isAdmin || isOwnProfile) && user.landing_page_slug && (
+          <Row className="mb-4">
+            <Col>
+              <Card>
+                <Card.Header className="bg-secondary text-white">
+                  <h5 className="mb-0">
+                    📊 {t('settings.analytics.sectionTitle', 'Page Analytics')}
+                  </h5>
+                </Card.Header>
+                <Card.Body>
+                  <PageViewsAnalytics pagePath={user.landing_page_slug} />
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
         )}
 
         {/* Edit Modal */}
