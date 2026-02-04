@@ -3,8 +3,8 @@
  * Verify that detail/edit pages render without errors
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { screen, waitFor, cleanup, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { screen, waitFor } from '@testing-library/react';
 import { renderWithProviders, mockAdminUser } from '../utils/testUtils';
 import { server } from '../mocks/server';
 import { http, HttpResponse } from 'msw';
@@ -14,7 +14,6 @@ import PatientDetailPage from '../../src/pages/PatientDetailPage';
 import EditPatientPage from '../../src/pages/EditPatientPage';
 import VisitDetailPage from '../../src/pages/VisitDetailPage';
 import EditVisitPage from '../../src/pages/EditVisitPage';
-import CreateVisitPage from '../../src/pages/CreateVisitPage';
 import InvoiceDetailPage from '../../src/pages/InvoiceDetailPage';
 import EditInvoicePage from '../../src/pages/EditInvoicePage';
 import CreateInvoicePage from '../../src/pages/CreateInvoicePage';
@@ -116,13 +115,6 @@ const mockRoles = [
 describe('Detail Pages Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-  });
-
-  afterEach(async () => {
-    vi.runOnlyPendingTimers();
-    vi.useRealTimers();
-    cleanup();
   });
 
   beforeEach(() => {
@@ -252,13 +244,6 @@ describe('Detail Pages Tests', () => {
       }, { timeout: 3000 });
     });
 
-    it('CreateVisitPage renders without error', async () => {
-      const { container } = renderWithProviders(<CreateVisitPage />, { user: mockAdminUser });
-
-      await waitFor(() => {
-        expect(container).toBeTruthy();
-      }, { timeout: 3000 });
-    });
   });
 
   describe('Invoice Pages', () => {

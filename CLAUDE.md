@@ -75,7 +75,7 @@ This script automatically:
 1. Connects via SSH to `root@nutrivault`
 2. Goes to the `nutrivault` directory
 3. Runs `git pull origin main`
-4. Executes `./scripts/deploy.sh [VERSION]` on the server
+4. Executes `./scripts/deploy.sh -y [VERSION]` on the server
 
 **DO NOT** run `docker-compose build/up` locally for production deployment!
 
