@@ -11,7 +11,8 @@ import { BrowserRouter } from 'react-router-dom';
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, defaultValue) => defaultValue || key
+    t: (key, defaultValue) => defaultValue || key,
+    i18n: { language: 'en', changeLanguage: vi.fn() }
   })
 }));
 
@@ -25,26 +26,23 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-// Mock react-icons
-vi.mock('react-icons/fa', () => ({
-  FaBell: () => <span data-testid="icon-bell" />,
-  FaTasks: () => <span data-testid="icon-tasks" />,
-  FaChartBar: () => <span data-testid="icon-chart-bar" />,
-  FaHeart: () => <span data-testid="icon-heart" />,
-  FaLightbulb: () => <span data-testid="icon-lightbulb" />,
-  FaCheckCircle: () => <span data-testid="icon-check" />,
-  FaExclamationTriangle: () => <span data-testid="icon-warning" />,
-  FaCalendarAlt: () => <span data-testid="icon-calendar" />,
-  FaUser: () => <span data-testid="icon-user" />,
-  FaPlus: () => <span data-testid="icon-plus" />,
-  FaInfoCircle: () => <span data-testid="icon-info" />
-}));
+// Mock react-icons (auto-mock all exports as simple spans)
+vi.mock('react-icons/fa', async (importOriginal) => {
+  const actual = await importOriginal();
+  const mocked = {};
+  for (const key of Object.keys(actual)) {
+    mocked[key] = (props) => <span data-testid={`icon-${key}`} {...props} />;
+  }
+  return mocked;
+});
 
 // Mock Recharts
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }) => <div data-testid="chart-container">{children}</div>,
   BarChart: ({ children }) => <div data-testid="bar-chart">{children}</div>,
+  AreaChart: ({ children }) => <div data-testid="area-chart">{children}</div>,
   Bar: () => null,
+  Area: () => null,
   XAxis: () => null,
   YAxis: () => null,
   Tooltip: () => null,
@@ -56,15 +54,8 @@ vi.mock('../../../services/dashboardService', () => ({
   getActivityFeed: vi.fn().mockResolvedValue({
     success: true,
     data: [
-      { id: 1, type: 'visit', message: 'New visit scheduled', timestamp: new Date().toISOString() },
-      { id: 2, type: 'patient', message: 'New patient registered', timestamp: new Date().toISOString() }
-    ]
-  }),
-  getTasks: vi.fn().mockResolvedValue({
-    success: true,
-    data: [
-      { id: 1, title: 'Follow up with patient', completed: false, dueDate: new Date().toISOString() },
-      { id: 2, title: 'Review lab results', completed: true, dueDate: new Date().toISOString() }
+      { id: 1, icon: '📅', message: 'New visit scheduled', created_at: new Date().toISOString(), color: 'primary' },
+      { id: 2, icon: '👤', message: 'New patient registered', created_at: new Date().toISOString(), color: 'success' }
     ]
   }),
   getRevenueChart: vi.fn().mockResolvedValue({
@@ -90,10 +81,31 @@ vi.mock('../../../services/dashboardService', () => ({
   }),
   getWhatsNew: vi.fn().mockResolvedValue({
     success: true,
-    data: [
-      { id: 1, title: 'New Feature Released', description: 'Check out the new analytics', date: new Date().toISOString() }
-    ]
+    data: {
+      currentVersion: '8.0.4',
+      changelog: {
+        title: 'New Feature Released',
+        date: new Date().toISOString(),
+        features: [
+          { icon: '✨', title: 'Analytics', description: 'Check out the new analytics' }
+        ]
+      }
+    }
   })
+}));
+
+// Mock task service (used by TaskManagerWidget)
+vi.mock('../../../services/taskService', () => ({
+  getTasks: vi.fn().mockResolvedValue({
+    success: true,
+    data: [
+      { id: 1, title: 'Follow up with patient', completed: false, due_date: new Date().toISOString(), priority: 'normal' },
+      { id: 2, title: 'Review lab results', completed: true, due_date: new Date().toISOString(), priority: 'normal' }
+    ]
+  }),
+  createTask: vi.fn().mockResolvedValue({ success: true, data: {} }),
+  completeTask: vi.fn().mockResolvedValue({ success: true }),
+  deleteTask: vi.fn().mockResolvedValue({ success: true })
 }));
 
 // Import widgets after mocking
@@ -120,7 +132,8 @@ describe('ActivityFeedWidget', () => {
     renderWithRouter(<ActivityFeedWidget />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Activity/i) || screen.getByText(/Activité/i)).toBeTruthy();
+      // t('dashboard.activityFeed', 'Activité récente') returns 'Activité récente'
+      expect(screen.getByText(/Activité récente/i)).toBeInTheDocument();
     });
   });
 
@@ -128,7 +141,7 @@ describe('ActivityFeedWidget', () => {
     renderWithRouter(<ActivityFeedWidget />);
 
     await waitFor(() => {
-      expect(screen.getByText(/visit/i) || screen.getByText(/patient/i)).toBeTruthy();
+      expect(screen.getByText(/visit/i)).toBeInTheDocument();
     });
   });
 });
@@ -142,7 +155,8 @@ describe('TaskManagerWidget', () => {
     renderWithRouter(<TaskManagerWidget />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Task/i) || screen.getByText(/Tâche/i)).toBeTruthy();
+      // t('dashboard.taskManager', 'Tâches à faire') returns 'Tâches à faire'
+      expect(screen.getByText(/Tâches à faire/i)).toBeInTheDocument();
     });
   });
 
@@ -150,8 +164,7 @@ describe('TaskManagerWidget', () => {
     renderWithRouter(<TaskManagerWidget />);
 
     await waitFor(() => {
-      // Tasks should be visible
-      expect(screen.getByText(/follow up/i) || screen.getByText(/review/i)).toBeTruthy();
+      expect(screen.getByText(/follow up/i)).toBeInTheDocument();
     });
   });
 });
@@ -165,7 +178,8 @@ describe('RevenueChartWidget', () => {
     renderWithRouter(<RevenueChartWidget />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Revenue/i) || screen.getByText(/Chiffre/i) || screen.getByText(/CA/i)).toBeTruthy();
+      // t('dashboard.revenueChart', 'Évolution du CA') returns 'Évolution du CA'
+      expect(screen.getByText(/Évolution du CA/i)).toBeInTheDocument();
     });
   });
 
@@ -187,7 +201,8 @@ describe('PracticeHealthScoreWidget', () => {
     renderWithRouter(<PracticeHealthScoreWidget />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Health/i) || screen.getByText(/Santé/i) || screen.getByText(/Score/i)).toBeTruthy();
+      // t('dashboard.practiceHealthScore', 'Santé du cabinet') returns 'Santé du cabinet'
+      expect(screen.getByText(/Santé du cabinet/i)).toBeInTheDocument();
     });
   });
 
@@ -195,7 +210,7 @@ describe('PracticeHealthScoreWidget', () => {
     renderWithRouter(<PracticeHealthScoreWidget />);
 
     await waitFor(() => {
-      expect(screen.getByText('75') || screen.getByText(/75/)).toBeTruthy();
+      expect(screen.getByText('75')).toBeInTheDocument();
     });
   });
 
@@ -203,8 +218,8 @@ describe('PracticeHealthScoreWidget', () => {
     renderWithRouter(<PracticeHealthScoreWidget />);
 
     await waitFor(() => {
-      // Should show component labels
-      expect(screen.getByText(/Growth/i) || screen.getByText(/Croissance/i) || screen.getByText(/Revenue/i)).toBeTruthy();
+      // t('dashboard.healthComponent.patientGrowth', 'Croissance patients') returns 'Croissance patients'
+      expect(screen.getByText(/Croissance patients/i)).toBeInTheDocument();
     });
   });
 });
@@ -218,7 +233,8 @@ describe('WhatsNewWidget', () => {
     renderWithRouter(<WhatsNewWidget />);
 
     await waitFor(() => {
-      expect(screen.getByText(/New/i) || screen.getByText(/Nouveau/i) || screen.getByText(/Quoi de neuf/i)).toBeTruthy();
+      // t('dashboard.whatsNew', 'Nouveautés') returns 'Nouveautés'
+      expect(screen.getByText(/Nouveautés/i)).toBeInTheDocument();
     });
   });
 
@@ -226,7 +242,7 @@ describe('WhatsNewWidget', () => {
     renderWithRouter(<WhatsNewWidget />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Feature/i) || screen.getByText(/analytics/i)).toBeTruthy();
+      expect(screen.getAllByText(/Analytics/i).length).toBeGreaterThan(0);
     });
   });
 });
@@ -240,20 +256,20 @@ describe('Widget Common Behaviors', () => {
     renderWithRouter(<ActivityFeedWidget />);
 
     await waitFor(() => {
-      // Should still render without crashing
-      expect(screen.getByText(/Activity/i) || screen.getByText(/Activité/i)).toBeTruthy();
+      // Empty state shows 'Aucune activité récente'
+      expect(screen.getByText(/Aucune activité récente/i)).toBeInTheDocument();
     });
   });
 
   it('TaskManagerWidget should handle empty tasks', async () => {
-    const dashboardService = await import('../../../services/dashboardService');
-    dashboardService.getTasks.mockResolvedValue({ success: true, data: [] });
+    const taskService = await import('../../../services/taskService');
+    taskService.getTasks.mockResolvedValue({ success: true, data: [] });
 
     renderWithRouter(<TaskManagerWidget />);
 
     await waitFor(() => {
-      // Should still render without crashing
-      expect(screen.getByText(/Task/i) || screen.getByText(/Tâche/i)).toBeTruthy();
+      // Empty state shows 'Aucune tâche en attente'
+      expect(screen.getByText(/Aucune tâche en attente/i)).toBeInTheDocument();
     });
   });
 

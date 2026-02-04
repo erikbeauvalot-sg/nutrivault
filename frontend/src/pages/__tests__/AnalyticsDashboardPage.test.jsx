@@ -163,10 +163,10 @@ describe('AnalyticsDashboardPage', () => {
 
     it('should display loading state', async () => {
       analyticsService.getHealthTrends.mockImplementation(() => new Promise(() => {}));
-      renderComponent();
+      const { container } = renderComponent();
 
       // Should show spinner during loading
-      expect(screen.getByRole('status')).toBeInTheDocument();
+      expect(container.querySelector('.spinner-border')).toBeInTheDocument();
     });
 
     it('should display health statistics after loading', async () => {
@@ -298,11 +298,13 @@ describe('AnalyticsDashboardPage', () => {
 
   describe('Date Range Filtering', () => {
     it('should update date range state on input change', async () => {
-      renderComponent();
+      const { container } = renderComponent();
 
-      const startDateInput = screen.getAllByRole('textbox')[0] || screen.getByLabelText(/Start Date/i);
+      // Date inputs use type="date" which does not have role "textbox"
+      const dateInputs = container.querySelectorAll('input[type="date"]');
+      expect(dateInputs.length).toBe(2);
 
-      // The date inputs are present
+      // The date labels are present
       expect(screen.getByText('Start Date')).toBeInTheDocument();
       expect(screen.getByText('End Date')).toBeInTheDocument();
     });
@@ -359,7 +361,8 @@ describe('AnalyticsDashboardPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('0')).toBeInTheDocument();
+        // Multiple stat cards show 0 (totalMeasures, uniquePatients, outOfRange)
+        expect(screen.getAllByText('0').length).toBeGreaterThan(0);
         expect(screen.getAllByText('No data available').length).toBeGreaterThan(0);
       });
     });

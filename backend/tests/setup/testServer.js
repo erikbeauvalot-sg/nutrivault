@@ -39,6 +39,22 @@ function createTestApp() {
   const appointmentRemindersRoutes = require('../../src/routes/appointmentReminders');
   const themeRoutes = require('../../src/routes/themes');
   const campaignRoutes = require('../../src/routes/campaigns');
+  const documentRoutes = require('../../src/routes/documents');
+  const recipeRoutes = require('../../src/routes/recipes');
+  const ingredientRoutes = require('../../src/routes/ingredients');
+  const gdprRoutes = require('../../src/routes/gdpr');
+  const analyticsRoutes = require('../../src/routes/analytics');
+  const dashboardRoutes = require('../../src/routes/dashboard');
+  const followupRoutes = require('../../src/routes/followups');
+  const visitTypeRoutes = require('../../src/routes/visitTypes');
+  const annotationRoutes = require('../../src/routes/annotations');
+  const aiConfigRoutes = require('../../src/routes/aiConfig');
+  const aiPromptRoutes = require('../../src/routes/aiPrompts');
+  const formulaRoutes = require('../../src/routes/formulas');
+  const pageViewRoutes = require('../../src/routes/pageViews');
+  const emailLogRoutes = require('../../src/routes/emailLogs');
+  const schedulerRoutes = require('../../src/routes/scheduler');
+  const googleCalendarRoutes = require('../../src/routes/googleCalendar');
 
   // Mount routes
   app.use('/api/auth', authRoutes);
@@ -58,6 +74,22 @@ function createTestApp() {
   app.use('/api/appointment-reminders', appointmentRemindersRoutes);
   app.use('/api/themes', themeRoutes);
   app.use('/api/campaigns', campaignRoutes);
+  app.use('/api/documents', documentRoutes);
+  app.use('/api/recipes', recipeRoutes);
+  app.use('/api/ingredients', ingredientRoutes);
+  app.use('/api/gdpr', gdprRoutes);
+  app.use('/api/analytics', analyticsRoutes);
+  app.use('/api/dashboard', dashboardRoutes);
+  app.use('/api/followups', followupRoutes);
+  app.use('/api/visit-types', visitTypeRoutes);
+  app.use('/api', annotationRoutes);
+  app.use('/api/ai-config', aiConfigRoutes);
+  app.use('/api/ai-prompts', aiPromptRoutes);
+  app.use('/api/formulas', formulaRoutes);
+  app.use('/api/page-views', pageViewRoutes);
+  app.use('/api/email-logs', emailLogRoutes);
+  app.use('/api/scheduler', schedulerRoutes);
+  app.use('/api/calendar', googleCalendarRoutes);
 
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(__dirname, '../../../uploads')));

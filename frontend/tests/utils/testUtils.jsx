@@ -8,6 +8,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import i18n from './i18nTestConfig';
 import { AuthContext } from '../../src/contexts/AuthContext';
+import ThemeContext from '../../src/contexts/ThemeContext';
 
 /**
  * Default mock user for authenticated tests
@@ -73,15 +74,29 @@ export const createMockAuthContext = (user = mockAdminUser, overrides = {}) => (
 });
 
 /**
+ * Default mock theme context value
+ */
+const mockThemeContextValue = {
+  themes: [],
+  currentTheme: null,
+  setTheme: vi.fn(),
+  loading: false,
+  refreshThemes: vi.fn(),
+  applyTheme: vi.fn(),
+};
+
+/**
  * All providers wrapper for tests
  */
 const AllProviders = ({ children, authValue }) => {
   return (
     <I18nextProvider i18n={i18n}>
       <AuthContext.Provider value={authValue}>
-        <BrowserRouter>
-          {children}
-        </BrowserRouter>
+        <ThemeContext.Provider value={mockThemeContextValue}>
+          <BrowserRouter>
+            {children}
+          </BrowserRouter>
+        </ThemeContext.Provider>
       </AuthContext.Provider>
     </I18nextProvider>
   );

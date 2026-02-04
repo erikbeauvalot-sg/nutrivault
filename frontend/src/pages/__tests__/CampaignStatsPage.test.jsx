@@ -134,9 +134,9 @@ describe('CampaignStatsPage', () => {
         () => new Promise(() => {})
       );
 
-      renderComponent();
+      const { container } = renderComponent();
 
-      expect(screen.getByRole('status')).toBeInTheDocument();
+      expect(container.querySelector('.spinner-border')).toBeInTheDocument();
       expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
   });
@@ -182,7 +182,8 @@ describe('CampaignStatsPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('100')).toBeInTheDocument();
+        // "100" appears in both the total recipients stat card and the campaign info card
+        expect(screen.getAllByText('100').length).toBeGreaterThanOrEqual(1);
         expect(screen.getByText('Total Recipients')).toBeInTheDocument();
       });
     });
@@ -191,7 +192,8 @@ describe('CampaignStatsPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('95')).toBeInTheDocument();
+        // "95" appears in both the delivered stat card and the delivery status badge
+        expect(screen.getAllByText('95').length).toBeGreaterThanOrEqual(1);
         expect(screen.getByText('Delivered')).toBeInTheDocument();
       });
     });

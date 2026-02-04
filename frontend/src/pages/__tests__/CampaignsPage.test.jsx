@@ -147,9 +147,10 @@ describe('CampaignsPage', () => {
 
       renderComponent();
 
+      // Allow extra time for the debounce effect (300ms) to settle
       await waitFor(() => {
         expect(screen.getByText('No campaigns found')).toBeInTheDocument();
-      });
+      }, { timeout: 3000 });
     });
   });
 
@@ -290,7 +291,10 @@ describe('CampaignsPage', () => {
         expect(screen.getByText('Delete Campaign')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByRole('button', { name: /delete/i }));
+      // The modal has a "Delete" button with variant="danger"
+      // Use the modal footer's danger button to avoid matching ActionButton mocks
+      const modalDeleteButton = screen.getByRole('button', { name: 'Delete' });
+      fireEvent.click(modalDeleteButton);
 
       await waitFor(() => {
         expect(campaignService.deleteCampaign).toHaveBeenCalledWith('1');

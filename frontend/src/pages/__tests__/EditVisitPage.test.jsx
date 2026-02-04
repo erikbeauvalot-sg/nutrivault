@@ -87,7 +87,8 @@ vi.mock('../../utils/measureTranslations', () => ({
 }));
 
 vi.mock('../../utils/dateUtils', () => ({
-  formatDateTime: vi.fn((date) => date)
+  formatDateTime: vi.fn((date) => date),
+  getTimezone: vi.fn(() => 'Europe/Paris')
 }));
 
 // Mock ConfirmModal

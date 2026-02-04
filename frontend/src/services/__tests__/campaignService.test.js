@@ -3,12 +3,18 @@
  * Unit tests for campaign API service
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import axios from 'axios';
-import * as campaignService from '../campaignService';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock axios
-vi.mock('axios');
+// Mock the api module (axios instance used by campaignService)
+const mockApi = vi.hoisted(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  delete: vi.fn(),
+}));
+vi.mock('../api', () => ({ default: mockApi }));
+
+import * as campaignService from '../campaignService';
 
 describe('campaignService', () => {
   const mockCampaign = {
@@ -30,11 +36,6 @@ describe('campaignService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.setItem('token', 'test-token');
-  });
-
-  afterEach(() => {
-    localStorage.clear();
   });
 
   // ========================================
@@ -49,13 +50,11 @@ describe('campaignService', () => {
           pagination: { page: 1, limit: 20, total: 1, totalPages: 1 }
         }
       };
-      axios.get.mockResolvedValue(mockResponse);
+      mockApi.get.mockResolvedValue(mockResponse);
 
       const result = await campaignService.getCampaigns();
 
-      expect(axios.get).toHaveBeenCalledWith('/api/campaigns', {
-        params: { page: 1, limit: 20 }
-      });
+      expect(mockApi.get).toHaveBeenCalledWith('/campaigns?');
       expect(result.data).toEqual([mockCampaign]);
       expect(result.pagination).toBeDefined();
     });
@@ -68,7 +67,7 @@ describe('campaignService', () => {
           pagination: { page: 1, limit: 20, total: 1, totalPages: 1 }
         }
       };
-      axios.get.mockResolvedValue(mockResponse);
+      mockApi.get.mockResolvedValue(mockResponse);
 
       await campaignService.getCampaigns({
         status: 'draft',
@@ -77,19 +76,15 @@ describe('campaignService', () => {
         page: 2
       });
 
-      expect(axios.get).toHaveBeenCalledWith('/api/campaigns', {
-        params: {
-          status: 'draft',
-          campaign_type: 'newsletter',
-          search: 'test',
-          page: 2,
-          limit: 20
-        }
-      });
+      const callArg = mockApi.get.mock.calls[0][0];
+      expect(callArg).toContain('status=draft');
+      expect(callArg).toContain('campaign_type=newsletter');
+      expect(callArg).toContain('search=test');
+      expect(callArg).toContain('page=2');
     });
 
     it('handles API errors', async () => {
-      axios.get.mockRejectedValue(new Error('Network error'));
+      mockApi.get.mockRejectedValue(new Error('Network error'));
 
       await expect(campaignService.getCampaigns()).rejects.toThrow('Network error');
     });
@@ -103,16 +98,16 @@ describe('campaignService', () => {
       const mockResponse = {
         data: { success: true, data: mockCampaign }
       };
-      axios.get.mockResolvedValue(mockResponse);
+      mockApi.get.mockResolvedValue(mockResponse);
 
       const result = await campaignService.getCampaignById('123');
 
-      expect(axios.get).toHaveBeenCalledWith('/api/campaigns/123');
+      expect(mockApi.get).toHaveBeenCalledWith('/campaigns/123');
       expect(result).toEqual(mockCampaign);
     });
 
     it('throws error for non-existent campaign', async () => {
-      axios.get.mockRejectedValue({
+      mockApi.get.mockRejectedValue({
         response: { status: 404, data: { error: 'Campaign not found' } }
       });
 
@@ -133,11 +128,11 @@ describe('campaignService', () => {
       const mockResponse = {
         data: { success: true, data: { ...mockCampaign, ...newCampaign } }
       };
-      axios.post.mockResolvedValue(mockResponse);
+      mockApi.post.mockResolvedValue(mockResponse);
 
       const result = await campaignService.createCampaign(newCampaign);
 
-      expect(axios.post).toHaveBeenCalledWith('/api/campaigns', newCampaign);
+      expect(mockApi.post).toHaveBeenCalledWith('/campaigns', newCampaign);
       expect(result.name).toBe('New Campaign');
     });
 
@@ -150,11 +145,11 @@ describe('campaignService', () => {
       const mockResponse = {
         data: { success: true, data: { ...mockCampaign, ...newCampaign } }
       };
-      axios.post.mockResolvedValue(mockResponse);
+      mockApi.post.mockResolvedValue(mockResponse);
 
       await campaignService.createCampaign(newCampaign);
 
-      expect(axios.post).toHaveBeenCalledWith('/api/campaigns', expect.objectContaining({
+      expect(mockApi.post).toHaveBeenCalledWith('/campaigns', expect.objectContaining({
         sender_id: 'dietitian-123'
       }));
     });
@@ -169,11 +164,11 @@ describe('campaignService', () => {
       const mockResponse = {
         data: { success: true, data: { ...mockCampaign, ...updates } }
       };
-      axios.put.mockResolvedValue(mockResponse);
+      mockApi.put.mockResolvedValue(mockResponse);
 
       const result = await campaignService.updateCampaign('123', updates);
 
-      expect(axios.put).toHaveBeenCalledWith('/api/campaigns/123', updates);
+      expect(mockApi.put).toHaveBeenCalledWith('/campaigns/123', updates);
       expect(result.name).toBe('Updated Name');
     });
   });
@@ -186,11 +181,11 @@ describe('campaignService', () => {
       const mockResponse = {
         data: { success: true, message: 'Campaign deleted' }
       };
-      axios.delete.mockResolvedValue(mockResponse);
+      mockApi.delete.mockResolvedValue(mockResponse);
 
       await campaignService.deleteCampaign('123');
 
-      expect(axios.delete).toHaveBeenCalledWith('/api/campaigns/123');
+      expect(mockApi.delete).toHaveBeenCalledWith('/campaigns/123');
     });
   });
 
@@ -205,11 +200,11 @@ describe('campaignService', () => {
           data: { ...mockCampaign, id: 'new-id', name: 'Test Campaign (copie)' }
         }
       };
-      axios.post.mockResolvedValue(mockResponse);
+      mockApi.post.mockResolvedValue(mockResponse);
 
       const result = await campaignService.duplicateCampaign('123');
 
-      expect(axios.post).toHaveBeenCalledWith('/api/campaigns/123/duplicate');
+      expect(mockApi.post).toHaveBeenCalledWith('/campaigns/123/duplicate');
       expect(result.name).toContain('copie');
     });
   });
@@ -222,15 +217,14 @@ describe('campaignService', () => {
       const mockResponse = {
         data: {
           success: true,
-          message: 'Campaign is being sent',
           data: { ...mockCampaign, status: 'sending' }
         }
       };
-      axios.post.mockResolvedValue(mockResponse);
+      mockApi.post.mockResolvedValue(mockResponse);
 
       const result = await campaignService.sendCampaign('123');
 
-      expect(axios.post).toHaveBeenCalledWith('/api/campaigns/123/send');
+      expect(mockApi.post).toHaveBeenCalledWith('/campaigns/123/send');
       expect(result.status).toBe('sending');
     });
   });
@@ -247,11 +241,11 @@ describe('campaignService', () => {
           data: { ...mockCampaign, status: 'scheduled', scheduled_at: scheduledAt }
         }
       };
-      axios.post.mockResolvedValue(mockResponse);
+      mockApi.post.mockResolvedValue(mockResponse);
 
       const result = await campaignService.scheduleCampaign('123', scheduledAt);
 
-      expect(axios.post).toHaveBeenCalledWith('/api/campaigns/123/schedule', {
+      expect(mockApi.post).toHaveBeenCalledWith('/campaigns/123/schedule', {
         scheduled_at: scheduledAt
       });
       expect(result.status).toBe('scheduled');
@@ -269,11 +263,11 @@ describe('campaignService', () => {
           data: { ...mockCampaign, status: 'cancelled' }
         }
       };
-      axios.post.mockResolvedValue(mockResponse);
+      mockApi.post.mockResolvedValue(mockResponse);
 
       const result = await campaignService.cancelCampaign('123');
 
-      expect(axios.post).toHaveBeenCalledWith('/api/campaigns/123/cancel');
+      expect(mockApi.post).toHaveBeenCalledWith('/campaigns/123/cancel');
       expect(result.status).toBe('cancelled');
     });
   });
@@ -293,11 +287,11 @@ describe('campaignService', () => {
           data: { count: 50, sample: [{ id: '1', first_name: 'Jean' }] }
         }
       };
-      axios.post.mockResolvedValue(mockResponse);
+      mockApi.post.mockResolvedValue(mockResponse);
 
       const result = await campaignService.previewAudienceCriteria(criteria);
 
-      expect(axios.post).toHaveBeenCalledWith('/api/campaigns/preview-audience', { criteria });
+      expect(mockApi.post).toHaveBeenCalledWith('/campaigns/preview-audience', { criteria });
       expect(result.count).toBe(50);
     });
   });
@@ -315,11 +309,11 @@ describe('campaignService', () => {
       const mockResponse = {
         data: { success: true, data: mockStats }
       };
-      axios.get.mockResolvedValue(mockResponse);
+      mockApi.get.mockResolvedValue(mockResponse);
 
       const result = await campaignService.getCampaignStats('123');
 
-      expect(axios.get).toHaveBeenCalledWith('/api/campaigns/123/stats');
+      expect(mockApi.get).toHaveBeenCalledWith('/campaigns/123/stats');
       expect(result.stats.sent).toBe(100);
     });
   });
@@ -339,13 +333,11 @@ describe('campaignService', () => {
           pagination: { page: 1, total: 1 }
         }
       };
-      axios.get.mockResolvedValue(mockResponse);
+      mockApi.get.mockResolvedValue(mockResponse);
 
       const result = await campaignService.getCampaignRecipients('123');
 
-      expect(axios.get).toHaveBeenCalledWith('/api/campaigns/123/recipients', {
-        params: { page: 1, limit: 50 }
-      });
+      expect(mockApi.get).toHaveBeenCalledWith('/campaigns/123/recipients?');
       expect(result.data).toEqual(mockRecipients);
     });
 
@@ -353,7 +345,7 @@ describe('campaignService', () => {
       const mockResponse = {
         data: { success: true, data: [], pagination: {} }
       };
-      axios.get.mockResolvedValue(mockResponse);
+      mockApi.get.mockResolvedValue(mockResponse);
 
       await campaignService.getCampaignRecipients('123', {
         status: 'failed',
@@ -361,9 +353,10 @@ describe('campaignService', () => {
         page: 2
       });
 
-      expect(axios.get).toHaveBeenCalledWith('/api/campaigns/123/recipients', {
-        params: { status: 'failed', search: 'test', page: 2, limit: 50 }
-      });
+      const callArg = mockApi.get.mock.calls[0][0];
+      expect(callArg).toContain('status=failed');
+      expect(callArg).toContain('search=test');
+      expect(callArg).toContain('page=2');
     });
   });
 
@@ -380,11 +373,11 @@ describe('campaignService', () => {
       const mockResponse = {
         data: { success: true, data: mockFields }
       };
-      axios.get.mockResolvedValue(mockResponse);
+      mockApi.get.mockResolvedValue(mockResponse);
 
       const result = await campaignService.getSegmentFields();
 
-      expect(axios.get).toHaveBeenCalledWith('/api/campaigns/segment-fields');
+      expect(mockApi.get).toHaveBeenCalledWith('/campaigns/segment-fields');
       expect(result).toEqual(mockFields);
     });
   });

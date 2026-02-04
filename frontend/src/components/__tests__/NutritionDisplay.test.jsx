@@ -38,9 +38,10 @@ describe('NutritionDisplay', () => {
     it('renders nutrition data when provided', () => {
       render(<NutritionDisplay nutrition={sampleNutrition} />);
 
-      expect(screen.getByText('250')).toBeInTheDocument();
-      expect(screen.getByText(/30/)).toBeInTheDocument();
-      expect(screen.getByText(/12/)).toBeInTheDocument();
+      // Values are rendered as "250 kcal", "30 g", "12 g" etc.
+      expect(screen.getByText('250 kcal')).toBeInTheDocument();
+      expect(screen.getByText(/30 g/)).toBeInTheDocument();
+      expect(screen.getByText(/12 g/)).toBeInTheDocument();
     });
 
     it('renders title when showTitle is true', () => {
@@ -75,7 +76,7 @@ describe('NutritionDisplay', () => {
   describe('Nutrient Display', () => {
     it('displays calories prominently', () => {
       render(<NutritionDisplay nutrition={sampleNutrition} />);
-      expect(screen.getByText('250')).toBeInTheDocument();
+      expect(screen.getByText('250 kcal')).toBeInTheDocument();
     });
 
     it('displays protein value', () => {
@@ -95,7 +96,8 @@ describe('NutritionDisplay', () => {
 
     it('displays fiber when present', () => {
       render(<NutritionDisplay nutrition={sampleNutrition} />);
-      expect(screen.getByText(/3.*g/)).toBeInTheDocument();
+      // Fiber is "3 g" - use exact match to avoid matching "30 g" (protein)
+      expect(screen.getByText('3 g')).toBeInTheDocument();
     });
 
     it('displays sodium when present', () => {

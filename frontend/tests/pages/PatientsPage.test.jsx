@@ -271,7 +271,7 @@ describe('PatientsPage', () => {
   });
 
   describe('Navigation', () => {
-    it('should navigate to schedule visit with patient', async () => {
+    it('should open create visit modal when clicking schedule button', async () => {
       const user = userEvent.setup();
       renderWithProviders(<PatientsPage />, { user: mockAdminUser });
 
@@ -282,8 +282,9 @@ describe('PatientsPage', () => {
       const scheduleButtons = screen.getAllByTitle(/schedule/i);
       await user.click(scheduleButtons[0]);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/visits/create', {
-        state: { selectedPatient: mockPatients[0] }
+      // The component opens a CreateVisitModal instead of navigating
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
       });
     });
   });

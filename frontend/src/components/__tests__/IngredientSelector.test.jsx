@@ -18,7 +18,13 @@ vi.mock('react-i18next', () => ({
 
 // Mock ingredient service
 vi.mock('../../services/ingredientService', () => ({
-  searchIngredients: vi.fn()
+  searchIngredients: vi.fn(),
+  getIngredients: vi.fn().mockResolvedValue({ data: [] })
+}));
+
+// Mock IngredientModal
+vi.mock('../IngredientModal', () => ({
+  default: () => null
 }));
 
 describe('IngredientSelector', () => {
@@ -295,7 +301,8 @@ describe('IngredientSelector', () => {
       await userEvent.type(input, 'chicken');
 
       await waitFor(() => {
-        expect(screen.getByText('g')).toBeInTheDocument();
+        // Two ingredients have 'g' as default_unit, one has 'piece'
+        expect(screen.getAllByText('g').length).toBe(2);
         expect(screen.getByText('piece')).toBeInTheDocument();
       });
     });

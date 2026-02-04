@@ -177,7 +177,7 @@ describe('SharedDocumentPage', () => {
         expect(screen.getByText('Password Required')).toBeInTheDocument();
       });
 
-      const passwordInput = screen.getByLabelText(/Password/i);
+      const passwordInput = screen.getByPlaceholderText('Enter password');
       fireEvent.change(passwordInput, { target: { value: 'testpass123' } });
 
       const unlockButton = screen.getByRole('button', { name: /Unlock Document/i });
@@ -293,7 +293,7 @@ describe('SharedDocumentPage', () => {
       renderWithRouter(mockToken);
 
       await waitFor(() => {
-        expect(screen.getByLabelText(/Password/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText('Enter password')).toBeInTheDocument();
       });
     });
 
@@ -310,7 +310,7 @@ describe('SharedDocumentPage', () => {
       renderWithRouter(mockToken);
 
       await waitFor(() => {
-        const passwordInput = screen.getByLabelText(/Password/i);
+        const passwordInput = screen.getByPlaceholderText('Enter password');
         fireEvent.change(passwordInput, { target: { value: 'testpass123' } });
       });
 
@@ -324,7 +324,7 @@ describe('SharedDocumentPage', () => {
       renderWithRouter(mockToken);
 
       await waitFor(() => {
-        const passwordInput = screen.getByLabelText(/Password/i);
+        const passwordInput = screen.getByPlaceholderText('Enter password');
         fireEvent.change(passwordInput, { target: { value: 'testpass123' } });
       });
 
@@ -344,7 +344,7 @@ describe('SharedDocumentPage', () => {
       renderWithRouter(mockToken);
 
       await waitFor(() => {
-        const passwordInput = screen.getByLabelText(/Password/i);
+        const passwordInput = screen.getByPlaceholderText('Enter password');
         fireEvent.change(passwordInput, { target: { value: 'wrongpass' } });
       });
 
@@ -364,7 +364,7 @@ describe('SharedDocumentPage', () => {
       renderWithRouter(mockToken);
 
       await waitFor(() => {
-        const passwordInput = screen.getByLabelText(/Password/i);
+        const passwordInput = screen.getByPlaceholderText('Enter password');
         fireEvent.change(passwordInput, { target: { value: 'anypass' } });
       });
 
@@ -387,7 +387,7 @@ describe('SharedDocumentPage', () => {
       renderWithRouter(mockToken);
 
       await waitFor(() => {
-        const passwordInput = screen.getByLabelText(/Password/i);
+        const passwordInput = screen.getByPlaceholderText('Enter password');
         fireEvent.change(passwordInput, { target: { value: 'testpass' } });
       });
 
@@ -405,7 +405,7 @@ describe('SharedDocumentPage', () => {
       renderWithRouter(mockToken);
 
       await waitFor(() => {
-        const passwordInput = screen.getByLabelText(/Password/i);
+        const passwordInput = screen.getByPlaceholderText('Enter password');
         fireEvent.change(passwordInput, { target: { value: 'testpass123' } });
       });
 
@@ -491,7 +491,7 @@ describe('SharedDocumentPage', () => {
 
       // Enter password
       await waitFor(() => {
-        const passwordInput = screen.getByLabelText(/Password/i);
+        const passwordInput = screen.getByPlaceholderText('Enter password');
         fireEvent.change(passwordInput, { target: { value: 'testpass123' } });
       });
 
@@ -512,8 +512,7 @@ describe('SharedDocumentPage', () => {
     it('disables download button for inaccessible share', async () => {
       publicDocService.getShareInfo.mockResolvedValue({
         ...mockShareInfo,
-        is_accessible: false,
-        is_expired: true
+        is_accessible: false
       });
 
       renderWithRouter(mockToken);
@@ -574,7 +573,7 @@ describe('SharedDocumentPage', () => {
 
       // Enter password
       await waitFor(() => {
-        const passwordInput = screen.getByLabelText(/Password/i);
+        const passwordInput = screen.getByPlaceholderText('Enter password');
         fireEvent.change(passwordInput, { target: { value: 'testpass' } });
       });
 
@@ -590,14 +589,27 @@ describe('SharedDocumentPage', () => {
     it('shows preview for images when accessible', async () => {
       publicDocService.getShareInfo.mockResolvedValue({
         ...mockShareInfo,
+        is_password_protected: true,
         document: {
           ...mockShareInfo.document,
           mime_type: 'image/jpeg',
           file_name: 'photo.jpg'
         }
       });
+      publicDocService.verifyPassword.mockResolvedValue({ valid: true });
 
       renderWithRouter(mockToken);
+
+      // Enter password to unlock
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Enter password')).toBeInTheDocument();
+      });
+
+      const passwordInput = screen.getByPlaceholderText('Enter password');
+      fireEvent.change(passwordInput, { target: { value: 'testpass' } });
+
+      const unlockButton = screen.getByRole('button', { name: /Unlock Document/i });
+      fireEvent.click(unlockButton);
 
       await waitFor(() => {
         const img = document.querySelector('img');
@@ -605,7 +617,7 @@ describe('SharedDocumentPage', () => {
       });
     });
 
-    it('shows locked preview placeholder for protected documents', async () => {
+    it('shows password prompt instead of preview for protected documents', async () => {
       publicDocService.getShareInfo.mockResolvedValue({
         ...mockShareInfo,
         is_password_protected: true
@@ -614,7 +626,8 @@ describe('SharedDocumentPage', () => {
       renderWithRouter(mockToken);
 
       await waitFor(() => {
-        expect(screen.getByText(/Preview available after password verification/)).toBeInTheDocument();
+        expect(screen.getByText('Password Required')).toBeInTheDocument();
+        expect(document.querySelector('iframe')).not.toBeInTheDocument();
       });
     });
 
