@@ -125,8 +125,9 @@ const CalendarView = ({
         timeslots={2}
         defaultView="week"
         views={['month', 'week', 'day']}
-        min={new Date(1972, 0, 1, 8, 0, 0)}
-        max={new Date(1972, 0, 1, 20, 0, 0)}
+        min={new Date(1972, 0, 1, 7, 0, 0)}
+        max={new Date(1972, 0, 1, 22, 0, 0)}
+        scrollToTime={new Date(1972, 0, 1, 8, 0, 0)}
       />
     </div>
   );

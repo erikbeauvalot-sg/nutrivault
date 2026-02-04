@@ -369,6 +369,7 @@
 }
 
 .rbc-time-slot {
+  min-height: 30px;
   border-top-color: var(--nv-warm-100) !important;
 }
 
@@ -382,7 +383,6 @@
 
 .rbc-time-content {
   border-top-color: var(--nv-warm-200) !important;
-  overflow-y: hidden !important;
 }
 
 .rbc-time-header-content {
