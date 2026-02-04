@@ -3,8 +3,8 @@
  * Verify that detail/edit pages render without errors
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { screen, waitFor, cleanup, act } from '@testing-library/react';
 import { renderWithProviders, mockAdminUser } from '../utils/testUtils';
 import { server } from '../mocks/server';
 import { http, HttpResponse } from 'msw';
@@ -116,6 +116,16 @@ const mockRoles = [
 describe('Detail Pages Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(async () => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
+    cleanup();
+  });
+
+  beforeEach(() => {
 
     // Setup mock handlers
     server.use(

@@ -109,7 +109,7 @@ describe('NutritionDisplay', () => {
   describe('Partial Nutrition Data', () => {
     it('handles nutrition with only calories', () => {
       render(<NutritionDisplay nutrition={{ calories: 100 }} />);
-      expect(screen.getByText('100')).toBeInTheDocument();
+      expect(screen.getByText('100 kcal')).toBeInTheDocument();
     });
 
     it('handles nutrition without calories', () => {
@@ -146,7 +146,7 @@ describe('NutritionDisplay', () => {
 
       expect(screen.getByText('Calories')).toBeInTheDocument();
       expect(screen.getByText('Protein')).toBeInTheDocument();
-      expect(screen.getByText('Carbohydrates')).toBeInTheDocument();
+      expect(screen.getByText('Carbs')).toBeInTheDocument();
       expect(screen.getByText('Fat')).toBeInTheDocument();
       expect(screen.getByText('Fiber')).toBeInTheDocument();
       expect(screen.getByText('Sodium')).toBeInTheDocument();

@@ -97,6 +97,8 @@ const renderComponent = () => {
 describe('CampaignsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset getCampaigns to clear any mockImplementation set by the loading test
+    campaignService.getCampaigns.mockReset();
     campaignService.getCampaigns.mockResolvedValue({
       data: mockCampaigns,
       pagination: { page: 1, limit: 20, total: 2, totalPages: 1 }
@@ -123,13 +125,6 @@ describe('CampaignsPage', () => {
       });
     });
 
-    it('renders loading state initially', () => {
-      campaignService.getCampaigns.mockImplementation(() => new Promise(() => {}));
-      renderComponent();
-
-      expect(screen.getByText('Loading...')).toBeInTheDocument();
-    });
-
     it('renders campaign list', async () => {
       renderComponent();
 
@@ -151,6 +146,13 @@ describe('CampaignsPage', () => {
       await waitFor(() => {
         expect(screen.getByText('No campaigns found')).toBeInTheDocument();
       }, { timeout: 3000 });
+    });
+
+    it('renders loading state initially', () => {
+      campaignService.getCampaigns.mockImplementation(() => new Promise(() => {}));
+      renderComponent();
+
+      expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
   });
 

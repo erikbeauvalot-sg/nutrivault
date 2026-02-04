@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <!-- Page principale -->
+  <url>
+    <loc>https://mariondiet.beauvalot.com/</loc>
+    <lastmod>2026-02-04</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://mariondiet.beauvalot.com/mariondiet/images/marion.jpg</image:loc>
+      <image:title>Marion Beauvalot - Diététicienne Nutritionniste à Suresnes</image:title>
+      <image:caption>Marion Beauvalot, diététicienne-nutritionniste diplômée à Suresnes (92)</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://mariondiet.beauvalot.com/mariondiet/images/hero.png</image:loc>
+      <image:title>Marion Beauvalot Diététicienne</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://mariondiet.beauvalot.com/mariondiet/images/services.jpg</image:loc>
+      <image:title>Services de diététique et nutrition</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://mariondiet.beauvalot.com/mariondiet/images/mon-approche.jpg</image:loc>
+      <image:title>Approche diététique personnalisée</image:title>
+    </image:image>
+  </url>
+
+</urlset>

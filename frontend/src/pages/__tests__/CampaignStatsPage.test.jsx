@@ -21,10 +21,11 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-// Mock react-i18next
+// Mock react-i18next — t must be a stable reference to avoid infinite useCallback/useEffect loops
+const stableT = (key, defaultValue) => defaultValue || key;
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, defaultValue) => defaultValue || key
+    t: stableT
   })
 }));
 
@@ -225,10 +226,11 @@ describe('CampaignStatsPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Delivery Status')).toBeInTheDocument();
-        expect(screen.getByText('Sent')).toBeInTheDocument();
-        expect(screen.getByText('Pending')).toBeInTheDocument();
-        expect(screen.getByText('Failed')).toBeInTheDocument();
-        expect(screen.getByText('Bounced')).toBeInTheDocument();
+        // These labels also appear in the filter dropdown options
+        expect(screen.getAllByText('Sent').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText('Pending').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText('Failed').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText('Bounced').length).toBeGreaterThanOrEqual(1);
       });
     });
 
@@ -267,7 +269,8 @@ describe('CampaignStatsPage', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('Recipients')).toBeInTheDocument();
+        // "Recipients" appears in both the table card header and Campaign Info card
+        expect(screen.getAllByText('Recipients').length).toBeGreaterThanOrEqual(1);
         expect(screen.getByText('John Doe')).toBeInTheDocument();
         expect(screen.getByText('Jane Smith')).toBeInTheDocument();
       });
@@ -442,9 +445,10 @@ describe('CampaignStatsPage', () => {
       await waitFor(() => {
         expect(screen.getByText('Recipient')).toBeInTheDocument();
         expect(screen.getAllByText('Status')[0]).toBeInTheDocument();
-        expect(screen.getByText('Sent')).toBeInTheDocument();
-        expect(screen.getByText('Opened')).toBeInTheDocument();
-        expect(screen.getByText('Clicked')).toBeInTheDocument();
+        // "Sent" also appears in delivery status card and filter dropdown
+        expect(screen.getAllByText('Sent').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText('Opened').length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText('Clicked').length).toBeGreaterThanOrEqual(1);
       });
     });
   });

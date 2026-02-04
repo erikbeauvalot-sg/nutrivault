@@ -1,0 +1,20 @@
+# robots.txt - Marion Beauvalot Diététicienne
+# https://mariondiet.beauvalot.com
+
+User-agent: *
+Allow: /mariondiet
+Allow: /mariondiet/
+Disallow: /login
+Disallow: /shared/
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /patients
+Disallow: /settings
+Disallow: /billing
+Disallow: /documents
+Disallow: /agenda
+Disallow: /campaigns
+Disallow: /recipes
+Disallow: /analytics
+
+Sitemap: https://mariondiet.beauvalot.com/sitemap.xml
