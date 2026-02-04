@@ -97,9 +97,9 @@ describe('CampaignsWidget', () => {
         () => new Promise(() => {})
       );
 
-      renderComponent();
+      const { container } = renderComponent();
 
-      expect(screen.getByRole('status')).toBeInTheDocument();
+      expect(container.querySelector('.spinner-border')).toBeInTheDocument();
     });
 
     it('should show widget title during loading', async () => {
@@ -127,7 +127,8 @@ describe('CampaignsWidget', () => {
       renderComponent();
 
       await waitFor(() => {
-        expect(screen.getByText('1')).toBeInTheDocument(); // 1 scheduled
+        // "1" appears for both scheduled and drafts counts
+        expect(screen.getAllByText('1').length).toBeGreaterThanOrEqual(1);
         expect(screen.getByText('Planifiées')).toBeInTheDocument();
       });
     });
@@ -266,8 +267,8 @@ describe('CampaignsWidget', () => {
 
       await waitFor(() => {
         // Dates should be formatted in French (e.g., "15 janv.")
-        // The exact format depends on browser locale
-        expect(screen.getByText(/janv/i)).toBeInTheDocument();
+        // Multiple campaigns may have January dates
+        expect(screen.getAllByText(/janv/i).length).toBeGreaterThan(0);
       });
     });
   });

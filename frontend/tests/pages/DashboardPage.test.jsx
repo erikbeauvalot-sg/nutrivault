@@ -273,7 +273,7 @@ describe('DashboardPage', () => {
       }
     });
 
-    it('should navigate to create visit page', async () => {
+    it('should open create visit modal when clicking schedule button', async () => {
       const user = userEvent.setup();
       renderWithProviders(<DashboardPage />, { user: mockAdminUser });
 
@@ -286,7 +286,11 @@ describe('DashboardPage', () => {
 
       if (scheduleBtn) {
         await user.click(scheduleBtn);
-        expect(mockNavigate).toHaveBeenCalledWith('/visits/create');
+
+        // The component opens a CreateVisitModal instead of navigating
+        await waitFor(() => {
+          expect(screen.getByRole('dialog')).toBeInTheDocument();
+        });
       }
     });
 
@@ -321,14 +325,15 @@ describe('DashboardPage', () => {
       });
     });
 
-    it('should display global stats in office mode', async () => {
+    it('should display navigation cards in office mode with links', async () => {
       realLocalStorage.setItem('nutrivault_dashboard_mode', 'office');
 
       renderWithProviders(<DashboardPage />, { user: mockAdminUser });
 
       await waitFor(() => {
-        // Stats section should be visible
-        expect(screen.getByText(/stats/i)).toBeInTheDocument();
+        // Office mode renders quick navigation cards with patient/agenda/billing links
+        const links = document.querySelectorAll('a[href="/patients"], a[href="/agenda"], a[href="/billing"]');
+        expect(links.length).toBeGreaterThan(0);
       });
     });
   });

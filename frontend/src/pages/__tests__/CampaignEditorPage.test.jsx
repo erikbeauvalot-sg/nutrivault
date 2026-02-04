@@ -95,12 +95,31 @@ const renderComponent = (initialRoute = '/campaigns/new') => {
   );
 };
 
+/**
+ * Finds the input/select/textarea sibling within the same Form.Group as the label.
+ * Needed because react-bootstrap Form.Label does not generate a `for` attribute
+ * unless an explicit `htmlFor` prop is passed, so getByLabelText cannot associate
+ * the label with its control.
+ */
+function getFormControl(labelPattern) {
+  const label = screen.getByText(labelPattern, { selector: 'label' });
+  const group = label.closest('.mb-3');
+  const control = group.querySelector('input, select, textarea');
+  return control;
+}
+
 describe('CampaignEditorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     campaignService.createCampaign.mockResolvedValue({ id: '1' });
     campaignService.updateCampaign.mockResolvedValue({ id: '1' });
     campaignService.previewAudienceCriteria.mockResolvedValue({ count: 50, patients: [] });
+
+    // Mock global fetch used by loadDietitians
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ data: [] })
+    });
   });
 
   describe('Rendering', () => {
@@ -121,10 +140,12 @@ describe('CampaignEditorPage', () => {
         </BrowserRouter>
       );
 
-      expect(screen.getByText(/Basic Info/)).toBeInTheDocument();
-      expect(screen.getByText(/Content/)).toBeInTheDocument();
-      expect(screen.getByText(/Audience/)).toBeInTheDocument();
-      expect(screen.getByText(/Preview/)).toBeInTheDocument();
+      // "Basic Info" also appears in the card header as "Basic Information",
+      // so we use getAllByText and verify at least one match exists for each step.
+      expect(screen.getAllByText(/Basic Info/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/Content/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/Audience/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/Preview/).length).toBeGreaterThanOrEqual(1);
     });
 
     it('should render form fields in basics step', async () => {
@@ -134,9 +155,9 @@ describe('CampaignEditorPage', () => {
         </BrowserRouter>
       );
 
-      expect(screen.getByLabelText(/Campaign Name/)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Email Subject/)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Campaign Type/)).toBeInTheDocument();
+      expect(getFormControl(/Campaign Name/)).toBeInTheDocument();
+      expect(getFormControl(/Email Subject/)).toBeInTheDocument();
+      expect(getFormControl(/Campaign Type/)).toBeInTheDocument();
     });
 
     it('should render action buttons', async () => {
@@ -159,7 +180,7 @@ describe('CampaignEditorPage', () => {
         </BrowserRouter>
       );
 
-      expect(screen.getByLabelText(/Campaign Name/)).toBeInTheDocument();
+      expect(getFormControl(/Campaign Name/)).toBeInTheDocument();
     });
 
     it('should navigate to content step when next is clicked', async () => {
@@ -170,10 +191,10 @@ describe('CampaignEditorPage', () => {
       );
 
       // Fill required fields
-      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+      fireEvent.change(getFormControl(/Campaign Name/), {
         target: { value: 'Test Campaign' }
       });
-      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+      fireEvent.change(getFormControl(/Email Subject/), {
         target: { value: 'Test Subject' }
       });
 
@@ -206,10 +227,10 @@ describe('CampaignEditorPage', () => {
       );
 
       // Fill basics
-      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+      fireEvent.change(getFormControl(/Campaign Name/), {
         target: { value: 'Test Campaign' }
       });
-      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+      fireEvent.change(getFormControl(/Email Subject/), {
         target: { value: 'Test Subject' }
       });
 
@@ -228,7 +249,7 @@ describe('CampaignEditorPage', () => {
       );
 
       // Try to save without name
-      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+      fireEvent.change(getFormControl(/Email Subject/), {
         target: { value: 'Test Subject' }
       });
 
@@ -248,7 +269,7 @@ describe('CampaignEditorPage', () => {
       );
 
       // Fill name but not subject
-      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+      fireEvent.change(getFormControl(/Campaign Name/), {
         target: { value: 'Test Campaign' }
       });
 
@@ -269,7 +290,7 @@ describe('CampaignEditorPage', () => {
         </BrowserRouter>
       );
 
-      const typeSelect = screen.getByLabelText(/Campaign Type/);
+      const typeSelect = getFormControl(/Campaign Type/);
       expect(typeSelect.value).toBe('newsletter');
     });
 
@@ -280,7 +301,7 @@ describe('CampaignEditorPage', () => {
         </BrowserRouter>
       );
 
-      const typeSelect = screen.getByLabelText(/Campaign Type/);
+      const typeSelect = getFormControl(/Campaign Type/);
       fireEvent.change(typeSelect, { target: { value: 'promotional' } });
 
       expect(typeSelect.value).toBe('promotional');
@@ -296,10 +317,10 @@ describe('CampaignEditorPage', () => {
       );
 
       // Fill form
-      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+      fireEvent.change(getFormControl(/Campaign Name/), {
         target: { value: 'Test Campaign' }
       });
-      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+      fireEvent.change(getFormControl(/Email Subject/), {
         target: { value: 'Test Subject' }
       });
 
@@ -324,10 +345,10 @@ describe('CampaignEditorPage', () => {
         </BrowserRouter>
       );
 
-      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+      fireEvent.change(getFormControl(/Campaign Name/), {
         target: { value: 'Test Campaign' }
       });
-      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+      fireEvent.change(getFormControl(/Email Subject/), {
         target: { value: 'Test Subject' }
       });
 
@@ -348,10 +369,10 @@ describe('CampaignEditorPage', () => {
         </BrowserRouter>
       );
 
-      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+      fireEvent.change(getFormControl(/Campaign Name/), {
         target: { value: 'Test Campaign' }
       });
-      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+      fireEvent.change(getFormControl(/Email Subject/), {
         target: { value: 'Test Subject' }
       });
 
@@ -370,10 +391,10 @@ describe('CampaignEditorPage', () => {
         </BrowserRouter>
       );
 
-      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+      fireEvent.change(getFormControl(/Campaign Name/), {
         target: { value: 'Test Campaign' }
       });
-      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+      fireEvent.change(getFormControl(/Email Subject/), {
         target: { value: 'Test Subject' }
       });
 
@@ -394,10 +415,10 @@ describe('CampaignEditorPage', () => {
         </BrowserRouter>
       );
 
-      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+      fireEvent.change(getFormControl(/Campaign Name/), {
         target: { value: 'Test Campaign' }
       });
-      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+      fireEvent.change(getFormControl(/Email Subject/), {
         target: { value: 'Test Subject' }
       });
       fireEvent.click(screen.getByText('Next'));
@@ -410,7 +431,7 @@ describe('CampaignEditorPage', () => {
     it('should display content textarea', async () => {
       await goToContentStep();
 
-      expect(screen.getByLabelText(/Email Body/)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/Write your email content here/)).toBeInTheDocument();
     });
 
     it('should display personalization variables sidebar', async () => {
@@ -422,7 +443,9 @@ describe('CampaignEditorPage', () => {
     it('should display back button', async () => {
       await goToContentStep();
 
-      expect(screen.getByText('Back')).toBeInTheDocument();
+      // The header "Back" link and the step "Back" button are both visible
+      const backButtons = screen.getAllByText('Back');
+      expect(backButtons.length).toBeGreaterThanOrEqual(2);
     });
   });
 
@@ -462,7 +485,7 @@ describe('CampaignEditorPage', () => {
         </BrowserRouter>
       );
 
-      const senderSelect = screen.getByLabelText(/Sender/);
+      const senderSelect = getFormControl(/Sender/);
       expect(senderSelect).toBeInTheDocument();
       expect(screen.getByText(/Use patient's assigned dietitian/)).toBeInTheDocument();
     });
@@ -480,10 +503,10 @@ describe('CampaignEditorPage', () => {
         </BrowserRouter>
       );
 
-      fireEvent.change(screen.getByLabelText(/Campaign Name/), {
+      fireEvent.change(getFormControl(/Campaign Name/), {
         target: { value: 'Test Campaign' }
       });
-      fireEvent.change(screen.getByLabelText(/Email Subject/), {
+      fireEvent.change(getFormControl(/Email Subject/), {
         target: { value: 'Test Subject' }
       });
 

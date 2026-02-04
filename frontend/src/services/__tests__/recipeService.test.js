@@ -44,7 +44,8 @@ describe('recipeService', () => {
       href: '',
       download: '',
       click: vi.fn(),
-      remove: vi.fn()
+      remove: vi.fn(),
+      setAttribute: vi.fn()
     }));
     vi.spyOn(document.body, 'appendChild').mockImplementation(() => {});
     vi.spyOn(document.body, 'removeChild').mockImplementation(() => {});
@@ -287,13 +288,19 @@ describe('recipeService', () => {
         { id: 'rec-1', title: 'Recipe 1' },
         { id: 'rec-2', title: 'Recipe 2' }
       ];
-      const mockResponse = { data: { success: true, data: mockRecipes } };
+      const mockResponse = {
+        data: {
+          success: true,
+          data: mockRecipes,
+          pagination: { page: 1, limit: 12, total: 2 }
+        }
+      };
       api.get.mockResolvedValue(mockResponse);
 
       const result = await getPatientRecipes('pat-123');
 
-      expect(api.get).toHaveBeenCalledWith('/patients/pat-123/recipes');
-      expect(result).toHaveLength(2);
+      expect(api.get).toHaveBeenCalledWith('/patients/pat-123/recipes?');
+      expect(result.data).toHaveLength(2);
     });
   });
 
@@ -319,7 +326,7 @@ describe('recipeService', () => {
 
     it('should use specified language for PDF', async () => {
       const mockBlob = new Blob(['pdf'], { type: 'application/pdf' });
-      api.get.mockResolvedValue({ data: mockBlob });
+      api.get.mockResolvedValue({ data: mockBlob, headers: {} });
 
       await exportRecipePDF('rec-123', 'fr');
 
@@ -331,7 +338,7 @@ describe('recipeService', () => {
 
     it('should include notes in PDF request', async () => {
       const mockBlob = new Blob(['pdf'], { type: 'application/pdf' });
-      api.get.mockResolvedValue({ data: mockBlob });
+      api.get.mockResolvedValue({ data: mockBlob, headers: {} });
 
       await exportRecipePDF('rec-123', 'en', 'Special instructions for patient');
 
@@ -343,7 +350,7 @@ describe('recipeService', () => {
 
     it('should trigger file download', async () => {
       const mockBlob = new Blob(['pdf'], { type: 'application/pdf' });
-      api.get.mockResolvedValue({ data: mockBlob });
+      api.get.mockResolvedValue({ data: mockBlob, headers: {} });
 
       await exportRecipePDF('rec-123');
 

@@ -129,7 +129,7 @@ describe('ingredientService', () => {
 
       await getCategories();
 
-      expect(api.get).toHaveBeenCalledWith('/ingredients/categories');
+      expect(api.get).toHaveBeenCalledWith('/ingredients/categories-legacy');
     });
 
     it('should return list of categories', async () => {

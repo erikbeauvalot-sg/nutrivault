@@ -79,6 +79,14 @@ async function reset() {
     'Ingredient',
     // Task model
     'Task',
+    // Annotation model
+    'MeasureAnnotation',
+    // Visit types
+    'VisitType',
+    // Page views
+    'PageView',
+    // Ingredient category
+    'IngredientCategory',
     // Campaign models
     'EmailCampaignRecipient',
     'EmailCampaign',
@@ -201,7 +209,25 @@ async function seedBaseData() {
 
     // Admin permissions
     { code: 'admin.settings', description: 'Access admin settings', resource: 'admin', action: 'settings' },
-    { code: 'admin.ai_config', description: 'Configure AI settings', resource: 'admin', action: 'ai_config' }
+    { code: 'admin.ai_config', description: 'Configure AI settings', resource: 'admin', action: 'ai_config' },
+
+    // Document permissions
+    { code: 'documents.read', description: 'View documents', resource: 'documents', action: 'read' },
+    { code: 'documents.upload', description: 'Upload documents', resource: 'documents', action: 'upload' },
+    { code: 'documents.update', description: 'Update documents', resource: 'documents', action: 'update' },
+    { code: 'documents.delete', description: 'Delete documents', resource: 'documents', action: 'delete' },
+    { code: 'documents.download', description: 'Download documents', resource: 'documents', action: 'download' },
+    { code: 'documents.share', description: 'Share documents', resource: 'documents', action: 'share' },
+
+    // Recipe permissions
+    { code: 'recipes.read', description: 'View recipes', resource: 'recipes', action: 'read' },
+    { code: 'recipes.create', description: 'Create recipes', resource: 'recipes', action: 'create' },
+    { code: 'recipes.update', description: 'Update recipes', resource: 'recipes', action: 'update' },
+    { code: 'recipes.delete', description: 'Delete recipes', resource: 'recipes', action: 'delete' },
+    { code: 'recipes.share', description: 'Share recipes', resource: 'recipes', action: 'share' },
+
+    // Settings permissions
+    { code: 'settings.manage', description: 'Manage settings', resource: 'settings', action: 'manage' }
   ];
   const permissions = await db.Permission.bulkCreate(permissionData);
 
@@ -223,9 +249,12 @@ async function seedBaseData() {
     'patients.create', 'patients.read', 'patients.update', 'patients.read.all',
     'visits.create', 'visits.read', 'visits.update',
     'billing.create', 'billing.read', 'billing.update',
-    'custom_fields.read', 'measures.read', 'email_templates.read', 'billing_templates.read',
+    'custom_fields.read', 'measures.read', 'measures.create', 'measures.update',
+    'email_templates.read', 'billing_templates.read',
     'invoice_customization.read', 'invoice_customization.update',
-    'export.patients', 'export.visits', 'export.billing'
+    'export.patients', 'export.visits', 'export.billing',
+    'documents.read', 'documents.upload', 'documents.update', 'documents.delete', 'documents.download', 'documents.share',
+    'recipes.read', 'recipes.create', 'recipes.update', 'recipes.delete', 'recipes.share'
   ];
   const dietitianPermissions = dietitianPermissionCodes
     .filter(code => permissionMap[code])

@@ -8,6 +8,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import IngredientModal from '../IngredientModal';
 import * as ingredientService from '../../services/ingredientService';
+import * as ingredientCategoryService from '../../services/ingredientCategoryService';
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
@@ -19,16 +20,53 @@ vi.mock('react-i18next', () => ({
 // Mock ingredient service
 vi.mock('../../services/ingredientService', () => ({
   createIngredient: vi.fn(),
-  updateIngredient: vi.fn()
+  updateIngredient: vi.fn(),
+  lookupNutrition: vi.fn()
+}));
+
+// Mock ingredient category service
+vi.mock('../../services/ingredientCategoryService', () => ({
+  getCategories: vi.fn()
 }));
 
 // Mock react-toastify
 vi.mock('react-toastify', () => ({
   toast: {
     success: vi.fn(),
-    error: vi.fn()
+    error: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn()
   }
 }));
+
+const mockCategories = [
+  { id: 'cat-1', name: 'Proteins', icon: '🥩', sort_order: 1 },
+  { id: 'cat-2', name: 'Vegetables', icon: '🥬', sort_order: 2 },
+  { id: 'cat-3', name: 'Fruits', icon: '🍎', sort_order: 3 },
+  { id: 'cat-4', name: 'Grains', icon: '🌾', sort_order: 4 },
+  { id: 'cat-5', name: 'Dairy', icon: '🧀', sort_order: 5 },
+  { id: 'cat-6', name: 'Other', icon: '📦', sort_order: 6 }
+];
+
+/**
+ * Helper to get form controls by their label text.
+ * The component uses Form.Group without controlId, so labels are not
+ * associated to inputs via htmlFor/id. React Bootstrap Modal renders
+ * via a portal into document.body, so we search document.body rather
+ * than the render container.
+ */
+function getFieldByLabel(labelPattern) {
+  const labels = document.body.querySelectorAll('label');
+  for (const label of labels) {
+    if (labelPattern.test(label.textContent)) {
+      const group = label.closest('.mb-3');
+      if (!group) continue;
+      const input = group.querySelector('input, select');
+      if (input) return input;
+    }
+  }
+  throw new Error(`Could not find form control for label matching ${labelPattern}`);
+}
 
 describe('IngredientModal', () => {
   const mockOnHide = vi.fn();
@@ -44,7 +82,7 @@ describe('IngredientModal', () => {
   const sampleIngredient = {
     id: 'ing-123',
     name: 'Chicken Breast',
-    category: 'proteins',
+    category_id: 'cat-1',
     default_unit: 'g',
     nutrition_per_100g: {
       calories: 165,
@@ -58,6 +96,7 @@ describe('IngredientModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    ingredientCategoryService.getCategories.mockResolvedValue(mockCategories);
     ingredientService.createIngredient.mockResolvedValue({ id: 'new-ing' });
     ingredientService.updateIngredient.mockResolvedValue(sampleIngredient);
   });
@@ -87,48 +126,58 @@ describe('IngredientModal', () => {
   describe('Form Fields', () => {
     it('renders name field', () => {
       render(<IngredientModal {...defaultProps} />);
-      expect(screen.getByLabelText(/Name/)).toBeInTheDocument();
+      expect(getFieldByLabel(/Name/)).toBeInTheDocument();
     });
 
-    it('renders category select', () => {
+    it('renders category select', async () => {
       render(<IngredientModal {...defaultProps} />);
-      expect(screen.getByLabelText(/Category/)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(getFieldByLabel(/Category/)).toBeInTheDocument();
+      });
     });
 
-    it('renders unit select', () => {
+    it('renders unit select', async () => {
       render(<IngredientModal {...defaultProps} />);
-      expect(screen.getByLabelText(/Default Unit/)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(getFieldByLabel(/Default Unit/)).toBeInTheDocument();
+      });
     });
 
-    it('renders nutrition fields', () => {
+    it('renders nutrition fields', async () => {
       render(<IngredientModal {...defaultProps} />);
-      expect(screen.getByLabelText(/Calories/)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Protein/)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Carbs/)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Fat/)).toBeInTheDocument();
-      expect(screen.getByLabelText(/Fiber/)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(getFieldByLabel(/Calories/)).toBeInTheDocument();
+      });
+      expect(getFieldByLabel(/Protein/)).toBeInTheDocument();
+      expect(getFieldByLabel(/Carbs/)).toBeInTheDocument();
+      expect(getFieldByLabel(/Fat/)).toBeInTheDocument();
+      expect(getFieldByLabel(/Fiber/)).toBeInTheDocument();
     });
 
     it('renders allergen badges', () => {
       render(<IngredientModal {...defaultProps} />);
-      expect(screen.getByText('Gluten')).toBeInTheDocument();
-      expect(screen.getByText('Dairy')).toBeInTheDocument();
-      expect(screen.getByText('Eggs')).toBeInTheDocument();
+      expect(screen.getByText('gluten')).toBeInTheDocument();
+      expect(screen.getByText('dairy')).toBeInTheDocument();
+      expect(screen.getByText('eggs')).toBeInTheDocument();
     });
   });
 
   describe('Create Mode', () => {
-    it('starts with empty form', () => {
+    it('starts with empty form', async () => {
       render(<IngredientModal {...defaultProps} />);
 
-      const nameInput = screen.getByLabelText(/Name/);
-      expect(nameInput).toHaveValue('');
+      await waitFor(() => {
+        expect(getFieldByLabel(/Name/)).toHaveValue('');
+      });
     });
 
     it('creates ingredient on submit', async () => {
       render(<IngredientModal {...defaultProps} />);
 
-      const nameInput = screen.getByLabelText(/Name/);
+      await waitFor(() => {
+        expect(getFieldByLabel(/Name/)).toBeInTheDocument();
+      });
+      const nameInput = getFieldByLabel(/Name/);
       await userEvent.type(nameInput, 'New Ingredient');
 
       const saveButton = screen.getByText('Save');
@@ -142,7 +191,10 @@ describe('IngredientModal', () => {
     it('calls onSuccess after successful creation', async () => {
       render(<IngredientModal {...defaultProps} />);
 
-      const nameInput = screen.getByLabelText(/Name/);
+      await waitFor(() => {
+        expect(getFieldByLabel(/Name/)).toBeInTheDocument();
+      });
+      const nameInput = getFieldByLabel(/Name/);
       await userEvent.type(nameInput, 'New Ingredient');
 
       const saveButton = screen.getByText('Save');
@@ -156,7 +208,10 @@ describe('IngredientModal', () => {
     it('calls onHide after successful creation', async () => {
       render(<IngredientModal {...defaultProps} />);
 
-      const nameInput = screen.getByLabelText(/Name/);
+      await waitFor(() => {
+        expect(getFieldByLabel(/Name/)).toBeInTheDocument();
+      });
+      const nameInput = getFieldByLabel(/Name/);
       await userEvent.type(nameInput, 'New Ingredient');
 
       const saveButton = screen.getByText('Save');
@@ -169,24 +224,29 @@ describe('IngredientModal', () => {
   });
 
   describe('Edit Mode', () => {
-    it('populates form with ingredient data', () => {
+    it('populates form with ingredient data', async () => {
       render(<IngredientModal {...defaultProps} ingredient={sampleIngredient} />);
 
-      const nameInput = screen.getByLabelText(/Name/);
-      expect(nameInput).toHaveValue('Chicken Breast');
+      await waitFor(() => {
+        expect(getFieldByLabel(/Name/)).toHaveValue('Chicken Breast');
+      });
     });
 
-    it('populates nutrition fields', () => {
+    it('populates nutrition fields', async () => {
       render(<IngredientModal {...defaultProps} ingredient={sampleIngredient} />);
 
-      const caloriesInput = screen.getByLabelText(/Calories/);
-      expect(caloriesInput).toHaveValue(165);
+      await waitFor(() => {
+        expect(getFieldByLabel(/Calories/)).toHaveValue(165);
+      });
     });
 
     it('updates ingredient on submit', async () => {
       render(<IngredientModal {...defaultProps} ingredient={sampleIngredient} />);
 
-      const nameInput = screen.getByLabelText(/Name/);
+      await waitFor(() => {
+        expect(getFieldByLabel(/Name/)).toHaveValue('Chicken Breast');
+      });
+      const nameInput = getFieldByLabel(/Name/);
       await userEvent.clear(nameInput);
       await userEvent.type(nameInput, 'Updated Chicken');
 
@@ -235,7 +295,7 @@ describe('IngredientModal', () => {
         expect(screen.getByText('This field is required')).toBeInTheDocument();
       });
 
-      const nameInput = screen.getByLabelText(/Name/);
+      const nameInput = getFieldByLabel(/Name/);
       await userEvent.type(nameInput, 'Valid Name');
 
       expect(screen.queryByText('This field is required')).not.toBeInTheDocument();
@@ -246,7 +306,7 @@ describe('IngredientModal', () => {
     it('toggles allergen selection when clicked', async () => {
       render(<IngredientModal {...defaultProps} />);
 
-      const glutenBadge = screen.getByText('Gluten');
+      const glutenBadge = screen.getByText('gluten');
       fireEvent.click(glutenBadge);
 
       // Badge should change appearance (bg-warning when selected)
@@ -256,7 +316,7 @@ describe('IngredientModal', () => {
     it('deselects allergen when clicked again', async () => {
       render(<IngredientModal {...defaultProps} />);
 
-      const glutenBadge = screen.getByText('Gluten');
+      const glutenBadge = screen.getByText('gluten');
       fireEvent.click(glutenBadge);
       fireEvent.click(glutenBadge);
 
@@ -266,10 +326,13 @@ describe('IngredientModal', () => {
     it('includes selected allergens in submission', async () => {
       render(<IngredientModal {...defaultProps} />);
 
-      const nameInput = screen.getByLabelText(/Name/);
+      await waitFor(() => {
+        expect(getFieldByLabel(/Name/)).toBeInTheDocument();
+      });
+      const nameInput = getFieldByLabel(/Name/);
       await userEvent.type(nameInput, 'Wheat Bread');
 
-      const glutenBadge = screen.getByText('Gluten');
+      const glutenBadge = screen.getByText('gluten');
       fireEvent.click(glutenBadge);
 
       const saveButton = screen.getByText('Save');
@@ -287,7 +350,10 @@ describe('IngredientModal', () => {
     it('accepts decimal values for nutrition', async () => {
       render(<IngredientModal {...defaultProps} />);
 
-      const proteinInput = screen.getByLabelText(/Protein/);
+      await waitFor(() => {
+        expect(getFieldByLabel(/Protein/)).toBeInTheDocument();
+      });
+      const proteinInput = getFieldByLabel(/Protein/);
       await userEvent.type(proteinInput, '3.5');
 
       expect(proteinInput).toHaveValue(3.5);
@@ -296,13 +362,16 @@ describe('IngredientModal', () => {
     it('includes nutrition in submission', async () => {
       render(<IngredientModal {...defaultProps} />);
 
-      const nameInput = screen.getByLabelText(/Name/);
+      await waitFor(() => {
+        expect(getFieldByLabel(/Name/)).toBeInTheDocument();
+      });
+      const nameInput = getFieldByLabel(/Name/);
       await userEvent.type(nameInput, 'Test Food');
 
-      const caloriesInput = screen.getByLabelText(/Calories/);
+      const caloriesInput = getFieldByLabel(/Calories/);
       await userEvent.type(caloriesInput, '100');
 
-      const proteinInput = screen.getByLabelText(/Protein/);
+      const proteinInput = getFieldByLabel(/Protein/);
       await userEvent.type(proteinInput, '10');
 
       const saveButton = screen.getByText('Save');
@@ -322,47 +391,57 @@ describe('IngredientModal', () => {
   });
 
   describe('Category Selection', () => {
-    it('lists all categories', () => {
+    it('lists all categories from API', async () => {
       render(<IngredientModal {...defaultProps} />);
 
-      const categorySelect = screen.getByLabelText(/Category/);
-      expect(categorySelect).toBeInTheDocument();
-
-      // Open dropdown and check options
-      const options = categorySelect.querySelectorAll('option');
-      expect(options.length).toBeGreaterThan(5);
+      await waitFor(() => {
+        const categorySelect = getFieldByLabel(/Category/);
+        const options = categorySelect.querySelectorAll('option');
+        // 6 categories + 1 "Select..." placeholder
+        expect(options.length).toBe(7);
+      });
     });
 
-    it('includes selected category in submission', async () => {
+    it('includes selected category_id in submission', async () => {
       render(<IngredientModal {...defaultProps} />);
 
-      const nameInput = screen.getByLabelText(/Name/);
+      await waitFor(() => {
+        const categorySelect = getFieldByLabel(/Category/);
+        const options = categorySelect.querySelectorAll('option');
+        expect(options.length).toBe(7);
+      });
+
+      const nameInput = getFieldByLabel(/Name/);
       await userEvent.type(nameInput, 'Carrot');
 
-      const categorySelect = screen.getByLabelText(/Category/);
-      fireEvent.change(categorySelect, { target: { value: 'vegetables' } });
+      const categorySelect = getFieldByLabel(/Category/);
+      fireEvent.change(categorySelect, { target: { value: 'cat-2' } });
 
       const saveButton = screen.getByText('Save');
       fireEvent.click(saveButton);
 
       await waitFor(() => {
         expect(ingredientService.createIngredient).toHaveBeenCalledWith(
-          expect.objectContaining({ category: 'vegetables' })
+          expect.objectContaining({ category_id: 'cat-2' })
         );
       });
     });
   });
 
   describe('Unit Selection', () => {
-    it('lists common units', () => {
+    it('lists common units', async () => {
       render(<IngredientModal {...defaultProps} />);
 
-      const unitSelect = screen.getByLabelText(/Default Unit/);
+      await waitFor(() => {
+        const unitSelect = getFieldByLabel(/Default Unit/);
+        expect(unitSelect).toBeInTheDocument();
+      });
 
-      // Check for common units
-      expect(unitSelect).toContainHTML('g');
-      expect(unitSelect).toContainHTML('ml');
-      expect(unitSelect).toContainHTML('cup');
+      const unitSelect = getFieldByLabel(/Default Unit/);
+      const options = Array.from(unitSelect.querySelectorAll('option')).map(o => o.value);
+      expect(options).toContain('g');
+      expect(options).toContain('ml');
+      expect(options).toContain('cup');
     });
   });
 
@@ -397,7 +476,10 @@ describe('IngredientModal', () => {
 
       render(<IngredientModal {...defaultProps} />);
 
-      const nameInput = screen.getByLabelText(/Name/);
+      await waitFor(() => {
+        expect(getFieldByLabel(/Name/)).toBeInTheDocument();
+      });
+      const nameInput = getFieldByLabel(/Name/);
       await userEvent.type(nameInput, 'New Ingredient');
 
       const saveButton = screen.getByText('Save');
@@ -420,7 +502,10 @@ describe('IngredientModal', () => {
 
       render(<IngredientModal {...defaultProps} />);
 
-      const nameInput = screen.getByLabelText(/Name/);
+      await waitFor(() => {
+        expect(getFieldByLabel(/Name/)).toBeInTheDocument();
+      });
+      const nameInput = getFieldByLabel(/Name/);
       await userEvent.type(nameInput, 'New Ingredient');
 
       const saveButton = screen.getByText('Save');
@@ -442,7 +527,10 @@ describe('IngredientModal', () => {
 
       render(<IngredientModal {...defaultProps} />);
 
-      const nameInput = screen.getByLabelText(/Name/);
+      await waitFor(() => {
+        expect(getFieldByLabel(/Name/)).toBeInTheDocument();
+      });
+      const nameInput = getFieldByLabel(/Name/);
       await userEvent.type(nameInput, 'Test Ingredient');
 
       const saveButton = screen.getByText('Save');
@@ -458,7 +546,10 @@ describe('IngredientModal', () => {
 
       render(<IngredientModal {...defaultProps} />);
 
-      const nameInput = screen.getByLabelText(/Name/);
+      await waitFor(() => {
+        expect(getFieldByLabel(/Name/)).toBeInTheDocument();
+      });
+      const nameInput = getFieldByLabel(/Name/);
       await userEvent.type(nameInput, 'Test Ingredient');
 
       const saveButton = screen.getByText('Save');

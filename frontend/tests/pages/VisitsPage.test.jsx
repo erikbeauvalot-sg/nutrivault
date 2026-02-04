@@ -159,7 +159,7 @@ describe('VisitsPage', () => {
   });
 
   describe('Navigation', () => {
-    it('should navigate to create visit page', async () => {
+    it('should open create visit modal when clicking create button', async () => {
       const user = userEvent.setup();
       renderWithProviders(<VisitsPage />, { user: mockAdminUser });
 
@@ -176,7 +176,11 @@ describe('VisitsPage', () => {
 
       if (createButton) {
         await user.click(createButton);
-        expect(mockNavigate).toHaveBeenCalledWith('/visits/create');
+
+        // The component opens a CreateVisitModal instead of navigating
+        await waitFor(() => {
+          expect(screen.getByRole('dialog')).toBeInTheDocument();
+        });
       }
     });
 

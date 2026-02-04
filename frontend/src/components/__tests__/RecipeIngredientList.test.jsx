@@ -18,7 +18,13 @@ vi.mock('react-i18next', () => ({
 
 // Mock ingredient service
 vi.mock('../../services/ingredientService', () => ({
-  searchIngredients: vi.fn()
+  searchIngredients: vi.fn(),
+  getIngredients: vi.fn().mockResolvedValue({ data: [] })
+}));
+
+// Mock IngredientModal (used by IngredientSelector)
+vi.mock('../IngredientModal', () => ({
+  default: () => null
 }));
 
 describe('RecipeIngredientList', () => {
@@ -130,8 +136,7 @@ describe('RecipeIngredientList', () => {
       render(<RecipeIngredientList ingredients={sampleIngredients} onChange={mockOnChange} />);
 
       const quantityInput = screen.getAllByRole('spinbutton')[0];
-      await userEvent.clear(quantityInput);
-      await userEvent.type(quantityInput, '250');
+      fireEvent.change(quantityInput, { target: { value: '250' } });
 
       expect(mockOnChange).toHaveBeenCalled();
       const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
@@ -265,13 +270,16 @@ describe('RecipeIngredientList', () => {
 
       // Should show text, not inputs
       expect(screen.getByText('200')).toBeInTheDocument();
-      expect(screen.getByText('g')).toBeInTheDocument();
+      // Both ingredients have unit 'g', so there are multiple matches
+      expect(screen.getAllByText('g').length).toBe(2);
     });
 
     it('shows optional badge for optional ingredients', () => {
       render(<RecipeIngredientList ingredients={sampleIngredients} onChange={mockOnChange} readOnly={true} />);
 
-      expect(screen.getByText('Optional')).toBeInTheDocument();
+      // "Optional" appears both as a table header and as a badge for optional ingredients
+      const optionalElements = screen.getAllByText('Optional');
+      expect(optionalElements.length).toBeGreaterThanOrEqual(2); // header + badge
     });
 
     it('shows notes as text', () => {

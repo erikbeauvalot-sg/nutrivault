@@ -112,7 +112,8 @@ describe('DocumentSharingModal', () => {
     it('shows close button', () => {
       render(<DocumentSharingModal {...defaultProps} />);
 
-      expect(screen.getByRole('button', { name: /close/i })).toBeInTheDocument();
+      // Footer close button text is the i18n key "common.close"
+      expect(screen.getByRole('button', { name: 'common.close' })).toBeInTheDocument();
     });
   });
 
@@ -132,7 +133,9 @@ describe('DocumentSharingModal', () => {
     it('allows setting expiration date', () => {
       render(<DocumentSharingModal {...defaultProps} />);
 
-      const dateInput = screen.getByLabelText(/Expiration Date/i);
+      // Form.Group has no controlId, so label is not associated with input.
+      // Find the datetime-local input directly by its type attribute.
+      const dateInput = document.querySelector('input[type="datetime-local"]');
       fireEvent.change(dateInput, { target: { value: '2024-12-31T23:59' } });
 
       expect(dateInput.value).toBe('2024-12-31T23:59');
@@ -141,19 +144,20 @@ describe('DocumentSharingModal', () => {
     it('allows toggling password protection', () => {
       render(<DocumentSharingModal {...defaultProps} />);
 
-      const passwordSwitch = screen.getByRole('switch');
+      // Bootstrap Form.Check type="switch" renders as a checkbox in jsdom
+      const passwordSwitch = screen.getByRole('checkbox', { name: /Password protect this link/i });
       fireEvent.click(passwordSwitch);
 
-      expect(screen.getByLabelText('Password *')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/Enter password/i)).toBeInTheDocument();
     });
 
     it('shows password field when password protection is enabled', () => {
       render(<DocumentSharingModal {...defaultProps} />);
 
-      const passwordSwitch = screen.getByRole('switch');
+      const passwordSwitch = screen.getByRole('checkbox', { name: /Password protect this link/i });
       fireEvent.click(passwordSwitch);
 
-      const passwordInput = screen.getByLabelText('Password *');
+      const passwordInput = screen.getByPlaceholderText(/Enter password/i);
       expect(passwordInput).toBeInTheDocument();
       expect(passwordInput).toHaveAttribute('type', 'password');
     });
@@ -162,24 +166,24 @@ describe('DocumentSharingModal', () => {
       render(<DocumentSharingModal {...defaultProps} />);
 
       // Enable password protection
-      const passwordSwitch = screen.getByRole('switch');
+      const passwordSwitch = screen.getByRole('checkbox', { name: /Password protect this link/i });
       fireEvent.click(passwordSwitch);
 
       // Enter password
-      const passwordInput = screen.getByLabelText('Password *');
+      const passwordInput = screen.getByPlaceholderText(/Enter password/i);
       fireEvent.change(passwordInput, { target: { value: 'testpass' } });
 
       // Disable password protection
       fireEvent.click(passwordSwitch);
 
       // Password field should be gone
-      expect(screen.queryByLabelText('Password *')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText(/Enter password/i)).not.toBeInTheDocument();
     });
 
     it('allows setting max downloads', () => {
       render(<DocumentSharingModal {...defaultProps} />);
 
-      const maxDownloadsInput = screen.getByLabelText(/Maximum Downloads/i);
+      const maxDownloadsInput = screen.getByPlaceholderText('Unlimited');
       fireEvent.change(maxDownloadsInput, { target: { value: '10' } });
 
       expect(maxDownloadsInput.value).toBe('10');
@@ -188,7 +192,7 @@ describe('DocumentSharingModal', () => {
     it('allows adding notes', () => {
       render(<DocumentSharingModal {...defaultProps} />);
 
-      const notesInput = screen.getByLabelText(/Notes/i);
+      const notesInput = screen.getByPlaceholderText(/Add a note about this share/i);
       fireEvent.change(notesInput, { target: { value: 'Test note' } });
 
       expect(notesInput.value).toBe('Test note');
@@ -202,12 +206,9 @@ describe('DocumentSharingModal', () => {
     it('shows error when no patient selected', async () => {
       render(<DocumentSharingModal {...defaultProps} />);
 
+      // When no patient is selected, the Create Share Link button is disabled
       const createButton = screen.getByRole('button', { name: /Create Share Link/i });
-      fireEvent.click(createButton);
-
-      await waitFor(() => {
-        expect(screen.getByText('Please select a patient')).toBeInTheDocument();
-      });
+      expect(createButton).toBeDisabled();
     });
 
     it('shows error for short password', async () => {
@@ -218,11 +219,11 @@ describe('DocumentSharingModal', () => {
       fireEvent.change(select, { target: { value: 'patient-1' } });
 
       // Enable password
-      const passwordSwitch = screen.getByRole('switch');
+      const passwordSwitch = screen.getByRole('checkbox', { name: /Password protect this link/i });
       fireEvent.click(passwordSwitch);
 
       // Enter short password
-      const passwordInput = screen.getByLabelText('Password *');
+      const passwordInput = screen.getByPlaceholderText(/Enter password/i);
       fireEvent.change(passwordInput, { target: { value: '123' } });
 
       // Try to create
@@ -251,7 +252,7 @@ describe('DocumentSharingModal', () => {
       fireEvent.change(select, { target: { value: 'patient-1' } });
 
       // Set max downloads
-      const maxDownloadsInput = screen.getByLabelText(/Maximum Downloads/i);
+      const maxDownloadsInput = screen.getByPlaceholderText('Unlimited');
       fireEvent.change(maxDownloadsInput, { target: { value: '5' } });
 
       // Create share
@@ -424,8 +425,13 @@ describe('DocumentSharingModal', () => {
       render(<DocumentSharingModal {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText(/John Doe/)).toBeInTheDocument();
-        expect(screen.getByText(/Downloads: 3\/10/)).toBeInTheDocument();
+        // Patient name appears in both the select option and accordion header
+        const matches = screen.getAllByText(/John Doe/);
+        expect(matches.length).toBeGreaterThanOrEqual(2);
+        // Download count text may be split across elements, so use a function matcher
+        expect(screen.getByText((content, element) => {
+          return element?.tagName === 'SMALL' && /Downloads.*3.*\/.*10/.test(element.textContent);
+        })).toBeInTheDocument();
       });
     });
 
@@ -512,11 +518,12 @@ describe('DocumentSharingModal', () => {
     it('shows revoke button for active shares', async () => {
       render(<DocumentSharingModal {...defaultProps} />);
 
-      // Expand the accordion to see the revoke button
+      // Wait for shares to load, then expand the accordion
       await waitFor(() => {
-        const accordionButton = screen.getByText(/John Doe/).closest('button');
-        fireEvent.click(accordionButton);
+        expect(document.querySelector('.accordion-button')).toBeInTheDocument();
       });
+
+      fireEvent.click(document.querySelector('.accordion-button'));
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /Revoke Link/i })).toBeInTheDocument();
@@ -526,11 +533,12 @@ describe('DocumentSharingModal', () => {
     it('opens confirmation modal when revoke is clicked', async () => {
       render(<DocumentSharingModal {...defaultProps} />);
 
-      // Expand accordion
+      // Wait for shares to load, then expand accordion
       await waitFor(() => {
-        const accordionButton = screen.getByText(/John Doe/).closest('button');
-        fireEvent.click(accordionButton);
+        expect(document.querySelector('.accordion-button')).toBeInTheDocument();
       });
+
+      fireEvent.click(document.querySelector('.accordion-button'));
 
       // Click revoke
       await waitFor(() => {
@@ -544,11 +552,12 @@ describe('DocumentSharingModal', () => {
     it('calls revokeShareLink on confirmation', async () => {
       render(<DocumentSharingModal {...defaultProps} />);
 
-      // Expand accordion
+      // Wait for shares to load, then expand accordion
       await waitFor(() => {
-        const accordionButton = screen.getByText(/John Doe/).closest('button');
-        fireEvent.click(accordionButton);
+        expect(document.querySelector('.accordion-button')).toBeInTheDocument();
       });
+
+      fireEvent.click(document.querySelector('.accordion-button'));
 
       // Click revoke
       await waitFor(() => {
@@ -592,35 +601,43 @@ describe('DocumentSharingModal', () => {
     it('copies link to clipboard', async () => {
       render(<DocumentSharingModal {...defaultProps} />);
 
-      // Expand accordion
+      // Wait for shares to load, then expand accordion
       await waitFor(() => {
-        const accordionButton = screen.getByText(/John Doe/).closest('button');
-        fireEvent.click(accordionButton);
+        expect(document.querySelector('.accordion-button')).toBeInTheDocument();
       });
 
-      // Click copy button
+      fireEvent.click(document.querySelector('.accordion-button'));
+
+      // Wait for accordion body to expand, then click copy
       await waitFor(() => {
-        const copyButton = screen.getByRole('button', { name: /Copy/i });
-        fireEvent.click(copyButton);
+        expect(screen.getByRole('button', { name: /^Copy$/i })).toBeInTheDocument();
       });
 
-      expect(mockClipboard.writeText).toHaveBeenCalledWith('http://localhost:5173/shared/token1');
+      const copyButton = screen.getByRole('button', { name: /^Copy$/i });
+      fireEvent.click(copyButton);
+
+      await waitFor(() => {
+        expect(mockClipboard.writeText).toHaveBeenCalledWith('http://localhost:5173/shared/token1');
+      });
     });
 
     it('shows Copied! feedback after copying', async () => {
       render(<DocumentSharingModal {...defaultProps} />);
 
-      // Expand accordion
+      // Wait for shares to load, then expand accordion
       await waitFor(() => {
-        const accordionButton = screen.getByText(/John Doe/).closest('button');
-        fireEvent.click(accordionButton);
+        expect(document.querySelector('.accordion-button')).toBeInTheDocument();
       });
 
-      // Click copy button
+      fireEvent.click(document.querySelector('.accordion-button'));
+
+      // Wait for accordion body to expand, then click copy
       await waitFor(() => {
-        const copyButton = screen.getByRole('button', { name: /Copy/i });
-        fireEvent.click(copyButton);
+        expect(screen.getByRole('button', { name: /^Copy$/i })).toBeInTheDocument();
       });
+
+      const copyButton = screen.getByRole('button', { name: /^Copy$/i });
+      fireEvent.click(copyButton);
 
       await waitFor(() => {
         expect(screen.getByText('Copied!')).toBeInTheDocument();
@@ -635,7 +652,7 @@ describe('DocumentSharingModal', () => {
     it('calls onHide when close button is clicked', async () => {
       render(<DocumentSharingModal {...defaultProps} />);
 
-      const closeButton = screen.getByRole('button', { name: /close/i });
+      const closeButton = screen.getByRole('button', { name: 'common.close' });
       fireEvent.click(closeButton);
 
       expect(mockOnHide).toHaveBeenCalled();
@@ -658,8 +675,8 @@ describe('DocumentSharingModal', () => {
       const createButton = screen.getByRole('button', { name: /Create Share Link/i });
       fireEvent.click(createButton);
 
-      // Try to close
-      const closeButton = screen.getByRole('button', { name: /close/i });
+      // Try to close - button is disabled while loading
+      const closeButton = screen.getByRole('button', { name: 'common.close' });
       fireEvent.click(closeButton);
 
       // Modal should still be open
@@ -676,7 +693,7 @@ describe('DocumentSharingModal', () => {
       fireEvent.change(select, { target: { value: 'patient-1' } });
 
       // Close modal
-      const closeButton = screen.getByRole('button', { name: /close/i });
+      const closeButton = screen.getByRole('button', { name: 'common.close' });
       fireEvent.click(closeButton);
 
       // Reopen modal
