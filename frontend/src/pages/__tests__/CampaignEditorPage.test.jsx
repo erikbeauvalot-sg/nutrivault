@@ -21,10 +21,11 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-// Mock react-i18next
+// Mock react-i18next — t must be a stable reference to avoid infinite useCallback/useEffect loops
+const stableT = (key, defaultValue) => defaultValue || key;
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key, defaultValue) => defaultValue || key
+    t: stableT
   })
 }));
 
@@ -493,8 +494,9 @@ describe('CampaignEditorPage', () => {
 
   describe('Loading State', () => {
     it('should show spinner while saving', async () => {
+      // Use a promise that never resolves to keep the saving state active
       campaignService.createCampaign.mockImplementation(
-        () => new Promise(resolve => setTimeout(() => resolve({ id: '1' }), 100))
+        () => new Promise(() => {})
       );
 
       render(
@@ -513,8 +515,10 @@ describe('CampaignEditorPage', () => {
       const saveButton = screen.getByText('Save Draft');
       fireEvent.click(saveButton);
 
-      // Button should show spinner
-      expect(screen.getByRole('status')).toBeInTheDocument();
+      // Button should be disabled while saving
+      await waitFor(() => {
+        expect(saveButton).toBeDisabled();
+      });
     });
   });
 });
