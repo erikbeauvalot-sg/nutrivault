@@ -180,7 +180,7 @@ const getRecentActivity = async (limit = 20, since = null) => {
   const recentAlerts = await db.MeasureAlert.findAll({
     where: {
       created_at: { [Op.gte]: defaultSince },
-      is_active: true
+      acknowledged_at: null
     },
     include: [
       {
@@ -241,10 +241,10 @@ const getRecentActivity = async (limit = 20, since = null) => {
       id: `invoice-${invoice.id}`,
       type: 'INVOICE_CREATED',
       ...ACTIVITY_TYPES.INVOICE_CREATED,
-      message: `Facture créée - €${invoice.total_amount.toFixed(2)} pour ${patientName}`,
+      message: `Facture créée - €${parseFloat(invoice.amount_total || 0).toFixed(2)} pour ${patientName}`,
       patient_id: invoice.patient?.id,
       patient_name: patientName,
-      metadata: { amount: invoice.total_amount },
+      metadata: { amount: invoice.amount_total },
       created_at: invoice.created_at
     });
   });
@@ -253,7 +253,7 @@ const getRecentActivity = async (limit = 20, since = null) => {
   const overdueInvoices = await db.Billing.findAll({
     where: {
       due_date: { [Op.lt]: now },
-      payment_status: { [Op.in]: ['PENDING', 'PARTIAL'] }
+      status: { [Op.in]: ['SENT', 'OVERDUE'] }
     },
     include: [{
       model: db.Patient,

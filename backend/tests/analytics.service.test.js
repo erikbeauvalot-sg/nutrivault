@@ -66,7 +66,7 @@ describe('Analytics Service', () => {
       name: 'weight',
       display_name: 'Weight',
       unit: 'kg',
-      category: 'body',
+      category: 'anthropometric',
       data_type: 'numeric',
       normal_range_min: 50,
       normal_range_max: 100,
@@ -79,7 +79,7 @@ describe('Analytics Service', () => {
       name: 'blood_pressure_systolic',
       display_name: 'Blood Pressure (Systolic)',
       unit: 'mmHg',
-      category: 'cardiovascular',
+      category: 'vitals',
       data_type: 'numeric',
       normal_range_min: 90,
       normal_range_max: 140,
@@ -107,19 +107,22 @@ describe('Analytics Service', () => {
           patient_id: testPatient1.id,
           measure_definition_id: testMeasureDefinition.id,
           numeric_value: 75,
-          measured_at: new Date()
+          measured_at: new Date(),
+          recorded_by: testDietitian.id
         },
         {
           patient_id: testPatient1.id,
           measure_definition_id: testMeasureDefinition.id,
           numeric_value: 76,
-          measured_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+          measured_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          recorded_by: testDietitian.id
         },
         {
           patient_id: testPatient2.id,
           measure_definition_id: testMeasureDefinition.id,
           numeric_value: 68,
-          measured_at: new Date()
+          measured_at: new Date(),
+          recorded_by: testDietitian.id
         }
       ]);
 
@@ -141,13 +144,15 @@ describe('Analytics Service', () => {
           patient_id: testPatient1.id,
           measure_definition_id: testMeasureDefinition.id,
           numeric_value: 75,
-          measured_at: now
+          measured_at: now,
+          recorded_by: testDietitian.id
         },
         {
           patient_id: testPatient1.id,
           measure_definition_id: testMeasureDefinition.id,
           numeric_value: 78,
-          measured_at: twoMonthsAgo
+          measured_at: twoMonthsAgo,
+          recorded_by: testDietitian.id
         }
       ]);
 
@@ -165,7 +170,8 @@ describe('Analytics Service', () => {
         patient_id: testPatient1.id,
         measure_definition_id: testMeasureDefinition.id,
         numeric_value: 75, // Within normal range (50-100)
-        measured_at: new Date()
+        measured_at: new Date(),
+        recorded_by: testDietitian.id
       });
 
       // Out of range measure
@@ -173,7 +179,8 @@ describe('Analytics Service', () => {
         patient_id: testPatient2.id,
         measure_definition_id: testMeasureDefinition.id,
         numeric_value: 110, // Above normal max (100)
-        measured_at: new Date()
+        measured_at: new Date(),
+        recorded_by: testDietitian.id
       });
 
       const result = await analyticsService.getHealthTrends({});
@@ -188,19 +195,22 @@ describe('Analytics Service', () => {
           patient_id: testPatient1.id,
           measure_definition_id: testMeasureDefinition.id,
           numeric_value: 75,
-          measured_at: new Date()
+          measured_at: new Date(),
+          recorded_by: testDietitian.id
         },
         {
           patient_id: testPatient1.id,
           measure_definition_id: testMeasureDefinition.id,
           numeric_value: 76,
-          measured_at: new Date()
+          measured_at: new Date(),
+          recorded_by: testDietitian.id
         },
         {
           patient_id: testPatient1.id,
           measure_definition_id: testMeasureDefinition2.id,
           numeric_value: 120,
-          measured_at: new Date()
+          measured_at: new Date(),
+          recorded_by: testDietitian.id
         }
       ]);
 
@@ -235,7 +245,7 @@ describe('Analytics Service', () => {
           amount_total: 150,
           amount_paid: 0,
           amount_due: 150,
-          status: 'PENDING',
+          status: 'SENT',
           is_active: true
         },
         {
@@ -294,12 +304,12 @@ describe('Analytics Service', () => {
       const result = await analyticsService.getFinancialMetrics({});
 
       const paidStatus = result.revenueByStatus.find(r => r.status === 'PAID');
-      const pendingStatus = result.revenueByStatus.find(r => r.status === 'PENDING');
+      const sentStatus = result.revenueByStatus.find(r => r.status === 'SENT');
 
       expect(paidStatus).toBeDefined();
       expect(paidStatus.total).toBe(100);
-      expect(pendingStatus).toBeDefined();
-      expect(pendingStatus.total).toBe(150);
+      expect(sentStatus).toBeDefined();
+      expect(sentStatus.total).toBe(150);
     });
 
     it('should breakdown payment methods', async () => {
@@ -325,21 +335,27 @@ describe('Analytics Service', () => {
         {
           patient_id: testPatient1.id,
           email_type: 'reminder',
-          recipient_email: testPatient1.email,
+          sent_to: testPatient1.email,
+          template_slug: 'appointment-reminder',
+          subject: 'Appointment Reminder',
           status: 'sent',
           sent_at: new Date()
         },
         {
           patient_id: testPatient1.id,
           email_type: 'reminder',
-          recipient_email: testPatient1.email,
+          sent_to: testPatient1.email,
+          template_slug: 'appointment-reminder',
+          subject: 'Appointment Reminder',
           status: 'sent',
           sent_at: new Date()
         },
         {
           patient_id: testPatient2.id,
           email_type: 'newsletter',
-          recipient_email: testPatient2.email,
+          sent_to: testPatient2.email,
+          template_slug: 'monthly-newsletter',
+          subject: 'Monthly Newsletter',
           status: 'failed',
           sent_at: new Date()
         }
@@ -455,7 +471,8 @@ describe('Analytics Service', () => {
           patient_id: testPatient1.id,
           measure_definition_id: testMeasureDefinition.id,
           numeric_value: 75,
-          measured_at: new Date(now.getTime() - i * 30 * 24 * 60 * 60 * 1000)
+          measured_at: new Date(now.getTime() - i * 30 * 24 * 60 * 60 * 1000),
+          recorded_by: testDietitian.id
         });
       }
 
@@ -490,7 +507,8 @@ describe('Analytics Service', () => {
         patient_id: testPatient1.id,
         measure_definition_id: testMeasureDefinition.id,
         numeric_value: 110, // Above normal max (100)
-        measured_at: new Date()
+        measured_at: new Date(),
+        recorded_by: testDietitian.id
       });
 
       const result = await analyticsService.calculatePatientHealthScore(testPatient1.id);
@@ -521,7 +539,8 @@ describe('Analytics Service', () => {
           patient_id: testPatient1.id,
           measure_definition_id: testMeasureDefinition.id,
           numeric_value: 75,
-          measured_at: new Date(Date.now() - i * 30 * 24 * 60 * 60 * 1000)
+          measured_at: new Date(Date.now() - i * 30 * 24 * 60 * 60 * 1000),
+          recorded_by: testDietitian.id
         });
       }
 

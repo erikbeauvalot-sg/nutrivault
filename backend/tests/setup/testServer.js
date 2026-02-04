@@ -38,6 +38,7 @@ function createTestApp() {
   const measureAlertsRoutes = require('../../src/routes/measureAlerts');
   const appointmentRemindersRoutes = require('../../src/routes/appointmentReminders');
   const themeRoutes = require('../../src/routes/themes');
+  const campaignRoutes = require('../../src/routes/campaigns');
 
   // Mount routes
   app.use('/api/auth', authRoutes);
@@ -56,6 +57,7 @@ function createTestApp() {
   app.use('/api', measureAlertsRoutes);
   app.use('/api/appointment-reminders', appointmentRemindersRoutes);
   app.use('/api/themes', themeRoutes);
+  app.use('/api/campaigns', campaignRoutes);
 
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(__dirname, '../../../uploads')));

@@ -14,6 +14,8 @@ const UserWebsitesManager = ({ userId, readOnly = false }) => {
   const { t } = useTranslation();
   const { user: currentUser, updateUser: updateAuthUser } = useAuth();
   const [websites, setWebsites] = useState([]);
+  const [landingPageSlug, setLandingPageSlug] = useState('');
+  const [slugDraft, setSlugDraft] = useState('');
   const [newWebsite, setNewWebsite] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -34,6 +36,8 @@ const UserWebsitesManager = ({ userId, readOnly = false }) => {
     try {
       const userData = await getUserById(targetUserId);
       setWebsites(userData.websites || []);
+      setLandingPageSlug(userData.landing_page_slug || '');
+      setSlugDraft(userData.landing_page_slug || '');
     } catch (err) {
       console.error('Error loading websites:', err);
       setError(t('settings.websites.loadError', 'Failed to load websites'));
@@ -105,6 +109,24 @@ const UserWebsitesManager = ({ userId, readOnly = false }) => {
     await saveWebsites(updatedWebsites);
   };
 
+  const handleSaveSlug = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await updateUser(targetUserId, { landing_page_slug: slugDraft.trim() || null });
+      setLandingPageSlug(slugDraft.trim());
+      toast.success(t('settings.websites.slugSaved', 'Landing page saved'));
+    } catch (err) {
+      console.error('Error saving landing page slug:', err);
+      setError(t('settings.websites.saveError', 'Failed to save'));
+      toast.error(t('settings.websites.saveError', 'Failed to save'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const slugChanged = slugDraft.trim() !== (landingPageSlug || '');
+
   const getDisplayUrl = (url) => {
     try {
       const urlObj = new URL(url);
@@ -124,8 +146,42 @@ const UserWebsitesManager = ({ userId, readOnly = false }) => {
 
   return (
     <div className="websites-manager">
+      {/* Landing page slug */}
+      {!readOnly ? (
+        <div className="mb-3">
+          <Form.Label className="fw-semibold">{t('users.landingPageSlug', 'Landing Page')}</Form.Label>
+          <InputGroup>
+            <Form.Control
+              type="text"
+              value={slugDraft}
+              onChange={(e) => setSlugDraft(e.target.value)}
+              placeholder="/mariondiet"
+              disabled={saving}
+            />
+            {slugChanged && (
+              <Button
+                variant="outline-success"
+                onClick={handleSaveSlug}
+                disabled={saving}
+              >
+                {saving ? <Spinner animation="border" size="sm" /> : t('common.save', 'Save')}
+              </Button>
+            )}
+          </InputGroup>
+          <Form.Text className="text-muted">
+            {t('users.landingPageSlugHelp', 'Internal app path for the landing page (e.g. /mariondiet)')}
+          </Form.Text>
+        </div>
+      ) : landingPageSlug ? (
+        <div className="mb-3">
+          <span className="fw-semibold">{t('users.landingPageSlug', 'Landing Page')}: </span>
+          <code>{landingPageSlug}</code>
+        </div>
+      ) : null}
+
+      <Form.Label className="fw-semibold">{t('settings.websites.externalUrls', 'External URLs')}</Form.Label>
       <p className="text-muted mb-3">
-        {t('settings.websites.description', 'Add your professional websites, blogs, or social media links.')}
+        {t('settings.websites.description', 'External domains that point to the landing page.')}
       </p>
 
       {error && (

@@ -10,6 +10,7 @@ let dashboardStatsService;
 let testPatient1;
 let testPatient2;
 let testDietitian;
+let adminUser;
 
 describe('Dashboard Stats Service', () => {
   beforeAll(async () => {
@@ -25,6 +26,20 @@ describe('Dashboard Stats Service', () => {
   beforeEach(async () => {
     await testDb.reset();
     await testDb.seedBaseData();
+
+    // Create admin user for scoping (ADMIN sees all data)
+    const adminRole = await db.Role.findOne({ where: { name: 'ADMIN' } });
+    adminUser = await db.User.create({
+      username: 'testadmin',
+      email: 'admin@test.com',
+      password_hash: '$2b$10$testhashedpassword',
+      first_name: 'Test',
+      last_name: 'Admin',
+      role_id: adminRole.id,
+      is_active: true
+    });
+    // Attach role info for scope helper
+    adminUser.role = adminRole;
 
     // Create test dietitian
     const dietitianRole = await db.Role.findOne({ where: { name: 'DIETITIAN' } });
@@ -64,7 +79,7 @@ describe('Dashboard Stats Service', () => {
 
   describe('getPracticeOverview', () => {
     it('should return practice overview with basic counts', async () => {
-      const result = await dashboardStatsService.getPracticeOverview();
+      const result = await dashboardStatsService.getPracticeOverview(adminUser);
 
       expect(result).toHaveProperty('totalPatients');
       expect(result).toHaveProperty('newPatientsThisMonth');
@@ -76,14 +91,14 @@ describe('Dashboard Stats Service', () => {
     });
 
     it('should count new patients this month', async () => {
-      const result = await dashboardStatsService.getPracticeOverview();
+      const result = await dashboardStatsService.getPracticeOverview(adminUser);
 
       // testPatient1 was created this month
       expect(result.newPatientsThisMonth).toBe(1);
     });
 
     it('should calculate patient change from last month', async () => {
-      const result = await dashboardStatsService.getPracticeOverview();
+      const result = await dashboardStatsService.getPracticeOverview(adminUser);
 
       expect(result).toHaveProperty('patientsChange');
       expect(typeof result.patientsChange).toBe('number');
@@ -108,7 +123,7 @@ describe('Dashboard Stats Service', () => {
         }
       ]);
 
-      const result = await dashboardStatsService.getPracticeOverview();
+      const result = await dashboardStatsService.getPracticeOverview(adminUser);
 
       expect(result.visitsThisMonth).toBe(2);
     });
@@ -135,17 +150,17 @@ describe('Dashboard Stats Service', () => {
           amount_total: 150,
           amount_paid: 0,
           amount_due: 150,
-          status: 'PENDING',
+          status: 'SENT',
           is_active: true
         }
       ]);
 
-      const result = await dashboardStatsService.getPracticeOverview();
+      const result = await dashboardStatsService.getPracticeOverview(adminUser);
 
       expect(result.revenueThisMonth).toBe(250);
     });
 
-    it('should calculate outstanding amount', async () => {
+    it('should calculate outstanding amount from unpaid invoices', async () => {
       await db.Billing.create({
         patient_id: testPatient1.id,
         invoice_number: 'INV-001',
@@ -154,14 +169,31 @@ describe('Dashboard Stats Service', () => {
         amount_total: 100,
         amount_paid: 0,
         amount_due: 100,
-        status: 'PENDING',
-        payment_status: 'PENDING',
+        status: 'SENT',
         is_active: true
       });
 
-      const result = await dashboardStatsService.getPracticeOverview();
+      const result = await dashboardStatsService.getPracticeOverview(adminUser);
 
       expect(result.outstandingAmount).toBe(100);
+    });
+
+    it('should not count paid invoices as outstanding', async () => {
+      await db.Billing.create({
+        patient_id: testPatient1.id,
+        invoice_number: 'INV-PAID',
+        invoice_date: new Date(),
+        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        amount_total: 200,
+        amount_paid: 200,
+        amount_due: 0,
+        status: 'PAID',
+        is_active: true
+      });
+
+      const result = await dashboardStatsService.getPracticeOverview(adminUser);
+
+      expect(result.outstandingAmount).toBe(0);
     });
 
     it('should calculate retention rate', async () => {
@@ -174,7 +206,7 @@ describe('Dashboard Stats Service', () => {
         visit_type: 'CONSULTATION'
       });
 
-      const result = await dashboardStatsService.getPracticeOverview();
+      const result = await dashboardStatsService.getPracticeOverview(adminUser);
 
       // 1 patient with recent visits / 2 total patients = 50%
       expect(result.retentionRate).toBe(50);
@@ -204,7 +236,7 @@ describe('Dashboard Stats Service', () => {
     });
 
     it('should return monthly revenue data for last 12 months', async () => {
-      const result = await dashboardStatsService.getRevenueChart('monthly');
+      const result = await dashboardStatsService.getRevenueChart(adminUser, 'monthly');
 
       expect(result).toBeInstanceOf(Array);
       expect(result.length).toBe(12);
@@ -217,7 +249,7 @@ describe('Dashboard Stats Service', () => {
     });
 
     it('should return quarterly revenue data', async () => {
-      const result = await dashboardStatsService.getRevenueChart('quarterly');
+      const result = await dashboardStatsService.getRevenueChart(adminUser, 'quarterly');
 
       expect(result).toBeInstanceOf(Array);
       expect(result.length).toBe(4);
@@ -229,7 +261,7 @@ describe('Dashboard Stats Service', () => {
     });
 
     it('should include month labels in monthly view', async () => {
-      const result = await dashboardStatsService.getRevenueChart('monthly');
+      const result = await dashboardStatsService.getRevenueChart(adminUser, 'monthly');
 
       result.forEach(item => {
         expect(item).toHaveProperty('month');
@@ -237,7 +269,7 @@ describe('Dashboard Stats Service', () => {
     });
 
     it('should calculate correct revenue totals', async () => {
-      const result = await dashboardStatsService.getRevenueChart('monthly');
+      const result = await dashboardStatsService.getRevenueChart(adminUser, 'monthly');
 
       // Current month should have 100
       const currentMonth = result[result.length - 1];
@@ -245,7 +277,7 @@ describe('Dashboard Stats Service', () => {
     });
 
     it('should count invoices per period', async () => {
-      const result = await dashboardStatsService.getRevenueChart('monthly');
+      const result = await dashboardStatsService.getRevenueChart(adminUser, 'monthly');
 
       // Current month should have 1 invoice
       const currentMonth = result[result.length - 1];
@@ -255,7 +287,7 @@ describe('Dashboard Stats Service', () => {
 
   describe('getPracticeHealthScore', () => {
     it('should return health score with all components', async () => {
-      const result = await dashboardStatsService.getPracticeHealthScore();
+      const result = await dashboardStatsService.getPracticeHealthScore(adminUser);
 
       expect(result).toHaveProperty('totalScore');
       expect(result).toHaveProperty('maxScore', 100);
@@ -270,7 +302,7 @@ describe('Dashboard Stats Service', () => {
     });
 
     it('should calculate patient growth score', async () => {
-      const result = await dashboardStatsService.getPracticeHealthScore();
+      const result = await dashboardStatsService.getPracticeHealthScore(adminUser);
 
       expect(result.components.patientGrowth.score).toBeGreaterThanOrEqual(0);
       expect(result.components.patientGrowth.score).toBeLessThanOrEqual(20);
@@ -289,19 +321,19 @@ describe('Dashboard Stats Service', () => {
         });
       }
 
-      const result = await dashboardStatsService.getPracticeHealthScore();
+      const result = await dashboardStatsService.getPracticeHealthScore(adminUser);
 
       expect(result.components.activity.score).toBe(10); // 1 point per visit, max 20
     });
 
     it('should determine correct health level', async () => {
-      const result = await dashboardStatsService.getPracticeHealthScore();
+      const result = await dashboardStatsService.getPracticeHealthScore(adminUser);
 
       expect(['excellent', 'good', 'average', 'needs_improvement']).toContain(result.level);
     });
 
     it('should calculate total score as sum of components', async () => {
-      const result = await dashboardStatsService.getPracticeHealthScore();
+      const result = await dashboardStatsService.getPracticeHealthScore(adminUser);
 
       const sumOfComponents =
         result.components.patientGrowth.score +
@@ -314,7 +346,7 @@ describe('Dashboard Stats Service', () => {
     });
 
     it('should include labels for all components', async () => {
-      const result = await dashboardStatsService.getPracticeHealthScore();
+      const result = await dashboardStatsService.getPracticeHealthScore(adminUser);
 
       Object.values(result.components).forEach(component => {
         expect(component).toHaveProperty('label');
@@ -323,14 +355,14 @@ describe('Dashboard Stats Service', () => {
     });
 
     it('should have score between 0 and 100', async () => {
-      const result = await dashboardStatsService.getPracticeHealthScore();
+      const result = await dashboardStatsService.getPracticeHealthScore(adminUser);
 
       expect(result.totalScore).toBeGreaterThanOrEqual(0);
       expect(result.totalScore).toBeLessThanOrEqual(100);
     });
 
-    it('should mark excellent when score >= 80', async () => {
-      // Create conditions for high score
+    it('should score high activity when many visits completed', async () => {
+      // Create conditions for high activity
       for (let i = 0; i < 20; i++) {
         await db.Visit.create({
           patient_id: testPatient1.id,
@@ -341,29 +373,8 @@ describe('Dashboard Stats Service', () => {
         });
       }
 
-      // Create payments
-      await db.Billing.create({
-        patient_id: testPatient1.id,
-        invoice_number: 'INV-TEST',
-        invoice_date: new Date(),
-        due_date: new Date(),
-        amount_total: 1000,
-        amount_paid: 1000,
-        amount_due: 0,
-        status: 'PAID',
-        is_active: true
-      });
+      const result = await dashboardStatsService.getPracticeHealthScore(adminUser);
 
-      await db.Payment.create({
-        billing_id: 1,
-        amount: 1000,
-        payment_date: new Date(),
-        payment_method: 'CARD'
-      });
-
-      const result = await dashboardStatsService.getPracticeHealthScore();
-
-      // With high activity score, total should be good
       expect(result.components.activity.score).toBe(20);
     });
   });

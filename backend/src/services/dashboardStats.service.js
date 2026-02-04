@@ -131,7 +131,7 @@ const getPracticeOverview = async (user) => {
       [db.sequelize.fn('SUM', db.sequelize.col('amount_due')), 'total']
     ],
     where: await buildBillingWhere(user, {
-      payment_status: { [Op.in]: ['PENDING', 'PARTIAL'] }
+      status: { [Op.in]: ['SENT', 'OVERDUE'] }
     }),
     raw: true
   });
