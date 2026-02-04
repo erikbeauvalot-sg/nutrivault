@@ -33,7 +33,8 @@ async function getHealthTrends(options = {}) {
   if (startDate) dateFilter[Op.gte] = new Date(startDate);
   if (endDate) dateFilter[Op.lte] = new Date(endDate);
 
-  const measureDateFilter = Object.keys(dateFilter).length > 0
+  const hasDateFilter = startDate || endDate;
+  const measureDateFilter = hasDateFilter
     ? { measured_at: dateFilter }
     : {};
 
@@ -287,7 +288,8 @@ async function getFinancialMetrics(options = {}) {
   if (startDate) dateFilter[Op.gte] = new Date(startDate);
   if (endDate) dateFilter[Op.lte] = new Date(endDate);
 
-  const invoiceDateFilter = Object.keys(dateFilter).length > 0
+  const hasDateFilter = startDate || endDate;
+  const invoiceDateFilter = hasDateFilter
     ? { invoice_date: dateFilter }
     : {};
 
@@ -432,7 +434,8 @@ async function getCommunicationEffectiveness(options = {}) {
   if (startDate) dateFilter[Op.gte] = new Date(startDate);
   if (endDate) dateFilter[Op.lte] = new Date(endDate);
 
-  const emailDateFilter = Object.keys(dateFilter).length > 0
+  const hasDateFilter = startDate || endDate;
+  const emailDateFilter = hasDateFilter
     ? { sent_at: dateFilter }
     : {};
 
@@ -468,7 +471,7 @@ async function getCommunicationEffectiveness(options = {}) {
         [fn('COUNT', col('id')), 'count'],
         [fn('AVG', col('reminders_sent')), 'avg_reminders']
       ],
-      where: Object.keys(dateFilter).length > 0 ? { visit_date: dateFilter } : {},
+      where: hasDateFilter ? { visit_date: dateFilter } : {},
       group: ['status']
     });
 
@@ -480,7 +483,7 @@ async function getCommunicationEffectiveness(options = {}) {
         [fn('COUNT', col('id')), 'count']
       ],
       where: {
-        ...(Object.keys(dateFilter).length > 0 ? { visit_date: dateFilter } : {}),
+        ...(hasDateFilter ? { visit_date: dateFilter } : {}),
         status: { [Op.in]: ['COMPLETED', 'NO_SHOW', 'CANCELLED'] }
       },
       group: [literal("CASE WHEN reminders_sent > 0 THEN 'with_reminder' ELSE 'no_reminder' END"), 'status']

@@ -100,7 +100,9 @@ async function deleteCampaign(id, user) {
   }
 
   if (campaign.status === 'sending') {
-    throw new Error('Cannot delete a campaign that is currently sending');
+    const error = new Error('Cannot delete a campaign that is currently sending');
+    error.statusCode = 400;
+    throw error;
   }
 
   await campaign.update({ is_active: false });
@@ -487,8 +489,8 @@ async function getRecipientStats(campaignId) {
     bounced: statusCounts.bounced || 0,
     opened: totalOpened,
     clicked: totalClicked,
-    openRate: totalSent > 0 ? ((totalOpened / totalSent) * 100).toFixed(1) : 0,
-    clickRate: totalSent > 0 ? ((totalClicked / totalSent) * 100).toFixed(1) : 0
+    openRate: totalSent > 0 ? parseFloat(((totalOpened / totalSent) * 100).toFixed(1)) : 0,
+    clickRate: totalSent > 0 ? parseFloat(((totalClicked / totalSent) * 100).toFixed(1)) : 0
   };
 }
 

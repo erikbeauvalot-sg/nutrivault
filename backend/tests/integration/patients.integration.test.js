@@ -41,12 +41,16 @@ describe('Patients API', () => {
   // ========================================
   describe('GET /api/patients', () => {
     beforeEach(async () => {
-      // Create some test patients
+      // Create some test patients and link them via M2M
       const db = testDb.getDb();
       for (const patient of patientFixtures.patientsList) {
-        await db.Patient.create({
+        const created = await db.Patient.create({
           ...patient,
           assigned_dietitian_id: dietitianAuth.user.id
+        });
+        await db.PatientDietitian.create({
+          patient_id: created.id,
+          dietitian_id: dietitianAuth.user.id
         });
       }
     });
@@ -120,6 +124,10 @@ describe('Patients API', () => {
         ...patientFixtures.validPatient,
         assigned_dietitian_id: dietitianAuth.user.id
       });
+      await db.PatientDietitian.create({
+        patient_id: testPatient.id,
+        dietitian_id: dietitianAuth.user.id
+      });
     });
 
     it('should return patient by ID for admin', async () => {
@@ -170,6 +178,10 @@ describe('Patients API', () => {
       testPatient = await db.Patient.create({
         ...patientFixtures.validPatient,
         assigned_dietitian_id: dietitianAuth.user.id
+      });
+      await db.PatientDietitian.create({
+        patient_id: testPatient.id,
+        dietitian_id: dietitianAuth.user.id
       });
     });
 
@@ -280,6 +292,10 @@ describe('Patients API', () => {
         ...patientFixtures.validPatient,
         assigned_dietitian_id: dietitianAuth.user.id
       });
+      await db.PatientDietitian.create({
+        patient_id: testPatient.id,
+        dietitian_id: dietitianAuth.user.id
+      });
     });
 
     it('should update patient with valid data as admin', async () => {
@@ -341,6 +357,10 @@ describe('Patients API', () => {
       testPatient = await db.Patient.create({
         ...patientFixtures.validPatient,
         assigned_dietitian_id: dietitianAuth.user.id
+      });
+      await db.PatientDietitian.create({
+        patient_id: testPatient.id,
+        dietitian_id: dietitianAuth.user.id
       });
     });
 
@@ -423,6 +443,10 @@ describe('Patients API', () => {
         ...patientFixtures.validPatient,
         assigned_dietitian_id: dietitianAuth.user.id
       });
+      await db.PatientDietitian.create({
+        patient_id: testPatient.id,
+        dietitian_id: dietitianAuth.user.id
+      });
     });
 
     describe('GET /api/patients/tags', () => {
@@ -501,6 +525,10 @@ describe('Patients API', () => {
       testPatient = await db.Patient.create({
         ...patientFixtures.validPatient,
         assigned_dietitian_id: dietitianAuth.user.id
+      });
+      await db.PatientDietitian.create({
+        patient_id: testPatient.id,
+        dietitian_id: dietitianAuth.user.id
       });
     });
 

@@ -33,11 +33,15 @@ describe('Billing API', () => {
     dietitianAuth = await testAuth.createDietitian();
     assistantAuth = await testAuth.createAssistant();
 
-    // Create test patient
+    // Create test patient and M2M link
     const db = testDb.getDb();
     testPatient = await db.Patient.create({
       ...patientFixtures.validPatient,
       assigned_dietitian_id: dietitianAuth.user.id
+    });
+    await db.PatientDietitian.create({
+      patient_id: testPatient.id,
+      dietitian_id: dietitianAuth.user.id
     });
 
     // Create test visit

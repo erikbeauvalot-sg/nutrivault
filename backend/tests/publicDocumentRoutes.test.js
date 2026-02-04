@@ -202,7 +202,7 @@ describe('Public Document Routes', () => {
     });
 
     it('includes patient info', async () => {
-      const token = 'g'.repeat(64);
+      const token = '1a'.repeat(32);
 
       await db.DocumentShare.create({
         document_id: testDocument.id,
@@ -228,7 +228,7 @@ describe('Public Document Routes', () => {
   // ========================================
   describe('POST /public/documents/:token/verify', () => {
     it('verifies correct password', async () => {
-      const token = 'h'.repeat(64);
+      const token = '2b'.repeat(32);
       const passwordHash = await bcrypt.hash('testpass123', 10);
 
       await db.DocumentShare.create({
@@ -251,7 +251,7 @@ describe('Public Document Routes', () => {
     });
 
     it('rejects incorrect password', async () => {
-      const token = 'i'.repeat(64);
+      const token = '3c'.repeat(32);
       const passwordHash = await bcrypt.hash('testpass123', 10);
 
       await db.DocumentShare.create({
@@ -273,7 +273,7 @@ describe('Public Document Routes', () => {
     });
 
     it('returns success for non-protected share', async () => {
-      const token = 'j'.repeat(64);
+      const token = '4d'.repeat(32);
 
       await db.DocumentShare.create({
         document_id: testDocument.id,
@@ -295,7 +295,7 @@ describe('Public Document Routes', () => {
     });
 
     it('returns 400 for missing password', async () => {
-      const token = 'k'.repeat(64);
+      const token = '5e'.repeat(32);
 
       await db.DocumentShare.create({
         document_id: testDocument.id,
@@ -315,7 +315,7 @@ describe('Public Document Routes', () => {
     });
 
     it('logs password attempt', async () => {
-      const token = 'l'.repeat(64);
+      const token = '6f'.repeat(32);
       const passwordHash = await bcrypt.hash('testpass123', 10);
 
       const share = await db.DocumentShare.create({
@@ -398,7 +398,7 @@ describe('Public Document Routes', () => {
   // ========================================
   describe('Access Logging', () => {
     it('records view when share info is fetched', async () => {
-      const token = 'm'.repeat(64);
+      const token = '70'.repeat(32);
 
       const share = await db.DocumentShare.create({
         document_id: testDocument.id,
@@ -425,7 +425,7 @@ describe('Public Document Routes', () => {
     });
 
     it('logs failed password attempts', async () => {
-      const token = 'n'.repeat(64);
+      const token = '80'.repeat(32);
       const passwordHash = await bcrypt.hash('testpass123', 10);
 
       const share = await db.DocumentShare.create({
@@ -460,7 +460,7 @@ describe('Public Document Routes', () => {
   // ========================================
   describe('Edge Cases', () => {
     it('handles share with deleted document gracefully', async () => {
-      const token = 'o'.repeat(64);
+      const token = '90'.repeat(32);
 
       // Create share first
       await db.DocumentShare.create({
@@ -484,7 +484,7 @@ describe('Public Document Routes', () => {
     });
 
     it('handles expired share correctly', async () => {
-      const token = 'p'.repeat(64);
+      const token = 'a0'.repeat(32);
       const pastDate = new Date();
       pastDate.setHours(pastDate.getHours() - 1);
 
@@ -507,7 +507,7 @@ describe('Public Document Routes', () => {
     });
 
     it('handles share at exact download limit', async () => {
-      const token = 'q'.repeat(64);
+      const token = 'b0'.repeat(32);
 
       await db.DocumentShare.create({
         document_id: testDocument.id,

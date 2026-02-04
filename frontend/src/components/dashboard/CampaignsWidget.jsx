@@ -38,7 +38,7 @@ const CampaignsWidget = () => {
       // Calculate average open rate from sent campaigns
       const sentWithStats = campaigns.filter(c => c.status === 'sent' && c.stats?.openRate);
       const avgOpenRate = sentWithStats.length > 0
-        ? Math.round(sentWithStats.reduce((sum, c) => sum + (c.stats?.openRate || 0), 0) / sentWithStats.length)
+        ? Math.round(sentWithStats.reduce((sum, c) => sum + (parseFloat(c.stats?.openRate) || 0), 0) / sentWithStats.length)
         : 0;
 
       // Total recipients from sent campaigns

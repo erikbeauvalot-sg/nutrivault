@@ -75,9 +75,9 @@ const UserDetailPage = () => {
     }
   }, [id, canAccess, isAdmin]);
 
-  // Fetch dietitian data when user is loaded and is a dietitian
+  // Fetch dietitian data when admin views any user, or when viewing a dietitian
   useEffect(() => {
-    if (user && user.role?.name === 'DIETITIAN') {
+    if (user && (isAdmin || user.role?.name === 'DIETITIAN')) {
       fetchDietitianData();
       if (isAdmin || isOwnProfile) {
         fetchCalendarStatus();
@@ -489,6 +489,7 @@ const UserDetailPage = () => {
 
   const isDietitian = user.role?.name === 'DIETITIAN';
   const isAssistant = user.role?.name === 'ASSISTANT';
+  const showDietitianSections = isAdmin || isDietitian;
 
   return (
     <Layout>
@@ -661,8 +662,8 @@ const UserDetailPage = () => {
           </Col>
         </Row>
 
-        {/* Dietitian-specific sections */}
-        {isDietitian && (
+        {/* Dietitian-specific sections — visible for admins viewing any profile */}
+        {showDietitianSections && (
           <>
             {/* Scheduled Visits */}
             <Row className="mb-4">

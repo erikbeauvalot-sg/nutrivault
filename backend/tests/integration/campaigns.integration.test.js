@@ -5,45 +5,45 @@
 
 const request = require('supertest');
 const testDb = require('../setup/testDb');
+const testAuth = require('../setup/testAuth');
 
-// Import server after testDb initialization
 let app;
 let db;
-let authToken;
-let testUser;
+let adminAuth;
 let testDietitian;
 let testPatient1;
 let testPatient2;
+
+/**
+ * Add campaign permissions to ADMIN role (not in base seed data)
+ */
+async function seedCampaignPermissions() {
+  const campaignPerms = [
+    { code: 'campaigns.create', description: 'Create campaigns', resource: 'campaigns', action: 'create' },
+    { code: 'campaigns.read', description: 'Read campaigns', resource: 'campaigns', action: 'read' },
+    { code: 'campaigns.update', description: 'Update campaigns', resource: 'campaigns', action: 'update' },
+    { code: 'campaigns.delete', description: 'Delete campaigns', resource: 'campaigns', action: 'delete' },
+    { code: 'campaigns.send', description: 'Send campaigns', resource: 'campaigns', action: 'send' }
+  ];
+
+  await db.Permission.bulkCreate(campaignPerms);
+
+  const adminRole = await db.Role.findOne({ where: { name: 'ADMIN' } });
+  const permissions = await db.Permission.findAll({ where: { resource: 'campaigns' } });
+
+  for (const perm of permissions) {
+    await db.RolePermission.create({
+      role_id: adminRole.id,
+      permission_id: perm.id
+    });
+  }
+}
 
 describe('Campaign API Integration Tests', () => {
   beforeAll(async () => {
     db = await testDb.init();
     await testDb.seedBaseData();
-
-    // Add campaign permissions
-    await db.Permission.bulkCreate([
-      { code: 'campaigns.create', description: 'Create campaigns', resource: 'campaigns', action: 'create' },
-      { code: 'campaigns.read', description: 'Read campaigns', resource: 'campaigns', action: 'read' },
-      { code: 'campaigns.update', description: 'Update campaigns', resource: 'campaigns', action: 'update' },
-      { code: 'campaigns.delete', description: 'Delete campaigns', resource: 'campaigns', action: 'delete' },
-      { code: 'campaigns.send', description: 'Send campaigns', resource: 'campaigns', action: 'send' }
-    ]);
-
-    // Assign permissions to ADMIN role
-    const adminRole = await db.Role.findOne({ where: { name: 'ADMIN' } });
-    const campaignPermissions = await db.Permission.findAll({
-      where: { resource: 'campaigns' }
-    });
-
-    for (const perm of campaignPermissions) {
-      await db.RolePermission.create({
-        role_id: adminRole.id,
-        permission_id: perm.id
-      });
-    }
-
-    // Import app after db setup
-    app = require('../../src/server');
+    app = require('../setup/testServer').resetApp();
   });
 
   afterAll(async () => {
@@ -53,40 +53,19 @@ describe('Campaign API Integration Tests', () => {
   beforeEach(async () => {
     await testDb.reset();
     await testDb.seedBaseData();
+    testAuth.resetCounter();
 
-    // Re-add campaign permissions after reset
-    await db.Permission.bulkCreate([
-      { code: 'campaigns.create', description: 'Create campaigns', resource: 'campaigns', action: 'create' },
-      { code: 'campaigns.read', description: 'Read campaigns', resource: 'campaigns', action: 'read' },
-      { code: 'campaigns.update', description: 'Update campaigns', resource: 'campaigns', action: 'update' },
-      { code: 'campaigns.delete', description: 'Delete campaigns', resource: 'campaigns', action: 'delete' },
-      { code: 'campaigns.send', description: 'Send campaigns', resource: 'campaigns', action: 'send' }
-    ]);
+    // Add campaign permissions after reset
+    await seedCampaignPermissions();
 
-    const adminRole = await db.Role.findOne({ where: { name: 'ADMIN' } });
-    const dietitianRole = await db.Role.findOne({ where: { name: 'DIETITIAN' } });
-    const campaignPermissions = await db.Permission.findAll({
-      where: { resource: 'campaigns' }
-    });
-
-    for (const perm of campaignPermissions) {
-      await db.RolePermission.create({
-        role_id: adminRole.id,
-        permission_id: perm.id
-      });
-    }
-
-    // Create test user
-    testUser = await db.User.create({
-      username: 'campaigntester',
-      email: 'campaigntester@example.com',
-      password_hash: '$2b$10$testhashedpassword',
+    // Create authenticated admin user
+    adminAuth = await testAuth.createAdmin({
       first_name: 'Campaign',
-      last_name: 'Tester',
-      role_id: adminRole.id,
-      is_active: true
+      last_name: 'Tester'
     });
 
+    // Create test dietitian
+    const dietitianRole = await db.Role.findOne({ where: { name: 'DIETITIAN' } });
     testDietitian = await db.User.create({
       username: 'dietitian1',
       email: 'dietitian1@example.com',
@@ -115,14 +94,6 @@ describe('Campaign API Integration Tests', () => {
       appointment_reminders_enabled: true,
       language_preference: 'fr'
     });
-
-    // Generate auth token (mock JWT)
-    const jwt = require('jsonwebtoken');
-    authToken = jwt.sign(
-      { id: testUser.id, username: testUser.username },
-      process.env.JWT_SECRET || 'test-secret',
-      { expiresIn: '1h' }
-    );
   });
 
   // ========================================
@@ -132,7 +103,7 @@ describe('Campaign API Integration Tests', () => {
     it('returns empty list when no campaigns exist', async () => {
       const response = await request(app)
         .get('/api/campaigns')
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', adminAuth.authHeader);
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -145,7 +116,7 @@ describe('Campaign API Integration Tests', () => {
         subject: 'Subject 1',
         status: 'draft',
         campaign_type: 'newsletter',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
@@ -154,13 +125,13 @@ describe('Campaign API Integration Tests', () => {
         subject: 'Subject 2',
         status: 'sent',
         campaign_type: 'promotional',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
       const response = await request(app)
         .get('/api/campaigns')
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', adminAuth.authHeader);
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -172,7 +143,7 @@ describe('Campaign API Integration Tests', () => {
         name: 'Draft Campaign',
         subject: 'Subject',
         status: 'draft',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
@@ -180,13 +151,13 @@ describe('Campaign API Integration Tests', () => {
         name: 'Sent Campaign',
         subject: 'Subject',
         status: 'sent',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
       const response = await request(app)
         .get('/api/campaigns?status=draft')
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', adminAuth.authHeader);
 
       expect(response.status).toBe(200);
       expect(response.body.data).toHaveLength(1);
@@ -198,7 +169,7 @@ describe('Campaign API Integration Tests', () => {
         name: 'Newsletter',
         subject: 'Subject',
         campaign_type: 'newsletter',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
@@ -206,13 +177,13 @@ describe('Campaign API Integration Tests', () => {
         name: 'Promotional',
         subject: 'Subject',
         campaign_type: 'promotional',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
       const response = await request(app)
         .get('/api/campaigns?campaign_type=newsletter')
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', adminAuth.authHeader);
 
       expect(response.status).toBe(200);
       expect(response.body.data).toHaveLength(1);
@@ -223,20 +194,20 @@ describe('Campaign API Integration Tests', () => {
       await db.EmailCampaign.create({
         name: 'January Newsletter',
         subject: 'Subject',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
       await db.EmailCampaign.create({
         name: 'February Update',
         subject: 'Subject',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
       const response = await request(app)
         .get('/api/campaigns?search=January')
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', adminAuth.authHeader);
 
       expect(response.status).toBe(200);
       expect(response.body.data).toHaveLength(1);
@@ -247,20 +218,20 @@ describe('Campaign API Integration Tests', () => {
       await db.EmailCampaign.create({
         name: 'Active Campaign',
         subject: 'Subject',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
       await db.EmailCampaign.create({
         name: 'Deleted Campaign',
         subject: 'Subject',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: false
       });
 
       const response = await request(app)
         .get('/api/campaigns')
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', adminAuth.authHeader);
 
       expect(response.status).toBe(200);
       expect(response.body.data).toHaveLength(1);
@@ -285,13 +256,13 @@ describe('Campaign API Integration Tests', () => {
         subject: 'Test Subject',
         body_html: '<p>Content</p>',
         status: 'draft',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
       const response = await request(app)
         .get(`/api/campaigns/${campaign.id}`)
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', adminAuth.authHeader);
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -303,13 +274,13 @@ describe('Campaign API Integration Tests', () => {
       const campaign = await db.EmailCampaign.create({
         name: 'Test Campaign',
         subject: 'Test Subject',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
       const response = await request(app)
         .get(`/api/campaigns/${campaign.id}`)
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', adminAuth.authHeader);
 
       expect(response.status).toBe(200);
       expect(response.body.data.creator).toBeDefined();
@@ -320,14 +291,14 @@ describe('Campaign API Integration Tests', () => {
       const campaign = await db.EmailCampaign.create({
         name: 'Test Campaign',
         subject: 'Test Subject',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         sender_id: testDietitian.id,
         is_active: true
       });
 
       const response = await request(app)
         .get(`/api/campaigns/${campaign.id}`)
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', adminAuth.authHeader);
 
       expect(response.status).toBe(200);
       expect(response.body.data.sender).toBeDefined();
@@ -338,13 +309,13 @@ describe('Campaign API Integration Tests', () => {
       const campaign = await db.EmailCampaign.create({
         name: 'Test Campaign',
         subject: 'Test Subject',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
       const response = await request(app)
         .get(`/api/campaigns/${campaign.id}`)
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', adminAuth.authHeader);
 
       expect(response.status).toBe(200);
       expect(response.body.data.stats).toBeDefined();
@@ -354,7 +325,7 @@ describe('Campaign API Integration Tests', () => {
     it('returns 404 for non-existent campaign', async () => {
       const response = await request(app)
         .get('/api/campaigns/00000000-0000-0000-0000-000000000000')
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', adminAuth.authHeader);
 
       expect(response.status).toBe(404);
     });
@@ -363,13 +334,13 @@ describe('Campaign API Integration Tests', () => {
       const campaign = await db.EmailCampaign.create({
         name: 'Deleted Campaign',
         subject: 'Test Subject',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: false
       });
 
       const response = await request(app)
         .get(`/api/campaigns/${campaign.id}`)
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', adminAuth.authHeader);
 
       expect(response.status).toBe(404);
     });
@@ -382,7 +353,7 @@ describe('Campaign API Integration Tests', () => {
     it('creates a new campaign', async () => {
       const response = await request(app)
         .post('/api/campaigns')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Authorization', adminAuth.authHeader)
         .send({
           name: 'New Campaign',
           subject: 'Welcome to our newsletter',
@@ -399,7 +370,7 @@ describe('Campaign API Integration Tests', () => {
     it('creates campaign with sender_id', async () => {
       const response = await request(app)
         .post('/api/campaigns')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Authorization', adminAuth.authHeader)
         .send({
           name: 'Campaign with Sender',
           subject: 'Test Subject',
@@ -413,7 +384,7 @@ describe('Campaign API Integration Tests', () => {
     it('creates campaign with target audience', async () => {
       const response = await request(app)
         .post('/api/campaigns')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Authorization', adminAuth.authHeader)
         .send({
           name: 'Targeted Campaign',
           subject: 'Test Subject',
@@ -432,7 +403,7 @@ describe('Campaign API Integration Tests', () => {
     it('returns 400 without required name', async () => {
       const response = await request(app)
         .post('/api/campaigns')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Authorization', adminAuth.authHeader)
         .send({
           subject: 'Test Subject'
         });
@@ -450,13 +421,13 @@ describe('Campaign API Integration Tests', () => {
         name: 'Original Name',
         subject: 'Original Subject',
         status: 'draft',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
       const response = await request(app)
         .put(`/api/campaigns/${campaign.id}`)
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Authorization', adminAuth.authHeader)
         .send({
           name: 'Updated Name',
           subject: 'Updated Subject'
@@ -472,13 +443,13 @@ describe('Campaign API Integration Tests', () => {
         name: 'Test Campaign',
         subject: 'Test Subject',
         status: 'draft',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
       const response = await request(app)
         .put(`/api/campaigns/${campaign.id}`)
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Authorization', adminAuth.authHeader)
         .send({
           sender_id: testDietitian.id
         });
@@ -492,13 +463,13 @@ describe('Campaign API Integration Tests', () => {
         name: 'Sent Campaign',
         subject: 'Test Subject',
         status: 'sent',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
       const response = await request(app)
         .put(`/api/campaigns/${campaign.id}`)
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Authorization', adminAuth.authHeader)
         .send({
           name: 'Try to Update'
         });
@@ -509,7 +480,7 @@ describe('Campaign API Integration Tests', () => {
     it('returns 404 for non-existent campaign', async () => {
       const response = await request(app)
         .put('/api/campaigns/00000000-0000-0000-0000-000000000000')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Authorization', adminAuth.authHeader)
         .send({
           name: 'Updated Name'
         });
@@ -527,13 +498,13 @@ describe('Campaign API Integration Tests', () => {
         name: 'To Delete',
         subject: 'Test Subject',
         status: 'draft',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
       const response = await request(app)
         .delete(`/api/campaigns/${campaign.id}`)
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', adminAuth.authHeader);
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -548,13 +519,13 @@ describe('Campaign API Integration Tests', () => {
         name: 'Sending Campaign',
         subject: 'Test Subject',
         status: 'sending',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
       const response = await request(app)
         .delete(`/api/campaigns/${campaign.id}`)
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', adminAuth.authHeader);
 
       expect(response.status).toBe(400);
     });
@@ -562,7 +533,7 @@ describe('Campaign API Integration Tests', () => {
     it('returns 404 for non-existent campaign', async () => {
       const response = await request(app)
         .delete('/api/campaigns/00000000-0000-0000-0000-000000000000')
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', adminAuth.authHeader);
 
       expect(response.status).toBe(404);
     });
@@ -578,13 +549,13 @@ describe('Campaign API Integration Tests', () => {
         subject: 'Original Subject',
         body_html: '<p>Content</p>',
         campaign_type: 'newsletter',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
       const response = await request(app)
         .post(`/api/campaigns/${campaign.id}/duplicate`)
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', adminAuth.authHeader);
 
       expect(response.status).toBe(201);
       expect(response.body.data.name).toContain('copie');
@@ -600,7 +571,7 @@ describe('Campaign API Integration Tests', () => {
     it('previews audience for criteria', async () => {
       const response = await request(app)
         .post('/api/campaigns/preview-audience')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Authorization', adminAuth.authHeader)
         .send({
           criteria: {
             conditions: [
@@ -628,7 +599,7 @@ describe('Campaign API Integration Tests', () => {
         name: 'Tracking Test',
         subject: 'Test',
         status: 'sent',
-        created_by: testUser.id,
+        created_by: adminAuth.user.id,
         is_active: true
       });
 
