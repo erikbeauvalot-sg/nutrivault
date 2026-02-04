@@ -121,7 +121,7 @@ async function uploadDocument(user, file, metadata, requestMetadata = {}) {
     }
 
     // Check upload permission
-    const hasUploadPermission = user.permissions?.some(p => p.code === 'documents.upload');
+    const hasUploadPermission = user.role?.permissions?.some(p => p.code === 'documents.upload');
     if (!hasUploadPermission && user.role.name !== 'ADMIN') {
       throw new Error('Insufficient permissions to upload documents');
     }
@@ -347,7 +347,7 @@ async function getDocumentById(user, documentId, requestMetadata = {}) {
     }
 
     // RBAC: Check read permissions
-    const hasReadPermission = user.permissions?.some(p => p.code === 'documents.read');
+    const hasReadPermission = user.role?.permissions?.some(p => p.code === 'documents.read');
     if (!hasReadPermission && user.role.name !== 'ADMIN' && document.uploaded_by !== user.id) {
       throw new Error('Insufficient permissions to view this document');
     }
@@ -370,7 +370,7 @@ async function downloadDocument(user, documentId, requestMetadata = {}) {
     const document = await getDocumentById(user, documentId, requestMetadata);
 
     // Check download permission
-    const hasDownloadPermission = user.permissions?.some(p => p.code === 'documents.download');
+    const hasDownloadPermission = user.role?.permissions?.some(p => p.code === 'documents.download');
     if (!hasDownloadPermission && user.role.name !== 'ADMIN' && document.uploaded_by !== user.id) {
       throw new Error('Insufficient permissions to download this document');
     }
@@ -418,7 +418,7 @@ async function updateDocument(user, documentId, updates, requestMetadata = {}) {
     const document = await getDocumentById(user, documentId, requestMetadata);
 
     // Check update permission
-    const hasUpdatePermission = user.permissions?.some(p => p.code === 'documents.update');
+    const hasUpdatePermission = user.role?.permissions?.some(p => p.code === 'documents.update');
     if (!hasUpdatePermission && user.role.name !== 'ADMIN' && document.uploaded_by !== user.id) {
       throw new Error('Insufficient permissions to update this document');
     }
@@ -458,7 +458,7 @@ async function deleteDocument(user, documentId, requestMetadata = {}) {
     const document = await getDocumentById(user, documentId, requestMetadata);
 
     // Check delete permission
-    const hasDeletePermission = user.permissions?.some(p => p.code === 'documents.delete');
+    const hasDeletePermission = user.role?.permissions?.some(p => p.code === 'documents.delete');
     if (!hasDeletePermission && user.role.name !== 'ADMIN' && document.uploaded_by !== user.id) {
       throw new Error('Insufficient permissions to delete this document');
     }
@@ -500,7 +500,7 @@ async function deleteDocument(user, documentId, requestMetadata = {}) {
 async function getDocumentStats(user, requestMetadata = {}) {
   try {
     // Check read permission
-    const hasReadPermission = user.permissions?.some(p => p.code === 'documents.read');
+    const hasReadPermission = user.role?.permissions?.some(p => p.code === 'documents.read');
     if (!hasReadPermission && user.role.name !== 'ADMIN') {
       throw new Error('Insufficient permissions to view document statistics');
     }
@@ -644,7 +644,7 @@ async function addTagsToDocument(user, documentId, newTags, requestMetadata = {}
     const document = await getDocumentById(user, documentId, requestMetadata);
 
     // Check update permission
-    const hasUpdatePermission = user.permissions?.some(p => p.code === 'documents.update');
+    const hasUpdatePermission = user.role?.permissions?.some(p => p.code === 'documents.update');
     if (!hasUpdatePermission && user.role.name !== 'ADMIN' && document.uploaded_by !== user.id) {
       throw new Error('Insufficient permissions to update this document');
     }
@@ -688,7 +688,7 @@ async function removeTagsFromDocument(user, documentId, tagsToRemove, requestMet
     const document = await getDocumentById(user, documentId, requestMetadata);
 
     // Check update permission
-    const hasUpdatePermission = user.permissions?.some(p => p.code === 'documents.update');
+    const hasUpdatePermission = user.role?.permissions?.some(p => p.code === 'documents.update');
     if (!hasUpdatePermission && user.role.name !== 'ADMIN' && document.uploaded_by !== user.id) {
       throw new Error('Insufficient permissions to update this document');
     }
@@ -745,7 +745,7 @@ async function sendDocumentToPatient(user, documentId, patientId, shareData = {}
     }
 
     // Check if user has permission to share documents
-    const hasSharePermission = user.permissions?.some(p => p.code === 'documents.share');
+    const hasSharePermission = user.role?.permissions?.some(p => p.code === 'documents.share');
     if (!hasSharePermission && user.role.name !== 'ADMIN') {
       throw new Error('Insufficient permissions to share documents');
     }
@@ -840,7 +840,7 @@ async function sendDocumentToGroup(user, documentId, patientIds, shareData = {},
     const document = await getDocumentById(user, documentId, requestMetadata);
 
     // Check if user has permission to share documents
-    const hasSharePermission = user.permissions?.some(p => p.code === 'documents.share');
+    const hasSharePermission = user.role?.permissions?.some(p => p.code === 'documents.share');
     if (!hasSharePermission && user.role.name !== 'ADMIN') {
       throw new Error('Insufficient permissions to share documents');
     }
@@ -899,7 +899,7 @@ async function getDocumentShares(user, documentId, requestMetadata = {}) {
     const document = await getDocumentById(user, documentId, requestMetadata);
 
     // Check read permission
-    const hasReadPermission = user.permissions?.some(p => p.code === 'documents.read');
+    const hasReadPermission = user.role?.permissions?.some(p => p.code === 'documents.read');
     if (!hasReadPermission && user.role.name !== 'ADMIN' && document.uploaded_by !== user.id) {
       throw new Error('Insufficient permissions to view document shares');
     }
@@ -973,7 +973,7 @@ async function createShareLink(user, documentId, config = {}, requestMetadata = 
     }
 
     // Check if user has permission to share documents
-    const hasSharePermission = user.permissions?.some(p => p.code === 'documents.share');
+    const hasSharePermission = user.role?.permissions?.some(p => p.code === 'documents.share');
     if (!hasSharePermission && user.role.name !== 'ADMIN') {
       throw new Error('Insufficient permissions to share documents');
     }
@@ -1264,7 +1264,7 @@ async function revokeShare(user, shareId, requestMetadata = {}) {
     }
 
     // Check permissions
-    const hasSharePermission = user.permissions?.some(p => p.code === 'documents.share');
+    const hasSharePermission = user.role?.permissions?.some(p => p.code === 'documents.share');
     if (!hasSharePermission && user.role.name !== 'ADMIN' && share.shared_by !== user.id) {
       throw new Error('Insufficient permissions to revoke this share');
     }
@@ -1309,7 +1309,7 @@ async function updateShareSettings(user, shareId, updates, requestMetadata = {})
     }
 
     // Check permissions
-    const hasSharePermission = user.permissions?.some(p => p.code === 'documents.share');
+    const hasSharePermission = user.role?.permissions?.some(p => p.code === 'documents.share');
     if (!hasSharePermission && user.role.name !== 'ADMIN' && share.shared_by !== user.id) {
       throw new Error('Insufficient permissions to update this share');
     }
@@ -1397,7 +1397,7 @@ async function getDocumentSharesWithLogs(user, documentId, requestMetadata = {})
     const document = await getDocumentById(user, documentId, requestMetadata);
 
     // Check read permission
-    const hasReadPermission = user.permissions?.some(p => p.code === 'documents.read');
+    const hasReadPermission = user.role?.permissions?.some(p => p.code === 'documents.read');
     if (!hasReadPermission && user.role.name !== 'ADMIN' && document.uploaded_by !== user.id) {
       throw new Error('Insufficient permissions to view document shares');
     }
