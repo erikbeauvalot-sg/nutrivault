@@ -11,6 +11,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import usePageTracking from './hooks/usePageTracking';
 
 // Eager load: Login page (first page users see)
 import LoginPage from './pages/LoginPage';
@@ -69,6 +70,7 @@ const PageLoader = () => (
 
 function App() {
   const { loading, isAuthenticated } = useAuth();
+  usePageTracking();
 
   // Show loading spinner while checking authentication
   if (loading) {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { hasAskedConsent, setAnalyticsConsent, hasAnalyticsConsent } from '../services/analyticsService';
+import { initConsent } from '../services/gtmService';
 
 /**
  * Cookie Consent Banner Component
@@ -9,14 +10,17 @@ const CookieConsentBanner = ({ onConsent }) => {
   const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
-    // Show banner if consent hasn't been asked yet
     if (!hasAskedConsent()) {
       setShowBanner(true);
+    } else {
+      // Push existing consent state to dataLayer on load
+      initConsent(hasAnalyticsConsent());
     }
   }, []);
 
   const handleAccept = () => {
     setAnalyticsConsent(true);
+    initConsent(true);
     setShowBanner(false);
     if (onConsent) {
       onConsent(true);
@@ -25,6 +29,7 @@ const CookieConsentBanner = ({ onConsent }) => {
 
   const handleDecline = () => {
     setAnalyticsConsent(false);
+    initConsent(false);
     setShowBanner(false);
     if (onConsent) {
       onConsent(false);
