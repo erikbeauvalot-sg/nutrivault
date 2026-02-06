@@ -80,7 +80,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
   const [showAddOptionModal, setShowAddOptionModal] = useState(false);
   const [newOptionValue, setNewOptionValue] = useState('');
 
-  const isEditing = !!definition;
+  const isEditing = !!definition?.id;
 
   const {
     register,
@@ -236,6 +236,9 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       }
 
       if (isEditing) {
+        if (!definition?.id) {
+          throw new Error('Definition ID is missing');
+        }
         await customFieldService.updateDefinition(definition.id, payload);
       } else {
         await customFieldService.createDefinition(payload);
@@ -586,11 +589,16 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
                       </Form.Control.Feedback>
                     )}
                     <Form.Text className="text-muted d-block mt-2">
-                      <strong>Syntax:</strong> Use {'{field_name}'} for variables<br/>
+                      <strong>Syntax:</strong><br/>
+                      - Custom field: {'{field_name}'}<br/>
+                      - Patient measure: {'{measure:weight}'}, {'{measure:height}'}<br/>
+                      - Time-series: {'{current:weight}'}, {'{previous:weight}'}, {'{delta:weight}'}<br/>
                       <strong>Operators:</strong> + - * / ^ (power)<br/>
                       <strong>Math Functions:</strong> sqrt(), abs(), round(), floor(), ceil(), min(), max()<br/>
                       <strong>Date Functions:</strong> today(), year(), month(), day()<br/>
-                      <strong>Example:</strong> {'{weight}'} / ({'{height}'} * {'{height}'}), or (today() - {'{birth_date}'}) / 365.25
+                      <strong>Examples:</strong><br/>
+                      - BMI: {'{measure:weight}'} / ({'{measure:height}'} * {'{measure:height}'})<br/>
+                      - Age: (today() - {'{birth_date}'}) / 365.25
                     </Form.Text>
                   </Form.Group>
 
