@@ -4,23 +4,38 @@
  * Used when category display_layout.type === 'radar'
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Tooltip, Legend } from 'recharts';
-import { Alert } from 'react-bootstrap';
+import { Alert, Spinner } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
+import { getMeasureDefinitions, getPatientMeasures } from '../services/measureService';
 
 /**
  * Normalize a value to a 0-10 scale for radar chart display
  * @param {any} value - The field value
  * @param {object} field - The field definition
+ * @param {object} measureDef - Optional measure definition for embedded fields
  * @returns {number|null} Normalized value or null if not applicable
  */
-const normalizeValue = (value, field) => {
+const normalizeValue = (value, field, measureDef = null) => {
   if (value === null || value === undefined || value === '') {
     return null;
   }
 
   const fieldType = field.field_type;
+
+  // Handle embedded fields using measure definition min/max
+  if (fieldType === 'embedded' && measureDef) {
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) return null;
+
+    const min = measureDef.min_value !== null && measureDef.min_value !== undefined ? measureDef.min_value : 0;
+    const max = measureDef.max_value !== null && measureDef.max_value !== undefined ? measureDef.max_value : 10;
+
+    if (max === min) return 5;
+    const normalized = ((numValue - min) / (max - min)) * 10;
+    return Math.max(0, Math.min(10, normalized));
+  }
 
   // Handle numeric types
   if (fieldType === 'number' || fieldType === 'decimal' || fieldType === 'integer') {
@@ -102,9 +117,81 @@ const normalizeValue = (value, field) => {
  * @param {object} props.category - Category object with fields
  * @param {object} props.fieldValues - Map of field definition_id to value
  * @param {object} props.options - Radar chart options from display_layout
+ * @param {string} props.patientId - Patient ID for fetching embedded measure values
  */
-const CustomFieldRadarChart = ({ category, fieldValues, options = {} }) => {
+const CustomFieldRadarChart = ({ category, fieldValues, options = {}, patientId = null }) => {
   const { t } = useTranslation();
+  const [embeddedValues, setEmbeddedValues] = useState({});
+  const [embeddedMeasureDefs, setEmbeddedMeasureDefs] = useState({});
+  const [loadingEmbedded, setLoadingEmbedded] = useState(false);
+
+  // Detect embedded fields and fetch their latest measure values
+  useEffect(() => {
+    if (!category?.fields || !patientId) return;
+
+    const embeddedFields = category.fields.filter(f => f.field_type === 'embedded');
+    if (embeddedFields.length === 0) return;
+
+    const fetchEmbeddedValues = async () => {
+      setLoadingEmbedded(true);
+      try {
+        const definitions = await getMeasureDefinitions({ is_active: true });
+        const values = {};
+        const defs = {};
+
+        await Promise.all(embeddedFields.map(async (field) => {
+          const measureName = field.select_options?.measure_name;
+          if (!measureName) return;
+
+          const definition = definitions.find(
+            d => d.name?.toLowerCase() === measureName.toLowerCase() ||
+                 d.display_name?.toLowerCase() === measureName.toLowerCase()
+          );
+          if (!definition) return;
+
+          defs[field.definition_id] = definition;
+
+          const measures = await getPatientMeasures(patientId, {
+            measure_definition_id: definition.id,
+            limit: 1
+          });
+
+          if (measures && measures.length > 0) {
+            const m = measures[0];
+            // Extract value based on measure type
+            switch (definition.measure_type) {
+              case 'numeric':
+              case 'calculated':
+                values[field.definition_id] = m.numeric_value;
+                break;
+              case 'text':
+                values[field.definition_id] = m.text_value;
+                break;
+              case 'boolean':
+                values[field.definition_id] = m.boolean_value;
+                break;
+              default:
+                values[field.definition_id] = m.numeric_value;
+            }
+          }
+        }));
+
+        setEmbeddedValues(values);
+        setEmbeddedMeasureDefs(defs);
+      } catch (err) {
+        console.error('Error fetching embedded measure values for radar:', err);
+      } finally {
+        setLoadingEmbedded(false);
+      }
+    };
+
+    fetchEmbeddedValues();
+  }, [category, patientId]);
+
+  // Merge fieldValues with embeddedValues
+  const mergedValues = useMemo(() => {
+    return { ...fieldValues, ...embeddedValues };
+  }, [fieldValues, embeddedValues]);
 
   // Build chart data from fields
   const chartData = useMemo(() => {
@@ -119,8 +206,9 @@ const CustomFieldRadarChart = ({ category, fieldValues, options = {} }) => {
         return !excludeTypes.includes(field.field_type);
       })
       .map(field => {
-        const rawValue = fieldValues[field.definition_id];
-        const normalizedValue = normalizeValue(rawValue, field);
+        const rawValue = mergedValues[field.definition_id];
+        const measureDef = embeddedMeasureDefs[field.definition_id] || null;
+        const normalizedValue = normalizeValue(rawValue, field, measureDef);
 
         return {
           field: field.field_label || field.field_name,
@@ -130,11 +218,21 @@ const CustomFieldRadarChart = ({ category, fieldValues, options = {} }) => {
           hasValue: normalizedValue !== null
         };
       });
-  }, [category, fieldValues]);
+  }, [category, mergedValues, embeddedMeasureDefs]);
 
   // Count fields with values
   const fieldsWithValues = chartData.filter(d => d.hasValue).length;
   const totalFields = chartData.length;
+
+  // Show loading while fetching embedded values
+  if (loadingEmbedded) {
+    return (
+      <div className="text-center py-4">
+        <Spinner animation="border" size="sm" className="me-2" />
+        {t('common.loading', 'Loading...')}
+      </div>
+    );
+  }
 
   // Don't render if no numeric-compatible fields
   if (chartData.length === 0) {
@@ -195,13 +293,6 @@ const CustomFieldRadarChart = ({ category, fieldValues, options = {} }) => {
 
     // Calculate text anchor based on position
     let textAnchor = 'middle';
-    let verticalAnchor = 'middle';
-
-    if (angleDeg > 45 && angleDeg < 135) {
-      textAnchor = 'start';
-    } else if (angleDeg < -45 && angleDeg > -135) {
-      textAnchor = 'end';
-    }
 
     // Vertical alignment
     if (angleDeg > -45 && angleDeg < 45) {

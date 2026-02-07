@@ -682,6 +682,7 @@ const VisitDetailPage = () => {
                           category={category}
                           fieldValues={fieldValues}
                           options={displayLayout.options || {}}
+                          patientId={visit?.patient?.id}
                         />
                       ) : displayLayout.type === 'list' ? (
                         // List layout - one field per row
