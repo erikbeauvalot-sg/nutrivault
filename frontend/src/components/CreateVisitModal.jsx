@@ -632,6 +632,7 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
                           value={fieldValues[field.definition_id] ?? ''}
                           onChange={handleCustomFieldChange}
                           disabled={loading}
+                          patientId={formData.patient_id}
                         />
                       </Form.Group>
                     ))}

@@ -6,8 +6,9 @@
 
 import { Badge } from 'react-bootstrap';
 import PropTypes from 'prop-types';
+import EmbeddedMeasureField from './EmbeddedMeasureField';
 
-const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highlightText = null }) => {
+const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highlightText = null, patientId = null }) => {
   const {
     field_label,
     field_type,
@@ -42,6 +43,21 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
       case 'blank':
         // Display blank space
         return <div style={{ height: '20px' }}>&nbsp;</div>;
+
+      case 'embedded': {
+        const measureName = fieldDefinition.select_options?.measure_name;
+        if (!measureName || !patientId) {
+          return <span className="text-muted">—</span>;
+        }
+        return (
+          <EmbeddedMeasureField
+            patientId={patientId}
+            measureName={measureName}
+            fieldLabel={fieldDefinition.field_label}
+            readOnly
+          />
+        );
+      }
     }
 
     // Handle empty values for other field types
@@ -157,19 +173,23 @@ const CustomFieldDisplay = ({ fieldDefinition, value, searchQuery = '', highligh
 CustomFieldDisplay.propTypes = {
   fieldDefinition: PropTypes.shape({
     field_label: PropTypes.string.isRequired,
-    field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean', 'calculated', 'separator', 'blank']).isRequired,
+    field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean', 'calculated', 'separator', 'blank', 'embedded']).isRequired,
     validation_rules: PropTypes.object,
-    select_options: PropTypes.arrayOf(
-      PropTypes.oneOfType([
-        PropTypes.string,
-        PropTypes.shape({ value: PropTypes.string, label: PropTypes.string })
-      ])
-    ),
+    select_options: PropTypes.oneOfType([
+      PropTypes.arrayOf(
+        PropTypes.oneOfType([
+          PropTypes.string,
+          PropTypes.shape({ value: PropTypes.string, label: PropTypes.string })
+        ])
+      ),
+      PropTypes.shape({ measure_name: PropTypes.string })
+    ]),
     decimal_places: PropTypes.number
   }).isRequired,
   value: PropTypes.any,
   searchQuery: PropTypes.string,
-  highlightText: PropTypes.func
+  highlightText: PropTypes.func,
+  patientId: PropTypes.string
 };
 
 export default CustomFieldDisplay;

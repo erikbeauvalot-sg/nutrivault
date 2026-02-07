@@ -9,6 +9,15 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CustomFieldInput from '../CustomFieldInput';
 
+// Mock EmbeddedMeasureField to avoid API calls in tests
+vi.mock('../EmbeddedMeasureField', () => ({
+  default: ({ patientId, measureName, visitId, readOnly }) => (
+    <div data-testid="embedded-measure-field" data-patient={patientId} data-measure={measureName} data-visit={visitId || ''} data-readonly={readOnly || false}>
+      Embedded: {measureName}
+    </div>
+  )
+}));
+
 describe('CustomFieldInput', () => {
   const mockOnChange = vi.fn();
 
@@ -195,6 +204,60 @@ describe('CustomFieldInput', () => {
 
       const checkbox = screen.getByRole('checkbox');
       expect(checkbox.checked).toBe(true);
+    });
+  });
+
+  describe('Embedded fields', () => {
+    it('renders EmbeddedMeasureField with patientId and visitId', () => {
+      render(
+        <CustomFieldInput
+          fieldDefinition={{
+            ...baseFieldDefinition,
+            field_type: 'embedded',
+            select_options: { measure_name: 'weight' }
+          }}
+          value={null}
+          onChange={mockOnChange}
+          patientId="patient-123"
+          visitId="visit-456"
+        />
+      );
+      const embedded = screen.getByTestId('embedded-measure-field');
+      expect(embedded).toBeInTheDocument();
+      expect(embedded).toHaveAttribute('data-patient', 'patient-123');
+      expect(embedded).toHaveAttribute('data-measure', 'weight');
+      expect(embedded).toHaveAttribute('data-visit', 'visit-456');
+    });
+
+    it('shows message when patientId is missing', () => {
+      render(
+        <CustomFieldInput
+          fieldDefinition={{
+            ...baseFieldDefinition,
+            field_type: 'embedded',
+            select_options: { measure_name: 'weight' }
+          }}
+          value={null}
+          onChange={mockOnChange}
+        />
+      );
+      expect(screen.getByText('Patient context required')).toBeInTheDocument();
+    });
+
+    it('shows message when measure_name is missing', () => {
+      render(
+        <CustomFieldInput
+          fieldDefinition={{
+            ...baseFieldDefinition,
+            field_type: 'embedded',
+            select_options: {}
+          }}
+          value={null}
+          onChange={mockOnChange}
+          patientId="patient-123"
+        />
+      );
+      expect(screen.getByText('Measure not configured')).toBeInTheDocument();
     });
   });
 });

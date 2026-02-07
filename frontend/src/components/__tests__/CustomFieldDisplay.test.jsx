@@ -5,9 +5,18 @@
  * Prevents React error #31 (objects rendered as children)
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import CustomFieldDisplay from '../CustomFieldDisplay';
+
+// Mock EmbeddedMeasureField to avoid API calls in tests
+vi.mock('../EmbeddedMeasureField', () => ({
+  default: ({ patientId, measureName, readOnly }) => (
+    <div data-testid="embedded-measure-field" data-patient={patientId} data-measure={measureName} data-readonly={readOnly}>
+      Embedded: {measureName}
+    </div>
+  )
+}));
 
 describe('CustomFieldDisplay', () => {
   const baseFieldDefinition = {
@@ -162,6 +171,56 @@ describe('CustomFieldDisplay', () => {
         />
       );
       expect(screen.getByText(/25.50/)).toBeInTheDocument();
+    });
+  });
+
+  describe('Embedded fields', () => {
+    it('renders EmbeddedMeasureField with patientId and readOnly', () => {
+      render(
+        <CustomFieldDisplay
+          fieldDefinition={{
+            field_label: 'Weight',
+            field_type: 'embedded',
+            select_options: { measure_name: 'weight' }
+          }}
+          value={null}
+          patientId="patient-123"
+        />
+      );
+      const embedded = screen.getByTestId('embedded-measure-field');
+      expect(embedded).toBeInTheDocument();
+      expect(embedded).toHaveAttribute('data-patient', 'patient-123');
+      expect(embedded).toHaveAttribute('data-measure', 'weight');
+      expect(embedded).toHaveAttribute('data-readonly', 'true');
+    });
+
+    it('renders dash when patientId is missing', () => {
+      render(
+        <CustomFieldDisplay
+          fieldDefinition={{
+            field_label: 'Weight',
+            field_type: 'embedded',
+            select_options: { measure_name: 'weight' }
+          }}
+          value={null}
+        />
+      );
+      expect(screen.getByText('—')).toBeInTheDocument();
+    });
+
+    it('renders dash when measure_name is missing', () => {
+      render(
+        <CustomFieldDisplay
+          fieldDefinition={{
+            field_label: 'Weight',
+            field_type: 'embedded',
+            select_options: {}
+          }}
+          value={null}
+          patientId="patient-123"
+        />
+      );
+      expect(screen.getByText('—')).toBeInTheDocument();
     });
   });
 });

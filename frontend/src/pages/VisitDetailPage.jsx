@@ -32,7 +32,10 @@ const VisitDetailPage = () => {
   const [visit, setVisit] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() => {
+    const hash = window.location.hash.replace('#', '');
+    return hash || 'overview';
+  });
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [finishingVisit, setFinishingVisit] = useState(false);
   const [finishSuccess, setFinishSuccess] = useState(null);
@@ -66,6 +69,11 @@ const VisitDetailPage = () => {
   // Email history refresh key - increment to force refresh
   const [emailRefreshKey, setEmailRefreshKey] = useState(0);
   const refreshEmailHistory = () => setEmailRefreshKey(prev => prev + 1);
+
+  const handleTabSelect = (tab) => {
+    setActiveTab(tab);
+    window.history.replaceState(null, '', `#${tab}`);
+  };
 
   useEffect(() => {
     if (id && i18n.resolvedLanguage) {
@@ -530,7 +538,7 @@ const VisitDetailPage = () => {
         {/* Visit Details Tabs */}
         <Card>
           <Card.Body>
-            <ResponsiveTabs activeKey={activeTab} onSelect={setActiveTab} id="visit-detail-tabs">
+            <ResponsiveTabs activeKey={activeTab} onSelect={handleTabSelect} id="visit-detail-tabs">
               {/* Overview Tab */}
               <Tab eventKey="overview" title={`📋 ${t('visits.overviewTab')}`}>
                 <Row>
@@ -683,6 +691,7 @@ const VisitDetailPage = () => {
                               <CustomFieldDisplay
                                 fieldDefinition={field}
                                 value={fieldValues[field.definition_id]}
+                                patientId={visit?.patient?.id}
                               />
                             </div>
                           ))}
@@ -695,6 +704,7 @@ const VisitDetailPage = () => {
                               <CustomFieldDisplay
                                 fieldDefinition={field}
                                 value={fieldValues[field.definition_id]}
+                                patientId={visit?.patient?.id}
                               />
                             </Col>
                           ))}

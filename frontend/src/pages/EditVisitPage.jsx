@@ -78,7 +78,10 @@ const EditVisitPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  const [activeTab, setActiveTab] = useState('visit');
+  const [activeTab, setActiveTab] = useState(() => {
+    const hash = window.location.hash.replace('#', '');
+    return hash || 'visit';
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [finishing, setFinishing] = useState(false);
@@ -199,6 +202,11 @@ const EditVisitPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTabSelect = (tab) => {
+    setActiveTab(tab);
+    window.history.replaceState(null, '', `#${tab}`);
   };
 
   const handleInputChange = (e) => {
@@ -619,7 +627,7 @@ const EditVisitPage = () => {
   const validateForm = () => {
     if (!formData.patient_id || !formData.dietitian_id || !formData.visit_date) {
       setError('Patient, dietitian, and visit date are required');
-      setActiveTab('visit');
+      handleTabSelect('visit');
       return false;
     }
     return true;
@@ -809,7 +817,7 @@ const EditVisitPage = () => {
         <Form onSubmit={handleSubmit}>
           <Card>
             <Card.Body>
-              <ResponsiveTabs activeKey={activeTab} onSelect={setActiveTab} id="edit-visit-tabs">
+              <ResponsiveTabs activeKey={activeTab} onSelect={handleTabSelect} id="edit-visit-tabs">
                 {/* Visit Information Tab */}
                 <Tab eventKey="visit" title={`📅 ${t('visits.visitInformationTab')}`}>
                   <Row>
@@ -1083,6 +1091,8 @@ const EditVisitPage = () => {
                                   value={fieldValues[field.definition_id]}
                                   onChange={handleCustomFieldChange}
                                   error={fieldErrors[field.definition_id]}
+                                  patientId={visit?.patient_id}
+                                  visitId={id}
                                 />
                               </div>
                             ))}
@@ -1097,6 +1107,8 @@ const EditVisitPage = () => {
                                   value={fieldValues[field.definition_id]}
                                   onChange={handleCustomFieldChange}
                                   error={fieldErrors[field.definition_id]}
+                                  patientId={visit?.patient_id}
+                                  visitId={id}
                                 />
                               </Col>
                             ))}

@@ -6,8 +6,9 @@
 
 import { Form } from 'react-bootstrap';
 import PropTypes from 'prop-types';
+import EmbeddedMeasureField from './EmbeddedMeasureField';
 
-const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, error = null }) => {
+const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, error = null, patientId = null, visitId = null }) => {
   const {
     field_name,
     field_label,
@@ -214,6 +215,34 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
         // Display blank space
         return <div style={{ height: '20px' }}>&nbsp;</div>;
 
+      case 'embedded': {
+        // Get measure_name from select_options
+        const measureName = select_options?.measure_name;
+        if (!measureName) {
+          return (
+            <div className="text-muted">
+              <em>Measure not configured</em>
+            </div>
+          );
+        }
+        if (!patientId) {
+          return (
+            <div className="text-muted">
+              <em>Patient context required</em>
+            </div>
+          );
+        }
+        return (
+          <EmbeddedMeasureField
+            patientId={patientId}
+            measureName={measureName}
+            fieldLabel={field_label}
+            visitId={visitId}
+            readOnly={disabled}
+          />
+        );
+      }
+
       default:
         return (
           <Form.Control
@@ -264,21 +293,27 @@ CustomFieldInput.propTypes = {
     definition_id: PropTypes.string.isRequired,
     field_name: PropTypes.string.isRequired,
     field_label: PropTypes.string.isRequired,
-    field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean', 'calculated', 'separator', 'blank']).isRequired,
+    field_type: PropTypes.oneOf(['text', 'textarea', 'number', 'date', 'select', 'boolean', 'calculated', 'separator', 'blank', 'embedded']).isRequired,
     is_required: PropTypes.bool,
     validation_rules: PropTypes.oneOfType([PropTypes.object, PropTypes.string]),
-    select_options: PropTypes.arrayOf(
-      PropTypes.oneOfType([
-        PropTypes.string,
-        PropTypes.shape({ value: PropTypes.string, label: PropTypes.string })
-      ])
-    ),
+    select_options: PropTypes.oneOfType([
+      PropTypes.arrayOf(
+        PropTypes.oneOfType([
+          PropTypes.string,
+          PropTypes.shape({ value: PropTypes.string, label: PropTypes.string })
+        ])
+      ),
+      // For embedded type, select_options is an object with measure_name
+      PropTypes.shape({ measure_name: PropTypes.string })
+    ]),
     help_text: PropTypes.string
   }).isRequired,
   value: PropTypes.any,
   onChange: PropTypes.func.isRequired,
   disabled: PropTypes.bool,
-  error: PropTypes.string
+  error: PropTypes.string,
+  patientId: PropTypes.string,
+  visitId: PropTypes.string
 };
 
 export default CustomFieldInput;

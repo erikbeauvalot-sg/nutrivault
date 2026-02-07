@@ -226,6 +226,7 @@ const PatientCustomFieldsTabs = ({ patientId, editable = false, onUpdate = null 
                         onChange={handleFieldChange}
                         disabled={!editable}
                         error={errors[field.definition_id]}
+                        patientId={patientId}
                       />
                     </Col>
                   ))}

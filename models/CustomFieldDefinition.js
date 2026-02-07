@@ -28,10 +28,10 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     field_type: {
-      type: DataTypes.ENUM('text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator', 'blank'),
+      type: DataTypes.ENUM('text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator', 'blank', 'embedded'),
       allowNull: false,
       validate: {
-        isIn: [['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator', 'blank']]
+        isIn: [['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator', 'blank', 'embedded']]
       }
     },
     is_required: {
@@ -56,8 +56,17 @@ module.exports = (sequelize, DataTypes) => {
               throw new Error('select_options must have at least one option');
             }
           }
-          if (this.field_type !== 'select' && this.field_type !== 'separator' && value) {
-            throw new Error('select_options can only be set for select fields');
+          if (this.field_type === 'embedded' && value) {
+            if (typeof value !== 'object' || Array.isArray(value)) {
+              throw new Error('select_options must be an object for embedded fields');
+            }
+            if (!value.measure_name) {
+              throw new Error('measure_name is required for embedded fields');
+            }
+          }
+          // Allow select_options for select, separator, and embedded types only
+          if (this.field_type !== 'select' && this.field_type !== 'separator' && this.field_type !== 'embedded' && value) {
+            throw new Error('select_options can only be set for select or embedded fields');
           }
         }
       }
@@ -329,6 +338,10 @@ module.exports = (sequelize, DataTypes) => {
 
       case 'separator':
         // Separators don't store values, so they're always valid
+        break;
+
+      case 'embedded':
+        // Embedded fields display measures from PatientMeasure, no direct value storage
         break;
 
       default:

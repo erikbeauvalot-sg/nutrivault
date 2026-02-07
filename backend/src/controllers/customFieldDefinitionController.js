@@ -274,7 +274,7 @@ const validateCreateDefinition = [
     .withMessage('Field label must be between 1 and 200 characters')
     .trim(),
   body('field_type')
-    .isIn(['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator', 'blank'])
+    .isIn(['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator', 'blank', 'embedded'])
     .withMessage('Invalid field type'),
   body('is_required')
     .optional()
@@ -293,6 +293,14 @@ const validateCreateDefinition = [
         }
         if (value.length === 0) {
           throw new Error('select_options must have at least one option');
+        }
+      }
+      if (req.body.field_type === 'embedded') {
+        if (typeof value !== 'object' || Array.isArray(value)) {
+          throw new Error('select_options must be an object with measure_name for embedded field type');
+        }
+        if (!value.measure_name) {
+          throw new Error('select_options.measure_name is required for embedded field type');
         }
       }
       return true;
@@ -336,7 +344,7 @@ const validateUpdateDefinition = [
     .trim(),
   body('field_type')
     .optional()
-    .isIn(['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator', 'blank'])
+    .isIn(['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator', 'blank', 'embedded'])
     .withMessage('Invalid field type'),
   body('is_required')
     .optional()
@@ -360,9 +368,17 @@ const validateUpdateDefinition = [
     }),
   body('select_options')
     .optional()
-    .custom((value) => {
-      if (value !== null && value !== undefined && !Array.isArray(value)) {
-        throw new Error('select_options must be an array');
+    .custom((value, { req }) => {
+      if (value !== null && value !== undefined) {
+        // For embedded type, select_options is an object with measure_name
+        if (req.body.field_type === 'embedded') {
+          if (typeof value !== 'object' || Array.isArray(value)) {
+            throw new Error('select_options must be an object with measure_name for embedded field type');
+          }
+        } else if (!Array.isArray(value)) {
+          // For select type, it must be an array
+          throw new Error('select_options must be an array');
+        }
       }
       return true;
     }),

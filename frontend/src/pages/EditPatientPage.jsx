@@ -547,6 +547,7 @@ const EditPatientPage = () => {
                                           onChange={handleFieldChange}
                                           disabled={saving}
                                           error={fieldErrors[field.definition_id]}
+                                          patientId={id}
                                         />
                                         {fieldErrors[field.definition_id] && (
                                           <Form.Text className="text-danger">
@@ -631,6 +632,7 @@ const EditPatientPage = () => {
                                     onChange={handleFieldChange}
                                     disabled={saving}
                                     error={fieldErrors[field.definition_id]}
+                                    patientId={id}
                                   />
                                   {fieldErrors[field.definition_id] && (
                                     <Form.Text className="text-danger">

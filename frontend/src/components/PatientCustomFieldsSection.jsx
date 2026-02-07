@@ -207,6 +207,7 @@ const PatientCustomFieldsSection = ({ patientId, editable = false, onUpdate = nu
                         onChange={handleFieldChange}
                         disabled={!editable}
                         error={errors[field.definition_id]}
+                        patientId={patientId}
                       />
                     </Col>
                   ))}

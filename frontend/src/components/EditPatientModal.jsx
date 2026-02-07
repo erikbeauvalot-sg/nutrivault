@@ -494,6 +494,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
                                 onChange={(value) => handleFieldChange(field.id, value)}
                                 disabled={loading}
                                 error={fieldErrors[field.id]}
+                                patientId={patient?.id}
                               />
                               {fieldErrors[field.id] && (
                                 <Form.Text className="text-danger">

@@ -23,6 +23,7 @@ const FIELD_TYPES = [
   { value: 'select', label: 'Dropdown', icon: '📋' },
   { value: 'boolean', label: 'Yes/No', icon: '☑️' },
   { value: 'calculated', label: 'Calculated', icon: '🧮' },
+  { value: 'embedded', label: 'Embedded Measure', icon: '📊' },
   { value: 'separator', label: 'Separator', icon: '➖' },
   { value: 'blank', label: 'Blank Space', icon: '⬜' }
 ];
@@ -42,7 +43,7 @@ const definitionSchema = (t) => yup.object().shape({
     .max(200, t('forms.maxLength', { count: 200 })),
   field_type: yup.string()
     .required(t('forms.required'))
-    .oneOf(['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator', 'blank']),
+    .oneOf(['text', 'number', 'date', 'select', 'boolean', 'textarea', 'calculated', 'separator', 'blank', 'embedded']),
   help_text: yup.string()
     .max(500, t('forms.maxLength', { count: 500 }))
     .nullable(),
@@ -79,6 +80,9 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
   // State for adding dropdown options
   const [showAddOptionModal, setShowAddOptionModal] = useState(false);
   const [newOptionValue, setNewOptionValue] = useState('');
+
+  // State for embedded measure field
+  const [measureName, setMeasureName] = useState('');
 
   const isEditing = !!definition?.id;
 
@@ -167,6 +171,12 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       setFormula(definition.formula || '');
       setDecimalPlaces(definition.decimal_places !== undefined ? definition.decimal_places : 2);
       setDependencies(definition.dependencies || []);
+      // Extract measure_name from select_options for embedded type
+      if (definition.field_type === 'embedded' && definition.select_options?.measure_name) {
+        setMeasureName(definition.select_options.measure_name);
+      } else {
+        setMeasureName('');
+      }
     } else {
       reset({
         category_id: categories && categories.length > 0 ? categories[0].id : '',
@@ -190,6 +200,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       setDecimalPlaces(2);
       setDependencies([]);
       setFormulaError(null);
+      setMeasureName('');
     }
   }, [definition, categories, reset]);
 
@@ -221,6 +232,11 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
         payload.decimal_places = decimalPlaces;
       }
 
+      // Add measure_name for embedded type (stored in select_options)
+      if (selectedFieldType === 'embedded') {
+        payload.select_options = { measure_name: measureName };
+      }
+
       // Validate select options
       if (selectedFieldType === 'select' && (!selectOptions || selectOptions.length === 0)) {
         setError('Please add at least one option for dropdown fields');
@@ -231,6 +247,13 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       // Validate formula for calculated fields
       if (selectedFieldType === 'calculated' && (!formula || formula.trim() === '')) {
         setError('Please enter a formula for calculated fields');
+        setLoading(false);
+        return;
+      }
+
+      // Validate measure_name for embedded fields
+      if (selectedFieldType === 'embedded' && (!measureName || measureName.trim() === '')) {
+        setError('Please enter a measure name for embedded fields');
         setLoading(false);
         return;
       }
@@ -253,6 +276,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       setDecimalPlaces(2);
       setDependencies([]);
       setFormulaError(null);
+      setMeasureName('');
 
       setTimeout(() => {
         onSuccess();
@@ -277,6 +301,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
     setDecimalPlaces(2);
     setDependencies([]);
     setFormulaError(null);
+    setMeasureName('');
     onHide();
   };
 
@@ -705,6 +730,31 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
                 <Form.Text className="text-muted">
                   Boolean fields don't require additional validation
                 </Form.Text>
+              )}
+
+              {selectedFieldType === 'embedded' && (
+                <div>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Measure Name * <Badge bg="info">Embedded</Badge></Form.Label>
+                    <Form.Control
+                      type="text"
+                      placeholder="e.g., weight, height, blood_pressure"
+                      value={measureName}
+                      onChange={(e) => setMeasureName(e.target.value)}
+                      isInvalid={selectedFieldType === 'embedded' && !measureName}
+                    />
+                    <Form.Text className="text-muted">
+                      Enter the name of the measure definition to embed (e.g., weight, height).
+                      This will display the patient's latest value for this measure.
+                    </Form.Text>
+                  </Form.Group>
+                  <Alert variant="info" className="mt-2">
+                    <small>
+                      <strong>ℹ️ Note:</strong> Embedded fields display the latest patient measure value inline.
+                      Users can add or edit values directly without navigating to the Measures tab.
+                    </small>
+                  </Alert>
+                </div>
               )}
             </Card.Body>
           </Card>
