@@ -6,11 +6,26 @@
 
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const multer = require('multer');
 const { body, param, query, validationResult } = require('express-validator');
 const recipeController = require('../controllers/recipeController');
 const recipeCategoryController = require('../controllers/recipeCategoryController');
 const authenticate = require('../middleware/authenticate');
 const { requirePermission } = require('../middleware/rbac');
+
+// Multer config for JSON import
+const importUpload = multer({
+  dest: path.join(__dirname, '../../temp_uploads'),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/json' || file.originalname.endsWith('.json')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .json files are allowed'), false);
+    }
+  }
+});
 
 /**
  * Validation middleware
@@ -206,6 +221,60 @@ router.get(
     validate
   ],
   recipeController.getRecipeBySlug
+);
+
+/**
+ * GET /api/recipes/export/json - Bulk export recipes as JSON
+ */
+router.get(
+  '/export/json',
+  authenticate,
+  requirePermission('recipes.read'),
+  recipeController.exportRecipesJSON
+);
+
+/**
+ * POST /api/recipes/import - Import recipes from JSON file
+ */
+router.post(
+  '/import',
+  authenticate,
+  requirePermission('recipes.create'),
+  importUpload.single('file'),
+  recipeController.importRecipesJSON
+);
+
+/**
+ * POST /api/recipes/import/url - Import recipe from a URL (schema.org/Recipe)
+ */
+router.post(
+  '/import/url',
+  authenticate,
+  requirePermission('recipes.create'),
+  [
+    body('url')
+      .trim()
+      .notEmpty()
+      .withMessage('URL is required')
+      .isURL()
+      .withMessage('Must be a valid URL'),
+    validate
+  ],
+  recipeController.importFromUrl
+);
+
+/**
+ * GET /api/recipes/:id/export/json - Export single recipe as JSON
+ */
+router.get(
+  '/:id/export/json',
+  authenticate,
+  requirePermission('recipes.read'),
+  [
+    param('id').isUUID().withMessage('Recipe ID must be a valid UUID'),
+    validate
+  ],
+  recipeController.exportSingleRecipeJSON
 );
 
 /**

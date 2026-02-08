@@ -194,6 +194,126 @@ export const getPatientRecipes = async (patientId, filters = {}) => {
 };
 
 // ============================================
+// JSON Import/Export
+// ============================================
+
+/**
+ * Export multiple recipes as JSON
+ * @param {string[]} recipeIds - Array of recipe UUIDs (empty = all)
+ * @returns {Promise<void>} - Downloads the JSON file
+ */
+export const exportRecipesJSON = async (recipeIds = []) => {
+  const params = new URLSearchParams();
+  if (recipeIds.length > 0) {
+    params.append('recipeIds', recipeIds.join(','));
+  }
+
+  const response = await api.get(`/recipes/export/json?${params.toString()}`, {
+    responseType: 'blob'
+  });
+
+  let filename = 'nutrivault-recipes.json';
+  const contentDisposition = response.headers['content-disposition'];
+  if (contentDisposition) {
+    const filenameMatch = contentDisposition.match(/filename="?([^";\n]+)"?/);
+    if (filenameMatch && filenameMatch[1]) {
+      filename = filenameMatch[1];
+    }
+  }
+
+  const blob = new Blob([response.data], { type: 'application/json' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+/**
+ * Export a single recipe as JSON
+ * @param {string} recipeId - Recipe UUID
+ * @returns {Promise<void>} - Downloads the JSON file
+ */
+export const exportRecipeJSON = async (recipeId) => {
+  const response = await api.get(`/recipes/${recipeId}/export/json`, {
+    responseType: 'blob'
+  });
+
+  let filename = `recipe-${recipeId}.json`;
+  const contentDisposition = response.headers['content-disposition'];
+  if (contentDisposition) {
+    const filenameMatch = contentDisposition.match(/filename="?([^";\n]+)"?/);
+    if (filenameMatch && filenameMatch[1]) {
+      filename = filenameMatch[1];
+    }
+  }
+
+  const blob = new Blob([response.data], { type: 'application/json' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+/**
+ * Preview a JSON import file (parse on client side)
+ * @param {File} file - JSON file to preview
+ * @returns {Promise<Object>} - Parsed import data
+ */
+export const previewImportFile = async (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        resolve(data);
+      } catch (err) {
+        reject(new Error('Invalid JSON file'));
+      }
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsText(file);
+  });
+};
+
+/**
+ * Import recipes from a JSON file
+ * @param {File} file - JSON file to import
+ * @param {Object} options - Import options
+ * @param {string} options.duplicateHandling - 'skip' or 'rename'
+ * @returns {Promise<Object>} - Import summary
+ */
+export const importRecipesJSON = async (file, options = {}) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (options.duplicateHandling) {
+    formData.append('duplicateHandling', options.duplicateHandling);
+  }
+
+  const response = await api.post('/recipes/import', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return extractData(response);
+};
+
+/**
+ * Import a recipe from a URL (schema.org/Recipe scraping)
+ * @param {string} url - The URL to import from
+ * @returns {Promise<Object>} - Import summary with created recipe
+ */
+export const importFromUrl = async (url) => {
+  const response = await api.post('/recipes/import/url', { url });
+  return extractData(response);
+};
+
+// ============================================
 // PDF Export
 // ============================================
 

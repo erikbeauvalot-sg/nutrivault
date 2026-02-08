@@ -5,16 +5,17 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Button, Badge, Spinner, Modal } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Badge, Spinner, Dropdown } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import DOMPurify from 'dompurify';
-import { FaFilePdf, FaShare, FaPlus } from 'react-icons/fa';
+import { FaFilePdf, FaFileExport, FaShare, FaPlus, FaEllipsisV } from 'react-icons/fa';
 import Layout from '../components/layout/Layout';
 import RecipeStatusBadge from '../components/RecipeStatusBadge';
 import RecipeModal from '../components/RecipeModal';
 import RecipeShareModal from '../components/RecipeShareModal';
 import RecipeIngredientList from '../components/RecipeIngredientList';
+import ConfirmModal from '../components/ConfirmModal';
 import { useAuth } from '../contexts/AuthContext';
 import * as recipeService from '../services/recipeService';
 
@@ -31,6 +32,7 @@ const RecipeDetailPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [exportingPDF, setExportingPDF] = useState(false);
+  const [exportingJSON, setExportingJSON] = useState(false);
 
   const canUpdate = hasPermission('recipes.update');
   const canDelete = hasPermission('recipes.delete');
@@ -107,7 +109,6 @@ const RecipeDetailPage = () => {
   const handleExportPDF = async () => {
     try {
       setExportingPDF(true);
-      // Use the current language from i18n
       const lang = i18n.language?.startsWith('fr') ? 'fr' : 'en';
       await recipeService.exportRecipePDF(id, lang);
       toast.success(t('recipes.pdfExported', 'PDF exported successfully'));
@@ -116,6 +117,19 @@ const RecipeDetailPage = () => {
       toast.error(t('recipes.pdfExportError', 'Failed to export PDF'));
     } finally {
       setExportingPDF(false);
+    }
+  };
+
+  const handleExportJSON = async () => {
+    try {
+      setExportingJSON(true);
+      await recipeService.exportRecipeJSON(id);
+      toast.success(t('recipes.export.success', 'Recipe exported successfully'));
+    } catch (error) {
+      console.error('Error exporting JSON:', error);
+      toast.error(t('recipes.export.error', 'Failed to export recipe'));
+    } finally {
+      setExportingJSON(false);
     }
   };
 
@@ -142,10 +156,9 @@ const RecipeDetailPage = () => {
     return config[difficulty] || config.medium;
   };
 
-  // Sanitize HTML content for safe rendering
+  // Sanitize HTML content for safe rendering using DOMPurify
   const getSanitizedInstructions = (instructions) => {
     if (!instructions) return '';
-    // Replace newlines with <br /> and sanitize
     const htmlContent = instructions.replace(/\n/g, '<br />');
     return DOMPurify.sanitize(htmlContent, {
       ALLOWED_TAGS: ['br', 'p', 'b', 'i', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
@@ -180,11 +193,14 @@ const RecipeDetailPage = () => {
   const totalTime = (recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0);
   const difficultyConfig = getDifficultyBadge(recipe.difficulty);
 
+  // Render sanitized instructions safely — content is cleaned by DOMPurify above
+  const sanitizedInstructions = getSanitizedInstructions(recipe.instructions);
+
   return (
     <Layout>
       <Container fluid className="py-4">
         {/* Header */}
-        <div className="d-flex justify-content-between align-items-start mb-4">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-start gap-3 mb-4">
           <div>
             <Button variant="link" className="p-0 mb-2" onClick={() => navigate('/recipes')}>
               &larr; {t('common.back', 'Back to Recipes')}
@@ -206,14 +222,16 @@ const RecipeDetailPage = () => {
               )}
             </div>
           </div>
-          <div className="d-flex gap-2">
-            <Button
-              variant="outline-secondary"
-              onClick={handleExportPDF}
-              disabled={exportingPDF}
-            >
+
+          {/* Desktop: all buttons visible */}
+          <div className="d-none d-lg-flex flex-wrap gap-2">
+            <Button variant="outline-secondary" onClick={handleExportPDF} disabled={exportingPDF}>
               <FaFilePdf className="me-1" />
               {exportingPDF ? t('common.exporting', 'Exporting...') : t('recipes.exportPDF', 'Export PDF')}
+            </Button>
+            <Button variant="outline-secondary" onClick={handleExportJSON} disabled={exportingJSON}>
+              <FaFileExport className="me-1" />
+              {exportingJSON ? t('common.exporting', 'Exporting...') : t('recipes.export.jsonButton', 'Export JSON')}
             </Button>
             {canShare && recipe.status === 'published' && (
               <Button variant="outline-primary" onClick={handleShare}>
@@ -237,7 +255,7 @@ const RecipeDetailPage = () => {
               </Button>
             )}
             {canUpdate && (
-              <Button variant="primary" onClick={handleEdit}>
+              <Button variant="primary" onClick={() => handleEdit()}>
                 {t('common.edit', 'Edit')}
               </Button>
             )}
@@ -246,6 +264,59 @@ const RecipeDetailPage = () => {
                 {t('common.delete', 'Delete')}
               </Button>
             )}
+          </div>
+
+          {/* Mobile: primary buttons + overflow dropdown */}
+          <div className="d-flex d-lg-none flex-wrap gap-2">
+            {canUpdate && (
+              <Button variant="primary" size="sm" onClick={() => handleEdit()}>
+                {t('common.edit', 'Edit')}
+              </Button>
+            )}
+            {canUpdate && recipe.status === 'draft' && (
+              <Button variant="success" size="sm" onClick={handlePublish}>
+                {t('recipes.actions.publish', 'Publish')}
+              </Button>
+            )}
+            {canUpdate && recipe.status === 'published' && (
+              <Button variant="warning" size="sm" onClick={handleArchive}>
+                {t('recipes.actions.archive', 'Archive')}
+              </Button>
+            )}
+            <Dropdown align="end">
+              <Dropdown.Toggle variant="outline-secondary" size="sm">
+                <FaEllipsisV />
+              </Dropdown.Toggle>
+              <Dropdown.Menu>
+                <Dropdown.Item onClick={handleExportPDF} disabled={exportingPDF}>
+                  <FaFilePdf className="me-2" />
+                  {t('recipes.exportPDF', 'Export PDF')}
+                </Dropdown.Item>
+                <Dropdown.Item onClick={handleExportJSON} disabled={exportingJSON}>
+                  <FaFileExport className="me-2" />
+                  {t('recipes.export.jsonButton', 'Export JSON')}
+                </Dropdown.Item>
+                {canShare && recipe.status === 'published' && (
+                  <Dropdown.Item onClick={handleShare}>
+                    <FaShare className="me-2" />
+                    {t('recipes.share', 'Share')}
+                  </Dropdown.Item>
+                )}
+                {canCreate && (
+                  <Dropdown.Item onClick={handleDuplicate}>
+                    {t('common.duplicate', 'Duplicate')}
+                  </Dropdown.Item>
+                )}
+                {canDelete && (
+                  <>
+                    <Dropdown.Divider />
+                    <Dropdown.Item className="text-danger" onClick={() => setShowDeleteModal(true)}>
+                      {t('common.delete', 'Delete')}
+                    </Dropdown.Item>
+                  </>
+                )}
+              </Dropdown.Menu>
+            </Dropdown>
           </div>
         </div>
 
@@ -286,14 +357,14 @@ const RecipeDetailPage = () => {
               </Card>
             )}
 
-            {/* Instructions */}
+            {/* Instructions — content sanitized by DOMPurify */}
             {recipe.instructions && (
               <Card className="mb-4">
                 <Card.Body>
                   <Card.Title>{t('recipes.instructions', 'Instructions')}</Card.Title>
                   <div
                     className="recipe-instructions"
-                    dangerouslySetInnerHTML={{ __html: getSanitizedInstructions(recipe.instructions) }}
+                    dangerouslySetInnerHTML={{ __html: sanitizedInstructions }}
                   />
                 </Card.Body>
               </Card>
@@ -415,6 +486,18 @@ const RecipeDetailPage = () => {
               </Card>
             )}
 
+            {/* Source URL */}
+            {recipe.source_url && (
+              <Card className="mb-4">
+                <Card.Body>
+                  <Card.Title className="fs-6">{t('recipes.sourceUrl', 'Source')}</Card.Title>
+                  <a href={recipe.source_url} target="_blank" rel="noopener noreferrer" className="text-truncate d-block small">
+                    {recipe.source_url}
+                  </a>
+                </Card.Body>
+              </Card>
+            )}
+
             {/* Creator info */}
             {recipe.creator && (
               <Card className="mb-4">
@@ -437,28 +520,24 @@ const RecipeDetailPage = () => {
           initialTab={editModalTab}
         />
 
-        {/* Delete Confirmation Modal */}
-        <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)} centered>
-          <Modal.Header closeButton>
-            <Modal.Title>{t('recipes.deleteTitle', 'Delete Recipe')}</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <p>
+        {/* Delete Confirmation */}
+        <ConfirmModal
+          show={showDeleteModal}
+          onHide={() => setShowDeleteModal(false)}
+          onConfirm={handleDelete}
+          title={t('recipes.deleteTitle', 'Delete Recipe')}
+          message={
+            <>
               {t('recipes.deleteConfirm', 'Are you sure you want to delete "{{title}}"?', {
                 title: recipe.title
               })}
-            </p>
-            <p className="text-muted small">{t('common.actionCannotBeUndone', 'This action cannot be undone.')}</p>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
-              {t('common.cancel', 'Cancel')}
-            </Button>
-            <Button variant="danger" onClick={handleDelete}>
-              {t('common.delete', 'Delete')}
-            </Button>
-          </Modal.Footer>
-        </Modal>
+              <br />
+              <small className="text-muted">{t('common.actionCannotBeUndone', 'This action cannot be undone.')}</small>
+            </>
+          }
+          confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
+        />
 
         {/* Share Modal */}
         <RecipeShareModal

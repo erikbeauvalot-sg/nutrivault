@@ -7,7 +7,7 @@ import { Card, Badge, Dropdown } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import RecipeStatusBadge from './RecipeStatusBadge';
 
-const RecipeCard = ({ recipe, onEdit, onDelete, onDuplicate, onPublish, onArchive, onShare, onClick }) => {
+const RecipeCard = ({ recipe, onEdit, onDelete, onDuplicate, onPublish, onArchive, onShare, onExportJSON, onClick }) => {
   const { t } = useTranslation();
 
   const getDifficultyBadge = (difficulty) => {
@@ -32,22 +32,24 @@ const RecipeCard = ({ recipe, onEdit, onDelete, onDuplicate, onPublish, onArchiv
   const totalTime = (recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0);
   const difficultyConfig = getDifficultyBadge(recipe.difficulty);
 
+  const hasAnyAction = onEdit || onDelete || onDuplicate || onPublish || onArchive || onShare || onExportJSON;
+
   return (
     <Card className="h-100 recipe-card">
-      {recipe.image_url && (
+      {recipe.image_url ? (
         <div
           className="recipe-card-image"
-          style={{
-            height: '160px',
-            backgroundImage: `url(${recipe.image_url})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            cursor: 'pointer'
-          }}
+          style={{ height: '160px', cursor: 'pointer', overflow: 'hidden' }}
           onClick={() => onClick && onClick(recipe)}
-        />
-      )}
-      {!recipe.image_url && (
+        >
+          <img
+            src={recipe.image_url}
+            alt={recipe.title}
+            loading="lazy"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        </div>
+      ) : (
         <div
           className="recipe-card-image d-flex align-items-center justify-content-center"
           style={{
@@ -72,41 +74,56 @@ const RecipeCard = ({ recipe, onEdit, onDelete, onDuplicate, onPublish, onArchiv
           >
             {recipe.title}
           </Card.Title>
-          <Dropdown align="end" onClick={(e) => e.stopPropagation()}>
-            <Dropdown.Toggle variant="link" size="sm" className="p-0 text-muted">
-              <span>...</span>
-            </Dropdown.Toggle>
-            <Dropdown.Menu>
-              <Dropdown.Item onClick={() => onEdit && onEdit(recipe)}>
-                {t('common.edit', 'Edit')}
-              </Dropdown.Item>
-              <Dropdown.Item onClick={() => onDuplicate && onDuplicate(recipe)}>
-                {t('common.duplicate', 'Duplicate')}
-              </Dropdown.Item>
-              {recipe.status === 'draft' && (
-                <Dropdown.Item onClick={() => onPublish && onPublish(recipe)}>
-                  {t('recipes.actions.publish', 'Publish')}
-                </Dropdown.Item>
-              )}
-              {recipe.status === 'published' && (
-                <Dropdown.Item onClick={() => onArchive && onArchive(recipe)}>
-                  {t('recipes.actions.archive', 'Archive')}
-                </Dropdown.Item>
-              )}
-              {onShare && recipe.status === 'published' && (
-                <Dropdown.Item onClick={() => onShare(recipe)}>
-                  {t('recipes.actions.share', 'Share with Patient')}
-                </Dropdown.Item>
-              )}
-              <Dropdown.Divider />
-              <Dropdown.Item
-                className="text-danger"
-                onClick={() => onDelete && onDelete(recipe)}
-              >
-                {t('common.delete', 'Delete')}
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
+          {hasAnyAction && (
+            <Dropdown align="end" onClick={(e) => e.stopPropagation()}>
+              <Dropdown.Toggle variant="link" size="sm" className="p-0 text-muted">
+                <span>...</span>
+              </Dropdown.Toggle>
+              <Dropdown.Menu>
+                {onEdit && (
+                  <Dropdown.Item onClick={() => onEdit(recipe)}>
+                    {t('common.edit', 'Edit')}
+                  </Dropdown.Item>
+                )}
+                {onDuplicate && (
+                  <Dropdown.Item onClick={() => onDuplicate(recipe)}>
+                    {t('common.duplicate', 'Duplicate')}
+                  </Dropdown.Item>
+                )}
+                {onPublish && recipe.status === 'draft' && (
+                  <Dropdown.Item onClick={() => onPublish(recipe)}>
+                    {t('recipes.actions.publish', 'Publish')}
+                  </Dropdown.Item>
+                )}
+                {onArchive && recipe.status === 'published' && (
+                  <Dropdown.Item onClick={() => onArchive(recipe)}>
+                    {t('recipes.actions.archive', 'Archive')}
+                  </Dropdown.Item>
+                )}
+                {onShare && recipe.status === 'published' && (
+                  <Dropdown.Item onClick={() => onShare(recipe)}>
+                    {t('recipes.actions.share', 'Share with Patient')}
+                  </Dropdown.Item>
+                )}
+                {onExportJSON && (
+                  <Dropdown.Item onClick={() => onExportJSON(recipe)}>
+                    {t('recipes.export.jsonButton', 'Export JSON')}
+                  </Dropdown.Item>
+                )}
+                {onDelete && (
+                  <>
+                    <Dropdown.Divider />
+                    <Dropdown.Item
+                      className="text-danger"
+                      onClick={() => onDelete(recipe)}
+                    >
+                      {t('common.delete', 'Delete')}
+                    </Dropdown.Item>
+                  </>
+                )}
+              </Dropdown.Menu>
+            </Dropdown>
+          )}
         </div>
 
         {recipe.description && (

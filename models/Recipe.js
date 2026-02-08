@@ -103,6 +103,10 @@ module.exports = (sequelize, DataTypes) => {
         return value || {};
       }
     },
+    source_url: {
+      type: DataTypes.STRING(1000),
+      allowNull: true
+    },
     category_id: {
       type: DataTypes.UUID,
       allowNull: true,

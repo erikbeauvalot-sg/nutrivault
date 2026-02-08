@@ -7,6 +7,8 @@
 const recipeService = require('../services/recipe.service');
 const recipeSharingService = require('../services/recipeSharing.service');
 const recipePDFService = require('../services/recipePDF.service');
+const recipeImportExportService = require('../services/recipeImportExport.service');
+const fs = require('fs');
 
 /**
  * Extract request metadata for audit logging
@@ -347,6 +349,147 @@ exports.resendShareEmail = async (req, res, next) => {
       data: {
         patient_email: result.patient_email
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/recipes/export/json - Export recipes as JSON
+ */
+exports.exportRecipesJSON = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const requestMetadata = getRequestMetadata(req);
+
+    // Parse recipeIds from query param (comma-separated or array)
+    let recipeIds = [];
+    if (req.query.recipeIds) {
+      recipeIds = Array.isArray(req.query.recipeIds)
+        ? req.query.recipeIds
+        : req.query.recipeIds.split(',').map(id => id.trim()).filter(Boolean);
+    }
+
+    const exportData = await recipeImportExportService.exportRecipes(recipeIds, user, requestMetadata);
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = `nutrivault-recipes-${dateStr}.json`;
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.json(exportData);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/recipes/:id/export/json - Export single recipe as JSON
+ */
+exports.exportSingleRecipeJSON = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const user = req.user;
+    const requestMetadata = getRequestMetadata(req);
+
+    const exportData = await recipeImportExportService.exportSingleRecipe(id, user, requestMetadata);
+
+    const recipe = exportData.recipes[0];
+    const slugify = (text) => {
+      return text
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .substring(0, 50);
+    };
+    const titleSlug = slugify(recipe.title);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const filename = `recipe-${titleSlug}-${dateStr}.json`;
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.json(exportData);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/recipes/import - Import recipes from JSON file
+ */
+exports.importRecipesJSON = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const requestMetadata = getRequestMetadata(req);
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No file provided'
+      });
+    }
+
+    // Read and parse the uploaded JSON file
+    let importData;
+    try {
+      const fileContent = fs.readFileSync(req.file.path, 'utf-8');
+      importData = JSON.parse(fileContent);
+    } catch (parseError) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid JSON file'
+      });
+    } finally {
+      // Cleanup temp file
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    }
+
+    const options = {
+      duplicateHandling: req.body.duplicateHandling || 'skip'
+    };
+
+    const summary = await recipeImportExportService.importRecipes(importData, options, user, requestMetadata);
+
+    res.status(200).json({
+      success: true,
+      data: summary,
+      message: `Import complete: ${summary.created} created, ${summary.skipped} skipped`
+    });
+  } catch (error) {
+    // Cleanup temp file on error
+    if (req.file) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    }
+    next(error);
+  }
+};
+
+/**
+ * POST /api/recipes/import/url - Import recipe from a URL
+ */
+exports.importFromUrl = async (req, res, next) => {
+  try {
+    const { url } = req.body;
+    const user = req.user;
+    const requestMetadata = getRequestMetadata(req);
+
+    const summary = await recipeImportExportService.importFromUrl(url, user, requestMetadata);
+
+    res.status(201).json({
+      success: true,
+      data: summary,
+      message: `Recipe "${summary.recipe?.title || 'Unknown'}" imported successfully`
     });
   } catch (error) {
     next(error);
