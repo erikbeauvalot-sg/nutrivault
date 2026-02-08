@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Container, Alert, Spinner, Badge, Card, ListGroup, Button } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import useModalParam from '../hooks/useModalParam';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay, format } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
 import Layout from '../components/layout/Layout';
@@ -31,7 +32,7 @@ const AgendaPage = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showEventModal, setShowEventModal] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateModal, openCreateModal, closeCreateModal] = useModalParam('new-visit');
   const [createModalDate, setCreateModalDate] = useState(null);
 
   useEffect(() => {
@@ -160,7 +161,7 @@ const AgendaPage = () => {
 
   const handleSelectSlot = (slotInfo) => {
     setCreateModalDate(slotInfo.start.toISOString());
-    setShowCreateModal(true);
+    openCreateModal();
   };
 
   const handleViewChange = (newView) => setView(newView);
@@ -191,7 +192,7 @@ const AgendaPage = () => {
 
   const handleCreateVisit = () => {
     setCreateModalDate(null);
-    setShowCreateModal(true);
+    openCreateModal();
   };
 
   const handleVisitCreated = () => {
@@ -404,7 +405,7 @@ const AgendaPage = () => {
 
         <CreateVisitModal
           show={showCreateModal}
-          onHide={() => setShowCreateModal(false)}
+          onHide={closeCreateModal}
           onSuccess={handleVisitCreated}
           prefilledDate={createModalDate}
         />

@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, ListGroup, Badge } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
+import useModalParam from '../hooks/useModalParam';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
@@ -46,8 +47,8 @@ const DashboardPage = () => {
   const [todaysVisits, setTodaysVisits] = useState([]);
   const [customFieldDefinitions, setCustomFieldDefinitions] = useState([]);
   const [loadingVisits, setLoadingVisits] = useState(true);
-  const [showQuickPatientModal, setShowQuickPatientModal] = useState(false);
-  const [showCreateVisitModal, setShowCreateVisitModal] = useState(false);
+  const [showQuickPatientModal, openQuickPatientModal, closeQuickPatientModal] = useModalParam('new-patient');
+  const [showCreateVisitModal, openCreateVisitModal, closeCreateVisitModal] = useModalParam('new-visit');
 
   useEffect(() => {
     fetchStats();
@@ -208,7 +209,7 @@ const DashboardPage = () => {
                 <Button
                   variant="success"
                   className="w-100 py-3"
-                  onClick={() => setShowQuickPatientModal(true)}
+                  onClick={openQuickPatientModal}
                 >
                   <div className="h4 mb-1">⚡</div>
                   <div>{t('dashboard.quickPatient', 'Patient Flash')}</div>
@@ -218,7 +219,7 @@ const DashboardPage = () => {
                 <Button
                   variant="primary"
                   className="w-100 py-3"
-                  onClick={() => setShowCreateVisitModal(true)}
+                  onClick={openCreateVisitModal}
                 >
                   <div className="h4 mb-1">📅</div>
                   <div>{t('dashboard.scheduleVisit')}</div>
@@ -477,15 +478,15 @@ const DashboardPage = () => {
       {/* Quick Patient Modal */}
       <QuickPatientModal
         show={showQuickPatientModal}
-        onHide={() => setShowQuickPatientModal(false)}
+        onHide={closeQuickPatientModal}
         onSuccess={handleQuickPatientCreated}
       />
 
       <CreateVisitModal
         show={showCreateVisitModal}
-        onHide={() => setShowCreateVisitModal(false)}
+        onHide={closeCreateVisitModal}
         onSuccess={() => {
-          setShowCreateVisitModal(false);
+          closeCreateVisitModal();
           fetchTodaysVisits();
           fetchStats();
         }}

@@ -8,6 +8,7 @@ import { Modal, Button, Form, Row, Col, Alert, Spinner, InputGroup } from 'react
 import { useTranslation } from 'react-i18next';
 import * as patientService from '../services/patientService';
 import * as visitService from '../services/visitService';
+import SearchableSelect from './ui/SearchableSelect';
 
 const EditInvoiceModal = ({ show, onHide, onSubmit, invoice }) => {
   const { t } = useTranslation();
@@ -171,23 +172,23 @@ const EditInvoiceModal = ({ show, onHide, onSubmit, invoice }) => {
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>{t('billing.patient', 'Patient')} *</Form.Label>
-                <Form.Select
+                <SearchableSelect
                   name="patient_id"
+                  options={patients.map(patient => ({
+                    value: patient.id,
+                    label: `${patient.first_name} ${patient.last_name}`,
+                    subtitle: patient.email || ''
+                  }))}
                   value={formData.patient_id}
-                  onChange={handlePatientChange}
+                  onChange={(val) => {
+                    handlePatientChange({ target: { name: 'patient_id', value: val } });
+                  }}
+                  placeholder={loading ? t('common.loading', 'Loading...') : t('billing.selectPatient', 'Select a patient')}
+                  searchPlaceholder={t('common.searchByName', 'Search by name...')}
+                  noResultsText={t('common.noResults', 'No results found')}
                   disabled={loading}
                   required
-                >
-                  <option value="">
-                    {loading ? t('common.loading', 'Loading...') : t('billing.selectPatient', 'Select a patient')}
-                  </option>
-                  {patients.map(patient => (
-                    <option key={patient.id} value={patient.id}>
-                      {patient.first_name} {patient.last_name}
-                      {patient.email && ` (${patient.email})`}
-                    </option>
-                  ))}
-                </Form.Select>
+                />
               </Form.Group>
             </Col>
 

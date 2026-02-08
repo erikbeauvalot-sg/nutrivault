@@ -1,14 +1,18 @@
 /**
  * CreateInvoiceModal Component
- * Modal form for creating new invoices
+ * Slide panel for creating new invoices.
+ * Uses SlidePanel + FormSection for harmonized UX.
  */
 
 import { useState, useEffect } from 'react';
-import { Modal, Button, Form, Row, Col, Alert, Spinner, InputGroup } from 'react-bootstrap';
+import { Form, Row, Col, Alert, Spinner, InputGroup } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import * as patientService from '../services/patientService';
 import * as visitService from '../services/visitService';
 import visitTypeService from '../services/visitTypeService';
+import SlidePanel from './ui/SlidePanel';
+import FormSection from './ui/FormSection';
+import SearchableSelect from './ui/SearchableSelect';
 
 const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
   const { t } = useTranslation();
@@ -60,7 +64,6 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
     try {
       setLoading(true);
       const response = await patientService.getPatients({ is_active: true });
-      // Handle both POC format and new API format
       const patientsData = response.data?.data || response.data || [];
       setPatients(Array.isArray(patientsData) ? patientsData : []);
     } catch (err) {
@@ -78,7 +81,6 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
     }
     try {
       const response = await visitService.getVisits({ patient_id: patientId, limit: 100 });
-      // Handle both POC format and new API format
       const visitsData = response.data?.data || response.data || [];
       setVisits(Array.isArray(visitsData) ? visitsData : []);
     } catch (err) {
@@ -97,7 +99,6 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
       items: []
     });
     setError(null);
-    // If patient is pre-selected, fetch their visits
     if (preSelectedPatient?.id) {
       fetchVisits(preSelectedPatient.id);
     }
@@ -111,27 +112,22 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
     }));
     setError(null);
 
-    // If patient changed, fetch their visits
     if (name === 'patient_id') {
       fetchVisits(value);
-      // Clear visit selection when patient changes
       setFormData(prev => ({
         ...prev,
         visit_id: ''
       }));
     }
 
-    // If visit changed, try to pre-fill amount from visit type's default_price
     if (name === 'visit_id' && value) {
       const selectedVisit = visits.find(v => v.id === value);
       if (selectedVisit?.visit_type) {
-        // Find the visit type by name
         const matchedType = visitTypes.find(vt => vt.name === selectedVisit.visit_type);
         if (matchedType?.default_price) {
           setFormData(prev => ({
             ...prev,
             amount_total: parseFloat(matchedType.default_price).toFixed(2),
-            // Also pre-fill description with visit type if empty
             description: prev.description || `${selectedVisit.visit_type} - ${new Date(selectedVisit.visit_date).toLocaleDateString()}`
           }));
         }
@@ -141,22 +137,22 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
 
   const validateForm = () => {
     if (!formData.patient_id) {
-      setError('Please select a patient');
+      setError(t('billing.selectPatientRequired', 'Please select a patient'));
       return false;
     }
     if (!formData.description.trim()) {
-      setError('Description is required');
+      setError(t('billing.descriptionRequired', 'Description is required'));
       return false;
     }
     if (!formData.amount_total || parseFloat(formData.amount_total) <= 0) {
-      setError('Amount must be greater than 0');
+      setError(t('billing.amountRequired', 'Amount must be greater than 0'));
       return false;
     }
     return true;
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
 
     if (!validateForm()) return;
 
@@ -164,7 +160,6 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
     setError(null);
 
     try {
-      // Prepare submit data
       const submitData = {
         patient_id: formData.patient_id,
         service_description: formData.description.trim(),
@@ -190,67 +185,105 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
     }
   };
 
+  // Progress indicator
+  const filledRequired = [formData.patient_id, formData.description.trim(), formData.amount_total].filter(Boolean).length;
+
   return (
-    <Modal show={show} onHide={handleClose} size="xl" fullscreen="md-down" scrollable>
-      <Modal.Header closeButton>
-        <Modal.Title>{t('billing.createInvoice', 'Create Invoice')}</Modal.Title>
-      </Modal.Header>
+    <SlidePanel
+      show={show}
+      onHide={handleClose}
+      title={t('billing.createInvoice', 'Create Invoice')}
+      subtitle={t('billing.newInvoiceSubtitle', 'Generate a new invoice')}
+      icon={
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <rect x="4" y="2" width="12" height="16" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+          <path d="M7 6h6M7 9h6M7 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      }
+      size="md"
+      onSubmit={handleSubmit}
+      submitLabel={t('billing.createInvoice', 'Create Invoice')}
+      loading={submitting || loading}
+    >
+      {error && (
+        <Alert variant="danger" dismissible onClose={() => setError(null)} className="mb-3">
+          {error}
+        </Alert>
+      )}
 
       <Form onSubmit={handleSubmit}>
-        <Modal.Body>
-          {error && (
-            <Alert variant="danger" dismissible onClose={() => setError(null)}>
-              {error}
-            </Alert>
-          )}
-
-          <Row>
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>{t('billing.patient', 'Patient')} *</Form.Label>
-                <Form.Select
-                  name="patient_id"
-                  value={formData.patient_id}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                  required
-                >
-                  <option value="">
-                    {loading ? t('common.loading', 'Loading...') : t('billing.selectPatient', 'Select a patient')}
-                  </option>
-                  {patients.map(patient => (
-                    <option key={patient.id} value={patient.id}>
-                      {patient.first_name} {patient.last_name}
-                      {patient.email && ` (${patient.email})`}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
-
-            <Col md={6}>
-              <Form.Group className="mb-3">
-                <Form.Label>{t('billing.visit', 'Visit')} ({t('common.optional', 'Optional')})</Form.Label>
-                <Form.Select
-                  name="visit_id"
-                  value={formData.visit_id}
-                  onChange={handleInputChange}
-                  disabled={loading}
-                >
-                  <option value="">{t('billing.noVisit', 'No associated visit')}</option>
-                  {visits.map(visit => (
-                    <option key={visit.id} value={visit.id}>
-                      {new Date(visit.visit_date).toLocaleDateString()} - {visit.visit_type} 
-                      {visit.status && ` (${getStatusText(visit.status)})`}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-            </Col>
-          </Row>
+        {/* Patient & Visit */}
+        <FormSection
+          title={t('billing.patientAndVisit', 'Patient & Visit')}
+          icon={
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.2"/>
+              <path d="M3 14c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            </svg>
+          }
+          description={`${filledRequired}/3 ${t('common.required', 'required')}`}
+          accent="slate"
+        >
+          <Form.Group className="mb-3">
+            <Form.Label>
+              {t('billing.patient', 'Patient')} <span className="text-danger">*</span>
+            </Form.Label>
+            <SearchableSelect
+              name="patient_id"
+              options={patients.map(patient => ({
+                value: patient.id,
+                label: `${patient.first_name} ${patient.last_name}`,
+                subtitle: patient.email || ''
+              }))}
+              value={formData.patient_id}
+              onChange={(val) => {
+                handleInputChange({ target: { name: 'patient_id', value: val } });
+              }}
+              placeholder={loading ? t('common.loading', 'Loading...') : t('billing.selectPatient', 'Select a patient')}
+              searchPlaceholder={t('common.searchByName', 'Search by name...')}
+              noResultsText={t('common.noResults', 'No results found')}
+              disabled={loading}
+              required
+            />
+          </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label>{t('billing.description', 'Description')} *</Form.Label>
+            <Form.Label>
+              {t('billing.visit', 'Visit')}
+              <span className="text-muted ms-1">({t('common.optional', 'Optional')})</span>
+            </Form.Label>
+            <Form.Select
+              name="visit_id"
+              value={formData.visit_id}
+              onChange={handleInputChange}
+              disabled={loading}
+            >
+              <option value="">{t('billing.noVisit', 'No associated visit')}</option>
+              {visits.map(visit => (
+                <option key={visit.id} value={visit.id}>
+                  {new Date(visit.visit_date).toLocaleDateString()} - {visit.visit_type}
+                  {visit.status && ` (${getStatusText(visit.status)})`}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </FormSection>
+
+        {/* Invoice Details */}
+        <FormSection
+          title={t('billing.invoiceDetails', 'Invoice Details')}
+          icon={
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.2"/>
+              <path d="M5 6h6M5 8h4M5 10h5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            </svg>
+          }
+          accent="gold"
+        >
+          <Form.Group className="mb-3">
+            <Form.Label>
+              {t('billing.description', 'Description')} <span className="text-danger">*</span>
+            </Form.Label>
             <Form.Control
               as="textarea"
               rows={3}
@@ -263,9 +296,11 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
           </Form.Group>
 
           <Row>
-            <Col md={6}>
+            <Col sm={6}>
               <Form.Group className="mb-3">
-                <Form.Label>{t('billing.amount', 'Amount')} *</Form.Label>
+                <Form.Label>
+                  {t('billing.amount', 'Amount')} <span className="text-danger">*</span>
+                </Form.Label>
                 <InputGroup>
                   <InputGroup.Text>$</InputGroup.Text>
                   <Form.Control
@@ -281,10 +316,12 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
                 </InputGroup>
               </Form.Group>
             </Col>
-
-            <Col md={6}>
+            <Col sm={6}>
               <Form.Group className="mb-3">
-                <Form.Label>{t('billing.dueDate', 'Due Date')} ({t('common.optional', 'Optional')})</Form.Label>
+                <Form.Label>
+                  {t('billing.dueDate', 'Due Date')}
+                  <span className="text-muted ms-1">({t('common.optional', 'Optional')})</span>
+                </Form.Label>
                 <Form.Control
                   type="date"
                   name="due_date"
@@ -294,25 +331,9 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
               </Form.Group>
             </Col>
           </Row>
-        </Modal.Body>
-
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleClose} disabled={submitting}>
-            {t('common.cancel', 'Cancel')}
-          </Button>
-          <Button variant="primary" type="submit" disabled={submitting || loading}>
-            {submitting ? (
-              <>
-                <Spinner animation="border" size="sm" className="me-2" />
-                {t('billing.creating', 'Creating...')}
-              </>
-            ) : (
-              t('billing.createInvoice', 'Create Invoice')
-            )}
-          </Button>
-        </Modal.Footer>
+        </FormSection>
       </Form>
-    </Modal>
+    </SlidePanel>
   );
 };
 

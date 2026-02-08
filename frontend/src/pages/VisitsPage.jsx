@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Container, Row, Col, Card, Table, Button, Badge, Form, InputGroup } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
+import useModalParam from '../hooks/useModalParam';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import { PageHeader, PageError, LoadingSpinner, EmptyState, Pagination } from '../components/common';
@@ -46,7 +47,7 @@ const VisitsPage = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const hasSyncedRef = useRef(false);
   const isMobile = useIsMobile();
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateModal, openCreateModal, closeCreateModal] = useModalParam('new-visit');
   const [createModalPatient, setCreateModalPatient] = useState(null);
 
   // Initialize filters from URL parameters
@@ -88,7 +89,7 @@ const VisitsPage = () => {
   useEffect(() => {
     if (location.state?.selectedPatient) {
       setCreateModalPatient(location.state.selectedPatient);
-      setShowCreateModal(true);
+      openCreateModal();
       // Clear the state so it doesn't re-trigger
       navigate(location.pathname + location.search, { replace: true, state: {} });
     } else if (location.state?.openCreateModal) {
@@ -97,7 +98,7 @@ const VisitsPage = () => {
         // We'll set patient_id but not the full object - modal handles it via dropdown
         setCreateModalPatient({ id: location.state.patientId });
       }
-      setShowCreateModal(true);
+      openCreateModal();
       navigate(location.pathname + location.search, { replace: true, state: {} });
     }
   }, [location.state]);
@@ -187,7 +188,7 @@ const VisitsPage = () => {
 
   const handleCreateClick = () => {
     setCreateModalPatient(null);
-    setShowCreateModal(true);
+    openCreateModal();
   };
 
   const handleViewClick = (visitId) => {
@@ -660,7 +661,7 @@ const VisitsPage = () => {
         <CreateVisitModal
           show={showCreateModal}
           onHide={() => {
-            setShowCreateModal(false);
+            closeCreateModal();
             setCreateModalPatient(null);
           }}
           onSuccess={() => fetchVisits()}

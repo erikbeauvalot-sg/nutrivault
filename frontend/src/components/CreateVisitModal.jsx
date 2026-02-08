@@ -1,11 +1,11 @@
 /**
  * CreateVisitModal Component
- * Modal for creating new visits with two-column layout (form + custom fields)
- * Pattern follows QuickPatientModal
+ * Slide panel for creating new visits with organized sections.
+ * Uses SlidePanel + FormSection for harmonized UX.
  */
 
 import { useState, useEffect } from 'react';
-import { Modal, Button, Form, Alert, Spinner, Row, Col } from 'react-bootstrap';
+import { Form, Alert, Spinner, Row, Col, Button } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import visitService from '../services/visitService';
@@ -16,6 +16,10 @@ import { getCategories, getPatientCustomFields } from '../services/customFieldSe
 import { getTimezone } from '../utils/dateUtils';
 import userService from '../services/userService';
 import CustomFieldInput from './CustomFieldInput';
+import SlidePanel from './ui/SlidePanel';
+import FormSection from './ui/FormSection';
+import SearchableSelect from './ui/SearchableSelect';
+import useFormPersist from '../hooks/useFormPersist';
 
 /**
  * Convert a local datetime string (YYYY-MM-DDTHH:mm) to ISO UTC string
@@ -75,7 +79,7 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
   const [customFieldCategories, setCustomFieldCategories] = useState([]);
   const [fieldValues, setFieldValues] = useState({});
 
-  const [formData, setFormData] = useState({
+  const defaultFormData = {
     patient_id: '',
     dietitian_id: '',
     visit_date: '',
@@ -83,7 +87,8 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
     visit_type: '',
     duration_minutes: '',
     status: 'SCHEDULED'
-  });
+  };
+  const [formData, setFormData, clearFormStorage] = useFormPersist('create-visit', defaultFormData);
 
   // Load data when modal opens
   useEffect(() => {
@@ -92,7 +97,10 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
       fetchDietitians();
       fetchVisitTypes();
       fetchVisitCustomFieldCategories();
-      applyDefaults();
+      // Only apply defaults if form is empty (no persisted data)
+      if (!formData.patient_id && !formData.visit_date) {
+        applyDefaults();
+      }
     }
   }, [show]);
 
@@ -104,7 +112,6 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
   }, [i18n.resolvedLanguage]);
 
   const applyDefaults = () => {
-    // DIETITIAN always uses their own ID; ASSISTANT/ADMIN can default to patient's dietitian
     const defaultDietitianId = user?.role === 'DIETITIAN'
       ? user.id
       : (selectedPatient?.assigned_dietitian?.id || user?.id || '');
@@ -119,7 +126,6 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
       status: 'SCHEDULED'
     };
 
-    // Apply prefilled date if provided
     if (prefilledDate) {
       const d = new Date(prefilledDate);
       const timezone = getTimezone();
@@ -238,7 +244,6 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
 
   // Pre-populate custom fields with patient's existing values when patient changes
   useEffect(() => {
-    // Reset field values when patient changes
     setFieldValues({});
     if (!formData.patient_id || customFieldCategories.length === 0) return;
 
@@ -249,7 +254,6 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
 
         if (!patientFields || !Array.isArray(patientFields)) return;
 
-        // Build a map of definition_id -> value from patient's existing data
         const existingValues = {};
         patientFields.forEach(category => {
           (category.fields || []).forEach(field => {
@@ -259,8 +263,6 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
           });
         });
 
-        // Only pre-fill fields that are shown in the visit creation form
-        // and belong to patient-level categories (entity_types includes 'patient')
         const patientLevelFieldIds = new Set();
         customFieldCategories.forEach(cat => {
           let entityTypes = cat.entity_types || ['patient'];
@@ -302,7 +304,6 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
     return false;
   });
 
-  // Flatten all fields from filtered categories
   const allCustomFields = filteredCategories.flatMap(cat => cat.fields || []);
   const hasCustomFields = allCustomFields.length > 0;
 
@@ -373,7 +374,7 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!validateForm()) return;
 
     setLoading(true);
@@ -389,14 +390,12 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
         status: 'SCHEDULED'
       };
 
-      // Remove empty strings
       Object.keys(submitData).forEach(key => {
         if (submitData[key] === '') submitData[key] = null;
       });
 
       const savedVisit = await visitService.createVisit(submitData);
 
-      // Save custom field values if any were filled
       if (savedVisit?.id && Object.keys(fieldValues).length > 0) {
         try {
           const fieldsToSave = Object.entries(fieldValues)
@@ -430,15 +429,8 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
   };
 
   const handleClose = () => {
-    setFormData({
-      patient_id: '',
-      dietitian_id: '',
-      visit_date: '',
-      visit_type_id: '',
-      visit_type: '',
-      duration_minutes: '',
-      status: 'SCHEDULED'
-    });
+    setFormData(defaultFormData);
+    clearFormStorage();
     setFieldValues({});
     setError(null);
     onHide();
@@ -448,218 +440,247 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
   const canCreateVisit = user?.role === 'ADMIN' || user?.role === 'DIETITIAN' || user?.role === 'ASSISTANT';
   if (!canCreateVisit) return null;
 
-  // DIETITIAN cannot choose another dietitian — they are always the assigned dietitian
   const canChooseDietitian = user?.role === 'ADMIN' || user?.role === 'ASSISTANT';
 
   const dtParts = extractDateTimeParts(formData.visit_date);
 
+  // Progress: count filled required fields
+  const filledRequired = [formData.patient_id, formData.dietitian_id, formData.visit_date].filter(Boolean).length;
+
   return (
-    <Modal show={show} onHide={handleClose} centered scrollable size={hasCustomFields ? 'lg' : undefined}>
-      <Modal.Header closeButton>
-        <Modal.Title>{t('visits.scheduleNewVisit', 'New Appointment')}</Modal.Title>
-      </Modal.Header>
+    <SlidePanel
+      show={show}
+      onHide={handleClose}
+      title={t('visits.scheduleNewVisit', 'New Appointment')}
+      subtitle={t('visits.createVisitSubtitle', 'Schedule a consultation')}
+      icon={
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+          <path d="M3 8h14" stroke="currentColor" strokeWidth="1.5"/>
+          <path d="M7 2v4M13 2v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      }
+      size="md"
+      onSubmit={handleSubmit}
+      submitLabel={t('visits.createVisit', 'Create Appointment')}
+      loading={loading}
+    >
+      {error && (
+        <Alert variant="danger" dismissible onClose={() => setError(null)} className="mb-3">
+          {error}
+        </Alert>
+      )}
 
       <Form onSubmit={handleSubmit}>
-        <Modal.Body>
-          {error && (
-            <Alert variant="danger" dismissible onClose={() => setError(null)}>
-              {error}
-            </Alert>
-          )}
+        {/* Appointment details */}
+        <FormSection
+          title={t('visits.appointmentDetails', 'Appointment details')}
+          icon={
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2"/>
+              <path d="M8 5v3l2 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          }
+          description={`${filledRequired}/3 ${t('common.required', 'required')}`}
+          accent="slate"
+        >
+          <Form.Group className="mb-3">
+            <Form.Label>
+              {t('visits.patient', 'Patient')} <span className="text-danger">*</span>
+            </Form.Label>
+            <SearchableSelect
+              name="patient_id"
+              options={patients.map(p => ({
+                value: p.id,
+                label: `${p.first_name} ${p.last_name}`,
+                subtitle: p.email || p.phone || ''
+              }))}
+              value={formData.patient_id}
+              onChange={(val) => {
+                setFormData(prev => ({ ...prev, patient_id: val }));
+                setError(null);
+              }}
+              placeholder={t('visits.selectPatient', 'Select a patient')}
+              searchPlaceholder={t('common.searchByName', 'Search by name...')}
+              noResultsText={t('common.noResults', 'No results found')}
+              disabled={loading || !!selectedPatient}
+              required
+            />
+          </Form.Group>
 
-          <Row>
-            {/* Left Column: Form Fields */}
-            <Col md={hasCustomFields ? 6 : 12}>
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  {t('visits.patient', 'Patient')} <span className="text-danger">*</span>
-                </Form.Label>
-                <Form.Select
-                  name="patient_id"
-                  value={formData.patient_id}
-                  onChange={handleInputChange}
-                  disabled={loading || !!selectedPatient}
-                  required
-                >
-                  <option value="">{t('visits.selectPatient', 'Select a patient')}</option>
-                  {patients.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.first_name} {p.last_name}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  {t('visits.dietitian', 'Dietitian')} <span className="text-danger">*</span>
-                </Form.Label>
-                {canChooseDietitian ? (
-                  <Form.Select
-                    name="dietitian_id"
-                    value={formData.dietitian_id}
-                    onChange={handleInputChange}
-                    disabled={loading}
-                    required
-                  >
-                    <option value="">{t('visits.selectDietitian', 'Select a dietitian')}</option>
-                    {dietitians.map(d => {
-                      const displayName = d.first_name || d.last_name
-                        ? `${d.first_name || ''} ${d.last_name || ''}`.trim()
-                        : d.username;
-                      return (
-                        <option key={d.id} value={d.id}>{displayName}</option>
-                      );
-                    })}
-                  </Form.Select>
-                ) : (
-                  <Form.Control
-                    type="text"
-                    value={`${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || ''}
-                    disabled
-                    readOnly
-                  />
-                )}
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label>
-                  {t('visits.visitDateTime', 'Date/Time')} <span className="text-danger">*</span>
-                </Form.Label>
-                <div className="d-flex gap-2 align-items-center flex-wrap">
-                  <Form.Control
-                    type="date"
-                    value={dtParts.date}
-                    onChange={(e) => handleDateTimeChange('date', e.target.value)}
-                    required
-                    disabled={loading}
-                    className="flex-grow-1"
-                    style={{ minWidth: '130px' }}
-                  />
-                  <div className="d-flex gap-1 align-items-center">
-                    <Form.Select
-                      value={dtParts.hour}
-                      onChange={(e) => handleDateTimeChange('hour', e.target.value)}
-                      required
-                      disabled={loading}
-                      style={{ width: '72px' }}
-                    >
-                      {Array.from({ length: 24 }, (_, i) => (
-                        <option key={i} value={String(i).padStart(2, '0')}>
-                          {String(i).padStart(2, '0')}h
-                        </option>
-                      ))}
-                    </Form.Select>
-                    <Form.Select
-                      value={dtParts.minute}
-                      onChange={(e) => handleDateTimeChange('minute', e.target.value)}
-                      required
-                      disabled={loading}
-                      style={{ width: '62px' }}
-                    >
-                      <option value="00">00</option>
-                      <option value="15">15</option>
-                      <option value="30">30</option>
-                      <option value="45">45</option>
-                    </Form.Select>
-                    <Button
-                      variant="outline-secondary"
-                      size="sm"
-                      onClick={setToNow}
-                      disabled={loading}
-                      title={t('visits.setToNow', 'Set to current time')}
-                    >
-                      &middot;
-                    </Button>
-                  </div>
-                </div>
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label>{t('visits.visitType', 'Visit Type')}</Form.Label>
-                <Form.Select
-                  name="visit_type_id"
-                  value={formData.visit_type_id}
-                  onChange={(e) => {
-                    const selectedId = e.target.value;
-                    const selectedType = visitTypes.find(vt => vt.id === selectedId);
-                    setFormData(prev => ({
-                      ...prev,
-                      visit_type_id: selectedId,
-                      visit_type: selectedType?.name || '',
-                      duration_minutes: selectedType?.duration_minutes || prev.duration_minutes
-                    }));
-                  }}
-                  disabled={loading}
-                >
-                  <option value="">{t('visits.selectType', 'Select type')}</option>
-                  {visitTypes.map(vt => (
-                    <option key={vt.id} value={vt.id}>
-                      {vt.name}
-                      {vt.duration_minutes && ` (${vt.duration_minutes} min)`}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label>{t('visits.duration', 'Duration (min)')}</Form.Label>
-                <Form.Control
-                  type="number"
-                  name="duration_minutes"
-                  value={formData.duration_minutes}
-                  onChange={handleInputChange}
-                  placeholder="60"
-                  min="1"
-                  max="480"
-                  disabled={loading}
-                />
-              </Form.Group>
-            </Col>
-
-            {/* Right Column: Custom Fields */}
-            {hasCustomFields && (
-              <Col xs={12} md={6}>
-                <h6 className="text-muted mb-3">
-                  {t('customFields.additionalInfo', 'Additional Information')}
-                </h6>
-                {filteredCategories.map(category => (
-                  <div key={category.id}>
-                    {(category.fields || []).map(field => (
-                      <Form.Group key={field.definition_id} className="mb-3">
-                        <CustomFieldInput
-                          fieldDefinition={field}
-                          value={fieldValues[field.definition_id] ?? ''}
-                          onChange={handleCustomFieldChange}
-                          disabled={loading}
-                          patientId={formData.patient_id}
-                        />
-                      </Form.Group>
-                    ))}
-                  </div>
-                ))}
-              </Col>
-            )}
-          </Row>
-        </Modal.Body>
-
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleClose} disabled={loading}>
-            {t('common.cancel', 'Cancel')}
-          </Button>
-          <Button variant="primary" type="submit" disabled={loading}>
-            {loading ? (
-              <>
-                <Spinner animation="border" size="sm" className="me-2" />
-                {t('visits.creatingVisit', 'Creating...')}
-              </>
+          <Form.Group className="mb-3">
+            <Form.Label>
+              {t('visits.dietitian', 'Dietitian')} <span className="text-danger">*</span>
+            </Form.Label>
+            {canChooseDietitian ? (
+              <Form.Select
+                name="dietitian_id"
+                value={formData.dietitian_id}
+                onChange={handleInputChange}
+                disabled={loading}
+                required
+              >
+                <option value="">{t('visits.selectDietitian', 'Select a dietitian')}</option>
+                {dietitians.map(d => {
+                  const displayName = d.first_name || d.last_name
+                    ? `${d.first_name || ''} ${d.last_name || ''}`.trim()
+                    : d.username;
+                  return (
+                    <option key={d.id} value={d.id}>{displayName}</option>
+                  );
+                })}
+              </Form.Select>
             ) : (
-              t('visits.createVisit', 'Create Appointment')
+              <Form.Control
+                type="text"
+                value={`${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || ''}
+                disabled
+                readOnly
+              />
             )}
-          </Button>
-        </Modal.Footer>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>
+              {t('visits.visitDateTime', 'Date/Time')} <span className="text-danger">*</span>
+            </Form.Label>
+            <div className="d-flex gap-2 align-items-center flex-wrap">
+              <Form.Control
+                type="date"
+                value={dtParts.date}
+                onChange={(e) => handleDateTimeChange('date', e.target.value)}
+                required
+                disabled={loading}
+                className="flex-grow-1"
+                style={{ minWidth: '130px' }}
+              />
+              <div className="d-flex gap-1 align-items-center">
+                <Form.Select
+                  value={dtParts.hour}
+                  onChange={(e) => handleDateTimeChange('hour', e.target.value)}
+                  required
+                  disabled={loading}
+                  style={{ width: '72px' }}
+                >
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <option key={i} value={String(i).padStart(2, '0')}>
+                      {String(i).padStart(2, '0')}h
+                    </option>
+                  ))}
+                </Form.Select>
+                <Form.Select
+                  value={dtParts.minute}
+                  onChange={(e) => handleDateTimeChange('minute', e.target.value)}
+                  required
+                  disabled={loading}
+                  style={{ width: '62px' }}
+                >
+                  <option value="00">00</option>
+                  <option value="15">15</option>
+                  <option value="30">30</option>
+                  <option value="45">45</option>
+                </Form.Select>
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  onClick={setToNow}
+                  disabled={loading}
+                  title={t('visits.setToNow', 'Set to current time')}
+                >
+                  {t('visits.now', 'Now')}
+                </Button>
+              </div>
+            </div>
+          </Form.Group>
+        </FormSection>
+
+        {/* Visit type & duration */}
+        <FormSection
+          title={t('visits.typeAndDuration', 'Type & Duration')}
+          icon={
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M4 2v12M12 2v12M2 6h12M2 10h12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            </svg>
+          }
+          accent="gold"
+          collapsible
+          defaultOpen
+        >
+          <Form.Group className="mb-3">
+            <Form.Label>{t('visits.visitType', 'Visit Type')}</Form.Label>
+            <Form.Select
+              name="visit_type_id"
+              value={formData.visit_type_id}
+              onChange={(e) => {
+                const selectedId = e.target.value;
+                const selectedType = visitTypes.find(vt => vt.id === selectedId);
+                setFormData(prev => ({
+                  ...prev,
+                  visit_type_id: selectedId,
+                  visit_type: selectedType?.name || '',
+                  duration_minutes: selectedType?.duration_minutes || prev.duration_minutes
+                }));
+              }}
+              disabled={loading}
+            >
+              <option value="">{t('visits.selectType', 'Select type')}</option>
+              {visitTypes.map(vt => (
+                <option key={vt.id} value={vt.id}>
+                  {vt.name}
+                  {vt.duration_minutes && ` (${vt.duration_minutes} min)`}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>{t('visits.duration', 'Duration (min)')}</Form.Label>
+            <Form.Control
+              type="number"
+              name="duration_minutes"
+              value={formData.duration_minutes}
+              onChange={handleInputChange}
+              placeholder="60"
+              min="1"
+              max="480"
+              disabled={loading}
+            />
+          </Form.Group>
+        </FormSection>
+
+        {/* Custom Fields */}
+        {hasCustomFields && (
+          <FormSection
+            title={t('customFields.additionalInfo', 'Additional Information')}
+            icon={
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M3 3h10v10H3z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                <path d="M6 6h4M6 8h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              </svg>
+            }
+            accent="info"
+            collapsible
+            defaultOpen
+          >
+            {filteredCategories.map(category => (
+              <div key={category.id}>
+                {(category.fields || []).map(field => (
+                  <Form.Group key={field.definition_id} className="mb-3">
+                    <CustomFieldInput
+                      fieldDefinition={field}
+                      value={fieldValues[field.definition_id] ?? ''}
+                      onChange={handleCustomFieldChange}
+                      disabled={loading}
+                      patientId={formData.patient_id}
+                    />
+                  </Form.Group>
+                ))}
+              </div>
+            ))}
+          </FormSection>
+        )}
       </Form>
-    </Modal>
+    </SlidePanel>
   );
 };
 

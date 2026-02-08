@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import useModalParam from '../hooks/useModalParam';
 import { Container } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,10 +27,10 @@ const PatientsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [showQuickPatientModal, setShowQuickPatientModal] = useState(false);
+  const [showQuickPatientModal, openQuickPatientModal, closeQuickPatientModal] = useModalParam('new-patient');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState(null);
-  const [showCreateVisitModal, setShowCreateVisitModal] = useState(false);
+  const [showCreateVisitModal, openCreateVisitModal, closeCreateVisitModal] = useModalParam('new-visit');
   const [createVisitPatient, setCreateVisitPatient] = useState(null);
 
   // Filter state
@@ -104,12 +105,12 @@ const PatientsPage = () => {
   };
 
   const handleCreatePatient = () => {
-    setShowQuickPatientModal(true);
+    openQuickPatientModal();
   };
 
   const handlePatientCreated = () => {
-    setShowQuickPatientModal(false);
-    fetchPatients(); // Refresh the patient list
+    closeQuickPatientModal();
+    fetchPatients();
   };
 
   const handleEditPatient = (patient) => {
@@ -130,7 +131,7 @@ const PatientsPage = () => {
 
   const handleScheduleVisit = (patient) => {
     setCreateVisitPatient(patient);
-    setShowCreateVisitModal(true);
+    openCreateVisitModal();
   };
 
   const handleSearchChange = (search) => {
@@ -209,7 +210,7 @@ const PatientsPage = () => {
 
       <QuickPatientModal
         show={showQuickPatientModal}
-        onHide={() => setShowQuickPatientModal(false)}
+        onHide={closeQuickPatientModal}
         onSuccess={handlePatientCreated}
       />
 
@@ -229,11 +230,11 @@ const PatientsPage = () => {
       <CreateVisitModal
         show={showCreateVisitModal}
         onHide={() => {
-          setShowCreateVisitModal(false);
+          closeCreateVisitModal();
           setCreateVisitPatient(null);
         }}
         onSuccess={() => {
-          setShowCreateVisitModal(false);
+          closeCreateVisitModal();
           setCreateVisitPatient(null);
         }}
         selectedPatient={createVisitPatient}

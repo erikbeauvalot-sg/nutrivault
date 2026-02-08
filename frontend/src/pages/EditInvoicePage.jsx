@@ -12,6 +12,7 @@ import Layout from '../components/layout/Layout';
 import { getInvoiceById, updateInvoice } from '../services/billingService';
 import { getPatients } from '../services/patientService';
 import visitService from '../services/visitService';
+import SearchableSelect from '../components/ui/SearchableSelect';
 
 const EditInvoicePage = () => {
   const { t, i18n } = useTranslation();
@@ -243,23 +244,23 @@ const EditInvoicePage = () => {
                     <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label>{t('billing.patient', 'Patient')} *</Form.Label>
-                        <Form.Select
+                        <SearchableSelect
                           name="patient_id"
+                          options={patients.map(patient => ({
+                            value: patient.id,
+                            label: `${patient.first_name} ${patient.last_name}`,
+                            subtitle: patient.email || ''
+                          }))}
                           value={formData.patient_id}
-                          onChange={handleInputChange}
+                          onChange={(val) => {
+                            handleInputChange({ target: { name: 'patient_id', value: val } });
+                          }}
+                          placeholder={t('billing.selectPatient', 'Select a patient')}
+                          searchPlaceholder={t('common.searchByName', 'Search by name...')}
+                          noResultsText={t('common.noResults', 'No results found')}
                           disabled={saving}
                           required
-                        >
-                          <option value="">
-                            {t('billing.selectPatient', 'Select a patient')}
-                          </option>
-                          {patients.map(patient => (
-                            <option key={patient.id} value={patient.id}>
-                              {patient.first_name} {patient.last_name}
-                              {patient.email && ` (${patient.email})`}
-                            </option>
-                          ))}
-                        </Form.Select>
+                        />
                       </Form.Group>
                     </Col>
 

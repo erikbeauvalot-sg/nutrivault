@@ -376,7 +376,7 @@ describe('QuickPatientModal', () => {
 
       await waitFor(() => {
         const dialog = screen.getByRole('dialog');
-        expect(dialog.querySelector('.modal-lg')).toBeInTheDocument();
+        expect(dialog.querySelector('.nv-slide-panel--lg')).toBeInTheDocument();
       });
     });
 
@@ -386,7 +386,7 @@ describe('QuickPatientModal', () => {
 
       await waitFor(() => {
         const dialog = screen.getByRole('dialog');
-        expect(dialog.querySelector('.modal-lg')).not.toBeInTheDocument();
+        expect(dialog.querySelector('.nv-slide-panel--lg')).not.toBeInTheDocument();
       });
     });
   });

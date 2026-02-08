@@ -9,6 +9,8 @@ import { Container, Row, Col, Card, Button, Form, Alert, InputGroup, Spinner } f
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
+import FormSection from '../components/ui/FormSection';
+import SearchableSelect from '../components/ui/SearchableSelect';
 import { createInvoice } from '../services/billingService';
 import { getPatients } from '../services/patientService';
 import visitService from '../services/visitService';
@@ -90,10 +92,8 @@ const CreateInvoicePage = () => {
     }));
     setError(null);
 
-    // If patient changed, fetch their visits
     if (name === 'patient_id') {
       fetchVisits(value);
-      // Clear visit selection when patient changes
       setFormData(prev => ({
         ...prev,
         visit_id: ''
@@ -126,7 +126,6 @@ const CreateInvoicePage = () => {
     setError(null);
 
     try {
-      // Prepare submit data
       const submitData = {
         patient_id: formData.patient_id,
         service_description: formData.description.trim(),
@@ -137,8 +136,6 @@ const CreateInvoicePage = () => {
 
       const result = await createInvoice(submitData);
 
-      // Navigate to the created invoice detail page
-      // result.data contains the invoice object from the API response
       const invoiceId = result.data?.id || result.id;
       navigate(`/billing/${invoiceId}`, {
         state: { message: t('billing.invoiceCreated', 'Invoice created successfully') }
@@ -152,151 +149,204 @@ const CreateInvoicePage = () => {
   };
 
   const handleCancel = () => {
-    navigate(-1); // Go back to previous page
+    navigate(-1);
   };
+
+  // Progress indicator
+  const filledRequired = [formData.patient_id, formData.description.trim(), formData.amount_total].filter(Boolean).length;
 
   return (
     <Layout>
       <Container fluid className="py-4">
         <Row className="mb-4">
           <Col>
-            <h1 className="h3 mb-0">{t('billing.createInvoice', 'Create Invoice')}</h1>
-            <p className="text-muted">{t('billing.createInvoiceDescription', 'Create a new invoice for patient services')}</p>
+            <div className="d-flex align-items-center gap-3 mb-1">
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, var(--nv-gold), var(--nv-warm-500))',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white'
+              }}>
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <rect x="4" y="2" width="12" height="16" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                  <path d="M7 6h6M7 9h6M7 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <div>
+                <h1 className="h3 mb-0">{t('billing.createInvoice', 'Create Invoice')}</h1>
+                <p className="text-muted mb-0">{t('billing.createInvoiceDescription', 'Create a new invoice for patient services')}</p>
+              </div>
+            </div>
           </Col>
         </Row>
 
         <Row>
           <Col lg={8}>
-            <Card>
-              <Card.Body>
-                {error && (
-                  <Alert variant="danger" dismissible onClose={() => setError(null)}>
-                    {error}
-                  </Alert>
-                )}
+            {error && (
+              <Alert variant="danger" dismissible onClose={() => setError(null)} className="mb-3">
+                {error}
+              </Alert>
+            )}
 
-                <Form onSubmit={handleSubmit}>
-                  <Row>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label>{t('billing.patient', 'Patient')} *</Form.Label>
-                        <Form.Select
-                          name="patient_id"
-                          value={formData.patient_id}
-                          onChange={handleInputChange}
-                          disabled={loading}
-                          required
-                        >
-                          <option value="">
-                            {loading ? t('common.loading', 'Loading...') : t('billing.selectPatient', 'Select a patient')}
+            <Form onSubmit={handleSubmit}>
+              {/* Patient & Visit Section */}
+              <FormSection
+                title={t('billing.patientAndVisit', 'Patient & Visit')}
+                icon={
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.2"/>
+                    <path d="M3 14c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                }
+                accent="slate"
+              >
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>{t('billing.patient', 'Patient')} <span className="text-danger">*</span></Form.Label>
+                      <SearchableSelect
+                        name="patient_id"
+                        options={patients.map(patient => ({
+                          value: patient.id,
+                          label: `${patient.first_name} ${patient.last_name}`,
+                          subtitle: patient.email || ''
+                        }))}
+                        value={formData.patient_id}
+                        onChange={(val) => {
+                          handleInputChange({ target: { name: 'patient_id', value: val } });
+                        }}
+                        placeholder={loading ? t('common.loading', 'Loading...') : t('billing.selectPatient', 'Select a patient')}
+                        searchPlaceholder={t('common.searchByName', 'Search by name...')}
+                        noResultsText={t('common.noResults', 'No results found')}
+                        disabled={loading}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>
+                        {t('billing.visit', 'Visit')}
+                        <span className="text-muted ms-1">({t('common.optional', 'Optional')})</span>
+                      </Form.Label>
+                      <Form.Select
+                        name="visit_id"
+                        value={formData.visit_id}
+                        onChange={handleInputChange}
+                        disabled={loading || !formData.patient_id}
+                      >
+                        <option value="">{t('billing.noVisit', 'No associated visit')}</option>
+                        {visits.map(visit => (
+                          <option key={visit.id} value={visit.id}>
+                            {new Date(visit.visit_date).toLocaleDateString()} - {visit.visit_type}
+                            {visit.status && ` (${getStatusText(visit.status)})`}
                           </option>
-                          {patients.map(patient => (
-                            <option key={patient.id} value={patient.id}>
-                              {patient.first_name} {patient.last_name}
-                              {patient.email && ` (${patient.email})`}
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
+                        ))}
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </FormSection>
 
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label>{t('billing.visit', 'Visit')} ({t('common.optional', 'Optional')})</Form.Label>
-                        <Form.Select
-                          name="visit_id"
-                          value={formData.visit_id}
-                          onChange={handleInputChange}
-                          disabled={loading || !formData.patient_id}
-                        >
-                          <option value="">{t('billing.noVisit', 'No associated visit')}</option>
-                          {visits.map(visit => (
-                            <option key={visit.id} value={visit.id}>
-                              {new Date(visit.visit_date).toLocaleDateString()} - {visit.visit_type}
-                              {visit.status && ` (${getStatusText(visit.status)})`}
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                  </Row>
+              {/* Invoice Details Section */}
+              <FormSection
+                title={t('billing.invoiceDetails', 'Invoice Details')}
+                icon={
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.2"/>
+                    <path d="M5 6h6M5 8h4M5 10h5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                }
+                description={`${filledRequired}/3 ${t('common.required', 'required')}`}
+                accent="gold"
+              >
+                <Form.Group className="mb-3">
+                  <Form.Label>{t('billing.description', 'Description')} <span className="text-danger">*</span></Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={3}
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    placeholder={t('billing.descriptionPlaceholder', 'Enter invoice description')}
+                    required
+                  />
+                </Form.Group>
 
-                  <Form.Group className="mb-3">
-                    <Form.Label>{t('billing.description', 'Description')} *</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      rows={4}
-                      name="description"
-                      value={formData.description}
-                      onChange={handleInputChange}
-                      placeholder={t('billing.descriptionPlaceholder', 'Enter invoice description')}
-                      required
-                    />
-                  </Form.Group>
-
-                  <Row>
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label>{t('billing.amount', 'Amount')} *</Form.Label>
-                        <InputGroup>
-                          <InputGroup.Text>€</InputGroup.Text>
-                          <Form.Control
-                            type="number"
-                            step="0.01"
-                            min="0.01"
-                            name="amount_total"
-                            value={formData.amount_total}
-                            onChange={handleInputChange}
-                            placeholder="0.00"
-                            required
-                          />
-                        </InputGroup>
-                      </Form.Group>
-                    </Col>
-
-                    <Col md={6}>
-                      <Form.Group className="mb-3">
-                        <Form.Label>{t('billing.dueDate', 'Due Date')} ({t('common.optional', 'Optional')})</Form.Label>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>{t('billing.amount', 'Amount')} <span className="text-danger">*</span></Form.Label>
+                      <InputGroup>
+                        <InputGroup.Text>€</InputGroup.Text>
                         <Form.Control
-                          type="date"
-                          name="due_date"
-                          value={formData.due_date}
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          name="amount_total"
+                          value={formData.amount_total}
                           onChange={handleInputChange}
+                          placeholder="0.00"
+                          required
                         />
-                      </Form.Group>
-                    </Col>
-                  </Row>
+                      </InputGroup>
+                    </Form.Group>
+                  </Col>
 
-                  <div className="d-flex gap-2 mt-4">
-                    <Button variant="secondary" onClick={handleCancel} disabled={submitting}>
-                      {t('common.cancel', 'Cancel')}
-                    </Button>
-                    <Button variant="primary" type="submit" disabled={submitting || loading}>
-                      {submitting ? (
-                        <>
-                          <Spinner animation="border" size="sm" className="me-2" />
-                          {t('billing.creating', 'Creating...')}
-                        </>
-                      ) : (
-                        t('billing.createInvoice', 'Create Invoice')
-                      )}
-                    </Button>
-                  </div>
-                </Form>
-              </Card.Body>
-            </Card>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>
+                        {t('billing.dueDate', 'Due Date')}
+                        <span className="text-muted ms-1">({t('common.optional', 'Optional')})</span>
+                      </Form.Label>
+                      <Form.Control
+                        type="date"
+                        name="due_date"
+                        value={formData.due_date}
+                        onChange={handleInputChange}
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </FormSection>
+
+              <div className="d-flex gap-2 mt-4">
+                <Button variant="outline-secondary" onClick={handleCancel} disabled={submitting}>
+                  {t('common.cancel', 'Cancel')}
+                </Button>
+                <Button variant="primary" type="submit" disabled={submitting || loading}>
+                  {submitting ? (
+                    <>
+                      <Spinner animation="border" size="sm" className="me-2" />
+                      {t('billing.creating', 'Creating...')}
+                    </>
+                  ) : (
+                    t('billing.createInvoice', 'Create Invoice')
+                  )}
+                </Button>
+              </div>
+            </Form>
           </Col>
 
           <Col lg={4}>
-            <Card>
-              <Card.Header>
-                <h5 className="mb-0">{t('common.help', 'Help')}</h5>
-              </Card.Header>
-              <Card.Body>
-                <p className="text-muted small">
+            <Card className="border-0" style={{ background: 'var(--nv-warm-100)', borderRadius: 12 }}>
+              <Card.Body className="p-4">
+                <div className="d-flex align-items-center gap-2 mb-3">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--nv-slate)' }}>
+                    <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2"/>
+                    <path d="M8 5v3.5l2.5 1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                  <h6 className="mb-0">{t('common.help', 'Help')}</h6>
+                </div>
+                <p className="text-muted small mb-2">
                   {t('billing.createInvoiceHelp', 'Create invoices for patient services. You can optionally associate an invoice with a specific visit.')}
                 </p>
-                <ul className="text-muted small">
+                <ul className="text-muted small mb-0 ps-3">
                   <li>{t('billing.patientRequired', 'Patient selection is required')}</li>
                   <li>{t('billing.descriptionRequired', 'Description and amount are required')}</li>
                   <li>{t('billing.visitOptional', 'Visit association is optional')}</li>

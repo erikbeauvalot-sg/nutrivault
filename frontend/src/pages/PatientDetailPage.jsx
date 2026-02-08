@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import useModalParam from '../hooks/useModalParam';
 import { Container, Row, Col, Card, Button, Badge, Alert, Spinner, Dropdown, Modal, Form, InputGroup } from 'react-bootstrap';
 import ResponsiveTabs, { Tab } from '../components/ResponsiveTabs';
 import { useTranslation } from 'react-i18next';
@@ -81,7 +82,7 @@ const PatientDetailPage = () => {
   const [invoiceToDelete, setInvoiceToDelete] = useState(null);
   const [patientRecipes, setPatientRecipes] = useState([]);
   const [recipesLoading, setRecipesLoading] = useState(false);
-  const [showCreateVisitModal, setShowCreateVisitModal] = useState(false);
+  const [showCreateVisitModal, openCreateVisitModal, closeCreateVisitModal] = useModalParam('new-visit');
   const [allDietitians, setAllDietitians] = useState([]);
   const [addingDietitian, setAddingDietitian] = useState(false);
   const [selectedNewDietitianId, setSelectedNewDietitianId] = useState('');
@@ -434,7 +435,7 @@ const PatientDetailPage = () => {
   };
 
   const handleAddVisit = () => {
-    setShowCreateVisitModal(true);
+    openCreateVisitModal();
   };
 
   const handleAddPayment = () => {
@@ -1508,9 +1509,9 @@ const PatientDetailPage = () => {
 
         <CreateVisitModal
           show={showCreateVisitModal}
-          onHide={() => setShowCreateVisitModal(false)}
+          onHide={closeCreateVisitModal}
           onSuccess={() => {
-            setShowCreateVisitModal(false);
+            closeCreateVisitModal();
             fetchPatientDetails();
           }}
           selectedPatient={patient}

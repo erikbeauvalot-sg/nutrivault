@@ -1,10 +1,11 @@
 /**
  * EditPatientModal Component
- * Modal form for editing existing patients with custom fields organized by categories
+ * Slide panel for editing existing patients with custom fields organized by categories.
+ * Uses SlidePanel + FormSection for harmonized UX.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Modal, Button, Form, Row, Col, Alert, Tab, Tabs, Spinner } from 'react-bootstrap';
+import { Form, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import userService from '../services/userService';
 import PatientTagsManager from './PatientTagsManager';
@@ -12,6 +13,8 @@ import * as patientTagService from '../services/patientTagService';
 import customFieldService from '../services/customFieldService';
 import CustomFieldInput from './CustomFieldInput';
 import api from '../services/api';
+import SlidePanel from './ui/SlidePanel';
+import FormSection from './ui/FormSection';
 
 const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
   const { t } = useTranslation();
@@ -95,7 +98,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
       setCustomFieldCategories(categoriesWithFields);
     } catch (err) {
       console.error('Error fetching custom fields:', err);
-      setError('Erreur lors du chargement des champs personnalisés');
+      setError(t('errors.loadingCustomFields', 'Error loading custom fields'));
     } finally {
       setLoadingCustomFields(false);
     }
@@ -135,7 +138,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
       return;
     }
 
-    setEmailValidation({ status: 'checking', message: 'Vérification...' });
+    setEmailValidation({ status: 'checking', message: t('common.checking', 'Checking...') });
 
     try {
       const response = await api.get(`/patients/check-email/${encodeURIComponent(email.trim().toLowerCase())}`);
@@ -144,19 +147,19 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
       if (isAvailable) {
         setEmailValidation({
           status: 'available',
-          message: '✓ Email disponible'
+          message: t('patients.emailAvailable', 'Email available')
         });
       } else {
         setEmailValidation({
           status: 'taken',
-          message: '✗ Cet email est déjà utilisé par un autre patient'
+          message: t('patients.emailTaken', 'This email is already used by another patient')
         });
       }
     } catch (err) {
       console.error('Error checking email:', err);
       setEmailValidation({ status: 'idle', message: '' });
     }
-  }, []);
+  }, [t]);
 
   const loadPatientData = async () => {
     try {
@@ -186,7 +189,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
       setError(null);
     } catch (err) {
       console.error('Error loading patient data:', err);
-      setError('Erreur lors du chargement des données patient');
+      setError(t('errors.loadingPatientData', 'Error loading patient data'));
     }
   };
 
@@ -200,15 +203,10 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
 
     // Debounced email validation
     if (name === 'email') {
-      // Clear previous timeout
       if (emailCheckTimeout.current) {
         clearTimeout(emailCheckTimeout.current);
       }
-
-      // Reset validation status while typing
       setEmailValidation({ status: 'idle', message: '' });
-
-      // Set new timeout (500ms debounce)
       if (value && value.trim()) {
         emailCheckTimeout.current = setTimeout(() => {
           checkEmailAvailability(value, originalEmail);
@@ -229,8 +227,6 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
       ...prev,
       [fieldDefinitionId]: value
     }));
-
-    // Clear error for this field
     setFieldErrors(prev => {
       const newErrors = { ...prev };
       delete newErrors[fieldDefinitionId];
@@ -240,22 +236,20 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
 
   const validateBasicForm = () => {
     if (!formData.first_name.trim() || !formData.last_name.trim()) {
-      setError('Le prénom et le nom sont requis');
+      setError(t('patients.nameRequired', 'First name and last name are required'));
       return false;
     }
     if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
-      setError('Format email invalide');
+      setError(t('patients.invalidEmail', 'Invalid email format'));
       return false;
     }
-    // Check if email is taken (only if it was changed from original)
     if (formData.email && formData.email.trim().toLowerCase() !== originalEmail.trim().toLowerCase()) {
       if (emailValidation.status === 'taken') {
-        setError('Cet email est déjà utilisé par un autre patient');
+        setError(t('patients.emailTaken', 'This email is already used by another patient'));
         return false;
       }
-      // Wait for email validation to complete
       if (emailValidation.status === 'checking') {
-        setError('Vérification de l\'email en cours...');
+        setError(t('patients.emailChecking', 'Email verification in progress...'));
         return false;
       }
     }
@@ -272,7 +266,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
         const validation = field.validateValue ? field.validateValue(value) : { isValid: true };
 
         if (!validation.isValid) {
-          errors[field.id] = validation.error || 'Valeur invalide';
+          errors[field.id] = validation.error || t('common.invalidValue', 'Invalid value');
           hasErrors = true;
         }
       });
@@ -283,11 +277,11 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
 
     if (!validateBasicForm()) return;
     if (!validateCustomFields()) {
-      setError('Veuillez corriger les erreurs dans les champs');
+      setError(t('patients.fixFieldErrors', 'Please fix the errors in the fields'));
       return;
     }
 
@@ -295,7 +289,6 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
     setError(null);
 
     try {
-      // Update basic patient info
       const basicData = {
         first_name: formData.first_name,
         last_name: formData.last_name,
@@ -308,7 +301,6 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
       const success = await onSubmit(patient.id, basicData);
 
       if (success) {
-        // Update custom fields
         const customFieldsData = Object.keys(fieldValues).map(fieldDefinitionId => ({
           field_definition_id: fieldDefinitionId,
           value: fieldValues[fieldDefinitionId]
@@ -322,7 +314,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
       }
     } catch (err) {
       console.error('Error updating patient:', err);
-      setError('Échec de la mise à jour: ' + (err.message || 'Erreur inconnue'));
+      setError(t('errors.updateFailed', 'Update failed') + ': ' + (err.message || t('errors.unknown', 'Unknown error')));
     } finally {
       setLoading(false);
     }
@@ -347,181 +339,216 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
 
   if (!patient) return null;
 
+  // Count filled fields for progress indication
+  const filledBasicFields = [formData.first_name, formData.last_name].filter(Boolean).length;
+  const totalBasicRequired = 2;
+
   return (
-    <Modal show={show} onHide={handleClose} size="xl" fullscreen="md-down" centered scrollable>
-      <Modal.Header closeButton>
-        <Modal.Title>{t('patients.editPatient')}: {patient.first_name} {patient.last_name}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {error && (
-          <Alert variant="danger" className="mb-3">
-            {error}
-          </Alert>
-        )}
+    <SlidePanel
+      show={show}
+      onHide={handleClose}
+      title={`${patient.first_name} ${patient.last_name}`}
+      subtitle={t('patients.editPatient', 'Edit patient')}
+      icon={
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <circle cx="10" cy="7" r="4" stroke="currentColor" strokeWidth="1.5"/>
+          <path d="M3 18c0-3.5 3.1-6 7-6s7 2.5 7 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      }
+      size="lg"
+      onSubmit={handleSubmit}
+      submitLabel={t('patients.updatePatient', 'Update patient')}
+      loading={loading || loadingCustomFields}
+    >
+      {error && (
+        <Alert variant="danger" dismissible onClose={() => setError(null)} className="mb-3">
+          {error}
+        </Alert>
+      )}
 
-        <Form onSubmit={handleSubmit}>
-          <Tabs defaultActiveKey="basic-info" className="mb-3">
-            {/* Basic Info Tab */}
-            <Tab eventKey="basic-info" title="📋 Informations de base">
-              <div className="mb-4">
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Prénom *</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="first_name"
-                        value={formData.first_name}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Nom *</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="last_name"
-                        value={formData.last_name}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Email</Form.Label>
-                      <Form.Control
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        isValid={emailValidation.status === 'available'}
-                        isInvalid={emailValidation.status === 'taken'}
-                      />
-                      {emailValidation.status === 'checking' && (
-                        <Form.Text className="text-muted">
-                          <Spinner animation="border" size="sm" className="me-1" />
-                          {emailValidation.message}
-                        </Form.Text>
-                      )}
-                      {emailValidation.status === 'available' && (
-                        <Form.Control.Feedback type="valid">
-                          {emailValidation.message}
-                        </Form.Control.Feedback>
-                      )}
-                      {emailValidation.status === 'taken' && (
-                        <Form.Control.Feedback type="invalid">
-                          {emailValidation.message}
-                        </Form.Control.Feedback>
-                      )}
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Téléphone</Form.Label>
-                      <Form.Control
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                      />
-                    </Form.Group>
-                  </Col>
-                </Row>
-                <Form.Group className="mb-3">
-                  <Form.Label>{t('patients.linkedDietitians', 'Diététiciens liés')}</Form.Label>
-                  <Form.Text className="d-block text-muted mb-1">
-                    {t('patients.linkedDietitiansInfo', 'Les diététiciens sont liés automatiquement lors des visites. Gérez les liens depuis la fiche patient.')}
-                  </Form.Text>
-                  {patient?.assigned_dietitian && (
-                    <div className="small">
-                      {patient.assigned_dietitian.first_name} {patient.assigned_dietitian.last_name}
-                    </div>
-                  )}
-                </Form.Group>
-                <Form.Group className="mb-3">
-                  <Form.Label>Tags patient</Form.Label>
-                  <PatientTagsManager
-                    patientId={patient?.id}
-                    initialTags={formData.tags}
-                    onTagsChange={handleTagsChange}
-                    disabled={loading}
-                  />
+      <Form onSubmit={handleSubmit}>
+        {/* Basic Info Section */}
+        <FormSection
+          title={t('patients.basicInfo', 'Personal information')}
+          icon={
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.2"/>
+              <path d="M5 6h6M5 8h4M5 10h5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            </svg>
+          }
+          description={`${filledBasicFields}/${totalBasicRequired} ${t('common.required', 'required')}`}
+          accent="slate"
+        >
+          <Row>
+            <Col sm={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>
+                  {t('patients.firstName', 'First name')} <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  name="first_name"
+                  value={formData.first_name}
+                  onChange={handleInputChange}
+                  placeholder={t('patients.firstNamePlaceholder', 'e.g. Marie')}
+                  required
+                  autoFocus
+                />
+              </Form.Group>
+            </Col>
+            <Col sm={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>
+                  {t('patients.lastName', 'Last name')} <span className="text-danger">*</span>
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  name="last_name"
+                  value={formData.last_name}
+                  onChange={handleInputChange}
+                  placeholder={t('patients.lastNamePlaceholder', 'e.g. Dupont')}
+                  required
+                />
+              </Form.Group>
+            </Col>
+          </Row>
+          <Row>
+            <Col sm={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>{t('patients.email', 'Email')}</Form.Label>
+                <Form.Control
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  placeholder="marie@example.com"
+                  isValid={emailValidation.status === 'available'}
+                  isInvalid={emailValidation.status === 'taken'}
+                />
+                {emailValidation.status === 'checking' && (
                   <Form.Text className="text-muted">
-                    Les tags aident à organiser et filtrer les patients
+                    <Spinner animation="border" size="sm" className="me-1" />
+                    {emailValidation.message}
                   </Form.Text>
-                </Form.Group>
+                )}
+                {emailValidation.status === 'available' && (
+                  <Form.Control.Feedback type="valid">
+                    {emailValidation.message}
+                  </Form.Control.Feedback>
+                )}
+                {emailValidation.status === 'taken' && (
+                  <Form.Control.Feedback type="invalid">
+                    {emailValidation.message}
+                  </Form.Control.Feedback>
+                )}
+              </Form.Group>
+            </Col>
+            <Col sm={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>{t('patients.phone', 'Phone')}</Form.Label>
+                <Form.Control
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  placeholder="+33 6 12 34 56 78"
+                />
+              </Form.Group>
+            </Col>
+          </Row>
+        </FormSection>
+
+        {/* Dietitian & Tags Section */}
+        <FormSection
+          title={t('patients.organization', 'Organization')}
+          icon={
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M2 13h12M4 9h8M6 5h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            </svg>
+          }
+          accent="gold"
+          collapsible
+          defaultOpen
+        >
+          <Form.Group className="mb-3">
+            <Form.Label>{t('patients.linkedDietitians', 'Linked dietitians')}</Form.Label>
+            <Form.Text className="d-block text-muted mb-1">
+              {t('patients.linkedDietitiansInfo', 'Dietitians are linked automatically during visits. Manage links from the patient record.')}
+            </Form.Text>
+            {patient?.assigned_dietitian && (
+              <div className="small" style={{ color: 'var(--nv-warm-700)' }}>
+                {patient.assigned_dietitian.first_name} {patient.assigned_dietitian.last_name}
               </div>
-            </Tab>
-
-            {/* Custom Field Categories Tabs */}
-            {loadingCustomFields ? (
-              <Tab eventKey="loading" title="⏳ Chargement..." disabled>
-                <div className="text-center py-5">
-                  <Spinner animation="border" />
-                </div>
-              </Tab>
-            ) : (
-              customFieldCategories.map((category) => (
-                <Tab
-                  key={category.id}
-                  eventKey={`category-${category.id}`}
-                  title={category.name}
-                >
-                  <div className="mb-4">
-                    {category.description && (
-                      <Alert variant="info" className="mb-3">
-                        {category.description}
-                      </Alert>
-                    )}
-
-                    {category.fields.length === 0 ? (
-                      <Alert variant="warning">
-                        Aucun champ défini pour cette catégorie
-                      </Alert>
-                    ) : (
-                      <Row>
-                        {category.fields.map((field) => (
-                          <Col md={6} key={field.id}>
-                            <Form.Group className="mb-3">
-                              <CustomFieldInput
-                                fieldDefinition={field}
-                                value={fieldValues[field.id] || ''}
-                                onChange={(value) => handleFieldChange(field.id, value)}
-                                disabled={loading}
-                                error={fieldErrors[field.id]}
-                                patientId={patient?.id}
-                              />
-                              {fieldErrors[field.id] && (
-                                <Form.Text className="text-danger">
-                                  {fieldErrors[field.id]}
-                                </Form.Text>
-                              )}
-                            </Form.Group>
-                          </Col>
-                        ))}
-                      </Row>
-                    )}
-                  </div>
-                </Tab>
-              ))
             )}
-          </Tabs>
-        </Form>
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={handleClose} disabled={loading}>
-          Annuler
-        </Button>
-        <Button variant="primary" onClick={handleSubmit} disabled={loading || loadingCustomFields}>
-          {loading ? 'Mise à jour...' : 'Mettre à jour le patient'}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>{t('patients.tags', 'Patient tags')}</Form.Label>
+            <PatientTagsManager
+              patientId={patient?.id}
+              initialTags={formData.tags}
+              onTagsChange={handleTagsChange}
+              disabled={loading}
+            />
+            <Form.Text className="text-muted">
+              {t('patients.tagsHelp', 'Tags help organize and filter patients')}
+            </Form.Text>
+          </Form.Group>
+        </FormSection>
+
+        {/* Custom Field Categories */}
+        {loadingCustomFields ? (
+          <div className="text-center py-4">
+            <Spinner animation="border" size="sm" className="me-2" />
+            <span className="text-muted small">{t('common.loadingFields', 'Loading fields...')}</span>
+          </div>
+        ) : (
+          customFieldCategories.map((category) => (
+            <FormSection
+              key={category.id}
+              title={category.name}
+              icon={
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 3h10v10H3z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                  <path d="M6 6h4M6 8h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+              }
+              description={category.description}
+              accent="info"
+              collapsible
+              defaultOpen={false}
+            >
+              {category.fields.length === 0 ? (
+                <p className="text-muted small mb-0">
+                  {t('customFields.noFieldsDefined', 'No fields defined for this category')}
+                </p>
+              ) : (
+                <Row>
+                  {category.fields.map((field) => (
+                    <Col sm={6} key={field.id}>
+                      <Form.Group className="mb-3">
+                        <CustomFieldInput
+                          fieldDefinition={field}
+                          value={fieldValues[field.id] || ''}
+                          onChange={(value) => handleFieldChange(field.id, value)}
+                          disabled={loading}
+                          error={fieldErrors[field.id]}
+                          patientId={patient?.id}
+                        />
+                        {fieldErrors[field.id] && (
+                          <Form.Text className="text-danger">
+                            {fieldErrors[field.id]}
+                          </Form.Text>
+                        )}
+                      </Form.Group>
+                    </Col>
+                  ))}
+                </Row>
+              )}
+            </FormSection>
+          ))
+        )}
+      </Form>
+    </SlidePanel>
   );
 };
 

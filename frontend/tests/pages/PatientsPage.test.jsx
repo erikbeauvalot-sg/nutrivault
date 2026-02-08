@@ -44,6 +44,8 @@ const mockPatients = [
 describe('PatientsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset URL to clean up any ?modal= params from previous tests
+    window.history.pushState({}, '', '/');
 
     server.use(
       http.get(`${API_URL}/patients`, ({ request }) => {

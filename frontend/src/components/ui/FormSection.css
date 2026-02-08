@@ -1,0 +1,144 @@
+/* ============================================
+   FORM SECTION — Grouped form area
+   ============================================ */
+
+.nv-form-section {
+  border-radius: 0.75rem;
+  border: 1px solid var(--nv-warm-200);
+  background: #fff;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.nv-form-section:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* Left accent bar */
+.nv-form-section--slate  { border-left: 3px solid var(--nv-slate); }
+.nv-form-section--gold   { border-left: 3px solid var(--nv-gold); }
+.nv-form-section--info   { border-left: 3px solid var(--nv-info); }
+.nv-form-section--success{ border-left: 3px solid var(--nv-success); }
+.nv-form-section--danger { border-left: 3px solid var(--nv-danger); }
+
+/* ---- Header ---- */
+.nv-form-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+  gap: 0.75rem;
+  user-select: none;
+}
+
+.nv-form-section__header--clickable {
+  cursor: pointer;
+}
+
+.nv-form-section__header--clickable:hover {
+  background: var(--nv-warm-ghost);
+}
+
+.nv-form-section__header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.nv-form-section__icon {
+  font-size: 1.125rem;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.nv-form-section__title {
+  font-family: var(--nv-font-display);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--nv-warm-700);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.nv-form-section__description {
+  font-family: var(--nv-font-display);
+  font-size: 0.75rem;
+  color: var(--nv-warm-400);
+  margin: 0.125rem 0 0;
+  line-height: 1.4;
+}
+
+/* Chevron */
+.nv-form-section__chevron {
+  color: var(--nv-warm-400);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.nv-form-section__chevron--open {
+  transform: rotate(0deg);
+}
+
+.nv-form-section__chevron:not(.nv-form-section__chevron--open) {
+  transform: rotate(-90deg);
+}
+
+/* ---- Body ---- */
+.nv-form-section__body {
+  overflow: hidden;
+  transition: max-height 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+              opacity 0.2s ease;
+}
+
+.nv-form-section__body--open {
+  max-height: 2000px;
+  opacity: 1;
+}
+
+.nv-form-section__body--closed {
+  max-height: 0;
+  opacity: 0;
+}
+
+.nv-form-section__content {
+  padding: 0 1rem 1rem;
+  border-top: 1px solid var(--nv-warm-100);
+}
+
+/* When body is closed, remove the separator */
+.nv-form-section__body--closed .nv-form-section__content {
+  border-top: none;
+}
+
+/* ---- Form fields inside section ---- */
+.nv-form-section .form-label,
+.nv-form-section label:not(.form-check-label) {
+  font-size: 0.7rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Tighter spacing for fields inside section */
+.nv-form-section .mb-3 {
+  margin-bottom: 0.75rem !important;
+}
+
+/* ---- Mobile ---- */
+@media (max-width: 767.98px) {
+  .nv-form-section {
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .nv-form-section__header {
+    padding: 0.75rem;
+  }
+
+  .nv-form-section__content {
+    padding: 0 0.75rem 0.75rem;
+  }
+}
