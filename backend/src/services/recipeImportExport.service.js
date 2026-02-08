@@ -431,13 +431,30 @@ function parseDuration(duration) {
 }
 
 /**
+ * Decode common HTML entities in script type attributes
+ * (e.g. marmiton.org encodes as application&#x2F;ld&#x2B;json)
+ */
+function decodeHtmlEntities(str) {
+  return str
+    .replace(/&#x2F;/gi, '/')
+    .replace(/&#x2B;/gi, '+')
+    .replace(/&#47;/g, '/')
+    .replace(/&#43;/g, '+')
+    .replace(/&sol;/gi, '/')
+    .replace(/&plus;/gi, '+');
+}
+
+/**
  * Extract JSON-LD blocks from HTML and find a Recipe object
  */
 function extractRecipeFromHtml(html) {
+  // Decode HTML entities in script type attributes so regex can match
+  const decodedHtml = decodeHtmlEntities(html);
+
   const jsonLdBlocks = [];
   const regex = /<script\s+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
   let match;
-  while ((match = regex.exec(html)) !== null) {
+  while ((match = regex.exec(decodedHtml)) !== null) {
     try {
       jsonLdBlocks.push(JSON.parse(match[1]));
     } catch {
