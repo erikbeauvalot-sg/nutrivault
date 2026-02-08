@@ -55,9 +55,22 @@ const exportLimiter = rateLimit({
   legacyHeaders: false
 });
 
+// Import rate limiter: 5 requests per hour (server-side fetch)
+const importLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // 5 requests per window
+  message: {
+    success: false,
+    error: 'Too many import requests. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 module.exports = {
   authLimiter,
   apiLimiter,
   reportLimiter,
-  exportLimiter
+  exportLimiter,
+  importLimiter
 };

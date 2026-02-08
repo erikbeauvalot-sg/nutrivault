@@ -16,29 +16,7 @@ class AuthService {
    */
   async login(username, password, rememberMe = false) {
     try {
-      console.log('🔐 LOGIN ATTEMPT:', { username, passwordLength: password?.length });
-      console.log('📁 DATABASE:', db.sequelize.config.storage || db.sequelize.config.database);
-      console.log('🔌 DB DIALECT:', db.sequelize.config.dialect);
-      
-      // First, try a simple query without associations
-      console.log('🔍 SIMPLE QUERY TEST...');
-      const simpleUser = await db.User.findOne({
-        where: { username }
-      });
-      console.log('   Simple query result:', simpleUser ? 'FOUND' : 'NOT FOUND');
-      
-      if (simpleUser) {
-        console.log('   Simple user data:', {
-          id: simpleUser.id,
-          username: simpleUser.username,
-          email: simpleUser.email,
-          role_id: simpleUser.role_id,
-          is_active: simpleUser.is_active
-        });
-      }
-      
       // Find user with role and permissions
-      console.log('🔍 FULL QUERY WITH ASSOCIATIONS...');
       const user = await db.User.findOne({
         where: { username },
         include: [
@@ -56,51 +34,30 @@ class AuthService {
         ]
       });
 
-      console.log('🔍 USER FOUND (with associations):', user ? 'YES' : 'NO');
-      if (user) {
-        console.log('   User ID:', user.id);
-        console.log('   Username:', user.username);
-        console.log('   Is Active:', user.is_active);
-        console.log('   Password Hash:', user.password_hash ? user.password_hash.substring(0, 20) + '...' : 'NULL');
-        console.log('   Role:', user.role?.name || 'NO ROLE');
-        console.log('   Permissions:', user.role?.permissions?.length || 0);
-      }
-
       if (!user) {
-        console.log('❌ ERROR: User not found in database');
         throw new Error('Invalid credentials');
       }
 
       // Check if account is active
       if (!user.is_active) {
-        console.log('❌ ERROR: Account is not active');
         throw new Error('Account is deactivated');
       }
 
       // Check if account is locked
       if (user.locked_until && new Date(user.locked_until) > new Date()) {
         const minutesRemaining = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
-        console.log('❌ ERROR: Account is locked until', user.locked_until);
         throw new Error(`Account is locked. Try again in ${minutesRemaining} minutes`);
       }
 
       // Verify password
-      console.log('🔑 COMPARING PASSWORD...');
-      console.log('   Password provided:', password ? `"${password}"` : 'NULL/EMPTY');
-      console.log('   Hash in DB:', user.password_hash ? 'EXISTS' : 'NULL');
-      
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
-      
-      console.log('✓ BCRYPT RESULT:', isValidPassword);
 
       if (!isValidPassword) {
-        console.log('❌ ERROR: Password comparison failed');
         // Increment failed login attempts
         await this.incrementFailedAttempts(user.id);
         throw new Error('Invalid credentials');
       }
-      
-      console.log('✅ PASSWORD VALID - Proceeding with login');
+
 
       // Reset failed login attempts on successful login
       await this.resetFailedAttempts(user.id);
@@ -134,8 +91,6 @@ class AuthService {
         ...tokens
       };
     } catch (error) {
-      console.error('🔥 Login error:', error.message);
-      console.error('🔥 Stack:', error.stack);
       throw error;
     }
   }
@@ -445,7 +400,6 @@ class AuthService {
     const { username, email, password, firstName, lastName, phone } = userData;
 
     try {
-      console.log('📝 REGISTER ATTEMPT:', { username, email, firstName, lastName });
 
       // Check if username already exists
       const existingUsername = await db.User.findOne({
@@ -493,8 +447,6 @@ class AuthService {
         last_login: null
       });
 
-      console.log('✅ USER CREATED:', { id: newUser.id, username: newUser.username });
-
       // Generate tokens for immediate login
       const tokens = await generateTokenPair(newUser);
 
@@ -523,7 +475,6 @@ class AuthService {
       };
 
     } catch (error) {
-      console.error('❌ REGISTER ERROR:', error.message);
       throw error;
     }
   }

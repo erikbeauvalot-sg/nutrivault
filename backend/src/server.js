@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const path = require('path');
 const db = require('../../models');
 const schedulerService = require('./services/scheduler.service');
@@ -14,9 +15,13 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps, Postman, or same-origin)
     if (!origin) return callback(null, true);
 
-    // In development, allow all origins
+    // In development, allow known local origins
     if (process.env.NODE_ENV === 'development') {
-      return callback(null, true);
+      const devOrigins = ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
+      if (!origin || devOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
     }
 
     // In production, check against allowed origins
@@ -35,6 +40,10 @@ const corsOptions = {
 };
 
 // Middleware
+app.use(helmet({
+  contentSecurityPolicy: false, // Managed by frontend/nginx
+  crossOriginEmbedderPolicy: false // Allow loading external images
+}));
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -237,9 +246,12 @@ app.use((err, req, res, next) => {
     });
   }
   
-  res.status(err.statusCode || err.status || 500).json({
+  const statusCode = err.statusCode || err.status || 500;
+  res.status(statusCode).json({
     success: false,
-    error: err.message || 'Internal Server Error'
+    error: statusCode >= 500 && process.env.NODE_ENV === 'production'
+      ? 'Internal Server Error'
+      : (err.message || 'Internal Server Error')
   });
 });
 

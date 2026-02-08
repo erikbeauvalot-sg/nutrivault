@@ -373,6 +373,51 @@ async function importRecipes(importData, options = {}, user, requestMetadata = {
 // URL Import (Schema.org/Recipe scraper)
 // ============================================
 
+const MAX_RESPONSE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+/**
+ * Validate that a URL does not target private/internal networks (SSRF prevention)
+ */
+function isUrlAllowed(urlString) {
+  let parsed;
+  try {
+    parsed = new URL(urlString);
+  } catch {
+    return false;
+  }
+
+  // Only allow http/https
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+
+  const hostname = parsed.hostname.toLowerCase();
+
+  // Block localhost
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') return false;
+
+  // Block cloud metadata endpoints
+  if (hostname === '169.254.169.254' || hostname === 'metadata.google.internal') return false;
+
+  // Block private IPv4 ranges
+  const ipv4Match = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4Match) {
+    const [, a, b] = ipv4Match.map(Number);
+    if (a === 10) return false;                        // 10.0.0.0/8
+    if (a === 172 && b >= 16 && b <= 31) return false; // 172.16.0.0/12
+    if (a === 192 && b === 168) return false;           // 192.168.0.0/16
+    if (a === 0) return false;                          // 0.0.0.0/8
+  }
+
+  return true;
+}
+
+/**
+ * Strip HTML tags from a string (basic sanitization for imported text)
+ */
+function stripHtml(str) {
+  if (!str || typeof str !== 'string') return str;
+  return str.replace(/<[^>]*>/g, '').trim();
+}
+
 /**
  * Parse ISO 8601 duration (PT30M, PT1H30M, etc.) to minutes
  */
@@ -667,6 +712,13 @@ function parseServings(recipeYield) {
  * @returns {Promise<Object>} The created recipe with summary info
  */
 async function importFromUrl(url, user, requestMetadata = {}) {
+  // SSRF validation
+  if (!isUrlAllowed(url)) {
+    const error = new Error('URL not allowed: private/internal addresses are blocked');
+    error.statusCode = 400;
+    throw error;
+  }
+
   // Fetch the page HTML
   let html;
   try {
@@ -677,7 +729,7 @@ async function importFromUrl(url, user, requestMetadata = {}) {
         'Accept-Language': 'en-US,en;q=0.9,fr;q=0.8'
       },
       redirect: 'follow',
-      signal: AbortSignal.timeout(15000)
+      signal: AbortSignal.timeout(5000)
     });
 
     if (!response.ok) {
@@ -686,7 +738,31 @@ async function importFromUrl(url, user, requestMetadata = {}) {
       throw error;
     }
 
-    html = await response.text();
+    // Check Content-Length if available
+    const contentLength = parseInt(response.headers.get('content-length') || '0', 10);
+    if (contentLength > MAX_RESPONSE_SIZE) {
+      const error = new Error('Response too large');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Read body with size limit
+    const reader = response.body.getReader();
+    const chunks = [];
+    let totalSize = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalSize += value.length;
+      if (totalSize > MAX_RESPONSE_SIZE) {
+        reader.cancel();
+        const error = new Error('Response too large');
+        error.statusCode = 400;
+        throw error;
+      }
+      chunks.push(value);
+    }
+    html = Buffer.concat(chunks).toString('utf-8');
   } catch (fetchError) {
     if (fetchError.statusCode) throw fetchError;
     const error = new Error(`Could not fetch URL: ${fetchError.message}`);
@@ -711,9 +787,9 @@ async function importFromUrl(url, user, requestMetadata = {}) {
   }
 
   const recipeData = {
-    title: String(title).trim().substring(0, 200),
-    description: schemaRecipe.description ? String(schemaRecipe.description).trim() : null,
-    instructions: parseInstructions(schemaRecipe.recipeInstructions),
+    title: stripHtml(String(title)).substring(0, 200),
+    description: schemaRecipe.description ? stripHtml(String(schemaRecipe.description)) : null,
+    instructions: stripHtml(parseInstructions(schemaRecipe.recipeInstructions)),
     prep_time_minutes: parseDuration(schemaRecipe.prepTime),
     cook_time_minutes: parseDuration(schemaRecipe.cookTime),
     servings: parseServings(schemaRecipe.recipeYield),

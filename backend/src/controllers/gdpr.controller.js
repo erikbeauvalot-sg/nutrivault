@@ -90,26 +90,37 @@ async function deletePatientPermanently(req, res) {
     // Perform hard delete
     const db = require('../../../models');
 
+    // Collect related IDs with safe parameterized queries
+    const visits = await db.Visit.findAll({ where: { patient_id: id }, attributes: ['id'], raw: true });
+    const visitIds = visits.map(v => v.id);
+
+    const billings = await db.Billing.findAll({ where: { patient_id: id }, attributes: ['id'], raw: true });
+    const billingIds = billings.map(b => b.id);
+
     // Delete in order to respect foreign key constraints
-    await db.VisitMeasurement.destroy({
-      where: { visit_id: { [db.Sequelize.Op.in]: db.Sequelize.literal(`(SELECT id FROM visits WHERE patient_id = '${id}')`) } },
-      force: true
-    });
+    if (visitIds.length > 0) {
+      await db.VisitMeasurement.destroy({
+        where: { visit_id: { [db.Sequelize.Op.in]: visitIds } },
+        force: true
+      });
+    }
 
     await db.Visit.destroy({
       where: { patient_id: id },
       force: true
     });
 
-    await db.Payment.destroy({
-      where: { billing_id: { [db.Sequelize.Op.in]: db.Sequelize.literal(`(SELECT id FROM billing WHERE patient_id = '${id}')`) } },
-      force: true
-    });
+    if (billingIds.length > 0) {
+      await db.Payment.destroy({
+        where: { billing_id: { [db.Sequelize.Op.in]: billingIds } },
+        force: true
+      });
 
-    await db.InvoiceEmail.destroy({
-      where: { billing_id: { [db.Sequelize.Op.in]: db.Sequelize.literal(`(SELECT id FROM billing WHERE patient_id = '${id}')`) } },
-      force: true
-    });
+      await db.InvoiceEmail.destroy({
+        where: { billing_id: { [db.Sequelize.Op.in]: billingIds } },
+        force: true
+      });
+    }
 
     await db.Billing.destroy({
       where: { patient_id: id },

@@ -15,6 +15,7 @@ import {
   Badge,
   Form
 } from 'react-bootstrap';
+import DOMPurify from 'dompurify';
 import emailTemplateService from '../services/emailTemplateService';
 
 // Sample data by category
@@ -213,7 +214,7 @@ const EmailPreviewModal = ({ show, onHide, template }) => {
                     overflowY: 'auto',
                     backgroundColor: '#fff'
                   }}
-                  dangerouslySetInnerHTML={{ __html: preview.html }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(preview.html) }}
                 />
               </Tab>
 

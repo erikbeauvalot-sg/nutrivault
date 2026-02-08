@@ -21,7 +21,7 @@ const bcrypt = require('bcryptjs');
 const { Op } = db.Sequelize;
 const { getScopedDietitianIds } = require('../helpers/scopeHelper');
 
-const SALT_ROUNDS = 10;
+const SALT_ROUNDS = 12;
 
 /**
  * Allowed MIME types for file uploads
@@ -88,8 +88,15 @@ function validateFile(file) {
  * @returns {string} Relative file path
  */
 function generateFilePath(resourceType, resourceId, filename) {
+  const allowedTypes = ['patient', 'visit', 'user', 'document'];
+  if (!allowedTypes.includes(resourceType)) {
+    throw new Error('Invalid resource type');
+  }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(resourceId)) {
+    throw new Error('Invalid resource ID');
+  }
   const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-  const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const sanitizedFilename = path.basename(filename).replace(/[^a-zA-Z0-9.-]/g, '_');
   return path.join(resourceType, date, `${resourceId}_${Date.now()}_${sanitizedFilename}`);
 }
 

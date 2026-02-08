@@ -13,6 +13,7 @@ const recipeController = require('../controllers/recipeController');
 const recipeCategoryController = require('../controllers/recipeCategoryController');
 const authenticate = require('../middleware/authenticate');
 const { requirePermission } = require('../middleware/rbac');
+const { importLimiter } = require('../middleware/rateLimiter');
 
 // Multer config for JSON import
 const importUpload = multer({
@@ -250,6 +251,7 @@ router.post(
 router.post(
   '/import/url',
   authenticate,
+  importLimiter,
   requirePermission('recipes.create'),
   [
     body('url')
