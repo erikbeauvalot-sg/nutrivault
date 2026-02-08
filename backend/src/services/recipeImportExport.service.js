@@ -557,11 +557,19 @@ function parseIngredientString(str) {
   const frenchResult = extractFrenchUnit(cleaned);
   if (frenchResult) return frenchResult;
 
-  const unitPattern = /^([\d\u00BC\u00BD\u00BE\u2153\u2154\u215B\u215C\u215D\u215E/.,\s]+)?\s*(cups?|tablespoons?|tbsps?|teaspoons?|tsps?|ounces?|oz|pounds?|lbs?|grams?|g|kilograms?|kg|milliliters?|ml|liters?|l|pieces?|pinch(?:es)?|cloves?|cans?|slices?|stalks?|sprigs?|heads?|bunche?s?)?\s*(?:of\s+)?(.+)/i;
+  const unitPattern = /^([\d\u00BC\u00BD\u00BE\u2153\u2154\u215B\u215C\u215D\u215E/.,\s]+)?\s*(cups?|tablespoons?|tbsps?|teaspoons?|tsps?|ounces?|oz|pounds?|lbs?|grams?|g|kilograms?|kg|milliliters?|ml|centiliters?|cl|deciliters?|dl|liters?|l|pieces?|pinch(?:es)?|cloves?|cans?|slices?|stalks?|sprigs?|heads?|bunche?s?)\b\s*(?:(?:of|de|du|des)\s+|d')?(.+)/i;
 
   const match = cleaned.match(unitPattern);
   if (!match) {
-    return { name: cleaned, quantity: null, unit: null };
+    // No unit found — try to extract a leading quantity (e.g. "1 oignons" → qty 1, unit piece)
+    const qtyOnly = cleaned.match(/^([\d\u00BC\u00BD\u00BE\u2153\u2154\u215B\u215C\u215D\u215E/.,]+)\s+(.+)/);
+    if (qtyOnly) {
+      let name = qtyOnly[2].replace(/^(?:d[eu]s?\s+|d')/i, '').trim();
+      return { name: name || qtyOnly[2], quantity: parseQuantity(qtyOnly[1]), unit: 'piece' };
+    }
+    // Bare ingredient — strip leading "de/d'/du/des"
+    let name = cleaned.replace(/^(?:d[eu]s?\s+|d')/i, '').trim();
+    return { name: name || cleaned, quantity: null, unit: null };
   }
 
   let quantityStr = (match[1] || '').trim();
@@ -623,6 +631,8 @@ function normalizeUnit(unit) {
     gram: 'g', grams: 'g', g: 'g',
     kilogram: 'kg', kilograms: 'kg', kg: 'kg',
     milliliter: 'ml', milliliters: 'ml', ml: 'ml',
+    centiliter: 'cl', centiliters: 'cl', cl: 'cl',
+    deciliter: 'dl', deciliters: 'dl', dl: 'dl',
     liter: 'l', liters: 'l', l: 'l',
     piece: 'piece', pieces: 'piece',
     pinch: 'pinch', pinches: 'pinch',
