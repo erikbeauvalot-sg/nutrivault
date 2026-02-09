@@ -647,4 +647,75 @@ exports.generateConsultationGuides = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/documents/generate-guides/:slug - Regenerate a single consultation guide PDF
+ * Overwrites existing PDF and updates Document record, or creates new if not found.
+ */
+exports.regenerateGuide = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { slug } = req.params;
+
+    // Find guide content by slug
+    const guide = consultationGuides.find(g => g.slug === slug);
+    if (!guide) {
+      return res.status(404).json({
+        success: false,
+        error: `Guide not found for slug: ${slug}`
+      });
+    }
+
+    // Get uploads base path
+    const basePath = process.env.NODE_ENV === 'production' ? '/app' : process.cwd();
+    const guidesDir = path.join(basePath, 'uploads', 'guides');
+    await fs.mkdir(guidesDir, { recursive: true });
+
+    // Generate PDF
+    const { buffer, fileName } = await generateGuidePDF(guide);
+
+    // Save file
+    const filePath = path.join('guides', fileName);
+    const fullPath = path.join(basePath, 'uploads', filePath);
+    await fs.writeFile(fullPath, buffer);
+
+    // Find existing Document record
+    let document = await db.Document.findOne({
+      where: {
+        category: 'guides',
+        is_template: true,
+        tags: { [db.Sequelize.Op.like]: `%${slug}%` }
+      }
+    });
+
+    if (document) {
+      // Update existing record
+      await document.update({
+        file_size: buffer.length,
+        file_path: filePath
+      });
+    } else {
+      // Create new Document record
+      document = await db.Document.create({
+        file_name: guide.title + '.pdf',
+        file_path: filePath,
+        file_size: buffer.length,
+        mime_type: 'application/pdf',
+        uploaded_by: user.id,
+        description: guide.subtitle,
+        category: 'guides',
+        is_template: true,
+        tags: JSON.stringify([guide.slug, 'consultation-guide'])
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: document,
+      message: `Guide "${guide.title}" regenerated successfully`
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.upload = upload;

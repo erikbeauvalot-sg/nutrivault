@@ -9,6 +9,7 @@
 const consultationGuides = [
   {
     slug: 'menopause',
+    icon: 'leaf',
     title: 'Guide : Ménopause et Alimentation',
     subtitle: 'Recommandations nutritionnelles pour bien vivre la ménopause',
     sections: [
@@ -63,6 +64,7 @@ const consultationGuides = [
 
   {
     slug: 'perte-de-poids',
+    icon: 'scale',
     title: 'Guide : Perte de Poids Durable',
     subtitle: 'Stratégies nutritionnelles pour une perte de poids saine et pérenne',
     sections: [
@@ -125,6 +127,7 @@ const consultationGuides = [
 
   {
     slug: 'reequilibrage-alimentaire',
+    icon: 'apple',
     title: 'Guide : Rééquilibrage Alimentaire',
     subtitle: 'Retrouver une alimentation saine et équilibrée au quotidien',
     sections: [
@@ -187,6 +190,7 @@ const consultationGuides = [
 
   {
     slug: 'sii',
+    icon: 'stomach',
     title: 'Guide : Syndrome de l\'Intestin Irritable (SII)',
     subtitle: 'Alimentation adaptée pour soulager les troubles digestifs',
     sections: [
@@ -247,6 +251,7 @@ const consultationGuides = [
 
   {
     slug: 'pathologies-feminines',
+    icon: 'flower',
     title: 'Guide : Pathologies Féminines (SOPK, Endométriose)',
     subtitle: 'Alimentation anti-inflammatoire et hormonale',
     sections: [
@@ -310,6 +315,7 @@ const consultationGuides = [
 
   {
     slug: 'vegetaliser-alimentation',
+    icon: 'plant',
     title: 'Guide : Végétaliser son Alimentation',
     subtitle: 'Intégrer davantage de végétal dans son assiette en toute sécurité',
     sections: [
@@ -372,6 +378,7 @@ const consultationGuides = [
 
   {
     slug: 'maladies-cardiovasculaires',
+    icon: 'heart',
     title: 'Guide : Maladies Cardiovasculaires et Alimentation',
     subtitle: 'Protéger son cœur par une alimentation adaptée',
     sections: [
@@ -439,6 +446,7 @@ const consultationGuides = [
 
   {
     slug: 'intolerances-alimentaires',
+    icon: 'wheat',
     title: 'Guide : Intolérances Alimentaires',
     subtitle: 'Gérer les intolérances tout en maintenant une alimentation équilibrée',
     sections: [

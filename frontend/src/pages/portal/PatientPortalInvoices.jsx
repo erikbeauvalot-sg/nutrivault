@@ -22,7 +22,7 @@ const statusBadge = (status, t) => {
 const formatAmount = (amount) => {
   const num = parseFloat(amount);
   if (isNaN(num)) return '—';
-  return num.toFixed(2) + ' $';
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(num);
 };
 
 const PatientPortalInvoices = () => {

@@ -56,7 +56,18 @@ const normalizeValue = (value, field) => {
     return value === true || value === 'true' || value === 1 || value === '1' ? 10 : 0;
   }
 
-  // Embedded or fallback: try parsing as number
+  // Embedded fields: use measure_range for normalization
+  if (fieldType === 'embedded' && field.measure_range) {
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) return null;
+    const min = field.measure_range.min_value ?? 0;
+    const max = field.measure_range.max_value ?? 10;
+    if (max === min) return 5;
+    const normalized = ((numValue - min) / (max - min)) * 10;
+    return Math.max(0, Math.min(10, normalized));
+  }
+
+  // Fallback: try parsing as number
   const numValue = parseFloat(value);
   if (!isNaN(numValue)) return Math.max(0, Math.min(10, numValue));
 

@@ -224,6 +224,21 @@ router.post(
   documentController.generateConsultationGuides
 );
 
+// POST /api/documents/generate-guides/:slug - Regenerate a single consultation guide PDF
+router.post(
+  '/generate-guides/:slug',
+  authenticate,
+  requirePermission('documents.upload'),
+  [
+    param('slug')
+      .isString()
+      .matches(/^[a-z0-9-]+$/)
+      .withMessage('Slug must contain only lowercase letters, numbers, and hyphens')
+  ],
+  validate,
+  documentController.regenerateGuide
+);
+
 // GET /api/documents/search - Search documents with advanced filters
 router.get(
   '/search',

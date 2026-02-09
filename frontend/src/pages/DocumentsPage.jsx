@@ -13,6 +13,8 @@ import Layout from '../components/layout/Layout';
 import DocumentListComponent from '../components/DocumentListComponent';
 import DocumentStatisticsWidget from '../components/DocumentStatisticsWidget';
 import * as documentService from '../services/documentService';
+import { FiUpload, FiFolder, FiBookOpen, FiEye, FiDownload, FiRefreshCw } from 'react-icons/fi';
+import { HiOutlineSparkles } from 'react-icons/hi';
 
 const GUIDE_LABELS = {
   'menopause': 'Ménopause',
@@ -40,6 +42,7 @@ const DocumentsPage = () => {
   const [guides, setGuides] = useState([]);
   const [guidesLoading, setGuidesLoading] = useState(false);
   const [generatingGuides, setGeneratingGuides] = useState(false);
+  const [regeneratingSlug, setRegeneratingSlug] = useState(null);
   const [guidesMessage, setGuidesMessage] = useState(null);
 
   useEffect(() => {
@@ -136,6 +139,34 @@ const DocumentsPage = () => {
     }
   };
 
+  const handleRegenerateGuide = async (guide) => {
+    const slug = getGuideSlug(guide);
+    if (!slug) return;
+    try {
+      setRegeneratingSlug(slug);
+      setGuidesMessage(null);
+      await documentService.regenerateGuide(slug);
+      setGuidesMessage({
+        type: 'success',
+        text: t('documents.guides.regenerateOneSuccess', {
+          guide: GUIDE_LABELS[slug] || slug,
+          defaultValue: `Guide "${GUIDE_LABELS[slug] || slug}" regenerated successfully`
+        })
+      });
+      fetchGuides();
+    } catch (err) {
+      console.error('Error regenerating guide:', err);
+      setGuidesMessage({
+        type: 'danger',
+        text: t('documents.guides.regenerateOneError', {
+          defaultValue: 'Failed to regenerate guide'
+        })
+      });
+    } finally {
+      setRegeneratingSlug(null);
+    }
+  };
+
   const handleDocumentDeleted = () => {
     fetchDocuments();
     fetchStatistics();
@@ -185,7 +216,7 @@ const DocumentsPage = () => {
                   variant="primary"
                   onClick={() => navigate('/documents/upload')}
                 >
-                  <i className="fas fa-upload me-2"></i>
+                  <FiUpload className="me-2" />
                   {t('documents.uploadDocument')}
                 </Button>
               )}
@@ -218,14 +249,14 @@ const DocumentsPage = () => {
           <Nav variant="tabs" className="mb-3">
             <Nav.Item>
               <Nav.Link eventKey="documents">
-                <i className="fas fa-folder me-2"></i>
+                <FiFolder className="me-2" />
                 {t('documents.allDocuments', 'Documents')}
                 <Badge bg="secondary" className="ms-2">{documents.length}</Badge>
               </Nav.Link>
             </Nav.Item>
             <Nav.Item>
               <Nav.Link eventKey="guides">
-                <i className="fas fa-book-medical me-2"></i>
+                <FiBookOpen className="me-2" />
                 {t('documents.guides.tab', 'Guides nutritionnels')}
                 {guides.length > 0 && (
                   <Badge bg="success" className="ms-2">{guides.length}</Badge>
@@ -287,7 +318,7 @@ const DocumentsPage = () => {
                         </>
                       ) : (
                         <>
-                          <i className="fas fa-magic me-2"></i>
+                          <HiOutlineSparkles className="me-2" />
                           {guides.length > 0
                             ? t('documents.guides.regenerate', 'Regénérer les guides')
                             : t('documents.guides.generate', 'Générer les guides')
@@ -304,7 +335,7 @@ const DocumentsPage = () => {
                     </div>
                   ) : guides.length === 0 ? (
                     <div className="text-center py-5">
-                      <i className="fas fa-book-medical fa-3x text-muted mb-3 d-block"></i>
+                      <FiBookOpen size={40} className="text-muted mb-3 d-block mx-auto" />
                       <p className="text-muted mb-3">
                         {t('documents.guides.empty', 'Aucun guide de consultation généré. Cliquez sur le bouton ci-dessus pour créer les 8 guides nutritionnels.')}
                       </p>
@@ -332,7 +363,7 @@ const DocumentsPage = () => {
                                     onClick={() => handlePreviewGuide(guide)}
                                     title={t('documents.viewDocument', 'View')}
                                   >
-                                    <i className="fas fa-eye me-1"></i>
+                                    <FiEye className="me-1" />
                                     {t('documents.viewDocument', 'Voir')}
                                   </Button>
                                   <Button
@@ -341,8 +372,23 @@ const DocumentsPage = () => {
                                     onClick={() => handleDownloadGuide(guide)}
                                     title={t('documents.downloadDocument', 'Download')}
                                   >
-                                    <i className="fas fa-download me-1"></i>
+                                    <FiDownload className="me-1" />
                                   </Button>
+                                  {hasPermission('documents.upload') && (
+                                    <Button
+                                      variant="outline-warning"
+                                      size="sm"
+                                      onClick={() => handleRegenerateGuide(guide)}
+                                      disabled={regeneratingSlug === slug}
+                                      title={t('documents.guides.regenerateOne', 'Regenerate this guide')}
+                                    >
+                                      {regeneratingSlug === slug ? (
+                                        <Spinner animation="border" size="sm" />
+                                      ) : (
+                                        <FiRefreshCw size={14} />
+                                      )}
+                                    </Button>
+                                  )}
                                 </div>
                               </Card.Body>
                             </Card>

@@ -341,6 +341,16 @@ export const generateConsultationGuides = async () => {
 };
 
 /**
+ * Regenerate a single consultation guide PDF
+ * @param {string} slug - Guide slug (e.g., 'menopause', 'sii')
+ * @returns {Promise<object>} Regenerated document
+ */
+export const regenerateGuide = async (slug) => {
+  const response = await api.post(`/documents/generate-guides/${slug}`);
+  return response.data;
+};
+
+/**
  * Get all consultation guide documents
  * @returns {Promise<object>} Guide documents
  */

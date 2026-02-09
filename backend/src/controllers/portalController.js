@@ -852,23 +852,87 @@ exports.getRadarData = async (req, res, next) => {
       }
     }
 
+    // Resolve embedded fields: fetch latest PatientMeasure values
+    const embeddedFields = [];
+    radarCategories.forEach(c => {
+      (c.field_definitions || []).forEach(def => {
+        if (def.field_type === 'embedded') {
+          let opts = null;
+          try { opts = def.select_options ? JSON.parse(def.select_options) : null; } catch (e) { opts = def.select_options; }
+          if (opts && opts.measure_name) {
+            embeddedFields.push({ def, measureName: opts.measure_name });
+          }
+        }
+      });
+    });
+
+    const embeddedValuesMap = {};
+    const embeddedMeasureDefsMap = {};
+
+    if (embeddedFields.length > 0) {
+      // Find all referenced measure definitions
+      const measureNames = [...new Set(embeddedFields.map(e => e.measureName))];
+      const measureDefs = await db.MeasureDefinition.findAll({
+        where: { is_active: true }
+      });
+
+      const measureDefByName = {};
+      for (const md of measureDefs) {
+        measureDefByName[md.name?.toLowerCase()] = md;
+        if (md.display_name) measureDefByName[md.display_name.toLowerCase()] = md;
+      }
+
+      for (const { def, measureName } of embeddedFields) {
+        const measureDef = measureDefByName[measureName.toLowerCase()];
+        if (!measureDef) continue;
+
+        embeddedMeasureDefsMap[def.id] = measureDef;
+
+        // Get latest measure for this patient
+        const latestMeasure = await db.PatientMeasure.findOne({
+          where: {
+            patient_id: patientId,
+            measure_definition_id: measureDef.id
+          },
+          order: [['recorded_at', 'DESC']],
+          limit: 1
+        });
+
+        if (latestMeasure) {
+          if (measureDef.measure_type === 'numeric' || measureDef.measure_type === 'calculated') {
+            embeddedValuesMap[def.id] = latestMeasure.numeric_value;
+          } else if (measureDef.measure_type === 'boolean') {
+            embeddedValuesMap[def.id] = latestMeasure.boolean_value;
+          } else {
+            embeddedValuesMap[def.id] = latestMeasure.numeric_value ?? latestMeasure.text_value;
+          }
+        }
+      }
+    }
+
     // Build response
     const result = radarCategories.map(category => {
       const fields = (category.field_definitions || [])
         .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
         .map(def => {
-          const valueRecord = valuesMap[def.id];
           let value = null;
-          if (valueRecord) {
-            const type = def.field_type;
-            if (type === 'number' || type === 'decimal' || type === 'integer') {
-              value = valueRecord.value_number != null ? valueRecord.value_number : null;
-            } else if (type === 'boolean' || type === 'checkbox') {
-              value = valueRecord.value_boolean != null ? valueRecord.value_boolean : null;
-            } else if (type === 'select' && def.allow_multiple && valueRecord.value_json) {
-              value = valueRecord.value_json;
-            } else {
-              value = valueRecord.value_text || null;
+
+          if (def.field_type === 'embedded') {
+            // Use resolved embedded value from PatientMeasure
+            value = embeddedValuesMap[def.id] !== undefined ? embeddedValuesMap[def.id] : null;
+          } else {
+            const valueRecord = valuesMap[def.id];
+            if (valueRecord) {
+              const type = def.field_type;
+              if (type === 'number' || type === 'decimal' || type === 'integer') {
+                value = valueRecord.value_number != null ? valueRecord.value_number : null;
+              } else if (type === 'boolean' || type === 'checkbox') {
+                value = valueRecord.value_boolean != null ? valueRecord.value_boolean : null;
+              } else if (type === 'select' && def.allow_multiple && valueRecord.value_json) {
+                value = valueRecord.value_json;
+              } else {
+                value = valueRecord.value_text || null;
+              }
             }
           }
 
@@ -886,6 +950,13 @@ exports.getRadarData = async (req, res, next) => {
             validationRules = def.validation_rules;
           }
 
+          // For embedded fields, include measure min/max for normalization
+          const measureDef = embeddedMeasureDefsMap[def.id];
+          const measureRange = measureDef ? {
+            min_value: measureDef.min_value,
+            max_value: measureDef.max_value
+          } : null;
+
           return {
             definition_id: def.id,
             field_name: def.field_name,
@@ -894,7 +965,8 @@ exports.getRadarData = async (req, res, next) => {
             validation_rules: validationRules,
             select_options: selectOptions,
             display_order: def.display_order,
-            value
+            value,
+            ...(measureRange && { measure_range: measureRange })
           };
         });
 
