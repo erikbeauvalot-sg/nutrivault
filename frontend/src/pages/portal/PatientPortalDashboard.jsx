@@ -148,19 +148,25 @@ const PatientPortalDashboard = () => {
                 <p className="text-muted mb-0">{t('portal.noMeasures', 'Aucune mesure enregistree')}</p>
               ) : (
                 <ul className="list-unstyled mb-0">
-                  {measures.map(m => (
-                    <li key={m.id} className="d-flex justify-content-between align-items-center py-2 border-bottom" style={{ gap: '0.5rem' }}>
-                      <span className="text-truncate" style={{ minWidth: 0 }}>
-                        {m._calculated ? m._displayName : (m.measureDefinition?.display_name || m.measureDefinition?.name || '—')}
-                      </span>
-                      <span className="fw-bold text-nowrap">
-                        {m._calculated
-                          ? `${m._value} ${m._unit}`
-                          : `${m.numeric_value ?? m.text_value ?? (m.boolean_value != null ? String(m.boolean_value) : '—')} ${m.measureDefinition?.unit || ''}`
-                        }
-                      </span>
-                    </li>
-                  ))}
+                  {measures.map(m => {
+                    const defId = m._calculated ? null : m.measure_definition_id;
+                    const linkTo = defId ? `/portal/measures?def=${defId}` : '/portal/measures';
+                    return (
+                      <li key={m.id}>
+                        <Link to={linkTo} className="d-flex justify-content-between align-items-center py-2 border-bottom text-decoration-none text-body" style={{ gap: '0.5rem', cursor: 'pointer' }}>
+                          <span className="text-truncate" style={{ minWidth: 0 }}>
+                            {m._calculated ? m._displayName : (m.measureDefinition?.display_name || m.measureDefinition?.name || '—')}
+                          </span>
+                          <span className="fw-bold text-nowrap">
+                            {m._calculated
+                              ? `${m._value} ${m._unit}`
+                              : `${m.numeric_value ?? m.text_value ?? (m.boolean_value != null ? String(m.boolean_value) : '—')} ${m.measureDefinition?.unit || ''}`
+                            }
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </Card.Body>

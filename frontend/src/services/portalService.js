@@ -30,6 +30,11 @@ export const getMeasures = async (params = {}) => {
   return extractData(response);
 };
 
+export const logMeasure = async (data) => {
+  const response = await api.post('/portal/measures', data);
+  return extractData(response);
+};
+
 export const getVisits = async () => {
   const response = await api.get('/portal/visits');
   return extractData(response);

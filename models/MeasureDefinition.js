@@ -185,6 +185,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'increase',
       comment: 'Whether increase or decrease is considered positive (increase=good when going up, decrease=good when going down)'
+    },
+    patient_can_log: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: 'Whether patients can self-log this measure via the portal'
     }
   }, {
     tableName: 'measure_definitions',

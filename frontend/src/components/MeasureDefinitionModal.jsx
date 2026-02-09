@@ -77,6 +77,7 @@ const measureSchema = yup.object().shape({
     .typeError('Alert threshold maximum must be a number')
     .nullable(),
   enable_alerts: yup.boolean(),
+  patient_can_log: yup.boolean(),
   trend_preference: yup.string().oneOf(['increase', 'decrease', 'neutral']).default('increase'),
   formula: yup.string()
     .when('measure_type', {
@@ -140,6 +141,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
       alert_threshold_min: null,
       alert_threshold_max: null,
       enable_alerts: false,
+      patient_can_log: false,
       trend_preference: 'increase',
       is_active: true,
       formula: ''
@@ -192,6 +194,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
           alert_threshold_min: definition.alert_threshold_min ?? null,
           alert_threshold_max: definition.alert_threshold_max ?? null,
           enable_alerts: definition.enable_alerts ?? false,
+          patient_can_log: definition.patient_can_log ?? false,
           trend_preference: definition.trend_preference || 'increase',
           is_active: definition.is_active !== undefined ? definition.is_active : true,
           formula: definition.formula || ''
@@ -213,6 +216,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
           alert_threshold_min: null,
           alert_threshold_max: null,
           enable_alerts: false,
+          patient_can_log: false,
           trend_preference: 'increase',
           is_active: true,
           formula: ''
@@ -240,6 +244,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
         payload.display_name = data.display_name;
         payload.description = data.description || null;
         payload.is_active = data.is_active;
+        payload.patient_can_log = data.patient_can_log ?? false;
 
         // Range fields (both validation and alert ranges) are allowed for system measures
         if (data.measure_type === 'numeric') {
@@ -260,6 +265,7 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
         payload.category = data.category;
         payload.measure_type = data.measure_type;
         payload.is_active = data.is_active;
+        payload.patient_can_log = data.patient_can_log ?? false;
 
         // Add unit for numeric/calculated types
         if (data.measure_type === 'numeric' || data.measure_type === 'calculated') {
@@ -718,6 +724,17 @@ const MeasureDefinitionModal = ({ show, onHide, definition, onSuccess }) => {
               </small>
             </Alert>
           )}
+
+          <Form.Group className="mb-3">
+            <Form.Check
+              type="switch"
+              label={t('measures.modal.patientCanLog', 'Allow patient self-logging')}
+              {...register('patient_can_log')}
+            />
+            <Form.Text className="text-muted">
+              {t('measures.modal.patientCanLogHelp', 'Patients can record this measure from their portal')}
+            </Form.Text>
+          </Form.Group>
 
           <Form.Group className="mb-3">
             <Form.Check

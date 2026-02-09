@@ -195,6 +195,7 @@ async function createDefinition(data, user, requestMetadata = {}) {
       is_active: data.is_active !== undefined ? data.is_active : true,
       display_order: data.display_order !== undefined ? data.display_order : 0,
       is_system: false, // User-created measures are never system measures
+      patient_can_log: data.patient_can_log !== undefined ? data.patient_can_log : false,
       formula: data.formula || null,
       dependencies: data.dependencies || [],
       last_formula_change: data.last_formula_change || null
@@ -243,7 +244,7 @@ async function updateDefinition(id, data, user, requestMetadata = {}) {
         'min_value', 'max_value',
         'normal_range_min', 'normal_range_max',
         'alert_threshold_min', 'alert_threshold_max',
-        'enable_alerts', 'trend_preference'
+        'enable_alerts', 'trend_preference', 'patient_can_log'
       ];
       const attemptedFields = Object.keys(data);
       const disallowedFields = attemptedFields.filter(f => !allowedFields.includes(f));
@@ -334,7 +335,7 @@ async function updateDefinition(id, data, user, requestMetadata = {}) {
       'unit', 'min_value', 'max_value', 'decimal_places', 'is_active', 'display_order',
       'normal_range_min', 'normal_range_max',
       'alert_threshold_min', 'alert_threshold_max', 'enable_alerts',
-      'formula', 'dependencies', 'last_formula_change'
+      'formula', 'dependencies', 'last_formula_change', 'trend_preference', 'patient_can_log'
     ];
 
     allowedUpdateFields.forEach(field => {

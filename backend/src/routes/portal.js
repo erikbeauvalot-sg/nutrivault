@@ -77,6 +77,17 @@ router.get('/measures',
 );
 
 /**
+ * POST /api/portal/measures — Log a measure (patient self-logging)
+ */
+router.post('/measures',
+  body('measure_definition_id').isUUID().withMessage('Valid measure definition ID is required'),
+  body('value').notEmpty().withMessage('Value is required'),
+  body('measured_at').optional().isISO8601().withMessage('Invalid date format'),
+  body('notes').optional().isString().isLength({ max: 500 }).withMessage('Notes must be 500 characters or less'),
+  portalController.logMeasure
+);
+
+/**
  * GET /api/portal/visits — Get visit history
  */
 router.get('/visits', portalController.getVisits);

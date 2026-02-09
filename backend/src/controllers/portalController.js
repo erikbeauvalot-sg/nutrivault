@@ -120,6 +120,7 @@ exports.getMeasures = async (req, res, next) => {
         model: db.MeasureDefinition,
         as: 'measureDefinition',
         attributes: ['id', 'name', 'display_name', 'unit', 'category', 'measure_type'],
+        required: true,
         include: [{
           model: db.MeasureTranslation,
           as: 'translations',
@@ -127,8 +128,7 @@ exports.getMeasures = async (req, res, next) => {
           required: false
         }]
       }],
-      order: [['measured_at', 'DESC']],
-      limit: 500
+      order: [['measured_at', 'DESC']]
     });
 
     // Apply translations to measure definitions
@@ -171,9 +171,24 @@ exports.getMeasures = async (req, res, next) => {
 
     const translatedDefinitions = definitions.map(d => applyTranslations(d));
 
+    // Get all loggable definitions (patient_can_log: true, is_active: true)
+    const loggableDefs = await db.MeasureDefinition.findAll({
+      where: { patient_can_log: true, is_active: true },
+      attributes: ['id', 'name', 'display_name', 'unit', 'category', 'measure_type', 'min_value', 'max_value', 'decimal_places'],
+      include: [{
+        model: db.MeasureTranslation,
+        as: 'translations',
+        where: { language_code: lang, entity_type: 'measure_definition' },
+        required: false
+      }],
+      order: [['display_order', 'ASC'], ['display_name', 'ASC']]
+    });
+
+    const translatedLoggable = loggableDefs.map(d => applyTranslations(d));
+
     res.json({
       success: true,
-      data: { measures: translatedMeasures, definitions: translatedDefinitions }
+      data: { measures: translatedMeasures, definitions: translatedDefinitions, loggableDefinitions: translatedLoggable }
     });
   } catch (error) {
     next(error);
@@ -697,6 +712,41 @@ exports.deleteJournalEntry = async (req, res, next) => {
 
     res.json({ success: true, message: 'Journal entry deleted' });
   } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/portal/measures — Log a measure from the patient portal
+ */
+exports.logMeasure = async (req, res, next) => {
+  try {
+    const { measure_definition_id, value, measured_at, notes } = req.body;
+
+    // Load the measure definition
+    const definition = await db.MeasureDefinition.findByPk(measure_definition_id);
+    if (!definition) {
+      return res.status(404).json({ success: false, error: 'Measure definition not found' });
+    }
+
+    // Verify it's active and patient-loggable
+    if (!definition.is_active || !definition.patient_can_log) {
+      return res.status(403).json({ success: false, error: 'This measure cannot be logged by patients' });
+    }
+
+    // Use the existing patientMeasure service
+    const patientMeasureService = require('../services/patientMeasure.service');
+    const result = await patientMeasureService.logMeasure(
+      req.patient.id,
+      { measure_definition_id, value, measured_at, notes },
+      req.user
+    );
+
+    res.status(201).json({ success: true, data: result });
+  } catch (error) {
+    if (error.message.includes('required') || error.message.includes('Invalid') || error.message.includes('must be')) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
     next(error);
   }
 };

@@ -198,7 +198,7 @@ async function getMeasures(patientId, filters = {}, user, requestMetadata = {}) 
         }
       ],
       order: [['measured_at', 'DESC']],
-      limit: filters.limit || 100
+      limit: filters.limit || 1000
     });
 
     // Format results

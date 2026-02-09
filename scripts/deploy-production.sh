@@ -67,6 +67,18 @@ main() {
     ssh -t "${SERVER}" "cd ${REMOTE_DIR} && git pull origin main && ./scripts/deploy.sh ${VERSION}"
 
     if [ $? -eq 0 ]; then
+        # On major releases, clean up Docker images if disk usage > 80%
+        local MINOR=$(echo "$VERSION" | cut -d. -f2)
+        local PATCH=$(echo "$VERSION" | cut -d. -f3)
+        if [ "$MINOR" == "0" ] && [ "$PATCH" == "0" ]; then
+            local DISK_USAGE=$(ssh "${SERVER}" "df / --output=pcent | tail -1 | tr -d ' %'")
+            if [ "$DISK_USAGE" -gt 80 ] 2>/dev/null; then
+                log_warn "Disk usage at ${DISK_USAGE}% — pruning unused Docker images..."
+                ssh "${SERVER}" "cd ${REMOTE_DIR} && docker image prune -af" 2>/dev/null
+                log_success "Docker image cleanup complete."
+            fi
+        fi
+
         echo ""
         log_success "═══════════════════════════════════════════════════════════════"
         log_success "  Deployment of v${VERSION} completed successfully!"
