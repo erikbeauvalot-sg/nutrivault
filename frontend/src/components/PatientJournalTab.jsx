@@ -1,16 +1,19 @@
 /**
  * PatientJournalTab Component
  * Dietitian view of a patient's journal entries (excludes private)
- * Allows adding/deleting comments
+ * Allows adding/deleting comments and photos on own entries
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Row, Col, Form, Button, Badge, Spinner, Alert } from 'react-bootstrap';
+import { Card, Row, Col, Form, Button, Badge, Spinner, Alert, Modal } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
+import { useDropzone } from 'react-dropzone';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import ConfirmModal from './ConfirmModal';
 import * as patientService from '../services/patientService';
+
+const MAX_PHOTOS = 5;
 
 const MOOD_EMOJIS = {
   very_bad: '\uD83D\uDE2B',
@@ -56,11 +59,31 @@ const PatientJournalTab = ({ patientId }) => {
   const [showNewEntry, setShowNewEntry] = useState(false);
   const [newEntry, setNewEntry] = useState({ content: '', title: '', entry_type: 'note', entry_date: new Date().toISOString().split('T')[0] });
   const [submittingEntry, setSubmittingEntry] = useState(false);
+  const [newEntryPhotos, setNewEntryPhotos] = useState([]);
 
   // Edit state
   const [editingEntryId, setEditingEntryId] = useState(null);
   const [editData, setEditData] = useState({ content: '', title: '', entry_type: 'note', entry_date: '' });
   const [deleteEntryId, setDeleteEntryId] = useState(null);
+
+  // Photo upload state per entry
+  const [uploadingPhotoEntryId, setUploadingPhotoEntryId] = useState(null);
+
+  // Lightbox
+  const [lightboxPhoto, setLightboxPhoto] = useState(null);
+
+  // Dropzone for new entry form
+  const newEntryDropzone = useDropzone({
+    accept: { 'image/jpeg': [], 'image/png': [], 'image/gif': [], 'image/webp': [] },
+    maxSize: 10 * 1024 * 1024,
+    disabled: newEntryPhotos.length >= MAX_PHOTOS,
+    onDrop: (accepted) => {
+      const remaining = MAX_PHOTOS - newEntryPhotos.length;
+      if (remaining <= 0) return;
+      const toAdd = accepted.slice(0, remaining).map(f => Object.assign(f, { preview: URL.createObjectURL(f) }));
+      setNewEntryPhotos(prev => [...prev, ...toAdd]);
+    }
+  });
 
   const loadEntries = useCallback(async () => {
     if (!patientId) return;
@@ -83,6 +106,11 @@ const PatientJournalTab = ({ patientId }) => {
   }, [patientId, page, filterType, filterMood, filterStartDate, filterEndDate, t]);
 
   useEffect(() => { loadEntries(); }, [loadEntries]);
+
+  // Cleanup new entry photo previews
+  useEffect(() => {
+    return () => { newEntryPhotos.forEach(f => URL.revokeObjectURL(f.preview)); };
+  }, [newEntryPhotos]);
 
   const handleAddComment = async (entryId) => {
     const text = commentTexts[entryId]?.trim();
@@ -154,20 +182,56 @@ const PatientJournalTab = ({ patientId }) => {
     if (!newEntry.content.trim()) return;
     setSubmittingEntry(true);
     try {
-      await patientService.createPatientJournalEntry(patientId, {
+      const created = await patientService.createPatientJournalEntry(patientId, {
         content: newEntry.content.trim(),
         title: newEntry.title.trim() || undefined,
         entry_type: newEntry.entry_type,
         entry_date: newEntry.entry_date
       });
+
+      // Upload photos for the new entry
+      if (newEntryPhotos.length > 0 && created.id) {
+        try {
+          await patientService.uploadJournalPhotos(patientId, created.id, newEntryPhotos);
+        } catch {
+          toast.error(t('journal.photoUploadError', 'Erreur lors de l\'upload des photos'));
+        }
+      }
+
       toast.success(t('journal.entryAdded', 'Note ajoutee au journal'));
       setNewEntry({ content: '', title: '', entry_type: 'note', entry_date: new Date().toISOString().split('T')[0] });
+      newEntryPhotos.forEach(f => URL.revokeObjectURL(f.preview));
+      setNewEntryPhotos([]);
       setShowNewEntry(false);
       loadEntries();
     } catch {
       toast.error(t('journal.entryError', 'Erreur lors de l\'ajout de la note'));
     } finally {
       setSubmittingEntry(false);
+    }
+  };
+
+  const handleUploadPhotosToEntry = async (entryId, files) => {
+    if (!files || files.length === 0) return;
+    setUploadingPhotoEntryId(entryId);
+    try {
+      await patientService.uploadJournalPhotos(patientId, entryId, Array.from(files));
+      toast.success(t('journal.photoUploading', 'Photos ajoutees'));
+      loadEntries();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || t('journal.photoUploadError', 'Erreur lors de l\'upload'));
+    } finally {
+      setUploadingPhotoEntryId(null);
+    }
+  };
+
+  const handleDeletePhoto = async (entryId, photoId) => {
+    try {
+      await patientService.deleteJournalPhoto(patientId, entryId, photoId);
+      toast.success(t('journal.photoDeleted', 'Photo supprimee'));
+      loadEntries();
+    } catch {
+      toast.error(t('journal.photoUploadError', 'Erreur lors de la suppression'));
     }
   };
 
@@ -247,6 +311,46 @@ const PatientJournalTab = ({ patientId }) => {
                 onChange={(e) => setNewEntry(prev => ({ ...prev, content: e.target.value }))}
                 className="mb-2"
               />
+
+              {/* Photos for new entry */}
+              <div
+                {...newEntryDropzone.getRootProps()}
+                style={{
+                  border: '2px dashed',
+                  borderColor: newEntryDropzone.isDragActive ? '#0d6efd' : '#adb5bd',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  textAlign: 'center',
+                  cursor: newEntryPhotos.length >= MAX_PHOTOS ? 'not-allowed' : 'pointer',
+                  opacity: newEntryPhotos.length >= MAX_PHOTOS ? 0.5 : 1,
+                  marginBottom: '8px'
+                }}
+              >
+                <input {...newEntryDropzone.getInputProps()} />
+                <small className="text-muted">
+                  {'\uD83D\uDCF7'} {t('journal.addPhotos', 'Cliquez ou deposez des photos ici (JPEG, PNG, GIF)')} ({newEntryPhotos.length}/{MAX_PHOTOS})
+                </small>
+              </div>
+              {newEntryPhotos.length > 0 && (
+                <div className="d-flex flex-wrap gap-2 mb-2">
+                  {newEntryPhotos.map((file, idx) => (
+                    <div key={`new-${idx}`} style={{ position: 'relative' }}>
+                      <img src={file.preview} alt={file.name} style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 6, border: '2px dashed #0d6efd', opacity: 0.8 }} />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          URL.revokeObjectURL(file.preview);
+                          setNewEntryPhotos(prev => prev.filter((_, i) => i !== idx));
+                        }}
+                        style={{ position: 'absolute', top: -6, right: -6, background: '#dc3545', color: 'white', border: 'none', borderRadius: '50%', width: 18, height: 18, fontSize: '11px', lineHeight: '16px', padding: 0, cursor: 'pointer' }}
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="d-flex justify-content-end">
                 <Button
                   variant="primary"
@@ -308,6 +412,8 @@ const PatientJournalTab = ({ patientId }) => {
         ) : (
           entries.map(entry => {
             const entryTags = entry.tags || [];
+            const entryPhotos = entry.photos || [];
+            const isOwn = entry.created_by_user_id === user?.id;
 
             return (
               <Card key={entry.id} className="mb-3">
@@ -330,7 +436,7 @@ const PatientJournalTab = ({ patientId }) => {
                       )}
                     </div>
                     {/* Edit/Delete buttons for own entries */}
-                    {entry.created_by_user_id === user?.id && editingEntryId !== entry.id && (
+                    {isOwn && editingEntryId !== entry.id && (
                       <div className="d-flex gap-1">
                         <Button size="sm" variant="outline-secondary" onClick={() => handleEditEntry(entry)} title={t('common.edit', 'Modifier')}>
                           {'\u270F\uFE0F'}
@@ -376,6 +482,63 @@ const PatientJournalTab = ({ patientId }) => {
                     </>
                   )}
 
+                  {/* Photos */}
+                  {entryPhotos.length > 0 && (
+                    <div className="d-flex flex-wrap gap-2 mb-2">
+                      {entryPhotos.map(photo => (
+                        <div key={photo.id} style={{ position: 'relative' }}>
+                          <img
+                            src={patientService.getJournalPhotoUrl(photo.file_path)}
+                            alt={photo.file_name}
+                            style={{
+                              width: 80, height: 80, objectFit: 'cover', borderRadius: 8,
+                              border: '2px solid #dee2e6', cursor: 'pointer'
+                            }}
+                            onClick={() => setLightboxPhoto(patientService.getJournalPhotoUrl(photo.file_path))}
+                          />
+                          {isOwn && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePhoto(entry.id, photo.id)}
+                              style={{
+                                position: 'absolute', top: -6, right: -6,
+                                background: '#dc3545', color: 'white', border: 'none',
+                                borderRadius: '50%', width: 18, height: 18,
+                                fontSize: '11px', lineHeight: '16px', padding: 0, cursor: 'pointer'
+                              }}
+                            >
+                              &times;
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add photos button for own entries */}
+                  {isOwn && entryPhotos.length < MAX_PHOTOS && (
+                    <div className="mb-2">
+                      <label
+                        className="btn btn-outline-secondary btn-sm"
+                        style={{ cursor: uploadingPhotoEntryId === entry.id ? 'wait' : 'pointer' }}
+                      >
+                        {uploadingPhotoEntryId === entry.id ? (
+                          <Spinner animation="border" size="sm" />
+                        ) : (
+                          <>{'\uD83D\uDCF7'} {t('journal.addPhotos', 'Ajouter des photos')}</>
+                        )}
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                          style={{ display: 'none' }}
+                          onChange={(e) => handleUploadPhotosToEntry(entry.id, e.target.files)}
+                          disabled={uploadingPhotoEntryId === entry.id}
+                        />
+                      </label>
+                    </div>
+                  )}
+
                   {/* Mood + Energy + Tags */}
                   <div className="d-flex gap-3 align-items-center flex-wrap mb-2">
                     {entry.mood && MOOD_EMOJIS[entry.mood] && (
@@ -384,7 +547,7 @@ const PatientJournalTab = ({ patientId }) => {
                       </span>
                     )}
                     {entry.energy_level && (
-                      <span className="text-muted">{'⚡'} {entry.energy_level}/5</span>
+                      <span className="text-muted">{'\u26A1'} {entry.energy_level}/5</span>
                     )}
                     {entryTags.length > 0 && entryTags.map(tag => (
                       <Badge key={tag} bg="light" text="dark" className="px-2 py-1">#{tag}</Badge>
@@ -401,7 +564,7 @@ const PatientJournalTab = ({ patientId }) => {
                         <div key={comment.id} className="mb-2 ps-3 d-flex justify-content-between align-items-start" style={{ borderLeft: '3px solid #0d6efd' }}>
                           <div>
                             <small className="fw-bold">
-                              {comment.author ? `${comment.author.first_name} ${comment.author.last_name}` : '—'}
+                              {comment.author ? `${comment.author.first_name} ${comment.author.last_name}` : '\u2014'}
                             </small>
                             <small className="text-muted ms-2">
                               {new Date(comment.created_at).toLocaleDateString('fr-FR')}
@@ -489,6 +652,32 @@ const PatientJournalTab = ({ patientId }) => {
         message={t('journal.deleteConfirm', 'Supprimer cette note ?')}
         confirmLabel={t('common.delete', 'Supprimer')}
       />
+
+      {/* Lightbox Modal */}
+      <Modal show={!!lightboxPhoto} onHide={() => setLightboxPhoto(null)} centered size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>{t('journal.viewPhoto', 'Photo')}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="text-center p-0">
+          {lightboxPhoto && (
+            <img
+              src={lightboxPhoto}
+              alt="Journal photo"
+              style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
+            />
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          {lightboxPhoto && (
+            <a href={lightboxPhoto} download className="btn btn-outline-primary btn-sm">
+              {t('common.download', 'Telecharger')}
+            </a>
+          )}
+          <Button variant="secondary" size="sm" onClick={() => setLightboxPhoto(null)}>
+            {t('common.close', 'Fermer')}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </Card>
   );
 };

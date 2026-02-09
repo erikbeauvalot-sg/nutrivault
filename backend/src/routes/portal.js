@@ -6,11 +6,27 @@
 
 const express = require('express');
 const router = express.Router();
+const path = require('path');
 const { body, param, query } = require('express-validator');
 const rateLimit = require('express-rate-limit');
+const multer = require('multer');
 const portalController = require('../controllers/portalController');
 const authenticate = require('../middleware/authenticate');
 const { resolvePatient } = require('../middleware/portalScope');
+
+// Multer config for journal photo uploads (images only, max 10MB per file)
+const journalPhotoUpload = multer({
+  dest: path.join(__dirname, '../../temp_uploads'),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed (JPEG, PNG, GIF, WebP)'), false);
+    }
+  }
+});
 
 // Rate limiter for set-password endpoint
 const setPasswordLimiter = rateLimit({
@@ -194,6 +210,24 @@ router.put('/journal/:id',
 router.delete('/journal/:id',
   param('id').isUUID(),
   portalController.deleteJournalEntry
+);
+
+/**
+ * POST /api/portal/journal/:id/photos — Upload photos to journal entry (max 5)
+ */
+router.post('/journal/:id/photos',
+  param('id').isUUID(),
+  journalPhotoUpload.array('photos', 5),
+  portalController.uploadJournalPhotos
+);
+
+/**
+ * DELETE /api/portal/journal/:id/photos/:photoId — Delete a journal photo
+ */
+router.delete('/journal/:id/photos/:photoId',
+  param('id').isUUID(),
+  param('photoId').isUUID(),
+  portalController.deleteJournalPhoto
 );
 
 /**

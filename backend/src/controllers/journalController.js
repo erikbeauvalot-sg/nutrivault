@@ -5,7 +5,10 @@
 
 const db = require('../../../models');
 const { Op } = db.Sequelize;
+const path = require('path');
+const fs = require('fs').promises;
 const { canAccessPatient } = require('../helpers/scopeHelper');
+const { generateFilePath, ensureUploadDirectory, UPLOAD_DIR } = require('../services/document.service');
 
 /**
  * GET /api/patients/:patientId/journal — View patient's journal (excludes private entries)
@@ -59,6 +62,13 @@ exports.getPatientJournal = async (req, res, next) => {
           model: db.User,
           as: 'createdBy',
           attributes: ['id', 'first_name', 'last_name']
+        },
+        {
+          model: db.Document,
+          as: 'photos',
+          where: { is_active: true },
+          required: false,
+          attributes: ['id', 'file_name', 'file_path', 'file_size', 'mime_type', 'created_at']
         }
       ],
       order: [['entry_date', 'DESC'], ['created_at', 'DESC']],
@@ -123,6 +133,13 @@ exports.createJournalEntry = async (req, res, next) => {
         {
           model: db.JournalComment,
           as: 'comments'
+        },
+        {
+          model: db.Document,
+          as: 'photos',
+          where: { is_active: true },
+          required: false,
+          attributes: ['id', 'file_name', 'file_path', 'file_size', 'mime_type', 'created_at']
         }
       ]
     });
@@ -173,7 +190,8 @@ exports.updateJournalEntry = async (req, res, next) => {
     const updated = await db.JournalEntry.findByPk(entry.id, {
       include: [
         { model: db.User, as: 'createdBy', attributes: ['id', 'first_name', 'last_name'] },
-        { model: db.JournalComment, as: 'comments', include: [{ model: db.User, as: 'author', attributes: ['id', 'first_name', 'last_name'] }] }
+        { model: db.JournalComment, as: 'comments', include: [{ model: db.User, as: 'author', attributes: ['id', 'first_name', 'last_name'] }] },
+        { model: db.Document, as: 'photos', where: { is_active: true }, required: false, attributes: ['id', 'file_name', 'file_path', 'file_size', 'mime_type', 'created_at'] }
       ]
     });
 
@@ -307,6 +325,140 @@ exports.deleteComment = async (req, res, next) => {
     await comment.destroy();
 
     res.json({ success: true, message: 'Comment deleted' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// =============================================
+// JOURNAL PHOTO ENDPOINTS (Dietitian)
+// =============================================
+
+const MAX_JOURNAL_PHOTOS = 5;
+
+/**
+ * POST /api/patients/:patientId/journal/:entryId/photos — Upload photos
+ */
+exports.uploadJournalPhotos = async (req, res, next) => {
+  try {
+    const { patientId, entryId } = req.params;
+    const files = req.files;
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ success: false, error: 'No files provided' });
+    }
+
+    const patient = await db.Patient.findByPk(patientId);
+    if (!patient) {
+      return res.status(404).json({ success: false, error: 'Patient not found' });
+    }
+
+    const hasAccess = await canAccessPatient(req.user, patient);
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, error: 'Access denied to this patient' });
+    }
+
+    const entry = await db.JournalEntry.findOne({
+      where: { id: entryId, patient_id: patientId }
+    });
+    if (!entry) {
+      return res.status(404).json({ success: false, error: 'Journal entry not found' });
+    }
+
+    // Check existing photo count
+    const existingCount = await db.Document.count({
+      where: { resource_type: 'journal_entry', resource_id: entryId, is_active: true }
+    });
+
+    if (existingCount + files.length > MAX_JOURNAL_PHOTOS) {
+      for (const file of files) {
+        try { await fs.unlink(file.path); } catch {}
+      }
+      return res.status(400).json({
+        success: false,
+        error: `Maximum ${MAX_JOURNAL_PHOTOS} photos per entry. Currently ${existingCount}, trying to add ${files.length}.`
+      });
+    }
+
+    const photos = [];
+    for (const file of files) {
+      const filePath = generateFilePath('journal_entry', entryId, file.originalname);
+      await ensureUploadDirectory(filePath);
+      const fullFilePath = path.join(process.cwd(), UPLOAD_DIR, filePath);
+
+      try {
+        await fs.copyFile(file.path, fullFilePath);
+        await fs.unlink(file.path);
+      } catch (err) {
+        try { await fs.unlink(file.path); } catch {}
+        throw err;
+      }
+
+      const doc = await db.Document.create({
+        resource_type: 'journal_entry',
+        resource_id: entryId,
+        file_name: file.originalname,
+        file_path: filePath,
+        file_size: file.size,
+        mime_type: file.mimetype,
+        uploaded_by: req.user.id
+      });
+
+      photos.push({
+        id: doc.id,
+        file_name: doc.file_name,
+        file_path: doc.file_path,
+        file_size: doc.file_size,
+        mime_type: doc.mime_type,
+        created_at: doc.created_at
+      });
+    }
+
+    res.status(201).json({ success: true, data: photos });
+  } catch (error) {
+    if (req.files) {
+      for (const file of req.files) {
+        try { await fs.unlink(file.path); } catch {}
+      }
+    }
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/patients/:patientId/journal/:entryId/photos/:photoId — Delete a photo
+ */
+exports.deleteJournalPhoto = async (req, res, next) => {
+  try {
+    const { patientId, entryId, photoId } = req.params;
+
+    const patient = await db.Patient.findByPk(patientId);
+    if (!patient) {
+      return res.status(404).json({ success: false, error: 'Patient not found' });
+    }
+
+    const hasAccess = await canAccessPatient(req.user, patient);
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, error: 'Access denied to this patient' });
+    }
+
+    const entry = await db.JournalEntry.findOne({
+      where: { id: entryId, patient_id: patientId }
+    });
+    if (!entry) {
+      return res.status(404).json({ success: false, error: 'Journal entry not found' });
+    }
+
+    const photo = await db.Document.findOne({
+      where: { id: photoId, resource_type: 'journal_entry', resource_id: entryId, is_active: true }
+    });
+    if (!photo) {
+      return res.status(404).json({ success: false, error: 'Photo not found' });
+    }
+
+    await photo.update({ is_active: false });
+
+    res.json({ success: true, message: 'Photo deleted' });
   } catch (error) {
     next(error);
   }

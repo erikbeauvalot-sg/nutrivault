@@ -145,6 +145,25 @@ export const deleteJournalComment = async (patientId, commentId) => {
   return extractData(response);
 };
 
+export const uploadJournalPhotos = async (patientId, entryId, files) => {
+  const formData = new FormData();
+  files.forEach(file => formData.append('photos', file));
+  const response = await api.post(`/patients/${patientId}/journal/${entryId}/photos`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return extractData(response);
+};
+
+export const deleteJournalPhoto = async (patientId, entryId, photoId) => {
+  const response = await api.delete(`/patients/${patientId}/journal/${entryId}/photos/${photoId}`);
+  return extractData(response);
+};
+
+export const getJournalPhotoUrl = (filePath) => {
+  const baseUrl = api.defaults.baseURL?.replace('/api', '') || '';
+  return `${baseUrl}/uploads/${filePath}`;
+};
+
 export const resendPortalInvitation = async (patientId) => {
   const response = await api.post(`/patients/${patientId}/portal/resend`);
   return extractData(response);

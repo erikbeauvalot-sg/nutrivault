@@ -894,4 +894,12 @@ db.User.hasMany(db.JournalEntry, {
   as: 'journal_entries'
 });
 
+// JournalEntry - Document (photos) polymorphic relationship
+db.JournalEntry.hasMany(db.Document, {
+  foreignKey: 'resource_id',
+  constraints: false,
+  scope: { resource_type: 'journal_entry' },
+  as: 'photos'
+});
+
 module.exports = db;

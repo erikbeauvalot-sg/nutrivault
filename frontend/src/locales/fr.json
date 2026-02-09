@@ -3192,7 +3192,16 @@
         "neutral": "Neutre",
         "good": "Bien",
         "very_good": "Très bien"
-      }
+      },
+      "photos": "Photos",
+      "addPhotos": "Cliquez ou déposez des photos ici (JPEG, PNG, GIF)",
+      "dropPhotos": "Déposez les photos ici...",
+      "photoLimit": "Maximum 5 photos par entrée",
+      "photoUploading": "Upload des photos...",
+      "photoUploadError": "Erreur lors de l'upload des photos",
+      "photoDeleted": "Photo supprimée",
+      "viewPhoto": "Photo",
+      "maxPhotosReached": "Maximum 5 photos atteint"
     }
   },
   "journal": {
@@ -3217,6 +3226,15 @@
     "entryUpdateError": "Erreur lors de la modification",
     "entryDeleted": "Note supprimée",
     "entryDeleteError": "Erreur lors de la suppression",
-    "deleteConfirm": "Supprimer cette note ?"
+    "deleteConfirm": "Supprimer cette note ?",
+    "photos": "Photos",
+    "addPhotos": "Cliquez ou déposez des photos ici (JPEG, PNG, GIF)",
+    "dropPhotos": "Déposez les photos ici...",
+    "photoLimit": "Maximum 5 photos par entrée",
+    "photoUploading": "Photos ajoutées",
+    "photoUploadError": "Erreur lors de l'upload des photos",
+    "photoDeleted": "Photo supprimée",
+    "viewPhoto": "Photo",
+    "maxPhotosReached": "Maximum 5 photos atteint"
   }
 }

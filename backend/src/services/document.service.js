@@ -88,7 +88,7 @@ function validateFile(file) {
  * @returns {string} Relative file path
  */
 function generateFilePath(resourceType, resourceId, filename) {
-  const allowedTypes = ['patient', 'visit', 'user', 'document'];
+  const allowedTypes = ['patient', 'visit', 'user', 'document', 'journal_entry'];
   if (!allowedTypes.includes(resourceType)) {
     throw new Error('Invalid resource type');
   }
@@ -232,6 +232,9 @@ async function validateResourceExists(resourceType, resourceId) {
       break;
     case 'user':
       model = User;
+      break;
+    case 'journal_entry':
+      model = db.JournalEntry;
       break;
     default:
       throw new Error('Invalid resource type');
@@ -1636,5 +1639,9 @@ module.exports = {
   sendDocumentByEmail,
   getPatientDocumentShares,
   ALLOWED_MIME_TYPES,
-  MAX_FILE_SIZE
+  MAX_FILE_SIZE,
+  UPLOAD_DIR,
+  generateFilePath,
+  ensureUploadDirectory,
+  validateFile
 };

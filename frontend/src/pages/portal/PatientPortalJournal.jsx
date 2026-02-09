@@ -1,14 +1,17 @@
 /**
  * Patient Portal Journal Page
- * Patients can create, edit, delete journal entries with mood, energy, tags
+ * Patients can create, edit, delete journal entries with mood, energy, tags, photos
  * Dietitian comments are displayed read-only
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { Card, Row, Col, Form, Button, Badge, Spinner, Alert, Modal, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
+import { useDropzone } from 'react-dropzone';
 import { toast } from 'react-toastify';
 import * as portalService from '../../services/portalService';
+
+const MAX_PHOTOS = 5;
 
 const MOOD_OPTIONS = [
   { value: 'very_bad', emoji: '\uD83D\uDE2B', labelKey: 'portal.journal.mood.very_bad', default: 'Tres mal' },
@@ -61,12 +64,60 @@ const PatientPortalJournal = () => {
   const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Photo state
+  const [pendingPhotos, setPendingPhotos] = useState([]); // New files to upload
+  const [existingPhotos, setExistingPhotos] = useState([]); // Photos already on server (edit mode)
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+
   // Edit state
   const [editingId, setEditingId] = useState(null);
 
   // Delete state
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Lightbox state
+  const [lightboxPhoto, setLightboxPhoto] = useState(null);
+
+  const totalPhotoCount = existingPhotos.length + pendingPhotos.length;
+
+  const onDrop = useCallback((acceptedFiles) => {
+    const remaining = MAX_PHOTOS - totalPhotoCount;
+    if (remaining <= 0) {
+      toast.warning(t('journal.maxPhotosReached', `Maximum ${MAX_PHOTOS} photos par entree`));
+      return;
+    }
+    const toAdd = acceptedFiles.slice(0, remaining);
+    // Add preview URLs
+    const withPreviews = toAdd.map(file => Object.assign(file, { preview: URL.createObjectURL(file) }));
+    setPendingPhotos(prev => [...prev, ...withPreviews]);
+  }, [totalPhotoCount, t]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'image/jpeg': [], 'image/png': [], 'image/gif': [], 'image/webp': [] },
+    maxSize: 10 * 1024 * 1024,
+    disabled: totalPhotoCount >= MAX_PHOTOS,
+  });
+
+  const removePendingPhoto = (index) => {
+    setPendingPhotos(prev => {
+      const updated = [...prev];
+      URL.revokeObjectURL(updated[index].preview);
+      updated.splice(index, 1);
+      return updated;
+    });
+  };
+
+  const removeExistingPhoto = async (photo) => {
+    try {
+      await portalService.deleteJournalPhoto(editingId, photo.id);
+      setExistingPhotos(prev => prev.filter(p => p.id !== photo.id));
+      toast.success(t('journal.photoDeleted', 'Photo supprimee'));
+    } catch {
+      toast.error(t('journal.photoUploadError', 'Erreur lors de la suppression de la photo'));
+    }
+  };
 
   const loadEntries = useCallback(async () => {
     try {
@@ -89,6 +140,13 @@ const PatientPortalJournal = () => {
 
   useEffect(() => { loadEntries(); }, [loadEntries]);
 
+  // Cleanup preview URLs
+  useEffect(() => {
+    return () => {
+      pendingPhotos.forEach(file => URL.revokeObjectURL(file.preview));
+    };
+  }, [pendingPhotos]);
+
   const resetForm = () => {
     setFormData({
       content: '',
@@ -102,6 +160,9 @@ const PatientPortalJournal = () => {
     });
     setTagInput('');
     setEditingId(null);
+    pendingPhotos.forEach(file => URL.revokeObjectURL(file.preview));
+    setPendingPhotos([]);
+    setExistingPhotos([]);
   };
 
   const handleSubmit = async (e) => {
@@ -115,12 +176,27 @@ const PatientPortalJournal = () => {
         tags: formData.tags.length > 0 ? formData.tags : null,
       };
 
+      let entryId;
       if (editingId) {
         await portalService.updateJournalEntry(editingId, payload);
+        entryId = editingId;
         toast.success(t('portal.journal.updated', 'Entree mise a jour'));
       } else {
-        await portalService.createJournalEntry(payload);
+        const created = await portalService.createJournalEntry(payload);
+        entryId = created.id;
         toast.success(t('portal.journal.created', 'Entree ajoutee'));
+      }
+
+      // Upload pending photos
+      if (pendingPhotos.length > 0 && entryId) {
+        setUploadingPhotos(true);
+        try {
+          await portalService.uploadJournalPhotos(entryId, pendingPhotos);
+          toast.success(t('journal.photoUploading', 'Photos ajoutees'));
+        } catch {
+          toast.error(t('journal.photoUploadError', 'Erreur lors de l\'upload des photos'));
+        }
+        setUploadingPhotos(false);
       }
 
       resetForm();
@@ -145,6 +221,8 @@ const PatientPortalJournal = () => {
       is_private: entry.is_private,
     });
     setEditingId(entry.id);
+    setExistingPhotos(entry.photos || []);
+    setPendingPhotos([]);
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -280,6 +358,95 @@ const PatientPortalJournal = () => {
                   </Form.Group>
                 </Col>
 
+                {/* Photos Dropzone */}
+                <Col xs={12}>
+                  <Form.Group>
+                    <Form.Label className="small mb-1">
+                      {t('journal.photos', 'Photos')} <small className="text-muted">({totalPhotoCount}/{MAX_PHOTOS})</small>
+                    </Form.Label>
+                    <div
+                      {...getRootProps()}
+                      style={{
+                        border: '2px dashed',
+                        borderColor: isDragActive ? '#0d6efd' : totalPhotoCount >= MAX_PHOTOS ? '#dee2e6' : '#adb5bd',
+                        borderRadius: '8px',
+                        padding: '16px',
+                        textAlign: 'center',
+                        cursor: totalPhotoCount >= MAX_PHOTOS ? 'not-allowed' : 'pointer',
+                        backgroundColor: isDragActive ? 'rgba(13,110,253,0.05)' : 'transparent',
+                        opacity: totalPhotoCount >= MAX_PHOTOS ? 0.5 : 1,
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <input {...getInputProps()} />
+                      <div style={{ fontSize: '1.5rem' }}>{'\uD83D\uDCF7'}</div>
+                      <small className="text-muted">
+                        {totalPhotoCount >= MAX_PHOTOS
+                          ? t('journal.maxPhotosReached', `Maximum ${MAX_PHOTOS} photos atteint`)
+                          : isDragActive
+                            ? t('journal.dropPhotos', 'Deposez les photos ici...')
+                            : t('journal.addPhotos', 'Cliquez ou deposez des photos ici (JPEG, PNG, GIF)')
+                        }
+                      </small>
+                    </div>
+
+                    {/* Photo thumbnails (existing + pending) */}
+                    {(existingPhotos.length > 0 || pendingPhotos.length > 0) && (
+                      <div className="d-flex flex-wrap gap-2 mt-2">
+                        {existingPhotos.map(photo => (
+                          <div key={photo.id} style={{ position: 'relative' }}>
+                            <img
+                              src={portalService.getJournalPhotoUrl(photo.file_path)}
+                              alt={photo.file_name}
+                              style={{
+                                width: 80, height: 80, objectFit: 'cover', borderRadius: 8,
+                                border: '2px solid #dee2e6', cursor: 'pointer'
+                              }}
+                              onClick={() => setLightboxPhoto(portalService.getJournalPhotoUrl(photo.file_path))}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeExistingPhoto(photo)}
+                              style={{
+                                position: 'absolute', top: -6, right: -6,
+                                background: '#dc3545', color: 'white', border: 'none',
+                                borderRadius: '50%', width: 20, height: 20,
+                                fontSize: '12px', lineHeight: '18px', padding: 0, cursor: 'pointer'
+                              }}
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        ))}
+                        {pendingPhotos.map((file, idx) => (
+                          <div key={`pending-${idx}`} style={{ position: 'relative' }}>
+                            <img
+                              src={file.preview}
+                              alt={file.name}
+                              style={{
+                                width: 80, height: 80, objectFit: 'cover', borderRadius: 8,
+                                border: '2px dashed #0d6efd', opacity: 0.8
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removePendingPhoto(idx)}
+                              style={{
+                                position: 'absolute', top: -6, right: -6,
+                                background: '#dc3545', color: 'white', border: 'none',
+                                borderRadius: '50%', width: 20, height: 20,
+                                fontSize: '12px', lineHeight: '18px', padding: 0, cursor: 'pointer'
+                              }}
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </Form.Group>
+                </Col>
+
                 {/* Mood */}
                 <Col xs={12} md={6}>
                   <Form.Group>
@@ -398,9 +565,9 @@ const PatientPortalJournal = () => {
 
                 {/* Submit */}
                 <Col xs={12} className="text-end">
-                  <Button type="submit" variant="primary" disabled={saving || !formData.content.trim()}>
-                    {saving ? (
-                      <><Spinner animation="border" size="sm" className="me-2" />{t('common.saving', 'Enregistrement...')}</>
+                  <Button type="submit" variant="primary" disabled={saving || uploadingPhotos || !formData.content.trim()}>
+                    {saving || uploadingPhotos ? (
+                      <><Spinner animation="border" size="sm" className="me-2" />{uploadingPhotos ? t('journal.photoUploading', 'Upload des photos...') : t('common.saving', 'Enregistrement...')}</>
                     ) : (
                       editingId
                         ? t('common.update', 'Mettre a jour')
@@ -481,6 +648,7 @@ const PatientPortalJournal = () => {
             const typeInfo = getTypeInfo(entry.entry_type);
             const moodInfo = getMoodInfo(entry.mood);
             const entryTags = entry.tags || [];
+            const entryPhotos = entry.photos || [];
 
             return (
               <Card key={entry.id} className="mb-3" style={entry.is_private ? { borderLeft: '4px solid #dc3545' } : {}}>
@@ -520,6 +688,24 @@ const PatientPortalJournal = () => {
                   {/* Content */}
                   <p className="mb-2" style={{ whiteSpace: 'pre-wrap' }}>{entry.content}</p>
 
+                  {/* Photos */}
+                  {entryPhotos.length > 0 && (
+                    <div className="d-flex flex-wrap gap-2 mb-2">
+                      {entryPhotos.map(photo => (
+                        <img
+                          key={photo.id}
+                          src={portalService.getJournalPhotoUrl(photo.file_path)}
+                          alt={photo.file_name}
+                          style={{
+                            width: 80, height: 80, objectFit: 'cover', borderRadius: 8,
+                            border: '2px solid #dee2e6', cursor: 'pointer'
+                          }}
+                          onClick={() => setLightboxPhoto(portalService.getJournalPhotoUrl(photo.file_path))}
+                        />
+                      ))}
+                    </div>
+                  )}
+
                   {/* Mood + Energy + Tags row */}
                   <div className="d-flex gap-3 align-items-center flex-wrap">
                     {moodInfo && (
@@ -529,7 +715,7 @@ const PatientPortalJournal = () => {
                     )}
                     {entry.energy_level && (
                       <span className="text-muted" title={t('portal.journal.energyLabel', 'Energie')}>
-                        {'⚡'} {entry.energy_level}/5
+                        {'\u26A1'} {entry.energy_level}/5
                       </span>
                     )}
                     {entryTags.length > 0 && entryTags.map(tag => (
@@ -547,7 +733,7 @@ const PatientPortalJournal = () => {
                         <div key={comment.id} className="mb-2 ps-3" style={{ borderLeft: '3px solid #0d6efd' }}>
                           <div className="d-flex justify-content-between">
                             <small className="fw-bold">
-                              {comment.author ? `${comment.author.first_name} ${comment.author.last_name}` : '—'}
+                              {comment.author ? `${comment.author.first_name} ${comment.author.last_name}` : '\u2014'}
                             </small>
                             <small className="text-muted">
                               {new Date(comment.created_at).toLocaleDateString('fr-FR')}
@@ -604,6 +790,32 @@ const PatientPortalJournal = () => {
           </Button>
           <Button variant="danger" onClick={handleDelete} disabled={deleting}>
             {deleting ? <Spinner animation="border" size="sm" /> : t('common.delete', 'Supprimer')}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Lightbox Modal */}
+      <Modal show={!!lightboxPhoto} onHide={() => setLightboxPhoto(null)} centered size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>{t('journal.viewPhoto', 'Photo')}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="text-center p-0">
+          {lightboxPhoto && (
+            <img
+              src={lightboxPhoto}
+              alt="Journal photo"
+              style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
+            />
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          {lightboxPhoto && (
+            <a href={lightboxPhoto} download className="btn btn-outline-primary btn-sm">
+              {t('common.download', 'Telecharger')}
+            </a>
+          )}
+          <Button variant="secondary" size="sm" onClick={() => setLightboxPhoto(null)}>
+            {t('common.close', 'Fermer')}
           </Button>
         </Modal.Footer>
       </Modal>

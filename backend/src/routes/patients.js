@@ -7,12 +7,28 @@
 
 const express = require('express');
 const router = express.Router();
+const path = require('path');
 const { body, param, query, validationResult } = require('express-validator');
+const multer = require('multer');
 const patientController = require('../controllers/patientController');
 const patientTagController = require('../controllers/patientTagController');
 const patientCustomFieldController = require('../controllers/patientCustomFieldController');
 const authenticate = require('../middleware/authenticate');
 const { requirePermission } = require('../middleware/rbac');
+
+// Multer config for journal photo uploads (images only, max 10MB per file)
+const journalPhotoUpload = multer({
+  dest: path.join(__dirname, '../../temp_uploads'),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed (JPEG, PNG, GIF, WebP)'), false);
+    }
+  }
+});
 
 /**
  * Validation middleware - check for validation errors
@@ -572,6 +588,35 @@ router.delete(
   param('commentId').isUUID().withMessage('Invalid comment ID'),
   validate,
   journalController.deleteComment
+);
+
+/**
+ * POST /api/patients/:patientId/journal/:entryId/photos - Upload photos to journal entry
+ * Requires: patients.update permission
+ */
+router.post(
+  '/:patientId/journal/:entryId/photos',
+  authenticate,
+  requirePermission('patients.update'),
+  param('patientId').isUUID().withMessage('Invalid patient ID'),
+  param('entryId').isUUID().withMessage('Invalid entry ID'),
+  journalPhotoUpload.array('photos', 5),
+  journalController.uploadJournalPhotos
+);
+
+/**
+ * DELETE /api/patients/:patientId/journal/:entryId/photos/:photoId - Delete a journal photo
+ * Requires: patients.update permission
+ */
+router.delete(
+  '/:patientId/journal/:entryId/photos/:photoId',
+  authenticate,
+  requirePermission('patients.update'),
+  param('patientId').isUUID().withMessage('Invalid patient ID'),
+  param('entryId').isUUID().withMessage('Invalid entry ID'),
+  param('photoId').isUUID().withMessage('Invalid photo ID'),
+  validate,
+  journalController.deleteJournalPhoto
 );
 
 // =============================================

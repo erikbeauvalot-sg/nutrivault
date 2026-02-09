@@ -6,6 +6,9 @@
 const db = require('../../../models');
 const bcrypt = require('bcryptjs');
 const { Op } = db.Sequelize;
+const path = require('path');
+const fs = require('fs').promises;
+const { generateFilePath, ensureUploadDirectory, UPLOAD_DIR } = require('../services/document.service');
 
 /**
  * GET /api/portal/me — Patient profile
@@ -599,6 +602,12 @@ exports.getJournalEntries = async (req, res, next) => {
           attributes: ['id', 'first_name', 'last_name']
         }],
         order: [['created_at', 'ASC']]
+      }, {
+        model: db.Document,
+        as: 'photos',
+        where: { is_active: true },
+        required: false,
+        attributes: ['id', 'file_name', 'file_path', 'file_size', 'mime_type', 'created_at']
       }],
       order: [['entry_date', 'DESC'], ['created_at', 'DESC']],
       limit: parseInt(limit),
@@ -643,7 +652,17 @@ exports.createJournalEntry = async (req, res, next) => {
       is_private: is_private || false
     });
 
-    res.status(201).json({ success: true, data: entry });
+    const created = await db.JournalEntry.findByPk(entry.id, {
+      include: [{
+        model: db.Document,
+        as: 'photos',
+        where: { is_active: true },
+        required: false,
+        attributes: ['id', 'file_name', 'file_path', 'file_size', 'mime_type', 'created_at']
+      }]
+    });
+
+    res.status(201).json({ success: true, data: created });
   } catch (error) {
     next(error);
   }
@@ -686,6 +705,12 @@ exports.updateJournalEntry = async (req, res, next) => {
           as: 'author',
           attributes: ['id', 'first_name', 'last_name']
         }]
+      }, {
+        model: db.Document,
+        as: 'photos',
+        where: { is_active: true },
+        required: false,
+        attributes: ['id', 'file_name', 'file_path', 'file_size', 'mime_type', 'created_at']
       }]
     });
 
@@ -1066,6 +1091,124 @@ exports.downloadInvoicePDF = async (req, res, next) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoice.invoice_number}.pdf"`);
     pdfDoc.pipe(res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// =============================================
+// JOURNAL PHOTO ENDPOINTS
+// =============================================
+
+const MAX_JOURNAL_PHOTOS = 5;
+
+/**
+ * POST /api/portal/journal/:id/photos — Upload photos to a journal entry
+ */
+exports.uploadJournalPhotos = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const files = req.files;
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ success: false, error: 'No files provided' });
+    }
+
+    // Verify entry belongs to patient
+    const entry = await db.JournalEntry.findOne({
+      where: { id, patient_id: req.patient.id }
+    });
+    if (!entry) {
+      return res.status(404).json({ success: false, error: 'Journal entry not found' });
+    }
+
+    // Check existing photo count
+    const existingCount = await db.Document.count({
+      where: { resource_type: 'journal_entry', resource_id: id, is_active: true }
+    });
+
+    if (existingCount + files.length > MAX_JOURNAL_PHOTOS) {
+      // Clean up temp files
+      for (const file of files) {
+        try { await fs.unlink(file.path); } catch {}
+      }
+      return res.status(400).json({
+        success: false,
+        error: `Maximum ${MAX_JOURNAL_PHOTOS} photos per entry. Currently ${existingCount}, trying to add ${files.length}.`
+      });
+    }
+
+    const photos = [];
+    for (const file of files) {
+      const filePath = generateFilePath('journal_entry', id, file.originalname);
+      await ensureUploadDirectory(filePath);
+      const fullFilePath = path.join(process.cwd(), UPLOAD_DIR, filePath);
+
+      try {
+        await fs.copyFile(file.path, fullFilePath);
+        await fs.unlink(file.path);
+      } catch (err) {
+        try { await fs.unlink(file.path); } catch {}
+        throw err;
+      }
+
+      const doc = await db.Document.create({
+        resource_type: 'journal_entry',
+        resource_id: id,
+        file_name: file.originalname,
+        file_path: filePath,
+        file_size: file.size,
+        mime_type: file.mimetype,
+        uploaded_by: req.user.id
+      });
+
+      photos.push({
+        id: doc.id,
+        file_name: doc.file_name,
+        file_path: doc.file_path,
+        file_size: doc.file_size,
+        mime_type: doc.mime_type,
+        created_at: doc.created_at
+      });
+    }
+
+    res.status(201).json({ success: true, data: photos });
+  } catch (error) {
+    // Clean up any remaining temp files
+    if (req.files) {
+      for (const file of req.files) {
+        try { await fs.unlink(file.path); } catch {}
+      }
+    }
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/portal/journal/:id/photos/:photoId — Delete a photo from a journal entry
+ */
+exports.deleteJournalPhoto = async (req, res, next) => {
+  try {
+    const { id, photoId } = req.params;
+
+    // Verify entry belongs to patient
+    const entry = await db.JournalEntry.findOne({
+      where: { id, patient_id: req.patient.id }
+    });
+    if (!entry) {
+      return res.status(404).json({ success: false, error: 'Journal entry not found' });
+    }
+
+    const photo = await db.Document.findOne({
+      where: { id: photoId, resource_type: 'journal_entry', resource_id: id, is_active: true }
+    });
+    if (!photo) {
+      return res.status(404).json({ success: false, error: 'Photo not found' });
+    }
+
+    await photo.update({ is_active: false });
+
+    res.json({ success: true, message: 'Photo deleted' });
   } catch (error) {
     next(error);
   }

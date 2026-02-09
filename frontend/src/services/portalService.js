@@ -98,6 +98,25 @@ export const deleteJournalEntry = async (id) => {
   return extractData(response);
 };
 
+export const uploadJournalPhotos = async (entryId, files) => {
+  const formData = new FormData();
+  files.forEach(file => formData.append('photos', file));
+  const response = await api.post(`/portal/journal/${entryId}/photos`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return extractData(response);
+};
+
+export const deleteJournalPhoto = async (entryId, photoId) => {
+  const response = await api.delete(`/portal/journal/${entryId}/photos/${photoId}`);
+  return extractData(response);
+};
+
+export const getJournalPhotoUrl = (filePath) => {
+  const baseUrl = api.defaults.baseURL?.replace('/api', '') || '';
+  return `${baseUrl}/uploads/${filePath}`;
+};
+
 // =============================================
 // Radar Chart (Wind Rose)
 // =============================================

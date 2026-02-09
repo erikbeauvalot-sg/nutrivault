@@ -122,6 +122,12 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'created_by_user_id',
       as: 'createdBy'
     });
+    JournalEntry.hasMany(models.Document, {
+      foreignKey: 'resource_id',
+      constraints: false,
+      scope: { resource_type: 'journal_entry' },
+      as: 'photos'
+    });
   };
 
   return JournalEntry;

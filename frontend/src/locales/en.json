@@ -3038,7 +3038,16 @@
         "neutral": "Neutral",
         "good": "Good",
         "very_good": "Very good"
-      }
+      },
+      "photos": "Photos",
+      "addPhotos": "Click or drop photos here (JPEG, PNG, GIF)",
+      "dropPhotos": "Drop photos here...",
+      "photoLimit": "Maximum 5 photos per entry",
+      "photoUploading": "Uploading photos...",
+      "photoUploadError": "Error uploading photos",
+      "photoDeleted": "Photo deleted",
+      "viewPhoto": "Photo",
+      "maxPhotosReached": "Maximum 5 photos reached"
     }
   },
   "journal": {
@@ -3063,6 +3072,15 @@
     "entryUpdateError": "Error updating note",
     "entryDeleted": "Note deleted",
     "entryDeleteError": "Error deleting note",
-    "deleteConfirm": "Delete this note?"
+    "deleteConfirm": "Delete this note?",
+    "photos": "Photos",
+    "addPhotos": "Click or drop photos here (JPEG, PNG, GIF)",
+    "dropPhotos": "Drop photos here...",
+    "photoLimit": "Maximum 5 photos per entry",
+    "photoUploading": "Photos added",
+    "photoUploadError": "Error uploading photos",
+    "photoDeleted": "Photo deleted",
+    "viewPhoto": "Photo",
+    "maxPhotosReached": "Maximum 5 photos reached"
   }
 }
