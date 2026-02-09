@@ -55,6 +55,15 @@ const PatientPortalRecipeDetail = () => {
       </Button>
 
       <Card>
+        {recipe.image_url && (
+          <div style={{ maxHeight: '350px', overflow: 'hidden' }}>
+            <img
+              src={recipe.image_url}
+              alt={recipe.title}
+              style={{ width: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          </div>
+        )}
         <Card.Header>
           <h3 className="mb-0">{recipe.title}</h3>
         </Card.Header>

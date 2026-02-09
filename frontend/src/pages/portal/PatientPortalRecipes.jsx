@@ -58,6 +58,23 @@ const PatientPortalRecipes = () => {
                   style={{ cursor: 'pointer' }}
                   onClick={() => navigate(`/portal/recipes/${recipe.id}`)}
                 >
+                  {recipe.image_url ? (
+                    <div style={{ height: '180px', overflow: 'hidden' }}>
+                      <img
+                        src={recipe.image_url}
+                        alt={recipe.title}
+                        loading="lazy"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      className="d-flex align-items-center justify-content-center"
+                      style={{ height: '180px', backgroundColor: '#f0f7f0' }}
+                    >
+                      <span style={{ fontSize: '3rem' }}>🍽️</span>
+                    </div>
+                  )}
                   <Card.Body>
                     <Card.Title>{recipe.title}</Card.Title>
                     {recipe.description && (

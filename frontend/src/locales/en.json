@@ -1657,6 +1657,8 @@
     "visibleOnCreationHelp": "If checked, this field will be displayed in the quick patient creation form",
     "showInVisitList": "Show in Visits List",
     "showInVisitListHelp": "If checked, this field will appear as a column in the visits list",
+    "showInPortal": "Show in Patient Portal",
+    "showInPortalHelp": "If checked, this field will be visible to patients in their portal visit details",
     "fieldRequired": "{{field}} is required",
     "reorderError": "Failed to reorder items",
     "cannotDeleteCategoryWithFields": "Cannot delete category with fields"
@@ -2845,6 +2847,7 @@
     "dietitian": "Dietitian",
     "status": "Status",
     "summary": "Summary",
+    "noVisitDetails": "No details for this visit",
     "fileName": "File",
     "category": "Category",
     "size": "Size",

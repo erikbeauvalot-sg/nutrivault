@@ -1709,6 +1709,8 @@
     "visibleOnCreationHelp": "Si coché, ce champ sera affiché dans le formulaire de création rapide de patient",
     "showInVisitList": "Afficher dans la liste des consultations",
     "showInVisitListHelp": "Si coché, ce champ sera affiché comme colonne dans la liste des consultations",
+    "showInPortal": "Afficher dans le portail patient",
+    "showInPortalHelp": "Si coché, ce champ sera visible par les patients dans le détail de leurs consultations",
     "fieldRequired": "{{field}} est obligatoire",
     "reorderError": "Échec du réordonnancement",
     "cannotDeleteCategoryWithFields": "Impossible de supprimer une catégorie contenant des champs"
@@ -2999,6 +3001,7 @@
     "dietitian": "Diététicien(ne)",
     "status": "Statut",
     "summary": "Résumé",
+    "noVisitDetails": "Aucun détail pour cette consultation",
     "fileName": "Fichier",
     "category": "Catégorie",
     "size": "Taille",

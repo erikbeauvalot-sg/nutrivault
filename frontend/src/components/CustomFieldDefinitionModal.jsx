@@ -57,7 +57,8 @@ const definitionSchema = (t) => yup.object().shape({
   show_in_basic_info: yup.boolean(),
   show_in_list: yup.boolean(),
   visible_on_creation: yup.boolean(),
-  show_in_visit_list: yup.boolean()
+  show_in_visit_list: yup.boolean(),
+  show_in_portal: yup.boolean()
 });
 
 const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSuccess }) => {
@@ -106,7 +107,8 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       show_in_basic_info: false,
       show_in_list: false,
       visible_on_creation: false,
-      show_in_visit_list: false
+      show_in_visit_list: false,
+      show_in_portal: false
     }
   });
 
@@ -162,7 +164,8 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
         show_in_basic_info: definition.show_in_basic_info || false,
         show_in_list: definition.show_in_list || false,
         visible_on_creation: definition.visible_on_creation || false,
-        show_in_visit_list: definition.show_in_visit_list || false
+        show_in_visit_list: definition.show_in_visit_list || false,
+        show_in_portal: definition.show_in_portal || false
       });
       setSelectedFieldType(definition.field_type || 'text');
       setSelectOptions(definition.select_options || []);
@@ -190,7 +193,8 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
         show_in_basic_info: false,
         show_in_list: false,
         visible_on_creation: false,
-        show_in_visit_list: false
+        show_in_visit_list: false,
+        show_in_portal: false
       });
       setSelectedFieldType('text');
       setSelectOptions([]);
@@ -821,8 +825,17 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
                   label={t('customFields.showInVisitList', 'Show in Visits List')}
                   {...register('show_in_visit_list')}
                 />
-                <Form.Text className="text-muted d-block">
+                <Form.Text className="text-muted d-block mb-3">
                   {t('customFields.showInVisitListHelp', 'If checked, this field will appear as a column in the visits list')}
+                </Form.Text>
+
+                <Form.Check
+                  type="checkbox"
+                  label={t('customFields.showInPortal', 'Show in Patient Portal')}
+                  {...register('show_in_portal')}
+                />
+                <Form.Text className="text-muted d-block">
+                  {t('customFields.showInPortalHelp', 'If checked, this field will be visible to patients in their portal visit details')}
                 </Form.Text>
               </Form.Group>
             </Col>

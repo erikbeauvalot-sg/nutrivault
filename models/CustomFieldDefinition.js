@@ -124,6 +124,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: false
     },
+    show_in_portal: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
     // Calculated field properties
     formula: {
       type: DataTypes.TEXT,

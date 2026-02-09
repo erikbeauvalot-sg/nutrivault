@@ -39,7 +39,7 @@ async function getAllCategories(user, filters = {}, requestMetadata = {}) {
           as: 'field_definitions',
           where: { is_active: true },
           required: false,
-          attributes: ['id', 'field_name', 'field_label', 'field_type', 'is_required', 'display_order', 'select_options', 'validation_rules', 'help_text', 'visible_on_creation', 'show_in_basic_info', 'show_in_list', 'show_in_visit_list', 'allow_multiple']
+          attributes: ['id', 'field_name', 'field_label', 'field_type', 'is_required', 'display_order', 'select_options', 'validation_rules', 'help_text', 'visible_on_creation', 'show_in_basic_info', 'show_in_list', 'show_in_visit_list', 'show_in_portal', 'allow_multiple']
         }
       ]
     });
@@ -441,7 +441,7 @@ const CATEGORY_EXPORT_FIELDS = [
 const DEFINITION_EXPORT_FIELDS = [
   'field_name', 'field_label', 'field_type', 'is_required', 'validation_rules',
   'select_options', 'allow_multiple', 'help_text', 'display_order', 'is_active',
-  'show_in_basic_info', 'show_in_list', 'show_in_visit_list', 'visible_on_creation',
+  'show_in_basic_info', 'show_in_list', 'show_in_visit_list', 'show_in_portal', 'visible_on_creation',
   'formula', 'dependencies', 'decimal_places', 'is_calculated'
 ];
 

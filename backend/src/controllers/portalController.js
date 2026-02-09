@@ -185,8 +185,12 @@ exports.getMeasures = async (req, res, next) => {
  */
 exports.getVisits = async (req, res, next) => {
   try {
+    const lang = req.patient.language_preference || req.user.language_preference || 'fr';
+    const patientId = req.patient.id;
+
+    // 1. Fetch visits
     const visits = await db.Visit.findAll({
-      where: { patient_id: req.patient.id },
+      where: { patient_id: patientId },
       attributes: ['id', 'visit_date', 'visit_type', 'status', 'visit_summary', 'created_at'],
       include: [{
         model: db.User,
@@ -197,7 +201,138 @@ exports.getVisits = async (req, res, next) => {
       limit: 100
     });
 
-    res.json({ success: true, data: visits });
+    // 2. Get all portal-enabled field definitions with their category
+    const portalFields = await db.CustomFieldDefinition.findAll({
+      where: { show_in_portal: true, is_active: true },
+      attributes: ['id', 'field_name', 'field_label', 'field_type', 'display_order', 'allow_multiple', 'category_id'],
+      include: [{
+        model: db.CustomFieldCategory,
+        as: 'category',
+        attributes: ['id', 'entity_types']
+      }],
+      order: [['display_order', 'ASC']]
+    });
+
+    if (portalFields.length === 0) {
+      // No portal fields configured, return visits without custom data
+      return res.json({ success: true, data: visits });
+    }
+
+    // Separate patient-level vs visit-level fields
+    const patientLevelFields = [];
+    const visitLevelFields = [];
+    portalFields.forEach(f => {
+      const entityTypes = f.category?.entity_types || ['patient'];
+      if (entityTypes.includes('patient')) {
+        patientLevelFields.push(f);
+      } else {
+        visitLevelFields.push(f);
+      }
+    });
+
+    // 3. Fetch patient-level values (shared across visits)
+    const patientFieldDefIds = patientLevelFields.map(f => f.id);
+    let patientValuesMap = {};
+    if (patientFieldDefIds.length > 0) {
+      const patientVals = await db.PatientCustomFieldValue.findAll({
+        where: {
+          patient_id: patientId,
+          field_definition_id: { [Op.in]: patientFieldDefIds }
+        }
+      });
+      patientVals.forEach(v => {
+        patientValuesMap[v.field_definition_id] = v;
+      });
+    }
+
+    // 4. Fetch visit-level values
+    const visitFieldDefIds = visitLevelFields.map(f => f.id);
+    let visitValuesMap = {};
+    if (visitFieldDefIds.length > 0) {
+      const visitIds = visits.map(v => v.id);
+      const visitVals = await db.VisitCustomFieldValue.findAll({
+        where: {
+          visit_id: { [Op.in]: visitIds },
+          field_definition_id: { [Op.in]: visitFieldDefIds }
+        }
+      });
+      visitVals.forEach(v => {
+        const key = `${v.visit_id}_${v.field_definition_id}`;
+        visitValuesMap[key] = v;
+      });
+    }
+
+    // 5. Fetch translations for field labels
+    const allFieldIds = portalFields.map(f => f.id);
+    let translationMap = {};
+    const translations = await db.CustomFieldTranslation.findAll({
+      where: {
+        entity_type: 'field_definition',
+        entity_id: { [Op.in]: allFieldIds },
+        language_code: lang,
+        field_name: 'field_label'
+      }
+    });
+    for (const t of translations) {
+      if (t.translated_value) {
+        translationMap[t.entity_id] = t.translated_value;
+      }
+    }
+
+    // 6. Helper to extract value from a field value record
+    const extractValue = (record, fieldDef) => {
+      if (!record) return null;
+      const type = fieldDef.field_type;
+      if (type === 'number') return record.value_number != null ? record.value_number : null;
+      if (type === 'boolean') return record.value_boolean != null ? record.value_boolean : null;
+      if ((type === 'select') && fieldDef.allow_multiple && record.value_json) {
+        return record.value_json;
+      }
+      return record.value_text || null;
+    };
+
+    // 7. Build response with custom field values per visit
+    const result = visits.map(v => {
+      const vJson = v.toJSON();
+      const customFieldValues = [];
+
+      portalFields.forEach(field => {
+        const entityTypes = field.category?.entity_types || ['patient'];
+        const isPatientLevel = entityTypes.includes('patient');
+
+        let record;
+        if (isPatientLevel) {
+          record = patientValuesMap[field.id];
+        } else {
+          record = visitValuesMap[`${v.id}_${field.id}`];
+        }
+
+        const value = extractValue(record, field);
+        if (value === null || value === '' || value === undefined) return;
+
+        const label = translationMap[field.id] || field.field_label || field.field_name;
+
+        customFieldValues.push({
+          id: record?.id || field.id,
+          value_text: typeof value === 'string' ? value : null,
+          value_number: typeof value === 'number' ? value : null,
+          value_boolean: typeof value === 'boolean' ? value : null,
+          value_json: (typeof value === 'object' && value !== null) ? value : null,
+          field_definition: {
+            id: field.id,
+            field_name: field.field_name,
+            field_label: label,
+            field_type: field.field_type,
+            display_order: field.display_order
+          }
+        });
+      });
+
+      vJson.custom_field_values = customFieldValues;
+      return vJson;
+    });
+
+    res.json({ success: true, data: result });
   } catch (error) {
     next(error);
   }

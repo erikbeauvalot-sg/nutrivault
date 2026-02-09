@@ -130,13 +130,13 @@ async function getPatientCustomFields(user, patientId, language = 'fr', requestM
       ]
     });
 
-    // Filter categories to only those that apply to patients
+    // Filter categories: include patient-level AND visit-level (show latest visit data)
     const patientCategories = categories.filter(category => {
       const entityTypes = category.entity_types || ['patient'];
-      return entityTypes.includes('patient');
+      return entityTypes.includes('patient') || entityTypes.includes('visit');
     });
 
-    // Get patient's custom field values
+    // Get patient's custom field values (patient-level)
     const patientValues = await PatientCustomFieldValue.findAll({
       where: { patient_id: patientId },
       include: [
@@ -154,6 +154,47 @@ async function getPatientCustomFields(user, patientId, language = 'fr', requestM
     patientValues.forEach(value => {
       valuesMap[value.field_definition_id] = value;
     });
+
+    // For visit-only categories, load values from the latest visit
+    const visitOnlyCategories = patientCategories.filter(c => {
+      const et = c.entity_types || ['patient'];
+      return !et.includes('patient') && et.includes('visit');
+    });
+
+    if (visitOnlyCategories.length > 0) {
+      const latestVisit = await db.Visit.findOne({
+        where: { patient_id: patientId },
+        order: [['visit_date', 'DESC']],
+        attributes: ['id']
+      });
+
+      if (latestVisit) {
+        const visitOnlyCategoryIds = visitOnlyCategories.map(c => c.id);
+        const visitOnlyFieldIds = [];
+        visitOnlyCategories.forEach(c => {
+          (c.field_definitions || []).forEach(f => visitOnlyFieldIds.push(f.id));
+        });
+
+        if (visitOnlyFieldIds.length > 0) {
+          const visitValues = await db.VisitCustomFieldValue.findAll({
+            where: {
+              visit_id: latestVisit.id,
+              field_definition_id: { [Op.in]: visitOnlyFieldIds }
+            },
+            include: [{
+              model: CustomFieldDefinition,
+              as: 'field_definition',
+              where: { is_active: true },
+              required: true
+            }]
+          });
+
+          visitValues.forEach(value => {
+            valuesMap[value.field_definition_id] = value;
+          });
+        }
+      }
+    }
 
     // Auto-calculate missing calculated field values
     // This handles the case where a calculated field is created after its dependencies already have values
