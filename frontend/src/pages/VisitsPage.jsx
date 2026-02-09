@@ -201,18 +201,40 @@ const VisitsPage = () => {
 
   const getStatusBadge = (status) => {
     const variants = {
+      REQUESTED: 'warning',
       SCHEDULED: 'info',
       COMPLETED: 'success',
       CANCELLED: 'secondary',
       NO_SHOW: 'danger'
     };
     const statusText = {
+      REQUESTED: t('visits.requested', 'Requested'),
       SCHEDULED: t('visits.scheduled'),
       COMPLETED: t('visits.completed'),
       CANCELLED: t('visits.cancelled'),
       NO_SHOW: t('visits.noShow')
     };
     return <Badge bg={variants[status] || 'secondary'}>{statusText[status] || status}</Badge>;
+  };
+
+  const handleApproveVisit = async (visitId, e) => {
+    e.stopPropagation();
+    try {
+      await visitService.updateVisit(visitId, { status: 'SCHEDULED' });
+      fetchVisits();
+    } catch (err) {
+      setError(err.response?.data?.error || t('errors.generic', 'Error'));
+    }
+  };
+
+  const handleDeclineVisit = async (visitId, e) => {
+    e.stopPropagation();
+    try {
+      await visitService.updateVisit(visitId, { status: 'CANCELLED' });
+      fetchVisits();
+    } catch (err) {
+      setError(err.response?.data?.error || t('errors.generic', 'Error'));
+    }
   };
 
   const formatDate = (dateString) => {
@@ -335,6 +357,7 @@ const VisitsPage = () => {
                     onChange={(e) => handleFilterChange('status', e.target.value)}
                   >
                     <option value="">{t('visits.allStatus')}</option>
+                    <option value="REQUESTED">{t('visits.requested', 'Requested')}</option>
                     <option value="SCHEDULED">{t('visits.scheduled')}</option>
                     <option value="COMPLETED">{t('visits.completed')}</option>
                     <option value="CANCELLED">{t('visits.cancelled')}</option>
@@ -426,20 +449,32 @@ const VisitsPage = () => {
                           })}
                         </div>
 
-                        {canEdit(visit) && (
-                          <div className="action-buttons mt-3" onClick={(e) => e.stopPropagation()}>
-                            <ActionButton
-                              action="edit"
-                              onClick={() => handleEditClick(visit.id)}
-                              title={t('common.edit', 'Edit')}
-                            />
-                            <ActionButton
-                              action="delete"
-                              onClick={() => handleDelete(visit.id)}
-                              title={t('common.delete', 'Delete')}
-                            />
-                          </div>
-                        )}
+                        <div className="action-buttons mt-3" onClick={(e) => e.stopPropagation()}>
+                          {visit.status === 'REQUESTED' && canEdit(visit) && (
+                            <>
+                              <Button size="sm" variant="success" className="me-1" onClick={(e) => handleApproveVisit(visit.id, e)}>
+                                {t('visits.approve', 'Approve')}
+                              </Button>
+                              <Button size="sm" variant="outline-danger" className="me-1" onClick={(e) => handleDeclineVisit(visit.id, e)}>
+                                {t('visits.decline', 'Decline')}
+                              </Button>
+                            </>
+                          )}
+                          {canEdit(visit) && (
+                            <>
+                              <ActionButton
+                                action="edit"
+                                onClick={() => handleEditClick(visit.id)}
+                                title={t('common.edit', 'Edit')}
+                              />
+                              <ActionButton
+                                action="delete"
+                                onClick={() => handleDelete(visit.id)}
+                                title={t('common.delete', 'Delete')}
+                              />
+                            </>
+                          )}
+                        </div>
                       </Card.Body>
                     </Card>
                   ))}
@@ -504,6 +539,16 @@ const VisitsPage = () => {
                             ))}
                             <td onClick={(e) => e.stopPropagation()}>
                               <div className="action-buttons">
+                                {visit.status === 'REQUESTED' && canEdit(visit) && (
+                                  <>
+                                    <Button size="sm" variant="success" className="me-1" onClick={(e) => handleApproveVisit(visit.id, e)}>
+                                      {t('visits.approve', 'Approve')}
+                                    </Button>
+                                    <Button size="sm" variant="outline-danger" className="me-1" onClick={(e) => handleDeclineVisit(visit.id, e)}>
+                                      {t('visits.decline', 'Decline')}
+                                    </Button>
+                                  </>
+                                )}
                                 {canEdit(visit) && (
                                   <>
                                     <ActionButton

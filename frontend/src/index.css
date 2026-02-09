@@ -10,6 +10,30 @@
   box-sizing: border-box;
 }
 
+/* ============================================
+   iOS SAFE AREA (Capacitor)
+   ============================================ */
+
+.navbar {
+  padding-top: calc(0.5rem + env(safe-area-inset-top));
+}
+
+body {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Keyboard open: remove bottom padding so input stays visible */
+body.keyboard-open {
+  padding-bottom: 0;
+}
+
+/* Toasts above bottom safe area */
+.Toastify__toast-container--bottom-center,
+.Toastify__toast-container--bottom-left,
+.Toastify__toast-container--bottom-right {
+  bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
+}
+
 body {
   font-family: var(--nv-font-display);
   font-weight: 400;

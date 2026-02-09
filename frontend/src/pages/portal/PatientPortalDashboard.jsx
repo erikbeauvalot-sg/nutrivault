@@ -74,6 +74,7 @@ const PatientPortalDashboard = () => {
   const [journalEntries, setJournalEntries] = useState([]);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [bookingEnabled, setBookingEnabled] = useState(false);
 
   const handlePreviewDoc = async (doc) => {
     try {
@@ -91,6 +92,12 @@ const PatientPortalDashboard = () => {
     setPreviewUrl(null);
     setPreviewDoc(null);
   };
+
+  useEffect(() => {
+    portalService.getFeatures()
+      .then(f => setBookingEnabled(f?.patientBooking === true))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -180,7 +187,17 @@ const PatientPortalDashboard = () => {
         <Col xs={12} md={6}>
           <Card className="h-100">
             <Card.Header className="d-flex justify-content-between align-items-center py-2">
-              <span style={{ fontSize: '0.9em' }}>{'\uD83D\uDCCB'} {t('portal.recentVisits', 'Consultations recentes')}</span>
+              <span style={{ fontSize: '0.9em' }}>
+                {'\uD83D\uDCCB'} {t('portal.recentVisits', 'Consultations recentes')}
+                {bookingEnabled && (() => {
+                  const pendingCount = visits.filter(v => v.status === 'REQUESTED').length;
+                  return pendingCount > 0 ? (
+                    <span className="badge bg-warning text-dark ms-2" style={{ fontSize: '0.75em' }}>
+                      {pendingCount} {t('portal.pendingRequests', 'en attente')}
+                    </span>
+                  ) : null;
+                })()}
+              </span>
               <Link to="/portal/visits" className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.8em' }}>
                 {t('common.viewAll', 'Voir tout')}
               </Link>

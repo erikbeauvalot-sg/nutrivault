@@ -71,3 +71,8 @@ backend/data.BKP/nutrivault_prod.db
 backend/data.BKP/nutrivault.db
 backend/data.BKP/old_nutrivault-01.db
 backend/nutrivault.db
+
+# Capacitor iOS
+frontend/ios/App/App/public/
+frontend/ios/App/Pods/
+frontend/ios/DerivedData/

@@ -60,6 +60,11 @@ router.use(authenticate);
 router.use(resolvePatient());
 
 /**
+ * GET /api/portal/features — Feature flags for the portal UI
+ */
+router.get('/features', portalController.getFeatures);
+
+/**
  * GET /api/portal/me — Get patient profile
  */
 router.get('/me', portalController.getProfile);
@@ -107,6 +112,50 @@ router.post('/measures',
  * GET /api/portal/visits — Get visit history
  */
 router.get('/visits', portalController.getVisits);
+
+// ==========================================
+// PATIENT BOOKING ROUTES (feature-flagged)
+// ==========================================
+
+/** Middleware: require FEATURE_PATIENT_BOOKING=true */
+const requireBookingFeature = (req, res, next) => {
+  if (process.env.FEATURE_PATIENT_BOOKING !== 'true') {
+    return res.status(403).json({ success: false, error: 'Patient booking is not enabled' });
+  }
+  next();
+};
+
+/**
+ * GET /api/portal/visit-types — Get active visit types for booking
+ */
+router.get('/visit-types', requireBookingFeature, portalController.getVisitTypes);
+
+/**
+ * GET /api/portal/my-dietitians — Get dietitians linked to this patient
+ */
+router.get('/my-dietitians', requireBookingFeature, portalController.getMyDietitians);
+
+/**
+ * POST /api/portal/visits — Request a visit appointment
+ */
+router.post('/visits',
+  requireBookingFeature,
+  body('dietitian_id').isUUID().withMessage('Dietitian ID is required'),
+  body('visit_date').isISO8601().withMessage('Valid date is required'),
+  body('visit_type').optional().isString().isLength({ max: 50 }),
+  body('request_message').optional().isString().isLength({ max: 1000 }),
+  body('duration_minutes').optional().isInt({ min: 1, max: 480 }),
+  portalController.createVisitRequest
+);
+
+/**
+ * PUT /api/portal/visits/:id/cancel — Cancel a visit
+ */
+router.put('/visits/:id/cancel',
+  requireBookingFeature,
+  param('id').isUUID(),
+  portalController.cancelVisit
+);
 
 /**
  * GET /api/portal/documents — Get shared documents

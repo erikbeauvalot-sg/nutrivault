@@ -6,6 +6,9 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import App from './App'
 import './index.css'
 import './i18n'
+import { initCapacitor } from './capacitor'
+
+initCapacitor()
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

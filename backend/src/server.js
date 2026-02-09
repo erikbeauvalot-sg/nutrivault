@@ -17,7 +17,7 @@ const corsOptions = {
 
     // In development, allow known local origins
     if (process.env.NODE_ENV === 'development') {
-      const devOrigins = ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
+      const devOrigins = ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001', 'capacitor://localhost'];
       if (!origin || devOrigins.includes(origin)) {
         return callback(null, true);
       }

@@ -11,6 +11,23 @@ const fs = require('fs').promises;
 const { generateFilePath, ensureUploadDirectory, UPLOAD_DIR } = require('../services/document.service');
 
 /**
+ * Check if a feature flag is enabled (env var = 'true')
+ */
+const isFeatureEnabled = (name) => process.env[name] === 'true';
+
+/**
+ * GET /api/portal/features — Portal feature flags
+ */
+exports.getFeatures = async (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      patientBooking: isFeatureEnabled('FEATURE_PATIENT_BOOKING')
+    }
+  });
+};
+
+/**
  * GET /api/portal/me — Patient profile
  */
 exports.getProfile = async (req, res, next) => {
@@ -200,6 +217,141 @@ exports.getMeasures = async (req, res, next) => {
 };
 
 /**
+ * GET /api/portal/visit-types — Active visit types for booking
+ */
+exports.getVisitTypes = async (req, res, next) => {
+  try {
+    const visitTypes = await db.VisitType.findAll({
+      where: { is_active: true },
+      attributes: ['id', 'name', 'duration_minutes', 'default_price', 'description'],
+      order: [['display_order', 'ASC'], ['name', 'ASC']]
+    });
+    res.json({ success: true, data: visitTypes });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/portal/my-dietitians — Dietitians linked to this patient
+ */
+exports.getMyDietitians = async (req, res, next) => {
+  try {
+    const links = await db.PatientDietitian.findAll({
+      where: { patient_id: req.patient.id },
+      include: [{
+        model: db.User,
+        as: 'dietitian',
+        attributes: ['id', 'first_name', 'last_name', 'username'],
+        where: { is_active: true }
+      }]
+    });
+    const dietitians = links.map(l => l.dietitian).filter(Boolean);
+    res.json({ success: true, data: dietitians });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/portal/visits — Create a visit request (patient)
+ */
+exports.createVisitRequest = async (req, res, next) => {
+  try {
+    const { dietitian_id, visit_date, visit_type, request_message, duration_minutes } = req.body;
+    const patientId = req.patient.id;
+
+    // Validate that the dietitian is linked to this patient
+    const link = await db.PatientDietitian.findOne({
+      where: { patient_id: patientId, dietitian_id }
+    });
+    if (!link) {
+      return res.status(400).json({ success: false, error: 'This dietitian is not assigned to you' });
+    }
+
+    // Validate dietitian exists and is active
+    const dietitian = await db.User.findByPk(dietitian_id);
+    if (!dietitian || !dietitian.is_active) {
+      return res.status(400).json({ success: false, error: 'Dietitian not found or inactive' });
+    }
+
+    // Create visit with REQUESTED status (forced, never trust body)
+    const visit = await db.Visit.create({
+      patient_id: patientId,
+      dietitian_id,
+      visit_date,
+      visit_type: visit_type || null,
+      status: 'REQUESTED',
+      duration_minutes: duration_minutes || null,
+      request_message: request_message || null
+    });
+
+    const created = await db.Visit.findByPk(visit.id, {
+      attributes: ['id', 'visit_date', 'visit_type', 'status', 'request_message', 'duration_minutes', 'created_at'],
+      include: [{
+        model: db.User,
+        as: 'dietitian',
+        attributes: ['id', 'first_name', 'last_name']
+      }]
+    });
+
+    res.status(201).json({ success: true, data: created });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/portal/visits/:id/cancel — Cancel a visit (patient)
+ * REQUESTED → cancel always OK
+ * SCHEDULED → cancel only if > 24h before visit_date
+ */
+exports.cancelVisit = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const patientId = req.patient.id;
+
+    const visit = await db.Visit.findOne({
+      where: { id, patient_id: patientId }
+    });
+
+    if (!visit) {
+      return res.status(404).json({ success: false, error: 'Visit not found' });
+    }
+
+    if (visit.status === 'REQUESTED') {
+      // Can always cancel a request
+      await visit.update({ status: 'CANCELLED' });
+      return res.json({ success: true, data: { id: visit.id, status: 'CANCELLED' } });
+    }
+
+    if (visit.status === 'SCHEDULED') {
+      // Check 24h rule
+      const visitTime = new Date(visit.visit_date).getTime();
+      const now = Date.now();
+      const hoursUntil = (visitTime - now) / (1000 * 60 * 60);
+
+      if (hoursUntil < 24) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot cancel within 24 hours of the appointment'
+        });
+      }
+
+      await visit.update({ status: 'CANCELLED' });
+      return res.json({ success: true, data: { id: visit.id, status: 'CANCELLED' } });
+    }
+
+    return res.status(400).json({
+      success: false,
+      error: `Cannot cancel a visit with status ${visit.status}`
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * GET /api/portal/visits — Patient's visit history
  */
 exports.getVisits = async (req, res, next) => {
@@ -210,7 +362,7 @@ exports.getVisits = async (req, res, next) => {
     // 1. Fetch visits
     const visits = await db.Visit.findAll({
       where: { patient_id: patientId },
-      attributes: ['id', 'visit_date', 'visit_type', 'status', 'visit_summary', 'created_at'],
+      attributes: ['id', 'visit_date', 'visit_type', 'status', 'visit_summary', 'request_message', 'created_at'],
       include: [{
         model: db.User,
         as: 'dietitian',

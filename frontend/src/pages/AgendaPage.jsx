@@ -202,10 +202,10 @@ const AgendaPage = () => {
 
   const getStatusBadge = (status) => {
     const variants = {
-      SCHEDULED: 'info', COMPLETED: 'success', CANCELLED: 'secondary', NO_SHOW: 'danger'
+      REQUESTED: 'warning', SCHEDULED: 'info', COMPLETED: 'success', CANCELLED: 'secondary', NO_SHOW: 'danger'
     };
     const statusText = {
-      SCHEDULED: t('visits.scheduled'), COMPLETED: t('visits.completed'),
+      REQUESTED: t('visits.requested', 'Requested'), SCHEDULED: t('visits.scheduled'), COMPLETED: t('visits.completed'),
       CANCELLED: t('visits.cancelled'), NO_SHOW: t('visits.noShow')
     };
     return <Badge bg={variants[status] || 'secondary'}>{statusText[status] || status}</Badge>;

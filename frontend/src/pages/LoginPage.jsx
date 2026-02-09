@@ -74,6 +74,8 @@ const LoginPage = () => {
                 <Form.Control
                   type="text"
                   placeholder={t('auth.usernameOrEmail', 'Nom d\'utilisateur ou email')}
+                  autoCapitalize="none"
+                  autoCorrect="off"
                   {...register('username', {
                     required: t('forms.required'),
                     minLength: {

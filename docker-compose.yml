@@ -36,7 +36,7 @@ services:
       - JWT_ISSUER=${JWT_ISSUER:-nutrivault}
       - MAX_LOGIN_ATTEMPTS=${MAX_LOGIN_ATTEMPTS:-5}
       - LOCKOUT_DURATION_MINUTES=${LOCKOUT_DURATION_MINUTES:-30}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost,capacitor://localhost}
       - MAX_FILE_SIZE=${MAX_FILE_SIZE:-10485760}
       - UPLOAD_PATH=/app/temp_uploads
       - LOG_LEVEL=${LOG_LEVEL:-info}
@@ -61,6 +61,8 @@ services:
       - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
       # Database initialization flags
       - SEED_DB=${SEED_DB:-false}
+      # Feature flags
+      - FEATURE_PATIENT_BOOKING=${FEATURE_PATIENT_BOOKING:-false}
     volumes:
       # Persistent data volume for SQLite database
       - nutrivault-data:/app/data

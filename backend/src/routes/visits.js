@@ -59,9 +59,9 @@ const createVisitValidation = [
   
   body('status')
     .optional()
-    .isIn(['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'])
-    .withMessage('Status must be one of: SCHEDULED, COMPLETED, CANCELLED, NO_SHOW'),
-  
+    .isIn(['REQUESTED', 'SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'])
+    .withMessage('Status must be one of: REQUESTED, SCHEDULED, COMPLETED, CANCELLED, NO_SHOW'),
+
   body('duration_minutes')
     .optional()
     .isInt({ min: 1, max: 480 })
@@ -84,18 +84,18 @@ const updateVisitValidation = [
     .optional()
     .isISO8601()
     .withMessage('Visit date must be a valid ISO 8601 date'),
-  
+
   body('visit_type')
     .optional({ checkFalsy: true })
     .isString()
     .withMessage('Visit type must be a string')
     .isLength({ max: 50 })
     .withMessage('Visit type must be less than 50 characters'),
-  
+
   body('status')
     .optional()
-    .isIn(['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'])
-    .withMessage('Status must be one of: SCHEDULED, COMPLETED, CANCELLED, NO_SHOW'),
+    .isIn(['REQUESTED', 'SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'])
+    .withMessage('Status must be one of: REQUESTED, SCHEDULED, COMPLETED, CANCELLED, NO_SHOW'),
   
   body('duration_minutes')
     .optional()
@@ -146,8 +146,8 @@ const queryValidation = [
   
   query('status')
     .optional()
-    .isIn(['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'])
-    .withMessage('Status must be one of: SCHEDULED, COMPLETED, CANCELLED, NO_SHOW'),
+    .isIn(['REQUESTED', 'SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'])
+    .withMessage('Status must be one of: REQUESTED, SCHEDULED, COMPLETED, CANCELLED, NO_SHOW'),
   
   query('start_date')
     .optional()

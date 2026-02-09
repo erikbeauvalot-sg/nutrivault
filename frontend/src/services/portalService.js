@@ -35,8 +35,33 @@ export const logMeasure = async (data) => {
   return extractData(response);
 };
 
+export const getFeatures = async () => {
+  const response = await api.get('/portal/features');
+  return extractData(response);
+};
+
 export const getVisits = async () => {
   const response = await api.get('/portal/visits');
+  return extractData(response);
+};
+
+export const getVisitTypes = async () => {
+  const response = await api.get('/portal/visit-types');
+  return extractData(response);
+};
+
+export const getMyDietitians = async () => {
+  const response = await api.get('/portal/my-dietitians');
+  return extractData(response);
+};
+
+export const createVisitRequest = async (data) => {
+  const response = await api.post('/portal/visits', data);
+  return extractData(response);
+};
+
+export const cancelVisit = async (id) => {
+  const response = await api.put(`/portal/visits/${id}/cancel`);
   return extractData(response);
 };
 

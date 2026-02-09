@@ -17,6 +17,7 @@ const locales = {
 
 // Solarpunk status colors
 const STATUS_COLORS = {
+  REQUESTED: { bg: '#d4a843', border: '#b8922e' },
   SCHEDULED: { bg: '#3a8a8c', border: '#2e7274' },
   COMPLETED: { bg: '#4b8c50', border: '#3e7a42' },
   CANCELLED: { bg: '#b8a88a', border: '#a09070' },
@@ -58,14 +59,17 @@ const CalendarView = ({
 
   // Solarpunk event style getter
   const eventStyleGetter = (event) => {
-    const colors = STATUS_COLORS[event.resource?.status] || STATUS_COLORS.SCHEDULED;
+    const status = event.resource?.status;
+    const colors = STATUS_COLORS[status] || STATUS_COLORS.SCHEDULED;
+    const isRequested = status === 'REQUESTED';
 
     return {
       style: {
         backgroundColor: colors.bg,
         color: 'white',
         borderRadius: '6px',
-        border: 'none',
+        border: isRequested ? `2px dashed ${colors.border}` : 'none',
+        opacity: isRequested ? 0.75 : 1,
         padding: '2px 5px',
         fontSize: '0.8rem'
       }

@@ -28,8 +28,13 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'SCHEDULED',
       validate: {
-        isIn: [['SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW']]
+        isIn: [['REQUESTED', 'SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW']]
       }
+    },
+    request_message: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Optional message from patient when requesting an appointment'
     },
     duration_minutes: {
       type: DataTypes.INTEGER,
@@ -176,6 +181,12 @@ module.exports = (sequelize, DataTypes) => {
   Visit.addHook('afterCreate', async (visit, options) => {
     console.log(`📅 [afterCreate] Visit ${visit.id} created, checking Google Calendar sync...`);
     try {
+      // Skip if this is a patient request (not yet approved)
+      if (visit.status === 'REQUESTED') {
+        console.log(`📅 [afterCreate] Skipping - REQUESTED status (patient request)`);
+        return;
+      }
+
       // Skip if this is a sync operation
       if (options.fromSync) {
         console.log(`📅 [afterCreate] Skipping - fromSync flag set`);
