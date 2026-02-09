@@ -72,6 +72,14 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: false
     },
+    created_by_user_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,
@@ -109,6 +117,10 @@ module.exports = (sequelize, DataTypes) => {
     JournalEntry.hasMany(models.JournalComment, {
       foreignKey: 'journal_entry_id',
       as: 'comments'
+    });
+    JournalEntry.belongsTo(models.User, {
+      foreignKey: 'created_by_user_id',
+      as: 'createdBy'
     });
   };
 

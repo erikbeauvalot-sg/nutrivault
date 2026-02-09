@@ -3138,6 +3138,19 @@
     "commentAdded": "Commentaire ajouté",
     "commentError": "Erreur lors de l'ajout du commentaire",
     "commentDeleted": "Commentaire supprimé",
-    "commentDeleteError": "Erreur lors de la suppression"
+    "commentDeleteError": "Erreur lors de la suppression",
+    "addNote": "Ajouter une note",
+    "newNote": "Nouvelle note diététicien",
+    "noteTitle": "Titre (optionnel)",
+    "noteTitlePlaceholder": "Ex: Bilan de la semaine",
+    "noteContentPlaceholder": "Écrivez votre note pour le patient...",
+    "saveNote": "Enregistrer la note",
+    "entryAdded": "Note ajoutée au journal",
+    "entryError": "Erreur lors de l'ajout de la note",
+    "entryUpdated": "Note modifiée",
+    "entryUpdateError": "Erreur lors de la modification",
+    "entryDeleted": "Note supprimée",
+    "entryDeleteError": "Erreur lors de la suppression",
+    "deleteConfirm": "Supprimer cette note ?"
   }
 }

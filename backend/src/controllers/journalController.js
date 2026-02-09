@@ -44,16 +44,23 @@ exports.getPatientJournal = async (req, res, next) => {
 
     const { count, rows } = await db.JournalEntry.findAndCountAll({
       where,
-      include: [{
-        model: db.JournalComment,
-        as: 'comments',
-        include: [{
+      include: [
+        {
+          model: db.JournalComment,
+          as: 'comments',
+          include: [{
+            model: db.User,
+            as: 'author',
+            attributes: ['id', 'first_name', 'last_name']
+          }],
+          order: [['created_at', 'ASC']]
+        },
+        {
           model: db.User,
-          as: 'author',
+          as: 'createdBy',
           attributes: ['id', 'first_name', 'last_name']
-        }],
-        order: [['created_at', 'ASC']]
-      }],
+        }
+      ],
       order: [['entry_date', 'DESC'], ['created_at', 'DESC']],
       limit: parseInt(limit),
       offset
@@ -69,6 +76,146 @@ exports.getPatientJournal = async (req, res, next) => {
         totalPages: Math.ceil(count / parseInt(limit))
       }
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/patients/:patientId/journal — Create a journal entry for a patient (dietitian note)
+ */
+exports.createJournalEntry = async (req, res, next) => {
+  try {
+    const { patientId } = req.params;
+    const { entry_date, entry_type, title, content } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ success: false, error: 'Content is required' });
+    }
+
+    const patient = await db.Patient.findByPk(patientId);
+    if (!patient) {
+      return res.status(404).json({ success: false, error: 'Patient not found' });
+    }
+
+    const hasAccess = await canAccessPatient(req.user, patient);
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, error: 'Access denied to this patient' });
+    }
+
+    const entry = await db.JournalEntry.create({
+      patient_id: patientId,
+      entry_date: entry_date || new Date().toISOString().split('T')[0],
+      entry_type: entry_type || 'note',
+      title: title?.trim() || null,
+      content: content.trim(),
+      is_private: false,
+      created_by_user_id: req.user.id
+    });
+
+    const created = await db.JournalEntry.findByPk(entry.id, {
+      include: [
+        {
+          model: db.User,
+          as: 'createdBy',
+          attributes: ['id', 'first_name', 'last_name']
+        },
+        {
+          model: db.JournalComment,
+          as: 'comments'
+        }
+      ]
+    });
+
+    res.status(201).json({ success: true, data: created });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/patients/:patientId/journal/:entryId — Update own journal entry
+ */
+exports.updateJournalEntry = async (req, res, next) => {
+  try {
+    const { patientId, entryId } = req.params;
+    const { entry_date, entry_type, title, content } = req.body;
+
+    const patient = await db.Patient.findByPk(patientId);
+    if (!patient) {
+      return res.status(404).json({ success: false, error: 'Patient not found' });
+    }
+
+    const hasAccess = await canAccessPatient(req.user, patient);
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, error: 'Access denied to this patient' });
+    }
+
+    const entry = await db.JournalEntry.findOne({
+      where: { id: entryId, patient_id: patientId }
+    });
+    if (!entry) {
+      return res.status(404).json({ success: false, error: 'Journal entry not found' });
+    }
+
+    // Only the author can update (or ADMIN)
+    const roleName = req.user.role?.name || req.user.role;
+    if (entry.created_by_user_id !== req.user.id && roleName !== 'ADMIN') {
+      return res.status(403).json({ success: false, error: 'You can only edit your own notes' });
+    }
+
+    if (content !== undefined) entry.content = content.trim();
+    if (title !== undefined) entry.title = title.trim() || null;
+    if (entry_type) entry.entry_type = entry_type;
+    if (entry_date) entry.entry_date = entry_date;
+    await entry.save();
+
+    const updated = await db.JournalEntry.findByPk(entry.id, {
+      include: [
+        { model: db.User, as: 'createdBy', attributes: ['id', 'first_name', 'last_name'] },
+        { model: db.JournalComment, as: 'comments', include: [{ model: db.User, as: 'author', attributes: ['id', 'first_name', 'last_name'] }] }
+      ]
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/patients/:patientId/journal/:entryId — Delete own journal entry
+ */
+exports.deleteJournalEntry = async (req, res, next) => {
+  try {
+    const { patientId, entryId } = req.params;
+
+    const patient = await db.Patient.findByPk(patientId);
+    if (!patient) {
+      return res.status(404).json({ success: false, error: 'Patient not found' });
+    }
+
+    const hasAccess = await canAccessPatient(req.user, patient);
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, error: 'Access denied to this patient' });
+    }
+
+    const entry = await db.JournalEntry.findOne({
+      where: { id: entryId, patient_id: patientId }
+    });
+    if (!entry) {
+      return res.status(404).json({ success: false, error: 'Journal entry not found' });
+    }
+
+    // Only the author can delete (or ADMIN)
+    const roleName = req.user.role?.name || req.user.role;
+    if (entry.created_by_user_id !== req.user.id && roleName !== 'ADMIN') {
+      return res.status(403).json({ success: false, error: 'You can only delete your own notes' });
+    }
+
+    await entry.destroy();
+
+    res.json({ success: true, message: 'Journal entry deleted' });
   } catch (error) {
     next(error);
   }

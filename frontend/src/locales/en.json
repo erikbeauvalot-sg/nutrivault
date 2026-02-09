@@ -2984,6 +2984,19 @@
     "commentAdded": "Comment added",
     "commentError": "Error adding comment",
     "commentDeleted": "Comment deleted",
-    "commentDeleteError": "Error deleting comment"
+    "commentDeleteError": "Error deleting comment",
+    "addNote": "Add a note",
+    "newNote": "New dietitian note",
+    "noteTitle": "Title (optional)",
+    "noteTitlePlaceholder": "E.g.: Weekly review",
+    "noteContentPlaceholder": "Write your note for the patient...",
+    "saveNote": "Save note",
+    "entryAdded": "Note added to journal",
+    "entryError": "Error adding note",
+    "entryUpdated": "Note updated",
+    "entryUpdateError": "Error updating note",
+    "entryDeleted": "Note deleted",
+    "entryDeleteError": "Error deleting note",
+    "deleteConfirm": "Delete this note?"
   }
 }

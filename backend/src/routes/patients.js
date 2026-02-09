@@ -486,6 +486,53 @@ router.get(
 );
 
 /**
+ * POST /api/patients/:patientId/journal - Create a journal entry for a patient (dietitian note)
+ * Requires: patients.update permission
+ */
+router.post(
+  '/:patientId/journal',
+  authenticate,
+  requirePermission('patients.update'),
+  param('patientId').isUUID().withMessage('Invalid patient ID'),
+  body('content').notEmpty().withMessage('Content is required'),
+  body('entry_type').optional().isIn(['food', 'symptom', 'mood', 'activity', 'note', 'other']),
+  body('entry_date').optional().isDate(),
+  validate,
+  journalController.createJournalEntry
+);
+
+/**
+ * PUT /api/patients/:patientId/journal/:entryId - Update own journal entry
+ * Requires: patients.update permission
+ */
+router.put(
+  '/:patientId/journal/:entryId',
+  authenticate,
+  requirePermission('patients.update'),
+  param('patientId').isUUID().withMessage('Invalid patient ID'),
+  param('entryId').isUUID().withMessage('Invalid entry ID'),
+  body('content').optional().notEmpty().withMessage('Content cannot be empty'),
+  body('entry_type').optional().isIn(['food', 'symptom', 'mood', 'activity', 'note', 'other']),
+  body('entry_date').optional().isDate(),
+  validate,
+  journalController.updateJournalEntry
+);
+
+/**
+ * DELETE /api/patients/:patientId/journal/:entryId - Delete own journal entry
+ * Requires: patients.update permission
+ */
+router.delete(
+  '/:patientId/journal/:entryId',
+  authenticate,
+  requirePermission('patients.update'),
+  param('patientId').isUUID().withMessage('Invalid patient ID'),
+  param('entryId').isUUID().withMessage('Invalid entry ID'),
+  validate,
+  journalController.deleteJournalEntry
+);
+
+/**
  * POST /api/patients/:patientId/journal/:entryId/comments - Add comment to journal entry
  * Requires: patients.read permission (dietitians commenting)
  */

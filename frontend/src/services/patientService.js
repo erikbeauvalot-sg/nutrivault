@@ -120,6 +120,21 @@ export const getPatientJournal = async (patientId, params = {}) => {
   return response.data;
 };
 
+export const createPatientJournalEntry = async (patientId, data) => {
+  const response = await api.post(`/patients/${patientId}/journal`, data);
+  return extractData(response);
+};
+
+export const updatePatientJournalEntry = async (patientId, entryId, data) => {
+  const response = await api.put(`/patients/${patientId}/journal/${entryId}`, data);
+  return extractData(response);
+};
+
+export const deletePatientJournalEntry = async (patientId, entryId) => {
+  const response = await api.delete(`/patients/${patientId}/journal/${entryId}`);
+  return extractData(response);
+};
+
 export const addJournalComment = async (patientId, entryId, data) => {
   const response = await api.post(`/patients/${patientId}/journal/${entryId}/comments`, data);
   return extractData(response);

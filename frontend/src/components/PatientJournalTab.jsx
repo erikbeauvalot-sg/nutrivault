@@ -8,6 +8,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, Row, Col, Form, Button, Badge, Spinner, Alert } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
+import ConfirmModal from './ConfirmModal';
 import * as patientService from '../services/patientService';
 
 const MOOD_EMOJIS = {
@@ -32,6 +34,7 @@ const MOOD_OPTIONS = ['very_bad', 'bad', 'neutral', 'good', 'very_good'];
 
 const PatientJournalTab = ({ patientId }) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +51,16 @@ const PatientJournalTab = ({ patientId }) => {
   // Comment state per entry
   const [commentTexts, setCommentTexts] = useState({});
   const [submittingComment, setSubmittingComment] = useState(null);
+
+  // New entry form
+  const [showNewEntry, setShowNewEntry] = useState(false);
+  const [newEntry, setNewEntry] = useState({ content: '', title: '', entry_type: 'note', entry_date: new Date().toISOString().split('T')[0] });
+  const [submittingEntry, setSubmittingEntry] = useState(false);
+
+  // Edit state
+  const [editingEntryId, setEditingEntryId] = useState(null);
+  const [editData, setEditData] = useState({ content: '', title: '', entry_type: 'note', entry_date: '' });
+  const [deleteEntryId, setDeleteEntryId] = useState(null);
 
   const loadEntries = useCallback(async () => {
     if (!patientId) return;
@@ -98,6 +111,66 @@ const PatientJournalTab = ({ patientId }) => {
     }
   };
 
+  const handleEditEntry = (entry) => {
+    setEditingEntryId(entry.id);
+    setEditData({
+      content: entry.content || '',
+      title: entry.title || '',
+      entry_type: entry.entry_type || 'note',
+      entry_date: entry.entry_date || ''
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editData.content.trim()) return;
+    try {
+      await patientService.updatePatientJournalEntry(patientId, editingEntryId, {
+        content: editData.content.trim(),
+        title: editData.title.trim() || undefined,
+        entry_type: editData.entry_type,
+        entry_date: editData.entry_date
+      });
+      toast.success(t('journal.entryUpdated', 'Note modifiee'));
+      setEditingEntryId(null);
+      loadEntries();
+    } catch {
+      toast.error(t('journal.entryUpdateError', 'Erreur lors de la modification'));
+    }
+  };
+
+  const handleDeleteEntry = async () => {
+    if (!deleteEntryId) return;
+    try {
+      await patientService.deletePatientJournalEntry(patientId, deleteEntryId);
+      toast.success(t('journal.entryDeleted', 'Note supprimee'));
+      setDeleteEntryId(null);
+      loadEntries();
+    } catch {
+      toast.error(t('journal.entryDeleteError', 'Erreur lors de la suppression'));
+    }
+  };
+
+  const handleCreateEntry = async () => {
+    if (!newEntry.content.trim()) return;
+    setSubmittingEntry(true);
+    try {
+      await patientService.createPatientJournalEntry(patientId, {
+        content: newEntry.content.trim(),
+        title: newEntry.title.trim() || undefined,
+        entry_type: newEntry.entry_type,
+        entry_date: newEntry.entry_date
+      });
+      toast.success(t('journal.entryAdded', 'Note ajoutee au journal'));
+      setNewEntry({ content: '', title: '', entry_type: 'note', entry_date: new Date().toISOString().split('T')[0] });
+      setShowNewEntry(false);
+      loadEntries();
+    } catch {
+      toast.error(t('journal.entryError', 'Erreur lors de l\'ajout de la note'));
+    } finally {
+      setSubmittingEntry(false);
+    }
+  };
+
   const clearFilters = () => {
     setFilterType('');
     setFilterMood('');
@@ -119,11 +192,74 @@ const PatientJournalTab = ({ patientId }) => {
 
   return (
     <Card>
-      <Card.Header>
+      <Card.Header className="d-flex justify-content-between align-items-center">
         <h5 className="mb-0">{'\uD83D\uDCD3'} {t('journal.tab', 'Journal de suivi')}</h5>
+        <Button size="sm" variant={showNewEntry ? 'outline-secondary' : 'primary'} onClick={() => setShowNewEntry(!showNewEntry)}>
+          {showNewEntry ? t('common.cancel', 'Annuler') : `+ ${t('journal.addNote', 'Ajouter une note')}`}
+        </Button>
       </Card.Header>
       <Card.Body>
         {error && <Alert variant="warning" dismissible onClose={() => setError('')}>{error}</Alert>}
+
+        {/* New Entry Form */}
+        {showNewEntry && (
+          <Card className="mb-3 border-primary">
+            <Card.Body>
+              <h6 className="mb-3">{'\uD83D\uDCDD'} {t('journal.newNote', 'Nouvelle note dieteticien')}</h6>
+              <Row className="g-2 mb-2">
+                <Col xs={12} md={4}>
+                  <Form.Label className="small mb-1">{t('common.date', 'Date')}</Form.Label>
+                  <Form.Control
+                    size="sm"
+                    type="date"
+                    value={newEntry.entry_date}
+                    onChange={(e) => setNewEntry(prev => ({ ...prev, entry_date: e.target.value }))}
+                  />
+                </Col>
+                <Col xs={12} md={4}>
+                  <Form.Label className="small mb-1">{t('portal.journal.entryType', 'Type')}</Form.Label>
+                  <Form.Select
+                    size="sm"
+                    value={newEntry.entry_type}
+                    onChange={(e) => setNewEntry(prev => ({ ...prev, entry_type: e.target.value }))}
+                  >
+                    {ENTRY_TYPES.map(type => (
+                      <option key={type} value={type}>{TYPE_ICONS[type]} {t(`portal.journal.type.${type}`, type)}</option>
+                    ))}
+                  </Form.Select>
+                </Col>
+                <Col xs={12} md={4}>
+                  <Form.Label className="small mb-1">{t('journal.noteTitle', 'Titre (optionnel)')}</Form.Label>
+                  <Form.Control
+                    size="sm"
+                    type="text"
+                    placeholder={t('journal.noteTitlePlaceholder', 'Ex: Bilan de la semaine')}
+                    value={newEntry.title}
+                    onChange={(e) => setNewEntry(prev => ({ ...prev, title: e.target.value }))}
+                  />
+                </Col>
+              </Row>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                placeholder={t('journal.noteContentPlaceholder', 'Ecrivez votre note pour le patient...')}
+                value={newEntry.content}
+                onChange={(e) => setNewEntry(prev => ({ ...prev, content: e.target.value }))}
+                className="mb-2"
+              />
+              <div className="d-flex justify-content-end">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleCreateEntry}
+                  disabled={submittingEntry || !newEntry.content.trim()}
+                >
+                  {submittingEntry ? <Spinner animation="border" size="sm" /> : t('journal.saveNote', 'Enregistrer la note')}
+                </Button>
+              </div>
+            </Card.Body>
+          </Card>
+        )}
 
         {/* Filters */}
         <Row className="g-2 mb-3 align-items-end">
@@ -187,14 +323,58 @@ const PatientJournalTab = ({ patientId }) => {
                           weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
                         })}
                       </small>
+                      {entry.createdBy && (
+                        <Badge bg="info" className="px-2 py-1">
+                          {'\uD83E\uDE7A'} {entry.createdBy.first_name} {entry.createdBy.last_name}
+                        </Badge>
+                      )}
                     </div>
+                    {/* Edit/Delete buttons for own entries */}
+                    {entry.created_by_user_id === user?.id && editingEntryId !== entry.id && (
+                      <div className="d-flex gap-1">
+                        <Button size="sm" variant="outline-secondary" onClick={() => handleEditEntry(entry)} title={t('common.edit', 'Modifier')}>
+                          {'\u270F\uFE0F'}
+                        </Button>
+                        <Button size="sm" variant="outline-danger" onClick={() => setDeleteEntryId(entry.id)} title={t('common.delete', 'Supprimer')}>
+                          &times;
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Title */}
-                  {entry.title && <h6 className="mb-2">{entry.title}</h6>}
+                  {/* Inline Edit Form */}
+                  {editingEntryId === entry.id ? (
+                    <div className="mb-2">
+                      <Row className="g-2 mb-2">
+                        <Col xs={12} md={4}>
+                          <Form.Control size="sm" type="date" value={editData.entry_date} onChange={(e) => setEditData(prev => ({ ...prev, entry_date: e.target.value }))} />
+                        </Col>
+                        <Col xs={12} md={4}>
+                          <Form.Select size="sm" value={editData.entry_type} onChange={(e) => setEditData(prev => ({ ...prev, entry_type: e.target.value }))}>
+                            {ENTRY_TYPES.map(type => (
+                              <option key={type} value={type}>{TYPE_ICONS[type]} {t(`portal.journal.type.${type}`, type)}</option>
+                            ))}
+                          </Form.Select>
+                        </Col>
+                        <Col xs={12} md={4}>
+                          <Form.Control size="sm" type="text" placeholder={t('journal.noteTitle', 'Titre (optionnel)')} value={editData.title} onChange={(e) => setEditData(prev => ({ ...prev, title: e.target.value }))} />
+                        </Col>
+                      </Row>
+                      <Form.Control as="textarea" rows={3} value={editData.content} onChange={(e) => setEditData(prev => ({ ...prev, content: e.target.value }))} className="mb-2" />
+                      <div className="d-flex gap-2 justify-content-end">
+                        <Button size="sm" variant="outline-secondary" onClick={() => setEditingEntryId(null)}>{t('common.cancel', 'Annuler')}</Button>
+                        <Button size="sm" variant="primary" onClick={handleSaveEdit} disabled={!editData.content.trim()}>{t('common.save', 'Enregistrer')}</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Title */}
+                      {entry.title && <h6 className="mb-2">{entry.title}</h6>}
 
-                  {/* Content */}
-                  <p className="mb-2" style={{ whiteSpace: 'pre-wrap' }}>{entry.content}</p>
+                      {/* Content */}
+                      <p className="mb-2" style={{ whiteSpace: 'pre-wrap' }}>{entry.content}</p>
+                    </>
+                  )}
 
                   {/* Mood + Energy + Tags */}
                   <div className="d-flex gap-3 align-items-center flex-wrap mb-2">
@@ -300,6 +480,15 @@ const PatientJournalTab = ({ patientId }) => {
           </div>
         )}
       </Card.Body>
+
+      <ConfirmModal
+        show={!!deleteEntryId}
+        onHide={() => setDeleteEntryId(null)}
+        onConfirm={handleDeleteEntry}
+        title={t('common.delete', 'Supprimer')}
+        message={t('journal.deleteConfirm', 'Supprimer cette note ?')}
+        confirmLabel={t('common.delete', 'Supprimer')}
+      />
     </Card>
   );
 };

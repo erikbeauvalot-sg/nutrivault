@@ -885,5 +885,13 @@ db.User.hasMany(db.JournalComment, {
   foreignKey: 'user_id',
   as: 'journal_comments'
 });
+db.JournalEntry.belongsTo(db.User, {
+  foreignKey: 'created_by_user_id',
+  as: 'createdBy'
+});
+db.User.hasMany(db.JournalEntry, {
+  foreignKey: 'created_by_user_id',
+  as: 'journal_entries'
+});
 
 module.exports = db;
