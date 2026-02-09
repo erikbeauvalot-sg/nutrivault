@@ -126,8 +126,14 @@ const DocumentsPage = () => {
     }
   };
 
-  const handlePreviewGuide = (guide) => {
-    window.open(documentService.getDocumentPreviewUrl(guide.id), '_blank');
+  const handlePreviewGuide = async (guide) => {
+    try {
+      const blob = await documentService.downloadDocument(guide.id);
+      const url = window.URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      window.open(url, '_blank');
+    } catch (err) {
+      console.error('Error previewing guide:', err);
+    }
   };
 
   const handleDocumentDeleted = () => {
