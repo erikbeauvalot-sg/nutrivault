@@ -396,6 +396,19 @@ router.post(
 );
 
 /**
+ * POST /api/patients/:id/portal/reset-password — Send password reset email
+ * Requires: patients.update permission
+ */
+router.post(
+  '/:id/portal/reset-password',
+  authenticate,
+  requirePermission('patients.update'),
+  param('id').isUUID().withMessage('Patient ID must be a valid UUID'),
+  validate,
+  patientController.sendPortalPasswordReset
+);
+
+/**
  * Patient CRUD Routes
  * NOTE: These parameterized routes come AFTER specific routes
  */

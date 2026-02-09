@@ -7,7 +7,11 @@
 
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs').promises;
 const documentService = require('../services/document.service');
+const { generateGuidePDF } = require('../services/consultationGuidePDF.service');
+const consultationGuides = require('../data/consultationGuideContent');
+const db = require('../../../models');
 
 /**
  * Extract request metadata for audit logging
@@ -572,6 +576,71 @@ exports.getPatientDocumentShares = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: shares
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/documents/generate-guides - Generate consultation guide PDFs
+ * Creates PDF documents for each consultation type guide.
+ * Idempotent: skips guides that already exist.
+ */
+exports.generateConsultationGuides = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const created = [];
+    const existing = [];
+
+    // Get uploads base path
+    const basePath = process.env.NODE_ENV === 'production' ? '/app' : process.cwd();
+    const guidesDir = path.join(basePath, 'uploads', 'guides');
+    await fs.mkdir(guidesDir, { recursive: true });
+
+    for (const guide of consultationGuides) {
+      // Check if guide already exists
+      const existingDoc = await db.Document.findOne({
+        where: {
+          category: 'guides',
+          is_template: true,
+          tags: { [db.Sequelize.Op.like]: `%${guide.slug}%` }
+        }
+      });
+
+      if (existingDoc) {
+        existing.push({ slug: guide.slug, id: existingDoc.id, title: guide.title });
+        continue;
+      }
+
+      // Generate PDF
+      const { buffer, fileName } = await generateGuidePDF(guide);
+
+      // Save file
+      const filePath = path.join('guides', fileName);
+      const fullPath = path.join(basePath, 'uploads', filePath);
+      await fs.writeFile(fullPath, buffer);
+
+      // Create Document record
+      const document = await db.Document.create({
+        file_name: guide.title + '.pdf',
+        file_path: filePath,
+        file_size: buffer.length,
+        mime_type: 'application/pdf',
+        uploaded_by: user.id,
+        description: guide.subtitle,
+        category: 'guides',
+        is_template: true,
+        tags: JSON.stringify([guide.slug, 'consultation-guide'])
+      });
+
+      created.push({ slug: guide.slug, id: document.id, title: guide.title });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { created, existing },
+      message: `${created.length} guide(s) created, ${existing.length} already existed`
     });
   } catch (error) {
     next(error);

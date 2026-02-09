@@ -357,12 +357,129 @@ L'équipe NutriVault
   });
 }
 
+/**
+ * Send password reset email for portal patient
+ * Generates a new invitation token and sends a reset link
+ * @param {string} patientId - Patient UUID
+ * @returns {Object} Portal status
+ */
+async function sendPasswordReset(patientId) {
+  const patient = await db.Patient.findByPk(patientId);
+  if (!patient || !patient.user_id) {
+    throw new Error('Portal is not active for this patient');
+  }
+
+  if (!patient.email) {
+    throw new Error('Patient does not have an email address');
+  }
+
+  const portalUser = await db.User.findByPk(patient.user_id);
+  if (!portalUser || !portalUser.is_active) {
+    throw new Error('Portal user account is not active');
+  }
+
+  // Generate new token
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date();
+  expiresAt.setHours(expiresAt.getHours() + INVITATION_EXPIRY_HOURS);
+
+  await patient.update({
+    portal_invitation_token: resetToken,
+    portal_invitation_expires_at: expiresAt
+  });
+
+  // Send reset email
+  await sendPasswordResetEmail(patient, resetToken);
+
+  return getPortalStatus(patientId);
+}
+
+/**
+ * Send password reset email
+ * @param {Object} patient - Patient record
+ * @param {string} token - Reset token
+ */
+async function sendPasswordResetEmail(patient, token) {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const resetLink = `${frontendUrl}/portal/set-password?token=${token}`;
+
+  const subject = 'Réinitialisation de votre mot de passe NutriVault';
+
+  const text = `
+Bonjour ${patient.first_name} ${patient.last_name},
+
+Une demande de réinitialisation de mot de passe a été effectuée pour votre compte patient NutriVault.
+
+Pour définir un nouveau mot de passe, cliquez sur le lien suivant :
+${resetLink}
+
+Ce lien est valable ${INVITATION_EXPIRY_HOURS} heures.
+
+Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet email.
+
+Cordialement,
+L'équipe NutriVault
+  `.trim();
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #2d5016 0%, #4a7c25 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { padding: 30px; background-color: #f9f9f9; }
+    .cta-button { display: inline-block; background: #4a7c25; color: white !important; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; }
+    .info-box { background-color: white; padding: 15px; margin: 20px 0; border-left: 4px solid #4a7c25; border-radius: 4px; }
+    .footer { text-align: center; padding: 20px; color: #777; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔑 Réinitialisation du mot de passe</h1>
+      <p>Portail patient NutriVault</p>
+    </div>
+    <div class="content">
+      <p>Bonjour <strong>${patient.first_name} ${patient.last_name}</strong>,</p>
+      <p>Une demande de réinitialisation de mot de passe a été effectuée pour votre compte.</p>
+
+      <div style="text-align: center;">
+        <a href="${resetLink}" class="cta-button">Définir un nouveau mot de passe</a>
+      </div>
+
+      <div class="info-box">
+        <p><strong>Votre identifiant :</strong> ${patient.email}</p>
+        <p><strong>Validité du lien :</strong> ${INVITATION_EXPIRY_HOURS} heures</p>
+      </div>
+
+      <p>Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet email. Votre mot de passe actuel reste inchangé.</p>
+      <p>Cordialement,<br><strong>L'équipe NutriVault</strong></p>
+    </div>
+    <div class="footer">
+      <p>Ceci est un email automatique. Veuillez ne pas répondre à ce message.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  return sendEmail({
+    to: patient.email,
+    subject,
+    text,
+    html
+  });
+}
+
 module.exports = {
   activatePortal,
   deactivatePortal,
   reactivatePortal,
   setPasswordFromInvitation,
   resendInvitation,
+  sendPasswordReset,
   getPortalStatus,
   sendPortalInvitationEmail
 };

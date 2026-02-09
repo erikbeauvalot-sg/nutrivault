@@ -158,17 +158,34 @@ const PortalStatusCard = ({ patientId, patientEmail }) => {
                 </div>
               )}
             </div>
-            <Button
-              variant="outline-danger"
-              size="sm"
-              disabled={actionLoading}
-              onClick={() => handleAction(
-                patientService.deactivatePortal,
-                t('portal.deactivated', 'Portail désactivé.')
-              )}
-            >
-              {actionLoading ? <Spinner size="sm" animation="border" /> : t('portal.deactivate', 'Désactiver le portail')}
-            </Button>
+            <div className="d-flex gap-2">
+              <Button
+                variant="outline-warning"
+                size="sm"
+                disabled={actionLoading}
+                onClick={() => {
+                  if (window.confirm(t('portal.resetPasswordConfirm', 'Envoyer un email de réinitialisation du mot de passe au patient ?'))) {
+                    handleAction(
+                      patientService.sendPortalPasswordReset,
+                      t('portal.resetPasswordSuccess', 'Email de réinitialisation envoyé.')
+                    );
+                  }
+                }}
+              >
+                {actionLoading ? <Spinner size="sm" animation="border" /> : t('portal.resetPassword', 'Réinitialiser le mot de passe')}
+              </Button>
+              <Button
+                variant="outline-danger"
+                size="sm"
+                disabled={actionLoading}
+                onClick={() => handleAction(
+                  patientService.deactivatePortal,
+                  t('portal.deactivated', 'Portail désactivé.')
+                )}
+              >
+                {t('portal.deactivate', 'Désactiver le portail')}
+              </Button>
+            </div>
           </>
         )}
 

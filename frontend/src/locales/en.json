@@ -1404,7 +1404,23 @@
     "tagsError": "Failed to update tags",
     "searchByTags": "Search by Tags",
     "filterByCategory": "Filter by Category",
-    "showTemplatesOnly": "Show Templates Only"
+    "showTemplatesOnly": "Show Templates Only",
+    "allDocuments": "Documents",
+    "guides": {
+      "tab": "Nutrition Guides",
+      "title": "Consultation Guides",
+      "description": "Nutritional PDF guides by consultation type. Share them with your patients.",
+      "generate": "Generate Guides",
+      "regenerate": "Regenerate Guides",
+      "generating": "Generating...",
+      "generateSuccess": "{{created}} guide(s) created, {{existing}} already existed",
+      "generateError": "Failed to generate guides",
+      "empty": "No consultation guides generated yet. Click the button above to create all 8 nutritional guides.",
+      "shareGuide": "Share a Guide",
+      "selectGuide": "Choose a guide",
+      "shareSuccess": "Guide shared with patient",
+      "shareError": "Failed to share guide"
+    }
   },
   "documentEmail": {
     "title": "Send Document by Email",
@@ -2974,6 +2990,9 @@
     "lastLogin": "Last login",
     "reactivate": "Reactivate portal",
     "reactivated": "Portal reactivated.",
+    "resetPassword": "Reset password",
+    "resetPasswordConfirm": "Send a password reset email to the patient?",
+    "resetPasswordSuccess": "Password reset email sent.",
     "journal": {
       "title": "My Follow-up Journal",
       "newEntry": "New entry",

@@ -216,6 +216,14 @@ router.get(
   documentController.getDocumentStats
 );
 
+// POST /api/documents/generate-guides - Generate consultation guide PDFs
+router.post(
+  '/generate-guides',
+  authenticate,
+  requirePermission('documents.upload'),
+  documentController.generateConsultationGuides
+);
+
 // GET /api/documents/search - Search documents with advanced filters
 router.get(
   '/search',

@@ -364,3 +364,18 @@ exports.resendInvitation = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * POST /api/patients/:id/portal/reset-password — Send password reset email
+ */
+exports.sendPortalPasswordReset = async (req, res, next) => {
+  try {
+    const status = await portalService.sendPasswordReset(req.params.id);
+    res.json({ success: true, data: status, message: 'Password reset email sent.' });
+  } catch (error) {
+    if (error.message.includes('not active') || error.message.includes('does not have') || error.message.includes('not active')) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+    next(error);
+  }
+};

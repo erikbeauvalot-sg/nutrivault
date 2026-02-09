@@ -149,3 +149,8 @@ export const resendPortalInvitation = async (patientId) => {
   const response = await api.post(`/patients/${patientId}/portal/resend`);
   return extractData(response);
 };
+
+export const sendPortalPasswordReset = async (patientId) => {
+  const response = await api.post(`/patients/${patientId}/portal/reset-password`);
+  return extractData(response);
+};

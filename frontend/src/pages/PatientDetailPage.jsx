@@ -93,6 +93,8 @@ const PatientDetailPage = () => {
   const [allDietitians, setAllDietitians] = useState([]);
   const [addingDietitian, setAddingDietitian] = useState(false);
   const [selectedNewDietitianId, setSelectedNewDietitianId] = useState('');
+  const [availableGuides, setAvailableGuides] = useState([]);
+  const [sharingGuide, setSharingGuide] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -101,6 +103,7 @@ const PatientDetailPage = () => {
       fetchPatientInvoices();
       fetchPatientMeasures();
       fetchPatientRecipes();
+      fetchAvailableGuides();
     }
   }, [id]);
 
@@ -178,6 +181,28 @@ const PatientDetailPage = () => {
     } catch (err) {
       console.error('Error fetching patient documents:', err);
       // Don't set error for documents failure
+    }
+  };
+
+  const fetchAvailableGuides = async () => {
+    try {
+      const response = await documentService.getConsultationGuides();
+      const data = response.data?.data || response.data || [];
+      setAvailableGuides(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error fetching guides:', err);
+    }
+  };
+
+  const handleShareGuide = async (guideId) => {
+    try {
+      setSharingGuide(true);
+      await documentService.sendToPatient(guideId, id, { sent_via: 'portal' });
+      fetchPatientDocuments();
+    } catch (err) {
+      console.error('Error sharing guide:', err);
+    } finally {
+      setSharingGuide(false);
     }
   };
 
@@ -964,14 +989,47 @@ const PatientDetailPage = () => {
               <Tab eventKey="documents" title={`📄 Documents (${documents.length})`}>
                 <div className="d-flex justify-content-between align-items-center mb-3">
                   <h5 className="mb-0">{t('documents.patientDocuments', 'Patient Documents')}</h5>
-                  <Button
-                    variant="outline-primary"
-                    size="sm"
-                    onClick={() => navigate(`/documents/upload?resourceType=patient&resourceId=${id}`)}
-                  >
-                    <i className="fas fa-upload me-1"></i>
-                    {t('documents.upload', 'Upload Document')}
-                  </Button>
+                  <div className="d-flex gap-2">
+                    {availableGuides.length > 0 && (
+                      <Dropdown>
+                        <Dropdown.Toggle
+                          variant="outline-success"
+                          size="sm"
+                          disabled={sharingGuide}
+                        >
+                          {sharingGuide ? (
+                            <Spinner animation="border" size="sm" className="me-1" />
+                          ) : (
+                            <i className="fas fa-book-medical me-1"></i>
+                          )}
+                          {t('documents.guides.shareGuide', 'Partager un guide')}
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu>
+                          <Dropdown.Header>{t('documents.guides.selectGuide', 'Choisir un guide')}</Dropdown.Header>
+                          {availableGuides.map(guide => {
+                            const tags = typeof guide.tags === 'string' ? JSON.parse(guide.tags || '[]') : (guide.tags || []);
+                            const slug = Array.isArray(tags) ? tags.find(t => t !== 'consultation-guide') : '';
+                            return (
+                              <Dropdown.Item
+                                key={guide.id}
+                                onClick={() => handleShareGuide(guide.id)}
+                              >
+                                {guide.file_name?.replace('.pdf', '').replace('Guide : ', '') || slug}
+                              </Dropdown.Item>
+                            );
+                          })}
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    )}
+                    <Button
+                      variant="outline-primary"
+                      size="sm"
+                      onClick={() => navigate(`/documents/upload?resourceType=patient&resourceId=${id}`)}
+                    >
+                      <i className="fas fa-upload me-1"></i>
+                      {t('documents.upload', 'Upload Document')}
+                    </Button>
+                  </div>
                 </div>
                 <DocumentListComponent
                   documents={documents}

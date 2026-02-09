@@ -328,3 +328,25 @@ export const sendDocumentByEmail = async (documentId, patientId, message = null)
   });
   return response.data;
 };
+
+/**
+ * Generate consultation guide PDFs
+ * Creates PDF documents for each consultation type.
+ * Idempotent - skips guides that already exist.
+ * @returns {Promise<object>} Result with created and existing guides
+ */
+export const generateConsultationGuides = async () => {
+  const response = await api.post('/documents/generate-guides');
+  return response.data;
+};
+
+/**
+ * Get all consultation guide documents
+ * @returns {Promise<object>} Guide documents
+ */
+export const getConsultationGuides = async () => {
+  const response = await api.get('/documents/search', {
+    params: { category: 'guides', is_template: true, limit: 50 }
+  });
+  return response.data;
+};

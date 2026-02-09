@@ -1447,7 +1447,23 @@
     "tagsError": "Échec de la mise à jour des étiquettes",
     "searchByTags": "Rechercher par étiquettes",
     "filterByCategory": "Filtrer par catégorie",
-    "showTemplatesOnly": "Afficher uniquement les modèles"
+    "showTemplatesOnly": "Afficher uniquement les modèles",
+    "allDocuments": "Documents",
+    "guides": {
+      "tab": "Guides nutritionnels",
+      "title": "Guides de consultation",
+      "description": "Guides PDF nutritionnels par type de consultation. Partagez-les avec vos patients.",
+      "generate": "Générer les guides",
+      "regenerate": "Regénérer les guides",
+      "generating": "Génération en cours...",
+      "generateSuccess": "{{created}} guide(s) créé(s), {{existing}} existaient déjà",
+      "generateError": "Échec de la génération des guides",
+      "empty": "Aucun guide de consultation généré. Cliquez sur le bouton ci-dessus pour créer les 8 guides nutritionnels.",
+      "shareGuide": "Partager un guide",
+      "selectGuide": "Choisir un guide",
+      "shareSuccess": "Guide partagé avec le patient",
+      "shareError": "Échec du partage du guide"
+    }
   },
   "documentEmail": {
     "title": "Envoyer le document par email",
@@ -3128,6 +3144,9 @@
     "lastLogin": "Dernière connexion",
     "reactivate": "Réactiver le portail",
     "reactivated": "Portail réactivé.",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "resetPasswordConfirm": "Envoyer un email de réinitialisation du mot de passe au patient ?",
+    "resetPasswordSuccess": "Email de réinitialisation envoyé.",
     "journal": {
       "title": "Mon journal de suivi",
       "newEntry": "Nouvelle entrée",
