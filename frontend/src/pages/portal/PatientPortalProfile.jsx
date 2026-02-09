@@ -85,11 +85,11 @@ const PatientPortalProfile = () => {
 
   return (
     <div>
-      <h2 className="mb-4">👤 {t('portal.nav.profile', 'Mon profil')}</h2>
+      <h2 className="mb-3" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.75rem)' }}>{'\uD83D\uDC64'} {t('portal.nav.profile', 'Mon profil')}</h2>
 
-      <Row className="g-4">
+      <Row className="g-3">
         {/* Profile Info */}
-        <Col md={6}>
+        <Col xs={12} md={6}>
           <Card>
             <Card.Header>{t('portal.personalInfo', 'Informations personnelles')}</Card.Header>
             <Card.Body>
@@ -138,7 +138,7 @@ const PatientPortalProfile = () => {
         </Col>
 
         {/* Change Password */}
-        <Col md={6}>
+        <Col xs={12} md={6}>
           <Card>
             <Card.Header>{t('portal.changePassword', 'Changer le mot de passe')}</Card.Header>
             <Card.Body>

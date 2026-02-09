@@ -93,10 +93,10 @@ const PatientPortalVisits = () => {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="mb-0">{'\uD83D\uDCCB'} {t('portal.nav.visits', 'Mes consultations')}</h2>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h2 className="mb-0" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.75rem)' }}>{'\uD83D\uDCCB'} {t('portal.nav.visits', 'Mes consultations')}</h2>
         {visits.length > 0 && (
-          <span className="text-muted">
+          <span className="text-muted small">
             {visits.length} {t('portal.nav.visits', 'consultation').toLowerCase()}{visits.length > 1 ? 's' : ''}
           </span>
         )}

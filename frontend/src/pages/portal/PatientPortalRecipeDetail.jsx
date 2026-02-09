@@ -50,13 +50,13 @@ const PatientPortalRecipeDetail = () => {
 
   return (
     <div>
-      <Button variant="outline-secondary" className="mb-3" onClick={() => navigate('/portal/recipes')}>
-        ← {t('common.back', 'Retour aux recettes')}
+      <Button variant="outline-secondary" size="sm" className="mb-3" onClick={() => navigate('/portal/recipes')}>
+        {'\u2190'} {t('common.back', 'Retour aux recettes')}
       </Button>
 
       <Card>
         {recipe.image_url && (
-          <div style={{ maxHeight: '350px', overflow: 'hidden' }}>
+          <div style={{ maxHeight: '250px', overflow: 'hidden' }}>
             <img
               src={recipe.image_url}
               alt={recipe.title}
@@ -65,7 +65,7 @@ const PatientPortalRecipeDetail = () => {
           </div>
         )}
         <Card.Header>
-          <h3 className="mb-0">{recipe.title}</h3>
+          <h3 className="mb-0" style={{ fontSize: 'clamp(1.1rem, 4vw, 1.5rem)' }}>{recipe.title}</h3>
         </Card.Header>
         <Card.Body>
           {recipe.description && <p>{recipe.description}</p>}

@@ -127,31 +127,33 @@ const PatientPortalDashboard = () => {
 
   return (
     <div>
-      <h2 className="mb-4">
+      <h2 className="mb-3" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.75rem)' }}>
         {t('portal.welcome', 'Bienvenue')}, {user?.username}
       </h2>
 
       {error && <Alert variant="warning">{error}</Alert>}
 
-      <Row className="g-4">
+      <Row className="g-3">
         {/* Recent Measures */}
-        <Col md={6}>
+        <Col xs={12} md={6}>
           <Card className="h-100">
-            <Card.Header className="d-flex justify-content-between align-items-center">
-              <span>📊 {t('portal.recentMeasures', 'Mesures récentes')}</span>
-              <Link to="/portal/measures" className="btn btn-sm btn-outline-primary">
+            <Card.Header className="d-flex justify-content-between align-items-center py-2">
+              <span style={{ fontSize: '0.9em' }}>{'\uD83D\uDCCA'} {t('portal.recentMeasures', 'Mesures recentes')}</span>
+              <Link to="/portal/measures" className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.8em' }}>
                 {t('common.viewAll', 'Voir tout')}
               </Link>
             </Card.Header>
-            <Card.Body>
+            <Card.Body className="py-2 px-3">
               {measures.length === 0 ? (
-                <p className="text-muted">{t('portal.noMeasures', 'Aucune mesure enregistrée')}</p>
+                <p className="text-muted mb-0">{t('portal.noMeasures', 'Aucune mesure enregistree')}</p>
               ) : (
                 <ul className="list-unstyled mb-0">
                   {measures.map(m => (
-                    <li key={m.id} className="d-flex justify-content-between py-2 border-bottom">
-                      <span>{m._calculated ? m._displayName : (m.measureDefinition?.display_name || m.measureDefinition?.name || '—')}</span>
-                      <span className="fw-bold">
+                    <li key={m.id} className="d-flex justify-content-between align-items-center py-2 border-bottom" style={{ gap: '0.5rem' }}>
+                      <span className="text-truncate" style={{ minWidth: 0 }}>
+                        {m._calculated ? m._displayName : (m.measureDefinition?.display_name || m.measureDefinition?.name || '—')}
+                      </span>
+                      <span className="fw-bold text-nowrap">
                         {m._calculated
                           ? `${m._value} ${m._unit}`
                           : `${m.numeric_value ?? m.text_value ?? (m.boolean_value != null ? String(m.boolean_value) : '—')} ${m.measureDefinition?.unit || ''}`
@@ -166,24 +168,27 @@ const PatientPortalDashboard = () => {
         </Col>
 
         {/* Recent Visits */}
-        <Col md={6}>
+        <Col xs={12} md={6}>
           <Card className="h-100">
-            <Card.Header className="d-flex justify-content-between align-items-center">
-              <span>📋 {t('portal.recentVisits', 'Consultations récentes')}</span>
-              <Link to="/portal/visits" className="btn btn-sm btn-outline-primary">
+            <Card.Header className="d-flex justify-content-between align-items-center py-2">
+              <span style={{ fontSize: '0.9em' }}>{'\uD83D\uDCCB'} {t('portal.recentVisits', 'Consultations recentes')}</span>
+              <Link to="/portal/visits" className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.8em' }}>
                 {t('common.viewAll', 'Voir tout')}
               </Link>
             </Card.Header>
-            <Card.Body>
+            <Card.Body className="py-2 px-3">
               {visits.length === 0 ? (
-                <p className="text-muted">{t('portal.noVisits', 'Aucune consultation')}</p>
+                <p className="text-muted mb-0">{t('portal.noVisits', 'Aucune consultation')}</p>
               ) : (
                 <ul className="list-unstyled mb-0">
                   {visits.map(v => (
                     <li key={v.id}>
-                      <Link to="/portal/visits" className="d-flex justify-content-between py-2 border-bottom text-decoration-none text-body" style={{ cursor: 'pointer' }}>
-                        <span>{new Date(v.visit_date).toLocaleDateString('fr-FR')} — {v.dietitian ? `${v.dietitian.first_name} ${v.dietitian.last_name}` : ''}</span>
-                        <span className="text-muted">{v.visit_type || '—'}</span>
+                      <Link to="/portal/visits" className="d-flex flex-column flex-sm-row justify-content-between py-2 border-bottom text-decoration-none text-body" style={{ cursor: 'pointer', gap: '0.25rem' }}>
+                        <span className="text-truncate" style={{ minWidth: 0 }}>
+                          {new Date(v.visit_date).toLocaleDateString('fr-FR')}
+                          {v.dietitian ? ` — ${v.dietitian.first_name} ${v.dietitian.last_name}` : ''}
+                        </span>
+                        <span className="text-muted text-nowrap" style={{ fontSize: '0.85em' }}>{v.visit_type || '—'}</span>
                       </Link>
                     </li>
                   ))}
@@ -194,28 +199,28 @@ const PatientPortalDashboard = () => {
         </Col>
 
         {/* Documents */}
-        <Col md={6}>
+        <Col xs={12} md={6}>
           <Card className="h-100">
-            <Card.Header className="d-flex justify-content-between align-items-center">
-              <span>📄 {t('portal.recentDocuments', 'Documents récents')}</span>
-              <Link to="/portal/documents" className="btn btn-sm btn-outline-primary">
+            <Card.Header className="d-flex justify-content-between align-items-center py-2">
+              <span style={{ fontSize: '0.9em' }}>{'\uD83D\uDCC4'} {t('portal.recentDocuments', 'Documents recents')}</span>
+              <Link to="/portal/documents" className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.8em' }}>
                 {t('common.viewAll', 'Voir tout')}
               </Link>
             </Card.Header>
-            <Card.Body>
+            <Card.Body className="py-2 px-3">
               {documents.length === 0 ? (
-                <p className="text-muted">{t('portal.noDocuments', 'Aucun document partagé')}</p>
+                <p className="text-muted mb-0">{t('portal.noDocuments', 'Aucun document partage')}</p>
               ) : (
                 <ul className="list-unstyled mb-0">
                   {documents.map(d => (
                     <li
                       key={d.id}
-                      className="d-flex justify-content-between py-2 border-bottom"
-                      style={{ cursor: 'pointer' }}
+                      className="d-flex justify-content-between align-items-center py-2 border-bottom"
+                      style={{ cursor: 'pointer', gap: '0.5rem' }}
                       onClick={() => d.document && handlePreviewDoc(d.document)}
                     >
-                      <span>{d.document?.file_name || '—'}</span>
-                      <span className="text-muted">{new Date(d.created_at).toLocaleDateString('fr-FR')}</span>
+                      <span className="text-truncate" style={{ minWidth: 0 }}>{d.document?.file_name || '—'}</span>
+                      <span className="text-muted text-nowrap" style={{ fontSize: '0.85em' }}>{new Date(d.created_at).toLocaleDateString('fr-FR')}</span>
                     </li>
                   ))}
                 </ul>
@@ -225,29 +230,29 @@ const PatientPortalDashboard = () => {
         </Col>
 
         {/* Journal */}
-        <Col md={6}>
+        <Col xs={12} md={6}>
           <Card className="h-100">
-            <Card.Header className="d-flex justify-content-between align-items-center">
-              <span>{'\uD83D\uDCD3'} {t('portal.recentJournal', 'Journal récent')}</span>
-              <Link to="/portal/journal" className="btn btn-sm btn-outline-primary">
+            <Card.Header className="d-flex justify-content-between align-items-center py-2">
+              <span style={{ fontSize: '0.9em' }}>{'\uD83D\uDCD3'} {t('portal.recentJournal', 'Journal recent')}</span>
+              <Link to="/portal/journal" className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.8em' }}>
                 {t('common.viewAll', 'Voir tout')}
               </Link>
             </Card.Header>
-            <Card.Body>
+            <Card.Body className="py-2 px-3">
               {journalEntries.length === 0 ? (
-                <p className="text-muted">{t('portal.noJournal', 'Aucune entrée dans votre journal')}</p>
+                <p className="text-muted mb-0">{t('portal.noJournal', 'Aucune entree dans votre journal')}</p>
               ) : (
                 <ul className="list-unstyled mb-0">
                   {journalEntries.map(entry => {
                     const moodEmojis = { very_bad: '\uD83D\uDE2B', bad: '\uD83D\uDE1F', neutral: '\uD83D\uDE10', good: '\uD83D\uDE42', very_good: '\uD83D\uDE04' };
                     return (
                       <li key={entry.id}>
-                        <Link to="/portal/journal" className="d-flex justify-content-between py-2 border-bottom text-decoration-none text-body" style={{ cursor: 'pointer' }}>
-                          <span>
+                        <Link to="/portal/journal" className="d-flex justify-content-between align-items-center py-2 border-bottom text-decoration-none text-body" style={{ cursor: 'pointer', gap: '0.5rem' }}>
+                          <span className="text-truncate" style={{ minWidth: 0 }}>
                             {entry.mood && moodEmojis[entry.mood] ? `${moodEmojis[entry.mood]} ` : ''}
-                            {entry.title || (entry.content?.substring(0, 50) + (entry.content?.length > 50 ? '...' : ''))}
+                            {entry.title || (entry.content?.substring(0, 40) + (entry.content?.length > 40 ? '...' : ''))}
                           </span>
-                          <small className="text-muted">{new Date(entry.entry_date + 'T00:00:00').toLocaleDateString('fr-FR')}</small>
+                          <small className="text-muted text-nowrap">{new Date(entry.entry_date + 'T00:00:00').toLocaleDateString('fr-FR')}</small>
                         </Link>
                       </li>
                     );
@@ -259,22 +264,22 @@ const PatientPortalDashboard = () => {
         </Col>
 
         {/* Recipes */}
-        <Col md={6}>
+        <Col xs={12} md={6}>
           <Card className="h-100">
-            <Card.Header className="d-flex justify-content-between align-items-center">
-              <span>🍽️ {t('portal.recentRecipes', 'Recettes récentes')}</span>
-              <Link to="/portal/recipes" className="btn btn-sm btn-outline-primary">
+            <Card.Header className="d-flex justify-content-between align-items-center py-2">
+              <span style={{ fontSize: '0.9em' }}>{'\uD83C\uDF7D\uFE0F'} {t('portal.recentRecipes', 'Recettes recentes')}</span>
+              <Link to="/portal/recipes" className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.8em' }}>
                 {t('common.viewAll', 'Voir tout')}
               </Link>
             </Card.Header>
-            <Card.Body>
+            <Card.Body className="py-2 px-3">
               {recipes.length === 0 ? (
-                <p className="text-muted">{t('portal.noRecipes', 'Aucune recette partagée')}</p>
+                <p className="text-muted mb-0">{t('portal.noRecipes', 'Aucune recette partagee')}</p>
               ) : (
                 <ul className="list-unstyled mb-0">
                   {recipes.map(r => (
                     <li key={r.id} className="py-2 border-bottom">
-                      <Link to={`/portal/recipes/${r.recipe?.id}`}>
+                      <Link to={`/portal/recipes/${r.recipe?.id}`} className="text-truncate d-block">
                         {r.recipe?.title || '—'}
                       </Link>
                     </li>
@@ -287,7 +292,7 @@ const PatientPortalDashboard = () => {
       </Row>
 
       {/* Document Preview Modal */}
-      <Modal show={!!previewUrl} onHide={closePreview} size="xl" centered>
+      <Modal show={!!previewUrl} onHide={closePreview} size="xl" centered fullscreen="md-down">
         <Modal.Header closeButton>
           <Modal.Title>{previewDoc?.file_name}</Modal.Title>
         </Modal.Header>

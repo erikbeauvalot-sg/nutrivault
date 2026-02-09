@@ -54,7 +54,7 @@ const SetPasswordPage = () => {
   if (!token) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
-        <Card style={{ maxWidth: '500px', width: '100%' }}>
+        <Card style={{ maxWidth: '500px', width: '100%' }} className="mx-2 mx-sm-0">
           <Card.Body className="p-5 text-center">
             <div className="mb-3" style={{ fontSize: '3rem' }}>🌱</div>
             <h3>NutriVault</h3>
@@ -73,7 +73,7 @@ const SetPasswordPage = () => {
   if (success) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
-        <Card style={{ maxWidth: '500px', width: '100%' }}>
+        <Card style={{ maxWidth: '500px', width: '100%' }} className="mx-2 mx-sm-0">
           <Card.Body className="p-5 text-center">
             <div className="mb-3" style={{ fontSize: '3rem' }}>✅</div>
             <h3>{t('portal.passwordSetSuccess', 'Mot de passe défini !')}</h3>
@@ -91,8 +91,8 @@ const SetPasswordPage = () => {
 
   return (
     <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
-      <Card style={{ maxWidth: '500px', width: '100%' }}>
-        <Card.Body className="p-5">
+      <Card style={{ maxWidth: '500px', width: '100%' }} className="mx-2 mx-sm-0">
+        <Card.Body className="p-3 p-sm-5">
           <div className="text-center mb-4">
             <div style={{ fontSize: '3rem' }}>🌱</div>
             <h3>NutriVault</h3>

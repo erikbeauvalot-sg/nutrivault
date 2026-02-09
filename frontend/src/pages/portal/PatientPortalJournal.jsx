@@ -188,10 +188,12 @@ const PatientPortalJournal = () => {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>{t('portal.journal.title', 'Mon journal de suivi')}</h2>
+      <div className="d-flex justify-content-between align-items-center mb-3 gap-2">
+        <h2 className="mb-0" style={{ fontSize: 'clamp(1.1rem, 4vw, 1.75rem)' }}>{t('portal.journal.title', 'Mon journal de suivi')}</h2>
         <Button
+          size="sm"
           variant={showForm ? 'outline-secondary' : 'primary'}
+          className="text-nowrap"
           onClick={() => {
             if (showForm) { resetForm(); }
             setShowForm(!showForm);
@@ -219,12 +221,13 @@ const PatientPortalJournal = () => {
           </Card.Header>
           <Card.Body>
             <Form onSubmit={handleSubmit}>
-              <Row className="g-3">
+              <Row className="g-2">
                 {/* Date + Type */}
-                <Col md={4}>
+                <Col xs={6} md={4}>
                   <Form.Group>
-                    <Form.Label>{t('portal.journal.date', 'Date')}</Form.Label>
+                    <Form.Label className="small mb-1">{t('portal.journal.date', 'Date')}</Form.Label>
                     <Form.Control
+                      size="sm"
                       type="date"
                       value={formData.entry_date}
                       onChange={(e) => setFormData(prev => ({ ...prev, entry_date: e.target.value }))}
@@ -232,10 +235,11 @@ const PatientPortalJournal = () => {
                     />
                   </Form.Group>
                 </Col>
-                <Col md={4}>
+                <Col xs={6} md={4}>
                   <Form.Group>
-                    <Form.Label>{t('portal.journal.entryType', 'Type')}</Form.Label>
+                    <Form.Label className="small mb-1">{t('portal.journal.entryType', 'Type')}</Form.Label>
                     <Form.Select
+                      size="sm"
                       value={formData.entry_type}
                       onChange={(e) => setFormData(prev => ({ ...prev, entry_type: e.target.value }))}
                     >
@@ -247,10 +251,11 @@ const PatientPortalJournal = () => {
                     </Form.Select>
                   </Form.Group>
                 </Col>
-                <Col md={4}>
+                <Col xs={12} md={4}>
                   <Form.Group>
-                    <Form.Label>{t('portal.journal.titleLabel', 'Titre')} <small className="text-muted">({t('common.optional', 'Optionnel')})</small></Form.Label>
+                    <Form.Label className="small mb-1">{t('portal.journal.titleLabel', 'Titre')} <small className="text-muted">({t('common.optional', 'Optionnel')})</small></Form.Label>
                     <Form.Control
+                      size="sm"
                       type="text"
                       placeholder={t('portal.journal.titlePlaceholder', 'Titre court...')}
                       value={formData.title}
@@ -276,10 +281,10 @@ const PatientPortalJournal = () => {
                 </Col>
 
                 {/* Mood */}
-                <Col md={6}>
+                <Col xs={12} md={6}>
                   <Form.Group>
-                    <Form.Label>{t('portal.journal.moodLabel', 'Humeur')}</Form.Label>
-                    <div className="d-flex gap-2">
+                    <Form.Label className="small mb-1">{t('portal.journal.moodLabel', 'Humeur')}</Form.Label>
+                    <div className="d-flex gap-1 flex-wrap">
                       {MOOD_OPTIONS.map(option => (
                         <OverlayTrigger
                           key={option.value}
@@ -292,7 +297,7 @@ const PatientPortalJournal = () => {
                               ...prev,
                               mood: prev.mood === option.value ? null : option.value
                             }))}
-                            style={{ fontSize: '1.5rem', padding: '4px 10px', lineHeight: 1 }}
+                            style={{ fontSize: '1.3rem', padding: '3px 8px', lineHeight: 1 }}
                           >
                             {option.emoji}
                           </Button>
@@ -303,15 +308,15 @@ const PatientPortalJournal = () => {
                 </Col>
 
                 {/* Energy */}
-                <Col md={6}>
+                <Col xs={12} md={6}>
                   <Form.Group>
-                    <Form.Label>
+                    <Form.Label className="small mb-1">
                       {t('portal.journal.energyLabel', 'Energie')}{' '}
                       {formData.energy_level && (
                         <Badge bg="info">{formData.energy_level}/5</Badge>
                       )}
                     </Form.Label>
-                    <div className="d-flex gap-2 align-items-center">
+                    <div className="d-flex gap-1 align-items-center flex-wrap">
                       {[1, 2, 3, 4, 5].map(level => (
                         <Button
                           key={level}
@@ -321,16 +326,16 @@ const PatientPortalJournal = () => {
                             ...prev,
                             energy_level: prev.energy_level === level ? null : level
                           }))}
-                          style={{ minWidth: '36px' }}
+                          style={{ minWidth: '32px', padding: '2px 6px' }}
                         >
-                          {'⚡'.repeat(level > 3 ? 3 : level > 1 ? 2 : 1)}
+                          {'\u26A1'.repeat(level > 3 ? 3 : level > 1 ? 2 : 1)}
                         </Button>
                       ))}
                       {formData.energy_level && (
                         <Button
                           variant="link"
                           size="sm"
-                          className="text-muted"
+                          className="text-muted p-0"
                           onClick={() => setFormData(prev => ({ ...prev, energy_level: null }))}
                         >
                           {t('common.reset', 'Reset')}
@@ -341,9 +346,9 @@ const PatientPortalJournal = () => {
                 </Col>
 
                 {/* Tags */}
-                <Col md={8}>
+                <Col xs={12} md={8}>
                   <Form.Group>
-                    <Form.Label>{t('portal.journal.tags', 'Tags')}</Form.Label>
+                    <Form.Label className="small mb-1">{t('portal.journal.tags', 'Tags')}</Form.Label>
                     <div className="d-flex gap-2">
                       <Form.Control
                         type="text"
@@ -376,8 +381,8 @@ const PatientPortalJournal = () => {
                 </Col>
 
                 {/* Private toggle */}
-                <Col md={4}>
-                  <Form.Group className="mt-4">
+                <Col xs={12} md={4}>
+                  <Form.Group className="mt-2 mt-md-4">
                     <Form.Check
                       type="switch"
                       id="is-private"

@@ -55,18 +55,18 @@ const PatientPortalMeasures = () => {
 
   return (
     <div>
-      <h2 className="mb-4">📊 {t('portal.nav.measures', 'Mes mesures')}</h2>
+      <h2 className="mb-3" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.75rem)' }}>{'\uD83D\uDCCA'} {t('portal.nav.measures', 'Mes mesures')}</h2>
 
       {error && <Alert variant="danger">{error}</Alert>}
 
       {/* Filters */}
-      <Card className="mb-4">
-        <Card.Body>
-          <Row className="g-3">
-            <Col md={4}>
+      <Card className="mb-3">
+        <Card.Body className="py-2 px-3">
+          <Row className="g-2">
+            <Col xs={12} sm={4}>
               <Form.Group>
-                <Form.Label>{t('portal.measureType', 'Type de mesure')}</Form.Label>
-                <Form.Select value={selectedDef} onChange={e => setSelectedDef(e.target.value)}>
+                <Form.Label className="small mb-1">{t('portal.measureType', 'Type de mesure')}</Form.Label>
+                <Form.Select size="sm" value={selectedDef} onChange={e => setSelectedDef(e.target.value)}>
                   <option value="">{t('common.all', 'Toutes')}</option>
                   {definitions.map(d => (
                     <option key={d.id} value={d.id}>{d.display_name || d.name} ({d.unit})</option>
@@ -74,16 +74,16 @@ const PatientPortalMeasures = () => {
                 </Form.Select>
               </Form.Group>
             </Col>
-            <Col md={4}>
+            <Col xs={6} sm={4}>
               <Form.Group>
-                <Form.Label>{t('portal.dateFrom', 'Du')}</Form.Label>
-                <Form.Control type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                <Form.Label className="small mb-1">{t('portal.dateFrom', 'Du')}</Form.Label>
+                <Form.Control size="sm" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
               </Form.Group>
             </Col>
-            <Col md={4}>
+            <Col xs={6} sm={4}>
               <Form.Group>
-                <Form.Label>{t('portal.dateTo', 'Au')}</Form.Label>
-                <Form.Control type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                <Form.Label className="small mb-1">{t('portal.dateTo', 'Au')}</Form.Label>
+                <Form.Control size="sm" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
               </Form.Group>
             </Col>
           </Row>

@@ -15,10 +15,23 @@
   padding: 2rem;
   background-color: var(--nv-parchment-light);
   overflow-y: auto;
+  min-width: 0; /* prevent flex child overflow */
 }
 
 .sidebar-overlay {
   display: none;
+}
+
+/* Portal navbar tweaks */
+.portal-navbar {
+  margin-bottom: 0 !important;
+}
+
+.portal-brand {
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Mobile layout adjustments */
@@ -43,5 +56,21 @@
 @media (max-width: 768px) {
   .layout-content {
     padding: 0.75rem;
+  }
+
+  .portal-brand {
+    font-size: 0.9rem;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 576px) {
+  .layout-content {
+    padding: 0.5rem;
+  }
+
+  .portal-brand {
+    font-size: 0.85rem;
+    max-width: 160px;
   }
 }

@@ -1,6 +1,6 @@
 /**
  * Patient Portal Documents Page
- * View and download shared documents
+ * View and download shared documents — responsive card layout on mobile, table on desktop
  */
 
 import { useState, useEffect } from 'react';
@@ -20,9 +20,9 @@ const categoryLabel = (category, t) => {
   const map = {
     recipes: t('portal.docCategory.recipes', 'Recettes'),
     guides: t('portal.docCategory.guides', 'Guides'),
-    templates: t('portal.docCategory.templates', 'Modèles'),
-    educational: t('portal.docCategory.educational', 'Éducatif'),
-    medical: t('portal.docCategory.medical', 'Médical'),
+    templates: t('portal.docCategory.templates', 'Modeles'),
+    educational: t('portal.docCategory.educational', 'Educatif'),
+    medical: t('portal.docCategory.medical', 'Medical'),
     administrative: t('portal.docCategory.administrative', 'Administratif'),
     report: t('portal.docCategory.report', 'Rapport'),
     other: t('portal.docCategory.other', 'Autre')
@@ -72,7 +72,7 @@ const PatientPortalDocuments = () => {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      toast.error(t('portal.downloadError', 'Erreur lors du téléchargement'));
+      toast.error(t('portal.downloadError', 'Erreur lors du telechargement'));
     } finally {
       setDownloading(null);
     }
@@ -104,83 +104,132 @@ const PatientPortalDocuments = () => {
     return <div className="text-center py-5"><Spinner animation="border" /></div>;
   }
 
+  const renderDocActions = (doc) => (
+    <div className="d-flex gap-2">
+      {doc && canPreview(doc.mime_type) && (
+        <Button
+          size="sm"
+          variant="outline-secondary"
+          disabled={previewing === doc.id}
+          onClick={() => handlePreview(doc)}
+        >
+          {previewing === doc.id ? (
+            <Spinner size="sm" animation="border" />
+          ) : (
+            <>{'\uD83D\uDC41'} {t('portal.view', 'Voir')}</>
+          )}
+        </Button>
+      )}
+      <Button
+        size="sm"
+        variant="outline-primary"
+        disabled={downloading === doc?.id}
+        onClick={() => handleDownload(doc?.id, doc?.file_name)}
+      >
+        {downloading === doc?.id ? (
+          <Spinner size="sm" animation="border" />
+        ) : (
+          <>{'\u2B07'} {t('portal.download', 'Telecharger')}</>
+        )}
+      </Button>
+    </div>
+  );
+
   return (
     <div>
-      <h2 className="mb-4">📄 {t('portal.nav.documents', 'Mes documents')}</h2>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h2 className="mb-0">{'\uD83D\uDCC4'} {t('portal.nav.documents', 'Mes documents')}</h2>
+        {documents.length > 0 && (
+          <span className="text-muted small">
+            {documents.length} {t('portal.document', 'document')}{documents.length > 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
 
       {error && <Alert variant="danger">{error}</Alert>}
 
       {documents.length === 0 ? (
-        <Alert variant="info">{t('portal.noDocuments', 'Aucun document partagé')}</Alert>
+        <Alert variant="info">{t('portal.noDocuments', 'Aucun document partage')}</Alert>
       ) : (
-        <Card>
-          <Card.Body className="p-0">
-            <Table responsive hover className="mb-0">
-              <thead>
-                <tr>
-                  <th>{t('portal.fileName', 'Fichier')}</th>
-                  <th>{t('portal.category', 'Catégorie')}</th>
-                  <th>{t('portal.size', 'Taille')}</th>
-                  <th>{t('portal.sharedBy', 'Partagé par')}</th>
-                  <th>{t('portal.date', 'Date')}</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {documents.map(share => {
-                  const doc = share.document;
-                  return (
-                    <tr key={share.id}>
-                      <td>
-                        <strong>{doc?.file_name || '—'}</strong>
-                        {doc?.description && (
-                          <div className="text-muted small">{doc.description}</div>
-                        )}
-                      </td>
-                      <td>{categoryLabel(doc?.category, t)}</td>
-                      <td>{formatFileSize(doc?.file_size)}</td>
-                      <td>
-                        {share.sharedByUser
-                          ? `${share.sharedByUser.first_name} ${share.sharedByUser.last_name}`
-                          : '—'}
-                      </td>
-                      <td>{new Date(share.created_at).toLocaleDateString('fr-FR')}</td>
-                      <td className="text-nowrap">
-                        {doc && canPreview(doc.mime_type) && (
-                          <Button
-                            size="sm"
-                            variant="outline-secondary"
-                            className="me-2"
-                            disabled={previewing === doc.id}
-                            onClick={() => handlePreview(doc)}
-                          >
-                            {previewing === doc.id ? (
-                              <Spinner size="sm" animation="border" />
-                            ) : (
-                              <>👁 {t('portal.view', 'Voir')}</>
-                            )}
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline-primary"
-                          disabled={downloading === doc?.id}
-                          onClick={() => handleDownload(doc?.id, doc?.file_name)}
-                        >
-                          {downloading === doc?.id ? (
-                            <Spinner size="sm" animation="border" />
-                          ) : (
-                            <>⬇ {t('portal.download', 'Télécharger')}</>
+        <>
+          {/* Desktop: Table view */}
+          <Card className="d-none d-md-block">
+            <Card.Body className="p-0">
+              <Table responsive hover className="mb-0">
+                <thead>
+                  <tr>
+                    <th>{t('portal.fileName', 'Fichier')}</th>
+                    <th>{t('portal.category', 'Categorie')}</th>
+                    <th>{t('portal.size', 'Taille')}</th>
+                    <th>{t('portal.sharedBy', 'Partage par')}</th>
+                    <th>{t('portal.date', 'Date')}</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {documents.map(share => {
+                    const doc = share.document;
+                    return (
+                      <tr key={share.id}>
+                        <td>
+                          <strong>{doc?.file_name || '—'}</strong>
+                          {doc?.description && (
+                            <div className="text-muted small">{doc.description}</div>
                           )}
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </Table>
-          </Card.Body>
-        </Card>
+                        </td>
+                        <td>{categoryLabel(doc?.category, t)}</td>
+                        <td>{formatFileSize(doc?.file_size)}</td>
+                        <td>
+                          {share.sharedByUser
+                            ? `${share.sharedByUser.first_name} ${share.sharedByUser.last_name}`
+                            : '—'}
+                        </td>
+                        <td>{new Date(share.created_at).toLocaleDateString('fr-FR')}</td>
+                        <td className="text-nowrap">
+                          {renderDocActions(doc)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </Table>
+            </Card.Body>
+          </Card>
+
+          {/* Mobile: Card view */}
+          <div className="d-md-none d-flex flex-column gap-2">
+            {documents.map(share => {
+              const doc = share.document;
+              return (
+                <Card key={share.id}>
+                  <Card.Body className="py-3 px-3">
+                    <div className="d-flex justify-content-between align-items-start mb-2">
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <strong className="d-block text-truncate">{doc?.file_name || '—'}</strong>
+                        {doc?.description && (
+                          <small className="text-muted d-block text-truncate">{doc.description}</small>
+                        )}
+                      </div>
+                    </div>
+                    <div className="d-flex flex-wrap gap-2 mb-2 text-muted" style={{ fontSize: '0.85em' }}>
+                      <span>{categoryLabel(doc?.category, t)}</span>
+                      <span>{'\u00B7'}</span>
+                      <span>{formatFileSize(doc?.file_size)}</span>
+                      <span>{'\u00B7'}</span>
+                      <span>{new Date(share.created_at).toLocaleDateString('fr-FR')}</span>
+                    </div>
+                    {share.sharedByUser && (
+                      <small className="text-muted d-block mb-2">
+                        {t('portal.sharedBy', 'Partage par')} {share.sharedByUser.first_name} {share.sharedByUser.last_name}
+                      </small>
+                    )}
+                    {renderDocActions(doc)}
+                  </Card.Body>
+                </Card>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* Preview Modal */}
@@ -189,12 +238,12 @@ const PatientPortalDocuments = () => {
         onHide={closePreview}
         size="xl"
         centered
-        dialogClassName="modal-90w"
+        fullscreen="md-down"
       >
         <Modal.Header closeButton>
-          <Modal.Title>{previewDoc?.file_name}</Modal.Title>
+          <Modal.Title className="text-truncate">{previewDoc?.file_name}</Modal.Title>
         </Modal.Header>
-        <Modal.Body className="p-0" style={{ minHeight: '70vh' }}>
+        <Modal.Body className="p-0" style={{ minHeight: '50vh' }}>
           {previewUrl && previewDoc?.mime_type === 'application/pdf' && (
             <iframe
               src={previewUrl}
@@ -217,7 +266,7 @@ const PatientPortalDocuments = () => {
             variant="primary"
             onClick={() => handleDownload(previewDoc?.id, previewDoc?.file_name)}
           >
-            ⬇ {t('portal.download', 'Télécharger')}
+            {'\u2B07'} {t('portal.download', 'Telecharger')}
           </Button>
           <Button variant="secondary" onClick={closePreview}>
             {t('common.close', 'Fermer')}

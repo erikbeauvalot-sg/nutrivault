@@ -33,33 +33,34 @@ const PatientPortalLayout = ({ children }) => {
 
   return (
     <div className="layout-wrapper">
-      <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
+      <Navbar bg="dark" variant="dark" expand="lg" className="portal-navbar">
         <Container fluid>
           <Button
             variant="dark"
-            className="d-lg-none me-2 hamburger-menu"
+            className="d-lg-none me-2 hamburger-menu p-1"
             onClick={toggleSidebar}
             aria-label="Toggle sidebar"
           >
             <span className="navbar-toggler-icon"></span>
           </Button>
-          <Navbar.Brand as={Link} to="/portal">
-            🌱 NutriVault — {t('portal.title', 'Mon Portail')}
+          <Navbar.Brand as={Link} to="/portal" className="me-auto portal-brand">
+            <span className="d-none d-sm-inline">🌱 NutriVault — {t('portal.title', 'Mon Portail')}</span>
+            <span className="d-sm-none">🌱 {t('portal.title', 'Mon Portail')}</span>
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="portal-navbar-nav" />
           <Navbar.Collapse id="portal-navbar-nav">
-            <Nav className="ms-auto align-items-center">
-              <div className="me-2">
+            <Nav className="ms-auto align-items-lg-center flex-row flex-wrap gap-2 py-2 py-lg-0">
+              <div>
                 <ThemeSelector />
               </div>
-              <div className="me-3">
+              <div>
                 <LanguageSelector />
               </div>
               <NavDropdown
                 title={
                   <>
-                    <i className="bi bi-person-circle me-2"></i>
-                    {user?.username || 'Patient'}
+                    <i className="bi bi-person-circle me-1"></i>
+                    <span className="d-none d-md-inline">{user?.username || 'Patient'}</span>
                   </>
                 }
                 id="portal-user-dropdown"

@@ -38,21 +38,21 @@ const PatientPortalRecipes = () => {
 
   return (
     <div>
-      <h2 className="mb-4">🍽️ {t('portal.nav.recipes', 'Mes recettes')}</h2>
+      <h2 className="mb-3" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.75rem)' }}>{'\uD83C\uDF7D\uFE0F'} {t('portal.nav.recipes', 'Mes recettes')}</h2>
 
       {error && <Alert variant="danger">{error}</Alert>}
 
       {recipes.length === 0 ? (
         <Alert variant="info">{t('portal.noRecipes', 'Aucune recette partagée')}</Alert>
       ) : (
-        <Row className="g-4">
+        <Row className="g-3">
           {recipes.map(access => {
             const recipe = access.recipe;
             if (!recipe) return null;
             const totalTime = (recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0);
 
             return (
-              <Col key={access.id} md={6} lg={4}>
+              <Col key={access.id} xs={12} sm={6} lg={4}>
                 <Card
                   className="h-100"
                   style={{ cursor: 'pointer' }}
