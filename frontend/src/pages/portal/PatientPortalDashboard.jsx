@@ -263,7 +263,7 @@ const PatientPortalDashboard = () => {
                       <li key={inv.id}>
                         <Link to="/portal/invoices" className="d-flex justify-content-between align-items-center py-2 border-bottom text-decoration-none text-body" style={{ cursor: 'pointer', gap: '0.5rem' }}>
                           <span className="text-truncate" style={{ minWidth: 0 }}>
-                            {inv.invoice_number} — {parseFloat(inv.amount_total).toFixed(2)} $
+                            {inv.invoice_number} — {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(parseFloat(inv.amount_total))}
                           </span>
                           <span className={`badge bg-${statusColors[inv.status] || 'secondary'}`} style={{ fontSize: '0.75em' }}>
                             {statusLabels[inv.status] || inv.status}
