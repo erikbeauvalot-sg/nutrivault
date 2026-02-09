@@ -2830,6 +2830,8 @@
       "visits": "My visits",
       "journal": "My journal",
       "documents": "My documents",
+      "invoices": "My invoices",
+      "radar": "My overview",
       "recipes": "My recipes",
       "profile": "My profile"
     },
@@ -2921,6 +2923,24 @@
       "administrative": "Administrative",
       "report": "Report",
       "other": "Other"
+    },
+    "radarNoValues": "No data available for this profile yet.",
+    "radarNone": "No profile configured",
+    "radarNoValue": "No value",
+    "recentInvoices": "Recent invoices",
+    "noInvoices": "No invoices",
+    "invoice": "invoice",
+    "invoiceNumber": "Invoice #",
+    "invoiceDate": "Date",
+    "dueDate": "Due date",
+    "amountTotal": "Total",
+    "amountDue": "Amount due",
+    "amountPaid": "Paid",
+    "downloadPdf": "PDF",
+    "invoiceStatus": {
+      "sent": "Sent",
+      "paid": "Paid",
+      "overdue": "Overdue"
     },
     "recipe": {
       "servings": "servings",

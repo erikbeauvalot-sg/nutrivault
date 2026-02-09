@@ -70,6 +70,7 @@ const PatientPortalDashboard = () => {
   const [documents, setDocuments] = useState([]);
   const [recipes, setRecipes] = useState([]);
   const [error, setError] = useState('');
+  const [invoices, setInvoices] = useState([]);
   const [journalEntries, setJournalEntries] = useState([]);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [previewDoc, setPreviewDoc] = useState(null);
@@ -94,18 +95,20 @@ const PatientPortalDashboard = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const [measuresData, visitsData, docsData, recipesData, journalData] = await Promise.all([
+        const [measuresData, visitsData, docsData, recipesData, journalData, invoicesData] = await Promise.all([
           portalService.getMeasures().catch(() => ({ measures: [] })),
           portalService.getVisits().catch(() => []),
           portalService.getDocuments().catch(() => []),
           portalService.getRecipes().catch(() => []),
-          portalService.getJournalEntries({ limit: 3 }).catch(() => ({ data: [] }))
+          portalService.getJournalEntries({ limit: 3 }).catch(() => ({ data: [] })),
+          portalService.getInvoices().catch(() => [])
         ]);
         setAllMeasures(measuresData?.measures || []);
         setVisits((visitsData || []).slice(0, 5));
         setDocuments((docsData || []).slice(0, 5));
         setRecipes((recipesData || []).slice(0, 5));
         setJournalEntries((journalData?.data || []).slice(0, 3));
+        setInvoices((invoicesData || []).slice(0, 3));
       } catch (err) {
         setError(t('portal.loadError', 'Erreur lors du chargement des données'));
       } finally {
@@ -229,6 +232,46 @@ const PatientPortalDashboard = () => {
                       <span className="text-muted text-nowrap" style={{ fontSize: '0.85em' }}>{new Date(d.created_at).toLocaleDateString('fr-FR')}</span>
                     </li>
                   ))}
+                </ul>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+
+        {/* Invoices */}
+        <Col xs={12} md={6}>
+          <Card className="h-100">
+            <Card.Header className="d-flex justify-content-between align-items-center py-2">
+              <span style={{ fontSize: '0.9em' }}>{'\uD83D\uDCB0'} {t('portal.recentInvoices', 'Factures recentes')}</span>
+              <Link to="/portal/invoices" className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.8em' }}>
+                {t('common.viewAll', 'Voir tout')}
+              </Link>
+            </Card.Header>
+            <Card.Body className="py-2 px-3">
+              {invoices.length === 0 ? (
+                <p className="text-muted mb-0">{t('portal.noInvoices', 'Aucune facture')}</p>
+              ) : (
+                <ul className="list-unstyled mb-0">
+                  {invoices.map(inv => {
+                    const statusColors = { PAID: 'success', OVERDUE: 'warning', SENT: 'info' };
+                    const statusLabels = {
+                      PAID: t('portal.invoiceStatus.paid', 'Paid'),
+                      OVERDUE: t('portal.invoiceStatus.overdue', 'Overdue'),
+                      SENT: t('portal.invoiceStatus.sent', 'Sent')
+                    };
+                    return (
+                      <li key={inv.id}>
+                        <Link to="/portal/invoices" className="d-flex justify-content-between align-items-center py-2 border-bottom text-decoration-none text-body" style={{ cursor: 'pointer', gap: '0.5rem' }}>
+                          <span className="text-truncate" style={{ minWidth: 0 }}>
+                            {inv.invoice_number} — {parseFloat(inv.amount_total).toFixed(2)} $
+                          </span>
+                          <span className={`badge bg-${statusColors[inv.status] || 'secondary'}`} style={{ fontSize: '0.75em' }}>
+                            {statusLabels[inv.status] || inv.status}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </Card.Body>

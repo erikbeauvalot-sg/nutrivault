@@ -47,7 +47,7 @@ const PatientDetailPage = () => {
   const { user } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const getStatusText = (status) => {
     const statusMap = {
@@ -67,6 +67,10 @@ const PatientDetailPage = () => {
   const [invoicesLoading, setInvoicesLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'basic-info');
+  const handleTabSelect = (tab) => {
+    setActiveTab(tab);
+    setSearchParams({ tab }, { replace: true });
+  };
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -703,7 +707,7 @@ const PatientDetailPage = () => {
               </Col>
             </Row>
 
-            <ResponsiveTabs activeKey={activeTab} onSelect={setActiveTab} id="patient-detail-tabs">
+            <ResponsiveTabs activeKey={activeTab} onSelect={handleTabSelect} id="patient-detail-tabs">
               {/* 1. Aperçu Tab */}
               <Tab eventKey="basic-info" title={`📋 ${t('patients.basicInformation', 'Overview')}`}>
                 {/* Essential Patient Info */}

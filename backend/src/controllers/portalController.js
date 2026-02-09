@@ -121,6 +121,7 @@ exports.getMeasures = async (req, res, next) => {
         as: 'measureDefinition',
         attributes: ['id', 'name', 'display_name', 'unit', 'category', 'measure_type'],
         required: true,
+        where: { name: { [Op.notLike]: 'cle_%' } },
         include: [{
           model: db.MeasureTranslation,
           as: 'translations',
@@ -171,9 +172,9 @@ exports.getMeasures = async (req, res, next) => {
 
     const translatedDefinitions = definitions.map(d => applyTranslations(d));
 
-    // Get all loggable definitions (patient_can_log: true, is_active: true)
+    // Get all loggable definitions (patient_can_log: true, is_active: true), excluding cle_* measures
     const loggableDefs = await db.MeasureDefinition.findAll({
-      where: { patient_can_log: true, is_active: true },
+      where: { patient_can_log: true, is_active: true, name: { [Op.notLike]: 'cle_%' } },
       attributes: ['id', 'name', 'display_name', 'unit', 'category', 'measure_type', 'min_value', 'max_value', 'decimal_places'],
       include: [{
         model: db.MeasureTranslation,
@@ -747,6 +748,253 @@ exports.logMeasure = async (req, res, next) => {
     if (error.message.includes('required') || error.message.includes('Invalid') || error.message.includes('must be')) {
       return res.status(400).json({ success: false, error: error.message });
     }
+    next(error);
+  }
+};
+
+// =============================================
+// RADAR CHART (WIND ROSE) ENDPOINTS
+// =============================================
+
+/**
+ * GET /api/portal/radar — Get radar chart categories + values for the patient
+ */
+exports.getRadarData = async (req, res, next) => {
+  try {
+    const patientId = req.patient.id;
+    const lang = req.patient.language_preference || req.user.language_preference || 'fr';
+
+    // Get categories with display_layout.type = 'radar' and their field definitions
+    const categories = await db.CustomFieldCategory.findAll({
+      where: { is_active: true },
+      order: [['display_order', 'ASC']],
+      include: [{
+        model: db.CustomFieldDefinition,
+        as: 'field_definitions',
+        where: { is_active: true },
+        required: false
+      }]
+    });
+
+    // Filter to only radar categories that apply to patients
+    const radarCategories = categories.filter(c => {
+      const layout = c.display_layout || {};
+      if (layout.type !== 'radar') return false;
+      const entityTypes = c.entity_types || ['patient'];
+      return entityTypes.includes('patient') || entityTypes.includes('visit');
+    });
+
+    if (radarCategories.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    // Get patient custom field values
+    const allFieldIds = [];
+    radarCategories.forEach(c => {
+      (c.field_definitions || []).forEach(f => allFieldIds.push(f.id));
+    });
+
+    const patientValues = await db.PatientCustomFieldValue.findAll({
+      where: { patient_id: patientId, field_definition_id: { [Op.in]: allFieldIds } }
+    });
+
+    const valuesMap = {};
+    patientValues.forEach(v => {
+      valuesMap[v.field_definition_id] = v;
+    });
+
+    // For visit-level categories, load from latest visit
+    const visitCategories = radarCategories.filter(c => {
+      const et = c.entity_types || ['patient'];
+      return !et.includes('patient') && et.includes('visit');
+    });
+
+    if (visitCategories.length > 0) {
+      const latestVisit = await db.Visit.findOne({
+        where: { patient_id: patientId },
+        order: [['visit_date', 'DESC']],
+        attributes: ['id']
+      });
+
+      if (latestVisit) {
+        const visitFieldIds = [];
+        visitCategories.forEach(c => {
+          (c.field_definitions || []).forEach(f => visitFieldIds.push(f.id));
+        });
+
+        if (visitFieldIds.length > 0) {
+          const visitValues = await db.VisitCustomFieldValue.findAll({
+            where: {
+              visit_id: latestVisit.id,
+              field_definition_id: { [Op.in]: visitFieldIds }
+            }
+          });
+          visitValues.forEach(v => {
+            valuesMap[v.field_definition_id] = v;
+          });
+        }
+      }
+    }
+
+    // Get translations for field labels
+    let translationMap = {};
+    if (lang !== 'fr') {
+      const translations = await db.CustomFieldTranslation.findAll({
+        where: {
+          entity_type: 'field_definition',
+          entity_id: { [Op.in]: allFieldIds },
+          language_code: lang,
+          field_name: 'field_label'
+        }
+      });
+      for (const t of translations) {
+        if (t.translated_value) translationMap[t.entity_id] = t.translated_value;
+      }
+    }
+
+    // Build response
+    const result = radarCategories.map(category => {
+      const fields = (category.field_definitions || [])
+        .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+        .map(def => {
+          const valueRecord = valuesMap[def.id];
+          let value = null;
+          if (valueRecord) {
+            const type = def.field_type;
+            if (type === 'number' || type === 'decimal' || type === 'integer') {
+              value = valueRecord.value_number != null ? valueRecord.value_number : null;
+            } else if (type === 'boolean' || type === 'checkbox') {
+              value = valueRecord.value_boolean != null ? valueRecord.value_boolean : null;
+            } else if (type === 'select' && def.allow_multiple && valueRecord.value_json) {
+              value = valueRecord.value_json;
+            } else {
+              value = valueRecord.value_text || null;
+            }
+          }
+
+          let selectOptions = null;
+          try {
+            selectOptions = def.select_options ? JSON.parse(def.select_options) : null;
+          } catch (e) {
+            selectOptions = def.select_options;
+          }
+
+          let validationRules = null;
+          try {
+            validationRules = def.validation_rules ? JSON.parse(def.validation_rules) : null;
+          } catch (e) {
+            validationRules = def.validation_rules;
+          }
+
+          return {
+            definition_id: def.id,
+            field_name: def.field_name,
+            field_label: translationMap[def.id] || def.field_label || def.field_name,
+            field_type: def.field_type,
+            validation_rules: validationRules,
+            select_options: selectOptions,
+            display_order: def.display_order,
+            value
+          };
+        });
+
+      return {
+        id: category.id,
+        name: category.name,
+        description: category.description,
+        color: category.color || '#3498db',
+        display_layout: category.display_layout || { type: 'radar' },
+        fields
+      };
+    });
+
+    res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// =============================================
+// INVOICE ENDPOINTS
+// =============================================
+
+/**
+ * GET /api/portal/invoices — Patient's invoices (SENT, PAID, OVERDUE only)
+ */
+exports.getInvoices = async (req, res, next) => {
+  try {
+    const invoices = await db.Billing.findAll({
+      where: {
+        patient_id: req.patient.id,
+        status: { [Op.in]: ['SENT', 'PAID', 'OVERDUE'] }
+      },
+      attributes: [
+        'id', 'invoice_number', 'invoice_date', 'due_date',
+        'service_description', 'amount_total', 'amount_paid',
+        'amount_due', 'status', 'payment_method', 'payment_date'
+      ],
+      include: [{
+        model: db.Payment,
+        as: 'payments',
+        attributes: ['id', 'amount', 'payment_method', 'payment_date', 'status'],
+        where: { status: 'PAID' },
+        required: false
+      }],
+      order: [['invoice_date', 'DESC']]
+    });
+
+    res.json({ success: true, data: invoices });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/portal/invoices/:id/pdf — Download invoice PDF
+ */
+exports.downloadInvoicePDF = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Verify the invoice belongs to this patient and is not DRAFT
+    const invoice = await db.Billing.findOne({
+      where: {
+        id,
+        patient_id: req.patient.id,
+        status: { [Op.notIn]: ['DRAFT', 'CANCELLED'] }
+      }
+    });
+
+    if (!invoice) {
+      return res.status(404).json({ success: false, error: 'Invoice not found' });
+    }
+
+    // Find the dietitian for branding: first assigned dietitian, or first admin
+    let userId;
+    const patientDietitian = await db.PatientDietitian.findOne({
+      where: { patient_id: req.patient.id },
+      include: [{ model: db.User, as: 'dietitian', attributes: ['id'] }]
+    });
+
+    if (patientDietitian?.dietitian?.id) {
+      userId = patientDietitian.dietitian.id;
+    } else {
+      // Fallback to first admin
+      const adminRole = await db.Role.findOne({ where: { name: 'ADMIN' } });
+      if (adminRole) {
+        const admin = await db.User.findOne({ where: { role_id: adminRole.id, is_active: true } });
+        if (admin) userId = admin.id;
+      }
+    }
+
+    const lang = req.patient.language_preference || 'fr';
+    const invoicePDFService = require('../services/invoicePDF.service');
+    const pdfDoc = await invoicePDFService.generateInvoicePDF(id, userId, lang);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="invoice-${invoice.invoice_number}.pdf"`);
+    pdfDoc.pipe(res);
+  } catch (error) {
     next(error);
   }
 };

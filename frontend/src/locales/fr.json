@@ -2984,6 +2984,8 @@
       "visits": "Mes consultations",
       "journal": "Mon journal",
       "documents": "Mes documents",
+      "invoices": "Mes factures",
+      "radar": "Mon bilan",
       "recipes": "Mes recettes",
       "profile": "Mon profil"
     },
@@ -3075,6 +3077,24 @@
       "administrative": "Administratif",
       "report": "Rapport",
       "other": "Autre"
+    },
+    "radarNoValues": "Pas encore de données pour ce profil.",
+    "radarNone": "Aucun profil configuré",
+    "radarNoValue": "Pas de valeur",
+    "recentInvoices": "Factures récentes",
+    "noInvoices": "Aucune facture",
+    "invoice": "facture",
+    "invoiceNumber": "N° Facture",
+    "invoiceDate": "Date",
+    "dueDate": "Échéance",
+    "amountTotal": "Total",
+    "amountDue": "Reste dû",
+    "amountPaid": "Payé",
+    "downloadPdf": "PDF",
+    "invoiceStatus": {
+      "sent": "Envoyée",
+      "paid": "Payée",
+      "overdue": "En retard"
     },
     "recipe": {
       "servings": "portions",

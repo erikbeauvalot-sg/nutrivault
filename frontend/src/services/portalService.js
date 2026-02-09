@@ -98,6 +98,31 @@ export const deleteJournalEntry = async (id) => {
   return extractData(response);
 };
 
+// =============================================
+// Radar Chart (Wind Rose)
+// =============================================
+
+export const getRadarData = async () => {
+  const response = await api.get('/portal/radar');
+  return extractData(response);
+};
+
+// =============================================
+// Invoices
+// =============================================
+
+export const getInvoices = async () => {
+  const response = await api.get('/portal/invoices');
+  return extractData(response);
+};
+
+export const downloadInvoicePDF = async (id) => {
+  const response = await api.get(`/portal/invoices/${id}/pdf`, {
+    responseType: 'blob'
+  });
+  return response.data;
+};
+
 export const setPassword = async (token, password) => {
   const response = await api.post('/portal/set-password', { token, password });
   return extractData(response);

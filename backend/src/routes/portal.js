@@ -119,6 +119,32 @@ router.get('/recipes/:id',
 );
 
 // ==========================================
+// RADAR CHART (WIND ROSE) ROUTES
+// ==========================================
+
+/**
+ * GET /api/portal/radar — Get radar chart data for patient
+ */
+router.get('/radar', portalController.getRadarData);
+
+// ==========================================
+// INVOICE ROUTES
+// ==========================================
+
+/**
+ * GET /api/portal/invoices — List patient invoices
+ */
+router.get('/invoices', portalController.getInvoices);
+
+/**
+ * GET /api/portal/invoices/:id/pdf — Download invoice PDF
+ */
+router.get('/invoices/:id/pdf',
+  param('id').isUUID(),
+  portalController.downloadInvoicePDF
+);
+
+// ==========================================
 // JOURNAL ROUTES
 // ==========================================
 
