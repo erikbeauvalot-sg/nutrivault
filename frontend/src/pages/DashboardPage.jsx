@@ -21,7 +21,8 @@ import {
   TaskManagerWidget,
   PracticeHealthScoreWidget,
   WhatsNewWidget,
-  CampaignsWidget
+  CampaignsWidget,
+  RecentJournalWidget
 } from '../components/dashboard';
 import api from '../services/api';
 import visitService from '../services/visitService';
@@ -313,6 +314,13 @@ const DashboardPage = () => {
               </Col>
             </Row>
 
+            {/* Recent Patient Journal */}
+            <Row className="mb-4">
+              <Col>
+                <RecentJournalWidget />
+              </Col>
+            </Row>
+
             {/* Today's Appointments List */}
             <Row>
               <Col>
@@ -431,7 +439,7 @@ const DashboardPage = () => {
                 <CampaignsWidget />
               </Col>
               <Col lg={6}>
-                {/* Placeholder for future widget or leave empty */}
+                <RecentJournalWidget />
               </Col>
             </Row>
 

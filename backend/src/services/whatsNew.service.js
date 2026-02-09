@@ -28,6 +28,56 @@ const getActualVersion = () => {
 
 // Current version changelog - human-readable features
 const CHANGELOG = {
+  '8.2.0': {
+    version: '8.2.0',
+    date: '2026-02-09',
+    title: {
+      fr: 'Portail Patient & Journal de Suivi',
+      en: 'Patient Portal & Follow-up Journal'
+    },
+    features: [
+      {
+        icon: '🏥',
+        title: { fr: 'Portail patient', en: 'Patient Portal' },
+        description: {
+          fr: 'Vos patients disposent désormais de leur propre espace sécurisé pour consulter leurs mesures, consultations, documents et recettes',
+          en: 'Your patients now have their own secure space to view their measures, visits, documents and recipes'
+        }
+      },
+      {
+        icon: '📓',
+        title: { fr: 'Journal de suivi patient', en: 'Patient Follow-up Journal' },
+        description: {
+          fr: 'Les patients peuvent tenir un journal quotidien (alimentation, humeur, symptômes, activité) avec suivi de l\'humeur et du niveau d\'énergie',
+          en: 'Patients can keep a daily journal (food, mood, symptoms, activity) with mood and energy level tracking'
+        }
+      },
+      {
+        icon: '💬',
+        title: { fr: 'Commentaires diététicien', en: 'Dietitian Comments' },
+        description: {
+          fr: 'Commentez les entrées du journal de vos patients directement depuis leur fiche, dans le nouvel onglet Journal',
+          en: 'Comment on your patients\' journal entries directly from their profile, in the new Journal tab'
+        }
+      },
+      {
+        icon: '🔒',
+        title: { fr: 'Entrées privées', en: 'Private Entries' },
+        description: {
+          fr: 'Les patients peuvent marquer certaines entrées comme privées, invisibles pour le diététicien',
+          en: 'Patients can mark certain entries as private, invisible to the dietitian'
+        }
+      },
+      {
+        icon: '📊',
+        title: { fr: 'Tableau de bord enrichi', en: 'Enhanced Dashboard' },
+        description: {
+          fr: 'Le tableau de bord du diététicien affiche désormais un récapitulatif des dernières entrées journal de tous vos patients',
+          en: 'The dietitian dashboard now shows a summary of the latest journal entries across all your patients'
+        }
+      }
+    ]
+  },
   '5.16.0': {
     version: '5.16.0',
     date: '2026-02-03',

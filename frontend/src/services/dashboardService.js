@@ -66,6 +66,15 @@ export const getAllChangelogs = async (language = 'fr', limit = 5) => {
   return response.data;
 };
 
+/**
+ * Get recent journal entries across the dietitian's patients
+ * @param {number} limit - Number of entries to return
+ */
+export const getRecentJournal = async (limit = 10) => {
+  const response = await api.get(`/dashboard/recent-journal?limit=${limit}`);
+  return response.data;
+};
+
 export default {
   getOverview,
   getRevenueChart,
@@ -73,5 +82,6 @@ export default {
   getActivityFeed,
   getActivitySummary,
   getWhatsNew,
-  getAllChangelogs
+  getAllChangelogs,
+  getRecentJournal
 };

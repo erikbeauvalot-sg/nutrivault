@@ -107,6 +107,58 @@ router.get('/recipes/:id',
   portalController.getRecipeDetail
 );
 
+// ==========================================
+// JOURNAL ROUTES
+// ==========================================
+
+/**
+ * GET /api/portal/journal — List journal entries
+ */
+router.get('/journal',
+  query('startDate').optional().isISO8601(),
+  query('endDate').optional().isISO8601(),
+  query('entry_type').optional().isIn(['food', 'symptom', 'mood', 'activity', 'note', 'other']),
+  query('mood').optional().isIn(['very_bad', 'bad', 'neutral', 'good', 'very_good']),
+  query('page').optional().isInt({ min: 1 }),
+  query('limit').optional().isInt({ min: 1, max: 100 }),
+  portalController.getJournalEntries
+);
+
+/**
+ * POST /api/portal/journal — Create journal entry
+ */
+router.post('/journal',
+  body('content').notEmpty().withMessage('Content is required'),
+  body('entry_date').optional().isISO8601(),
+  body('entry_type').optional().isIn(['food', 'symptom', 'mood', 'activity', 'note', 'other']),
+  body('mood').optional({ nullable: true }).isIn(['very_bad', 'bad', 'neutral', 'good', 'very_good']),
+  body('energy_level').optional({ nullable: true }).isInt({ min: 1, max: 5 }),
+  body('is_private').optional().isBoolean(),
+  portalController.createJournalEntry
+);
+
+/**
+ * PUT /api/portal/journal/:id — Update journal entry
+ */
+router.put('/journal/:id',
+  param('id').isUUID(),
+  body('content').optional().notEmpty(),
+  body('entry_date').optional().isISO8601(),
+  body('entry_type').optional().isIn(['food', 'symptom', 'mood', 'activity', 'note', 'other']),
+  body('mood').optional({ nullable: true }).isIn(['very_bad', 'bad', 'neutral', 'good', 'very_good']),
+  body('energy_level').optional({ nullable: true }).isInt({ min: 1, max: 5 }),
+  body('is_private').optional().isBoolean(),
+  portalController.updateJournalEntry
+);
+
+/**
+ * DELETE /api/portal/journal/:id — Delete journal entry
+ */
+router.delete('/journal/:id',
+  param('id').isUUID(),
+  portalController.deleteJournalEntry
+);
+
 /**
  * PUT /api/portal/theme — Change theme
  */

@@ -375,6 +375,158 @@ exports.updateTheme = async (req, res, next) => {
   }
 };
 
+// =============================================
+// JOURNAL ENDPOINTS
+// =============================================
+
+/**
+ * GET /api/portal/journal — List own journal entries
+ */
+exports.getJournalEntries = async (req, res, next) => {
+  try {
+    const { startDate, endDate, entry_type, mood, page = 1, limit = 50 } = req.query;
+
+    const where = { patient_id: req.patient.id };
+
+    if (startDate || endDate) {
+      where.entry_date = {};
+      if (startDate) where.entry_date[Op.gte] = startDate;
+      if (endDate) where.entry_date[Op.lte] = endDate;
+    }
+    if (entry_type) where.entry_type = entry_type;
+    if (mood) where.mood = mood;
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const { count, rows } = await db.JournalEntry.findAndCountAll({
+      where,
+      include: [{
+        model: db.JournalComment,
+        as: 'comments',
+        include: [{
+          model: db.User,
+          as: 'author',
+          attributes: ['id', 'first_name', 'last_name']
+        }],
+        order: [['created_at', 'ASC']]
+      }],
+      order: [['entry_date', 'DESC'], ['created_at', 'DESC']],
+      limit: parseInt(limit),
+      offset
+    });
+
+    res.json({
+      success: true,
+      data: rows,
+      pagination: {
+        total: count,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(count / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/portal/journal — Create a journal entry
+ */
+exports.createJournalEntry = async (req, res, next) => {
+  try {
+    const { entry_date, entry_type, title, content, mood, energy_level, tags, is_private } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ success: false, error: 'Content is required' });
+    }
+
+    const entry = await db.JournalEntry.create({
+      patient_id: req.patient.id,
+      entry_date: entry_date || new Date().toISOString().split('T')[0],
+      entry_type: entry_type || 'note',
+      title: title || null,
+      content: content.trim(),
+      mood: mood || null,
+      energy_level: energy_level || null,
+      tags: tags || null,
+      is_private: is_private || false
+    });
+
+    res.status(201).json({ success: true, data: entry });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/portal/journal/:id — Update own journal entry
+ */
+exports.updateJournalEntry = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const entry = await db.JournalEntry.findOne({
+      where: { id, patient_id: req.patient.id }
+    });
+
+    if (!entry) {
+      return res.status(404).json({ success: false, error: 'Journal entry not found' });
+    }
+
+    const { entry_date, entry_type, title, content, mood, energy_level, tags, is_private } = req.body;
+
+    const updateData = {};
+    if (entry_date !== undefined) updateData.entry_date = entry_date;
+    if (entry_type !== undefined) updateData.entry_type = entry_type;
+    if (title !== undefined) updateData.title = title;
+    if (content !== undefined) updateData.content = content;
+    if (mood !== undefined) updateData.mood = mood;
+    if (energy_level !== undefined) updateData.energy_level = energy_level;
+    if (tags !== undefined) updateData.tags = tags;
+    if (is_private !== undefined) updateData.is_private = is_private;
+
+    await entry.update(updateData);
+
+    const updated = await db.JournalEntry.findByPk(id, {
+      include: [{
+        model: db.JournalComment,
+        as: 'comments',
+        include: [{
+          model: db.User,
+          as: 'author',
+          attributes: ['id', 'first_name', 'last_name']
+        }]
+      }]
+    });
+
+    res.json({ success: true, data: updated });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/portal/journal/:id — Soft-delete own journal entry
+ */
+exports.deleteJournalEntry = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const entry = await db.JournalEntry.findOne({
+      where: { id, patient_id: req.patient.id }
+    });
+
+    if (!entry) {
+      return res.status(404).json({ success: false, error: 'Journal entry not found' });
+    }
+
+    await entry.destroy();
+
+    res.json({ success: true, message: 'Journal entry deleted' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 /**
  * POST /api/portal/set-password — Set password from invitation token (public)
  */

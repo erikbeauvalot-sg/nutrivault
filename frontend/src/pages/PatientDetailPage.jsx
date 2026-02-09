@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import useModalParam from '../hooks/useModalParam';
 import { Container, Row, Col, Card, Button, Badge, Alert, Spinner, Dropdown, Modal, Form, InputGroup } from 'react-bootstrap';
 import ResponsiveTabs, { Tab } from '../components/ResponsiveTabs';
@@ -39,6 +39,7 @@ import visitService from '../services/visitService';
 import * as recipeService from '../services/recipeService';
 import userService from '../services/userService';
 import PortalStatusCard from '../components/PortalStatusCard';
+import PatientJournalTab from '../components/PatientJournalTab';
 import './PatientDetailPage.css';
 
 const PatientDetailPage = () => {
@@ -46,6 +47,7 @@ const PatientDetailPage = () => {
   const { user } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const getStatusText = (status) => {
     const statusMap = {
@@ -64,7 +66,7 @@ const PatientDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('basic-info');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'basic-info');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -1148,7 +1150,12 @@ const PatientDetailPage = () => {
                 )}
               </Tab>
 
-              {/* 7. Recipes Tab */}
+              {/* 7. Journal Tab */}
+              <Tab eventKey="journal" title={`📓 ${t('journal.tab', 'Journal')}`}>
+                <PatientJournalTab patientId={id} />
+              </Tab>
+
+              {/* 8. Recipes Tab */}
               <Tab eventKey="recipes" title={`🍽️ ${t('recipes.title', 'Recettes')} (${patientRecipes.length})`}>
                 <Card>
                   <Card.Header>

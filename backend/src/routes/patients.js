@@ -467,6 +467,54 @@ router.delete(
 );
 
 // =============================================
+// JOURNAL ROUTES (Dietitian-facing)
+// =============================================
+
+const journalController = require('../controllers/journalController');
+
+/**
+ * GET /api/patients/:patientId/journal - View patient's journal entries
+ * Requires: patients.read permission
+ */
+router.get(
+  '/:patientId/journal',
+  authenticate,
+  requirePermission('patients.read'),
+  param('patientId').isUUID().withMessage('Invalid patient ID'),
+  validate,
+  journalController.getPatientJournal
+);
+
+/**
+ * POST /api/patients/:patientId/journal/:entryId/comments - Add comment to journal entry
+ * Requires: patients.read permission (dietitians commenting)
+ */
+router.post(
+  '/:patientId/journal/:entryId/comments',
+  authenticate,
+  requirePermission('patients.read'),
+  param('patientId').isUUID().withMessage('Invalid patient ID'),
+  param('entryId').isUUID().withMessage('Invalid entry ID'),
+  body('content').notEmpty().withMessage('Content is required'),
+  validate,
+  journalController.addComment
+);
+
+/**
+ * DELETE /api/patients/:patientId/journal/comments/:commentId - Delete own comment
+ * Requires: patients.read permission
+ */
+router.delete(
+  '/:patientId/journal/comments/:commentId',
+  authenticate,
+  requirePermission('patients.read'),
+  param('patientId').isUUID().withMessage('Invalid patient ID'),
+  param('commentId').isUUID().withMessage('Invalid comment ID'),
+  validate,
+  journalController.deleteComment
+);
+
+// =============================================
 // EMAIL LOG ROUTES
 // =============================================
 

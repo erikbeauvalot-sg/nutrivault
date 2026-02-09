@@ -6,6 +6,8 @@
 const dashboardStatsService = require('../services/dashboardStats.service');
 const activityFeedService = require('../services/activityFeed.service');
 const whatsNewService = require('../services/whatsNew.service');
+const { getScopedPatientIds } = require('../helpers/scopeHelper');
+const db = require('../../../models');
 
 /**
  * Get practice overview KPIs
@@ -157,6 +159,64 @@ const getAllChangelogs = async (req, res) => {
   }
 };
 
+/**
+ * Get recent journal entries across the dietitian's patients
+ * GET /api/dashboard/recent-journal?limit=10
+ */
+const getRecentJournal = async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    const patientIds = await getScopedPatientIds(req.user);
+
+    if (patientIds !== null && patientIds.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const where = { is_private: false };
+    if (patientIds !== null) {
+      where.patient_id = { [db.Sequelize.Op.in]: patientIds };
+    }
+
+    const entries = await db.JournalEntry.findAll({
+      where,
+      order: [['entry_date', 'DESC'], ['created_at', 'DESC']],
+      limit: parseInt(limit, 10),
+      include: [
+        {
+          model: db.Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name']
+        },
+        {
+          model: db.JournalComment,
+          as: 'comments',
+          attributes: ['id']
+        }
+      ]
+    });
+
+    const data = entries.map(e => ({
+      id: e.id,
+      patient_id: e.patient_id,
+      patient_name: e.patient ? `${e.patient.first_name} ${e.patient.last_name}` : '—',
+      entry_date: e.entry_date,
+      entry_type: e.entry_type,
+      title: e.title,
+      content: e.content?.substring(0, 120) + (e.content?.length > 120 ? '...' : ''),
+      mood: e.mood,
+      energy_level: e.energy_level,
+      tags: e.tags,
+      comment_count: e.comments ? e.comments.length : 0,
+      created_at: e.created_at
+    }));
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error fetching recent journal:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch recent journal entries' });
+  }
+};
+
 module.exports = {
   getOverview,
   getRevenueChart,
@@ -164,5 +224,6 @@ module.exports = {
   getActivityFeed,
   getActivitySummary,
   getWhatsNew,
-  getAllChangelogs
+  getAllChangelogs,
+  getRecentJournal
 };

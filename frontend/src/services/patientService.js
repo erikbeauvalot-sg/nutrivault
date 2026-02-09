@@ -104,6 +104,32 @@ export const reactivatePortal = async (patientId) => {
   return extractData(response);
 };
 
+// =============================================
+// Journal (Dietitian side)
+// =============================================
+
+export const getPatientJournal = async (patientId, params = {}) => {
+  const query = new URLSearchParams();
+  if (params.startDate) query.append('startDate', params.startDate);
+  if (params.endDate) query.append('endDate', params.endDate);
+  if (params.entry_type) query.append('entry_type', params.entry_type);
+  if (params.mood) query.append('mood', params.mood);
+  if (params.page) query.append('page', params.page);
+  if (params.limit) query.append('limit', params.limit);
+  const response = await api.get(`/patients/${patientId}/journal?${query.toString()}`);
+  return response.data;
+};
+
+export const addJournalComment = async (patientId, entryId, data) => {
+  const response = await api.post(`/patients/${patientId}/journal/${entryId}/comments`, data);
+  return extractData(response);
+};
+
+export const deleteJournalComment = async (patientId, commentId) => {
+  const response = await api.delete(`/patients/${patientId}/journal/comments/${commentId}`);
+  return extractData(response);
+};
+
 export const resendPortalInvitation = async (patientId) => {
   const response = await api.post(`/patients/${patientId}/portal/resend`);
   return extractData(response);

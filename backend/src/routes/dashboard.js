@@ -20,6 +20,7 @@ router.get('/activity', dashboardController.getActivityFeed);
 router.get('/activity-summary', dashboardController.getActivitySummary);
 router.get('/whats-new', dashboardController.getWhatsNew);
 router.get('/changelogs', dashboardController.getAllChangelogs);
+router.get('/recent-journal', dashboardController.getRecentJournal);
 
 // Task endpoints
 router.get('/tasks', taskController.getTasks);

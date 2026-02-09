@@ -976,7 +976,9 @@
       "measureAlert": "Alerte mesure",
       "invoiceCreated": "Facture créée",
       "invoiceOverdue": "Facture en retard"
-    }
+    },
+    "recentJournal": "Journal des patients",
+    "noJournalEntries": "Aucune entrée récente dans les journaux"
   },
   "billing": {
     "title": "Gestion de la facturation",
@@ -2968,6 +2970,7 @@
       "home": "Accueil",
       "measures": "Mes mesures",
       "visits": "Mes consultations",
+      "journal": "Mon journal",
       "documents": "Mes documents",
       "recipes": "Mes recettes",
       "profile": "Mon profil"
@@ -2976,6 +2979,8 @@
     "recentMeasures": "Mesures récentes",
     "recentVisits": "Consultations récentes",
     "recentDocuments": "Documents récents",
+    "recentJournal": "Journal récent",
+    "noJournal": "Aucune entrée dans votre journal",
     "recentRecipes": "Recettes récentes",
     "noMeasures": "Aucune mesure enregistrée",
     "noVisits": "Aucune consultation",
@@ -3079,6 +3084,60 @@
     "activeSince": "Actif depuis",
     "lastLogin": "Dernière connexion",
     "reactivate": "Réactiver le portail",
-    "reactivated": "Portail réactivé."
+    "reactivated": "Portail réactivé.",
+    "journal": {
+      "title": "Mon journal de suivi",
+      "newEntry": "Nouvelle entrée",
+      "editEntry": "Modifier l'entrée",
+      "date": "Date",
+      "entryType": "Type",
+      "titleLabel": "Titre",
+      "titlePlaceholder": "Titre court...",
+      "content": "Contenu",
+      "contentPlaceholder": "Décrivez votre journée, vos repas, vos ressentis...",
+      "moodLabel": "Humeur",
+      "energyLabel": "Énergie",
+      "tags": "Tags",
+      "tagsPlaceholder": "Ajouter un tag...",
+      "private": "Entrée privée",
+      "privateHint": "Les entrées privées ne sont pas visibles par votre diététicien(ne)",
+      "noEntries": "Aucune entrée dans votre journal",
+      "noEntriesHint": "Commencez à écrire pour suivre votre alimentation, vos symptômes et votre bien-être",
+      "loadError": "Erreur lors du chargement du journal",
+      "saveError": "Erreur lors de l'enregistrement",
+      "created": "Entrée ajoutée",
+      "updated": "Entrée mise à jour",
+      "deleted": "Entrée supprimée",
+      "deleteError": "Erreur lors de la suppression",
+      "deleteConfirm": "Supprimer cette entrée ?",
+      "deleteConfirmMessage": "Cette action est irréversible. Voulez-vous vraiment supprimer cette entrée de votre journal ?",
+      "comments": "Commentaires",
+      "type": {
+        "food": "Alimentation",
+        "symptom": "Symptôme",
+        "mood": "Humeur",
+        "activity": "Activité",
+        "note": "Note",
+        "other": "Autre"
+      },
+      "mood": {
+        "very_bad": "Très mal",
+        "bad": "Mal",
+        "neutral": "Neutre",
+        "good": "Bien",
+        "very_good": "Très bien"
+      }
+    }
+  },
+  "journal": {
+    "tab": "Journal",
+    "loadError": "Erreur lors du chargement du journal",
+    "noEntries": "Aucune entrée dans le journal de ce patient",
+    "noEntriesHint": "Le patient n'a pas encore écrit dans son journal, ou toutes les entrées sont privées.",
+    "addComment": "Ajouter un commentaire...",
+    "commentAdded": "Commentaire ajouté",
+    "commentError": "Erreur lors de l'ajout du commentaire",
+    "commentDeleted": "Commentaire supprimé",
+    "commentDeleteError": "Erreur lors de la suppression"
   }
 }

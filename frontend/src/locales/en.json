@@ -948,7 +948,9 @@
       "measureAlert": "Measure alert",
       "invoiceCreated": "Invoice created",
       "invoiceOverdue": "Invoice overdue"
-    }
+    },
+    "recentJournal": "Patient Journals",
+    "noJournalEntries": "No recent journal entries"
   },
   "billing": {
     "title": "Billing Management",
@@ -2814,6 +2816,7 @@
       "home": "Home",
       "measures": "My measures",
       "visits": "My visits",
+      "journal": "My journal",
       "documents": "My documents",
       "recipes": "My recipes",
       "profile": "My profile"
@@ -2822,6 +2825,8 @@
     "recentMeasures": "Recent measures",
     "recentVisits": "Recent visits",
     "recentDocuments": "Recent documents",
+    "recentJournal": "Recent journal",
+    "noJournal": "No journal entries yet",
     "recentRecipes": "Recent recipes",
     "noMeasures": "No measures recorded",
     "noVisits": "No visits",
@@ -2925,6 +2930,60 @@
     "activeSince": "Active since",
     "lastLogin": "Last login",
     "reactivate": "Reactivate portal",
-    "reactivated": "Portal reactivated."
+    "reactivated": "Portal reactivated.",
+    "journal": {
+      "title": "My Follow-up Journal",
+      "newEntry": "New entry",
+      "editEntry": "Edit entry",
+      "date": "Date",
+      "entryType": "Type",
+      "titleLabel": "Title",
+      "titlePlaceholder": "Short title...",
+      "content": "Content",
+      "contentPlaceholder": "Describe your day, meals, how you feel...",
+      "moodLabel": "Mood",
+      "energyLabel": "Energy",
+      "tags": "Tags",
+      "tagsPlaceholder": "Add a tag...",
+      "private": "Private entry",
+      "privateHint": "Private entries are not visible to your dietitian",
+      "noEntries": "No entries in your journal",
+      "noEntriesHint": "Start writing to track your food, symptoms and well-being",
+      "loadError": "Error loading journal",
+      "saveError": "Error saving entry",
+      "created": "Entry added",
+      "updated": "Entry updated",
+      "deleted": "Entry deleted",
+      "deleteError": "Error deleting entry",
+      "deleteConfirm": "Delete this entry?",
+      "deleteConfirmMessage": "This action cannot be undone. Are you sure you want to delete this journal entry?",
+      "comments": "Comments",
+      "type": {
+        "food": "Food",
+        "symptom": "Symptom",
+        "mood": "Mood",
+        "activity": "Activity",
+        "note": "Note",
+        "other": "Other"
+      },
+      "mood": {
+        "very_bad": "Very bad",
+        "bad": "Bad",
+        "neutral": "Neutral",
+        "good": "Good",
+        "very_good": "Very good"
+      }
+    }
+  },
+  "journal": {
+    "tab": "Journal",
+    "loadError": "Error loading journal",
+    "noEntries": "No entries in this patient's journal",
+    "noEntriesHint": "The patient hasn't written in their journal yet, or all entries are private.",
+    "addComment": "Add a comment...",
+    "commentAdded": "Comment added",
+    "commentError": "Error adding comment",
+    "commentDeleted": "Comment deleted",
+    "commentDeleteError": "Error deleting comment"
   }
 }

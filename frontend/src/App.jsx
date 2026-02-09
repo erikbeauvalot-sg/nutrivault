@@ -66,6 +66,7 @@ const PatientPortalDocuments = lazy(() => import('./pages/portal/PatientPortalDo
 const PatientPortalRecipes = lazy(() => import('./pages/portal/PatientPortalRecipes'));
 const PatientPortalRecipeDetail = lazy(() => import('./pages/portal/PatientPortalRecipeDetail'));
 const PatientPortalProfile = lazy(() => import('./pages/portal/PatientPortalProfile'));
+const PatientPortalJournal = lazy(() => import('./pages/portal/PatientPortalJournal'));
 const SetPasswordPage = lazy(() => import('./pages/portal/SetPasswordPage'));
 
 // Loading fallback component
@@ -482,6 +483,7 @@ function App() {
       <Route path="/portal/measures" element={<PatientProtectedRoute><PatientPortalMeasures /></PatientProtectedRoute>} />
       <Route path="/portal/visits" element={<PatientProtectedRoute><PatientPortalVisits /></PatientProtectedRoute>} />
       <Route path="/portal/documents" element={<PatientProtectedRoute><PatientPortalDocuments /></PatientProtectedRoute>} />
+      <Route path="/portal/journal" element={<PatientProtectedRoute><PatientPortalJournal /></PatientProtectedRoute>} />
       <Route path="/portal/recipes" element={<PatientProtectedRoute><PatientPortalRecipes /></PatientProtectedRoute>} />
       <Route path="/portal/recipes/:id" element={<PatientProtectedRoute><PatientPortalRecipeDetail /></PatientProtectedRoute>} />
       <Route path="/portal/profile" element={<PatientProtectedRoute><PatientPortalProfile /></PatientProtectedRoute>} />

@@ -16,6 +16,7 @@ const PatientPortalSidebar = ({ isOpen, onClose }) => {
     { path: '/portal', icon: '🏠', label: t('portal.nav.home', 'Accueil'), exact: true },
     { path: '/portal/measures', icon: '📊', label: t('portal.nav.measures', 'Mes mesures') },
     { path: '/portal/visits', icon: '📋', label: t('portal.nav.visits', 'Mes consultations') },
+    { path: '/portal/journal', icon: '📓', label: t('portal.nav.journal', 'Mon journal') },
     { path: '/portal/documents', icon: '📄', label: t('portal.nav.documents', 'Mes documents') },
     { path: '/portal/recipes', icon: '🍽️', label: t('portal.nav.recipes', 'Mes recettes') },
     { path: '/portal/profile', icon: '👤', label: t('portal.nav.profile', 'Mon profil') },

@@ -59,6 +59,8 @@ db.PageView = require('./PageView')(sequelize, DataTypes);
 db.Theme = require('./Theme')(sequelize, DataTypes);
 db.UserSupervisor = require('./UserSupervisor')(sequelize, DataTypes);
 db.PatientDietitian = require('./PatientDietitian')(sequelize, DataTypes);
+db.JournalEntry = require('./JournalEntry')(sequelize, DataTypes);
+db.JournalComment = require('./JournalComment')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -854,6 +856,34 @@ db.User.belongsToMany(db.Patient, {
   foreignKey: 'dietitian_id',
   otherKey: 'patient_id',
   as: 'linked_patients'
+});
+
+// JournalEntry associations
+db.JournalEntry.belongsTo(db.Patient, {
+  foreignKey: 'patient_id',
+  as: 'patient'
+});
+db.Patient.hasMany(db.JournalEntry, {
+  foreignKey: 'patient_id',
+  as: 'journal_entries'
+});
+
+db.JournalEntry.hasMany(db.JournalComment, {
+  foreignKey: 'journal_entry_id',
+  as: 'comments'
+});
+db.JournalComment.belongsTo(db.JournalEntry, {
+  foreignKey: 'journal_entry_id',
+  as: 'journalEntry'
+});
+
+db.JournalComment.belongsTo(db.User, {
+  foreignKey: 'user_id',
+  as: 'author'
+});
+db.User.hasMany(db.JournalComment, {
+  foreignKey: 'user_id',
+  as: 'journal_comments'
 });
 
 module.exports = db;

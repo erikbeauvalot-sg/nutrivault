@@ -70,6 +70,7 @@ const PatientPortalDashboard = () => {
   const [documents, setDocuments] = useState([]);
   const [recipes, setRecipes] = useState([]);
   const [error, setError] = useState('');
+  const [journalEntries, setJournalEntries] = useState([]);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [previewDoc, setPreviewDoc] = useState(null);
 
@@ -93,16 +94,18 @@ const PatientPortalDashboard = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const [measuresData, visitsData, docsData, recipesData] = await Promise.all([
+        const [measuresData, visitsData, docsData, recipesData, journalData] = await Promise.all([
           portalService.getMeasures().catch(() => ({ measures: [] })),
           portalService.getVisits().catch(() => []),
           portalService.getDocuments().catch(() => []),
-          portalService.getRecipes().catch(() => [])
+          portalService.getRecipes().catch(() => []),
+          portalService.getJournalEntries({ limit: 3 }).catch(() => ({ data: [] }))
         ]);
         setAllMeasures(measuresData?.measures || []);
         setVisits((visitsData || []).slice(0, 5));
         setDocuments((docsData || []).slice(0, 5));
         setRecipes((recipesData || []).slice(0, 5));
+        setJournalEntries((journalData?.data || []).slice(0, 3));
       } catch (err) {
         setError(t('portal.loadError', 'Erreur lors du chargement des données'));
       } finally {
@@ -215,6 +218,40 @@ const PatientPortalDashboard = () => {
                       <span className="text-muted">{new Date(d.created_at).toLocaleDateString('fr-FR')}</span>
                     </li>
                   ))}
+                </ul>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+
+        {/* Journal */}
+        <Col md={6}>
+          <Card className="h-100">
+            <Card.Header className="d-flex justify-content-between align-items-center">
+              <span>{'\uD83D\uDCD3'} {t('portal.recentJournal', 'Journal récent')}</span>
+              <Link to="/portal/journal" className="btn btn-sm btn-outline-primary">
+                {t('common.viewAll', 'Voir tout')}
+              </Link>
+            </Card.Header>
+            <Card.Body>
+              {journalEntries.length === 0 ? (
+                <p className="text-muted">{t('portal.noJournal', 'Aucune entrée dans votre journal')}</p>
+              ) : (
+                <ul className="list-unstyled mb-0">
+                  {journalEntries.map(entry => {
+                    const moodEmojis = { very_bad: '\uD83D\uDE2B', bad: '\uD83D\uDE1F', neutral: '\uD83D\uDE10', good: '\uD83D\uDE42', very_good: '\uD83D\uDE04' };
+                    return (
+                      <li key={entry.id}>
+                        <Link to="/portal/journal" className="d-flex justify-content-between py-2 border-bottom text-decoration-none text-body" style={{ cursor: 'pointer' }}>
+                          <span>
+                            {entry.mood && moodEmojis[entry.mood] ? `${moodEmojis[entry.mood]} ` : ''}
+                            {entry.title || (entry.content?.substring(0, 50) + (entry.content?.length > 50 ? '...' : ''))}
+                          </span>
+                          <small className="text-muted">{new Date(entry.entry_date + 'T00:00:00').toLocaleDateString('fr-FR')}</small>
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </Card.Body>

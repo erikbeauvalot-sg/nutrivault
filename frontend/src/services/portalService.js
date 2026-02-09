@@ -62,6 +62,37 @@ export const updateTheme = async (themeId) => {
   return extractData(response);
 };
 
+// =============================================
+// Journal
+// =============================================
+
+export const getJournalEntries = async (params = {}) => {
+  const query = new URLSearchParams();
+  if (params.startDate) query.append('startDate', params.startDate);
+  if (params.endDate) query.append('endDate', params.endDate);
+  if (params.entry_type) query.append('entry_type', params.entry_type);
+  if (params.mood) query.append('mood', params.mood);
+  if (params.page) query.append('page', params.page);
+  if (params.limit) query.append('limit', params.limit);
+  const response = await api.get(`/portal/journal?${query.toString()}`);
+  return response.data;
+};
+
+export const createJournalEntry = async (data) => {
+  const response = await api.post('/portal/journal', data);
+  return extractData(response);
+};
+
+export const updateJournalEntry = async (id, data) => {
+  const response = await api.put(`/portal/journal/${id}`, data);
+  return extractData(response);
+};
+
+export const deleteJournalEntry = async (id) => {
+  const response = await api.delete(`/portal/journal/${id}`);
+  return extractData(response);
+};
+
 export const setPassword = async (token, password) => {
   const response = await api.post('/portal/set-password', { token, password });
   return extractData(response);
