@@ -105,6 +105,16 @@ db.User.hasMany(db.Patient, {
   as: 'assigned_patients'
 });
 
+// Patient - User (portal account) relationship
+db.Patient.belongsTo(db.User, {
+  foreignKey: 'user_id',
+  as: 'portalUser'
+});
+db.User.hasOne(db.Patient, {
+  foreignKey: 'user_id',
+  as: 'patient_record'
+});
+
 // Patient - PatientTag relationship (tags for patient segmentation)
 db.PatientTag.belongsTo(db.Patient, {
   foreignKey: 'patient_id',

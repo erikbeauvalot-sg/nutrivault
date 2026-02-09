@@ -79,3 +79,32 @@ export const deletePatient = async (id) => {
   const response = await api.delete(`/patients/${id}`);
   return extractData(response);
 };
+
+// =============================================
+// Portal Management (Dietitian side)
+// =============================================
+
+export const getPortalStatus = async (patientId) => {
+  const response = await api.get(`/patients/${patientId}/portal/status`);
+  return extractData(response);
+};
+
+export const activatePortal = async (patientId) => {
+  const response = await api.post(`/patients/${patientId}/portal/activate`);
+  return extractData(response);
+};
+
+export const deactivatePortal = async (patientId) => {
+  const response = await api.post(`/patients/${patientId}/portal/deactivate`);
+  return extractData(response);
+};
+
+export const reactivatePortal = async (patientId) => {
+  const response = await api.post(`/patients/${patientId}/portal/reactivate`);
+  return extractData(response);
+};
+
+export const resendPortalInvitation = async (patientId) => {
+  const response = await api.post(`/patients/${patientId}/portal/resend`);
+  return extractData(response);
+};

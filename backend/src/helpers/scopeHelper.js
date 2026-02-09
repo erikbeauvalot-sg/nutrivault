@@ -36,6 +36,7 @@ async function getScopedDietitianIds(user) {
     return links.map(l => l.dietitian_id);
   }
 
+  // PATIENT role has no dietitian access
   // VIEWER or unknown
   return [];
 }
@@ -47,6 +48,19 @@ async function getScopedDietitianIds(user) {
  * @returns {Promise<string[]|null>} Array of patient IDs, or null for unrestricted (ADMIN)
  */
 async function getScopedPatientIds(user) {
+  if (!user || !user.role) return [];
+
+  const roleName = user.role.name || user.role;
+
+  // PATIENT: can only see their own patient record
+  if (roleName === 'PATIENT') {
+    const patient = await db.Patient.findOne({
+      where: { user_id: user.id },
+      attributes: ['id']
+    });
+    return patient ? [patient.id] : [];
+  }
+
   const dietitianIds = await getScopedDietitianIds(user);
 
   if (dietitianIds === null) {

@@ -327,6 +327,75 @@ router.delete(
 );
 
 /**
+ * Patient Portal Management Routes
+ */
+
+/**
+ * GET /api/patients/:id/portal/status — Get portal status for a patient
+ * Requires: patients.read permission
+ */
+router.get(
+  '/:id/portal/status',
+  authenticate,
+  requirePermission('patients.read'),
+  param('id').isUUID().withMessage('Patient ID must be a valid UUID'),
+  validate,
+  patientController.getPortalStatus
+);
+
+/**
+ * POST /api/patients/:id/portal/activate — Activate patient portal
+ * Requires: patients.update permission
+ */
+router.post(
+  '/:id/portal/activate',
+  authenticate,
+  requirePermission('patients.update'),
+  param('id').isUUID().withMessage('Patient ID must be a valid UUID'),
+  validate,
+  patientController.activatePortal
+);
+
+/**
+ * POST /api/patients/:id/portal/deactivate — Deactivate patient portal
+ * Requires: patients.update permission
+ */
+router.post(
+  '/:id/portal/deactivate',
+  authenticate,
+  requirePermission('patients.update'),
+  param('id').isUUID().withMessage('Patient ID must be a valid UUID'),
+  validate,
+  patientController.deactivatePortal
+);
+
+/**
+ * POST /api/patients/:id/portal/reactivate — Reactivate patient portal
+ * Requires: patients.update permission
+ */
+router.post(
+  '/:id/portal/reactivate',
+  authenticate,
+  requirePermission('patients.update'),
+  param('id').isUUID().withMessage('Patient ID must be a valid UUID'),
+  validate,
+  patientController.reactivatePortal
+);
+
+/**
+ * POST /api/patients/:id/portal/resend — Resend portal invitation
+ * Requires: patients.update permission
+ */
+router.post(
+  '/:id/portal/resend',
+  authenticate,
+  requirePermission('patients.update'),
+  param('id').isUUID().withMessage('Patient ID must be a valid UUID'),
+  validate,
+  patientController.resendInvitation
+);
+
+/**
  * Patient CRUD Routes
  * NOTE: These parameterized routes come AFTER specific routes
  */

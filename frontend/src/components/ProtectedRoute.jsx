@@ -26,6 +26,12 @@ const ProtectedRoute = ({ children, requiredPermission = null }) => {
     return <Navigate to="/login" replace />;
   }
 
+  // Redirect PATIENT users to their portal
+  const roleName = typeof user?.role === 'string' ? user.role : user?.role?.name;
+  if (roleName === 'PATIENT') {
+    return <Navigate to="/portal" replace />;
+  }
+
   // Check permission if required (optional - for future use)
   if (requiredPermission && user) {
     const hasPermission = user.permissions?.includes(requiredPermission);

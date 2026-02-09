@@ -6,6 +6,7 @@
  */
 
 const patientService = require('../services/patient.service');
+const portalService = require('../services/portal.service');
 const db = require('../../../models');
 const { ensurePatientDietitianLink, canAccessPatient } = require('../helpers/scopeHelper');
 
@@ -284,6 +285,82 @@ exports.removePatientDietitian = async (req, res, next) => {
       message: 'Dietitian link removed'
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+// =============================================
+// PORTAL MANAGEMENT (Dietitian endpoints)
+// =============================================
+
+/**
+ * GET /api/patients/:id/portal/status — Get portal status
+ */
+exports.getPortalStatus = async (req, res, next) => {
+  try {
+    const status = await portalService.getPortalStatus(req.params.id);
+    res.json({ success: true, data: status });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/patients/:id/portal/activate — Activate portal
+ */
+exports.activatePortal = async (req, res, next) => {
+  try {
+    const status = await portalService.activatePortal(req.params.id, req.user.id);
+    res.json({ success: true, data: status, message: 'Portal activated. Invitation email sent.' });
+  } catch (error) {
+    if (error.message.includes('already') || error.message.includes('must have') || error.message.includes('associated')) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+    next(error);
+  }
+};
+
+/**
+ * POST /api/patients/:id/portal/deactivate — Deactivate portal
+ */
+exports.deactivatePortal = async (req, res, next) => {
+  try {
+    const status = await portalService.deactivatePortal(req.params.id);
+    res.json({ success: true, data: status, message: 'Portal deactivated.' });
+  } catch (error) {
+    if (error.message.includes('not active')) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+    next(error);
+  }
+};
+
+/**
+ * POST /api/patients/:id/portal/reactivate — Reactivate portal
+ */
+exports.reactivatePortal = async (req, res, next) => {
+  try {
+    const status = await portalService.reactivatePortal(req.params.id);
+    res.json({ success: true, data: status, message: 'Portal reactivated.' });
+  } catch (error) {
+    if (error.message.includes('never activated') || error.message.includes('already active')) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
+    next(error);
+  }
+};
+
+/**
+ * POST /api/patients/:id/portal/resend — Resend invitation
+ */
+exports.resendInvitation = async (req, res, next) => {
+  try {
+    const status = await portalService.resendInvitation(req.params.id);
+    res.json({ success: true, data: status, message: 'Invitation email resent.' });
+  } catch (error) {
+    if (error.message.includes('not active') || error.message.includes('does not have')) {
+      return res.status(400).json({ success: false, error: error.message });
+    }
     next(error);
   }
 };

@@ -138,7 +138,8 @@ async function seedBaseData() {
   const roles = await db.Role.bulkCreate([
     { name: 'ADMIN', description: 'Administrator with full access', is_active: true },
     { name: 'DIETITIAN', description: 'Dietitian with patient access', is_active: true },
-    { name: 'ASSISTANT', description: 'Assistant with limited access', is_active: true }
+    { name: 'ASSISTANT', description: 'Assistant with limited access', is_active: true },
+    { name: 'PATIENT', description: 'Patient with portal access', is_active: true }
   ]);
 
   // Create permissions (using actual schema: code, description, resource, action)
@@ -227,7 +228,14 @@ async function seedBaseData() {
     { code: 'recipes.share', description: 'Share recipes', resource: 'recipes', action: 'share' },
 
     // Settings permissions
-    { code: 'settings.manage', description: 'Manage settings', resource: 'settings', action: 'manage' }
+    { code: 'settings.manage', description: 'Manage settings', resource: 'settings', action: 'manage' },
+
+    // Portal permissions (PATIENT role)
+    { code: 'portal.own_measures', description: 'View own measures', resource: 'portal', action: 'own_measures' },
+    { code: 'portal.own_visits', description: 'View own visits', resource: 'portal', action: 'own_visits' },
+    { code: 'portal.own_documents', description: 'View own documents', resource: 'portal', action: 'own_documents' },
+    { code: 'portal.own_recipes', description: 'View own recipes', resource: 'portal', action: 'own_recipes' },
+    { code: 'portal.own_profile', description: 'View and update own profile', resource: 'portal', action: 'own_profile' }
   ];
   const permissions = await db.Permission.bulkCreate(permissionData);
 
@@ -276,6 +284,19 @@ async function seedBaseData() {
       permission_id: permissionMap[code]
     }));
   await db.RolePermission.bulkCreate(assistantPermissions);
+
+  // Assign portal permissions to PATIENT role
+  const patientPermissionCodes = [
+    'portal.own_measures', 'portal.own_visits', 'portal.own_documents',
+    'portal.own_recipes', 'portal.own_profile'
+  ];
+  const patientPermissions = patientPermissionCodes
+    .filter(code => permissionMap[code])
+    .map(code => ({
+      role_id: roles[3].id,
+      permission_id: permissionMap[code]
+    }));
+  await db.RolePermission.bulkCreate(patientPermissions);
 
   return { roles, permissions };
 }

@@ -55,6 +55,7 @@ function createTestApp() {
   const emailLogRoutes = require('../../src/routes/emailLogs');
   const schedulerRoutes = require('../../src/routes/scheduler');
   const googleCalendarRoutes = require('../../src/routes/googleCalendar');
+  const portalRoutes = require('../../src/routes/portal');
 
   // Mount routes
   app.use('/api/auth', authRoutes);
@@ -90,6 +91,7 @@ function createTestApp() {
   app.use('/api/email-logs', emailLogRoutes);
   app.use('/api/scheduler', schedulerRoutes);
   app.use('/api/calendar', googleCalendarRoutes);
+  app.use('/api/portal', portalRoutes);
 
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(__dirname, '../../../uploads')));

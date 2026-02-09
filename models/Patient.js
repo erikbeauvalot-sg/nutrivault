@@ -78,6 +78,33 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       unique: true,
       comment: 'Unique token for unsubscribe link'
+    },
+    // Portal fields
+    user_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      unique: true,
+      references: {
+        model: 'users',
+        key: 'id'
+      },
+      comment: 'Linked user account for patient portal access'
+    },
+    portal_invitation_token: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      unique: true,
+      comment: 'Token sent via email for portal activation'
+    },
+    portal_invitation_expires_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Expiry date for portal invitation token'
+    },
+    portal_activated_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Date when patient first set their password and activated portal'
     }
   }, {
     tableName: 'patients',

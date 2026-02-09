@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       unique: true,
       validate: {
-        isIn: [['ADMIN', 'DIETITIAN', 'ASSISTANT', 'VIEWER']]
+        isIn: [['ADMIN', 'DIETITIAN', 'ASSISTANT', 'VIEWER', 'PATIENT']]
       }
     },
     description: {

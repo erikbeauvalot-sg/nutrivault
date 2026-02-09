@@ -11,6 +11,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import PatientProtectedRoute from './components/PatientProtectedRoute';
 import usePageTracking from './hooks/usePageTracking';
 
 // Eager load: Login page (first page users see)
@@ -57,6 +58,16 @@ const ThemeManagementPage = lazy(() => import('./pages/ThemeManagementPage'));
 const ScheduledTasksPage = lazy(() => import('./pages/ScheduledTasksPage'));
 const DiscordWebhookPage = lazy(() => import('./pages/DiscordWebhookPage'));
 
+// Patient Portal pages
+const PatientPortalDashboard = lazy(() => import('./pages/portal/PatientPortalDashboard'));
+const PatientPortalMeasures = lazy(() => import('./pages/portal/PatientPortalMeasures'));
+const PatientPortalVisits = lazy(() => import('./pages/portal/PatientPortalVisits'));
+const PatientPortalDocuments = lazy(() => import('./pages/portal/PatientPortalDocuments'));
+const PatientPortalRecipes = lazy(() => import('./pages/portal/PatientPortalRecipes'));
+const PatientPortalRecipeDetail = lazy(() => import('./pages/portal/PatientPortalRecipeDetail'));
+const PatientPortalProfile = lazy(() => import('./pages/portal/PatientPortalProfile'));
+const SetPasswordPage = lazy(() => import('./pages/portal/SetPasswordPage'));
+
 // Loading fallback component
 const PageLoader = () => (
   <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
@@ -70,7 +81,7 @@ const PageLoader = () => (
 );
 
 function App() {
-  const { loading, isAuthenticated } = useAuth();
+  const { loading, isAuthenticated, user } = useAuth();
   usePageTracking();
 
   // Show loading spinner while checking authentication
@@ -91,7 +102,9 @@ function App() {
         <Route
           path="/login"
           element={
-            isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
+            isAuthenticated
+              ? <Navigate to={user?.role === 'PATIENT' ? '/portal' : '/dashboard'} replace />
+              : <LoginPage />
           }
         />
 
@@ -461,10 +474,22 @@ function App() {
         }
       />
 
+      {/* Patient Portal: Set Password (Public) */}
+      <Route path="/portal/set-password" element={<SetPasswordPage />} />
+
+      {/* Patient Portal Routes (Protected - PATIENT role only) */}
+      <Route path="/portal" element={<PatientProtectedRoute><PatientPortalDashboard /></PatientProtectedRoute>} />
+      <Route path="/portal/measures" element={<PatientProtectedRoute><PatientPortalMeasures /></PatientProtectedRoute>} />
+      <Route path="/portal/visits" element={<PatientProtectedRoute><PatientPortalVisits /></PatientProtectedRoute>} />
+      <Route path="/portal/documents" element={<PatientProtectedRoute><PatientPortalDocuments /></PatientProtectedRoute>} />
+      <Route path="/portal/recipes" element={<PatientProtectedRoute><PatientPortalRecipes /></PatientProtectedRoute>} />
+      <Route path="/portal/recipes/:id" element={<PatientProtectedRoute><PatientPortalRecipeDetail /></PatientProtectedRoute>} />
+      <Route path="/portal/profile" element={<PatientProtectedRoute><PatientPortalProfile /></PatientProtectedRoute>} />
+
       {/* Default Route */}
       <Route
         path="/"
-        element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />}
+        element={<Navigate to={isAuthenticated ? (user?.role === 'PATIENT' ? '/portal' : '/dashboard') : '/login'} replace />}
       />
 
       {/* Catch-all Route */}

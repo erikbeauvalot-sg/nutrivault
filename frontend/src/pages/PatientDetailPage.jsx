@@ -38,6 +38,7 @@ import * as documentService from '../services/documentService';
 import visitService from '../services/visitService';
 import * as recipeService from '../services/recipeService';
 import userService from '../services/userService';
+import PortalStatusCard from '../components/PortalStatusCard';
 import './PatientDetailPage.css';
 
 const PatientDetailPage = () => {
@@ -804,6 +805,9 @@ const PatientDetailPage = () => {
                     </Row>
                   </Card.Body>
                 </Card>
+
+                {/* Portal Status Card */}
+                <PortalStatusCard patientId={id} patientEmail={patient?.email} />
 
                 {/* Custom Fields marked as "show_in_basic_info", grouped by category */}
                 {customFieldCategories

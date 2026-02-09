@@ -34,8 +34,14 @@ const LoginPage = () => {
     setError('');
 
     try {
-      await login(data.username, data.password, data.rememberMe);
-      navigate('/dashboard');
+      const userData = await login(data.username, data.password, data.rememberMe);
+      // Redirect patients to portal, staff to dashboard
+      const roleName = typeof userData?.role === 'string' ? userData.role : userData?.role?.name;
+      if (roleName === 'PATIENT') {
+        navigate('/portal');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       setError(err.error || t('auth.invalidCredentials'));
     } finally {
@@ -64,10 +70,10 @@ const LoginPage = () => {
 
             <Form onSubmit={handleSubmit(onSubmit)}>
               <Form.Group className="mb-3" controlId="username">
-                <Form.Label>{t('auth.username')}</Form.Label>
+                <Form.Label>{t('auth.usernameOrEmail', 'Nom d\'utilisateur ou email')}</Form.Label>
                 <Form.Control
                   type="text"
-                  placeholder={t('auth.username')}
+                  placeholder={t('auth.usernameOrEmail', 'Nom d\'utilisateur ou email')}
                   {...register('username', {
                     required: t('forms.required'),
                     minLength: {

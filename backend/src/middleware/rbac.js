@@ -247,6 +247,31 @@ function requireAssignedDietitian() {
   };
 }
 
+/**
+ * Middleware: Require user is a staff member (not a PATIENT)
+ * Use this to protect staff-only routes from patient access
+ * @returns {Function} Express middleware
+ */
+function requireStaffRole() {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    if (hasRole(req.user, 'PATIENT')) {
+      return res.status(403).json({
+        success: false,
+        error: 'This resource is not accessible from the patient portal'
+      });
+    }
+
+    return next();
+  };
+}
+
 module.exports = {
   // Middleware functions
   requirePermission,
@@ -256,7 +281,8 @@ module.exports = {
   requireAnyRole,
   requireOwnerOrPermission,
   requireAssignedDietitian,
-  
+  requireStaffRole,
+
   // Helper functions
   hasPermission,
   hasRole,

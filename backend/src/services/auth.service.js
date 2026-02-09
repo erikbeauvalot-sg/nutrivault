@@ -17,8 +17,8 @@ class AuthService {
    */
   async login(username, password, rememberMe = false) {
     try {
-      // Find user with role and permissions
-      const user = await db.User.findOne({
+      // Find user by username, or by email (for patient portal login)
+      let user = await db.User.findOne({
         where: { username },
         include: [
           {
@@ -34,6 +34,27 @@ class AuthService {
           }
         ]
       });
+
+      // If not found by username, try by email (patients use their email to log in)
+      if (!user) {
+        const { Op } = db.Sequelize;
+        user = await db.User.findOne({
+          where: { email: username.trim().toLowerCase() },
+          include: [
+            {
+              model: db.Role,
+              as: 'role',
+              include: [
+                {
+                  model: db.Permission,
+                  as: 'permissions',
+                  through: { attributes: [] }
+                }
+              ]
+            }
+          ]
+        });
+      }
 
       if (!user) {
         throw new Error('Invalid credentials');

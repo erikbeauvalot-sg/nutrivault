@@ -47,6 +47,7 @@ export const AuthProvider = ({ children }) => {
       const userData = await authService.login(username, password, rememberMe);
       setUser(userData);
       setIsAuthenticated(true);
+      return userData;
     } catch (error) {
       setUser(null);
       setIsAuthenticated(false);
@@ -111,6 +112,17 @@ export const AuthProvider = ({ children }) => {
     return hasRole('ADMIN');
   };
 
+  /**
+   * Check if user is a patient
+   * @returns {boolean} True if user has PATIENT role
+   */
+  const isPatient = () => {
+    if (!user) return false;
+    // user.role can be a string (from backend login response) or an object
+    const roleName = typeof user.role === 'string' ? user.role : user.role?.name;
+    return roleName === 'PATIENT';
+  };
+
   const value = {
     user,
     loading,
@@ -120,6 +132,7 @@ export const AuthProvider = ({ children }) => {
     hasPermission,
     hasRole,
     isAdmin,
+    isPatient,
     updateUser,
   };
 

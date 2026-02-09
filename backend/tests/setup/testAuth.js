@@ -156,6 +156,46 @@ function resetCounter() {
 }
 
 /**
+ * Create a patient user with linked Patient record and portal activated
+ * @param {object} overrides - Optional field overrides
+ * @returns {object} { user, token, authHeader, patient, password }
+ */
+async function createPatientUser(overrides = {}) {
+  const db = testDb.getDb();
+
+  const patientEmail = overrides.patientEmail || generateUniqueEmail('patient');
+
+  // Create the Patient record first
+  const patient = await db.Patient.create({
+    first_name: overrides.first_name || 'TestPatient',
+    last_name: overrides.last_name || 'User',
+    email: patientEmail,
+    phone: overrides.phone || null,
+    language_preference: overrides.language_preference || 'fr',
+    is_active: true
+  });
+
+  // Create a User with PATIENT role
+  const { user, token, authHeader, password } = await createUser('PATIENT', {
+    email: patientEmail,
+    username: patientEmail,
+    first_name: overrides.first_name || 'TestPatient',
+    last_name: overrides.last_name || 'User'
+  });
+
+  // Link patient to user and set portal as activated
+  await patient.update({
+    user_id: user.id,
+    portal_activated_at: new Date()
+  });
+
+  // Reload patient to get updated fields
+  await patient.reload();
+
+  return { user, token, authHeader, patient, password };
+}
+
+/**
  * Create multiple users of different roles
  * @returns {object} Object containing admin, dietitian, and assistant users
  */
@@ -172,6 +212,7 @@ module.exports = {
   createAdmin,
   createDietitian,
   createAssistant,
+  createPatientUser,
   createAllRoleUsers,
   generateToken,
   generateExpiredToken,

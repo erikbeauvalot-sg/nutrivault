@@ -74,6 +74,10 @@ app.use('/api/public/contact', publicContactRoutes);
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
+// Patient portal routes (mixed public/protected)
+const portalRoutes = require('./routes/portal');
+app.use('/api/portal', portalRoutes);
+
 // Patient routes (protected - RBAC enforced in routes file)
 const patientRoutes = require('./routes/patients');
 app.use('/api/patients', patientRoutes);
