@@ -126,7 +126,8 @@ const DiscordWebhookPage = () => {
     recipes: t('discord.categoryRecipes', 'Recettes'),
     documents: t('discord.categoryDocuments', 'Documents'),
     billing: t('discord.categoryBilling', 'Facturation'),
-    campaigns: t('discord.categoryCampaigns', 'Campagnes')
+    campaigns: t('discord.categoryCampaigns', 'Campagnes'),
+    contact: t('discord.categoryContact', 'Contact MarionDiet')
   };
 
   if (loading) {

@@ -30,7 +30,8 @@ const AVAILABLE_EVENTS = [
   { code: 'campaigns.SEND', label: 'Envoi campagne', category: 'campaigns' },
   { code: 'campaigns.SCHEDULE', label: 'Planification campagne', category: 'campaigns' },
   { code: 'campaigns.CANCEL', label: 'Annulation campagne', category: 'campaigns' },
-  { code: 'campaigns.DELETE', label: 'Suppression campagne', category: 'campaigns' }
+  { code: 'campaigns.DELETE', label: 'Suppression campagne', category: 'campaigns' },
+  { code: 'contact.SUBMIT', label: 'Formulaire de contact', category: 'contact' }
 ];
 
 // Settings cache
@@ -91,6 +92,7 @@ function getColorForAction(action) {
     case 'SEND':     return 0xe67e22; // orange
     case 'SCHEDULE': return 0x1abc9c; // teal
     case 'CANCEL':   return 0xe74c3c; // red
+    case 'SUBMIT':   return 0xe91e63; // pink
     default:         return 0x95a5a6; // grey
   }
 }
@@ -108,7 +110,8 @@ function getActionLabel(action) {
     READ: 'Lecture',
     SEND: 'Envoi',
     SCHEDULE: 'Planification',
-    CANCEL: 'Annulation'
+    CANCEL: 'Annulation',
+    SUBMIT: 'Soumission'
   };
   return labels[action] || action;
 }
@@ -124,7 +127,8 @@ function getResourceLabel(resourceType) {
     recipes: 'Recette',
     document: 'Document',
     billing: 'Facture',
-    campaigns: 'Campagne'
+    campaigns: 'Campagne',
+    contact: 'Contact'
   };
   return labels[resourceType] || resourceType;
 }
@@ -234,6 +238,38 @@ function sleep(ms) {
 }
 
 /**
+ * Notify Discord of a contact form submission (fire-and-forget, no audit log)
+ */
+async function notifyContact({ name, email, phone, subject, message }) {
+  try {
+    const settings = await loadSettings();
+    if (!settings.webhookUrl) return;
+    if (!settings.enabledEvents.includes('contact.SUBMIT')) return;
+
+    const fields = [
+      { name: 'Nom', value: name, inline: true },
+      { name: 'Email', value: email, inline: true }
+    ];
+    if (phone) fields.push({ name: 'Téléphone', value: phone, inline: true });
+    fields.push({ name: 'Sujet', value: subject, inline: false });
+    fields.push({ name: 'Message', value: message.length > 1024 ? message.substring(0, 1021) + '...' : message, inline: false });
+
+    const embed = {
+      title: '📩 Nouveau message de contact — MarionDiet',
+      color: 0xe91e63,
+      fields,
+      timestamp: new Date().toISOString(),
+      footer: { text: 'NutriVault — MarionDiet' }
+    };
+
+    messageQueue.push({ webhookUrl: settings.webhookUrl, embed });
+    processQueue();
+  } catch (err) {
+    console.error('[Discord] notifyContact error:', err.message);
+  }
+}
+
+/**
  * Main entry point: notify Discord of an audit event (fire-and-forget)
  */
 async function notify(auditData) {
@@ -287,6 +323,7 @@ async function sendTestMessage(webhookUrl) {
 
 module.exports = {
   notify,
+  notifyContact,
   sendTestMessage,
   loadSettings,
   invalidateCache,

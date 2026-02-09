@@ -66,6 +66,10 @@ app.get('/health', (req, res) => {
 const publicDocumentRoutes = require('./routes/publicDocuments');
 app.use('/public/documents', publicDocumentRoutes);
 
+// Public contact form route (no authentication required)
+const publicContactRoutes = require('./routes/publicContact');
+app.use('/api/public/contact', publicContactRoutes);
+
 // Authentication routes (public)
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);

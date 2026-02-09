@@ -138,6 +138,12 @@ const MarionDietPage = () => {
 
       if (response.ok) {
         setFormStatus('sent');
+        // Notify backend for Discord notification (fire-and-forget)
+        fetch('/api/public/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        }).catch(() => {});
         setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
         pushFormSubmit('contact', true);
       } else {
