@@ -39,18 +39,21 @@ async function activatePortal(patientId, invitedByUserId) {
     }
   }
 
-  // Check if email is already used by another User (e.g., a dietitian who is also a patient)
-  const existingUserWithEmail = await db.User.findOne({
-    where: { email: patient.email.trim().toLowerCase() }
-  });
-  if (existingUserWithEmail) {
-    throw new Error('This email address is already associated with an existing user account. The patient cannot use the same email for portal access.');
-  }
-
   // Get PATIENT role
   const patientRole = await db.Role.findOne({ where: { name: 'PATIENT' } });
   if (!patientRole) {
     throw new Error('PATIENT role not found. Please run database migrations.');
+  }
+
+  // Only check email conflict among other PATIENT users (same email is allowed for dietitian + patient)
+  const existingPatientUser = await db.User.findOne({
+    where: {
+      email: patient.email.trim().toLowerCase(),
+      role_id: patientRole.id
+    }
+  });
+  if (existingPatientUser) {
+    throw new Error('Another patient portal account already uses this email address.');
   }
 
   // Generate invitation token

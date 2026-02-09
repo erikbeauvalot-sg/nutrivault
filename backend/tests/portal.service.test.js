@@ -116,13 +116,27 @@ describe('Portal Service', () => {
         .rejects.toThrow('already active');
     });
 
-    it('should throw if email is already used by another User', async () => {
+    it('should allow activation when a dietitian already has the same email', async () => {
       const admin = await testAuth.createAdmin();
-      // admin user has an email — create patient with same email
+      // admin user has an email — create patient with same email: this should work
       const patient = await createPatientRecord({ email: admin.user.email });
 
-      await expect(portalService.activatePortal(patient.id, admin.user.id))
-        .rejects.toThrow('already associated');
+      const result = await portalService.activatePortal(patient.id, admin.user.id);
+      expect(result.status).toBe('invitation_pending');
+    });
+
+    it('should create patient User with same email as dietitian User', async () => {
+      const admin = await testAuth.createAdmin();
+      const patient = await createPatientRecord({ email: admin.user.email });
+
+      const result = await portalService.activatePortal(patient.id, admin.user.id);
+      expect(result.status).toBe('invitation_pending');
+
+      // Verify both Users now exist with the same email
+      const users = await db.User.findAll({
+        where: { email: admin.user.email.trim().toLowerCase() }
+      });
+      expect(users.length).toBe(2);
     });
 
     it('should throw if patient not found', async () => {

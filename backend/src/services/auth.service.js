@@ -35,25 +35,31 @@ class AuthService {
         ]
       });
 
-      // If not found by username, try by email (patients use their email to log in)
+      // If not found by username, try by email for PATIENT users only
+      // (dietitians/admins log in with username, patients log in with email)
       if (!user) {
-        const { Op } = db.Sequelize;
-        user = await db.User.findOne({
-          where: { email: username.trim().toLowerCase() },
-          include: [
-            {
-              model: db.Role,
-              as: 'role',
-              include: [
-                {
-                  model: db.Permission,
-                  as: 'permissions',
-                  through: { attributes: [] }
-                }
-              ]
-            }
-          ]
-        });
+        const patientRole = await db.Role.findOne({ where: { name: 'PATIENT' } });
+        if (patientRole) {
+          user = await db.User.findOne({
+            where: {
+              email: username.trim().toLowerCase(),
+              role_id: patientRole.id
+            },
+            include: [
+              {
+                model: db.Role,
+                as: 'role',
+                include: [
+                  {
+                    model: db.Permission,
+                    as: 'permissions',
+                    through: { attributes: [] }
+                  }
+                ]
+              }
+            ]
+          });
+        }
       }
 
       if (!user) {
@@ -441,10 +447,14 @@ class AuthService {
         throw new Error('Username already exists');
       }
 
-      // Check if email already exists
-      const existingEmail = await db.User.findOne({
-        where: { email }
-      });
+      // Check if email already exists among non-PATIENT users
+      // (patients and dietitians can share the same email)
+      const patientRole = await db.Role.findOne({ where: { name: 'PATIENT' } });
+      const emailWhere = { email };
+      if (patientRole) {
+        emailWhere.role_id = { [db.Sequelize.Op.ne]: patientRole.id };
+      }
+      const existingEmail = await db.User.findOne({ where: emailWhere });
 
       if (existingEmail) {
         throw new Error('Email already exists');
