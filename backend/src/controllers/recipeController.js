@@ -227,11 +227,11 @@ exports.duplicateRecipe = async (req, res, next) => {
 exports.shareRecipe = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { patient_id, notes } = req.body;
+    const { patient_id, notes, send_email } = req.body;
     const user = req.user;
     const requestMetadata = getRequestMetadata(req);
 
-    const access = await recipeSharingService.shareRecipe(id, patient_id, { notes }, user, requestMetadata);
+    const access = await recipeSharingService.shareRecipe(id, patient_id, { notes, send_email }, user, requestMetadata);
 
     res.status(201).json({
       success: true,
@@ -349,6 +349,27 @@ exports.resendShareEmail = async (req, res, next) => {
       data: {
         patient_email: result.patient_email
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/recipes/:id/visibility - Update recipe visibility
+ */
+exports.setVisibility = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { visibility } = req.body;
+    const user = req.user;
+    const requestMetadata = getRequestMetadata(req);
+
+    const result = await recipeSharingService.setVisibility(id, visibility, user, requestMetadata);
+
+    res.json({
+      success: true,
+      data: result
     });
   } catch (error) {
     next(error);

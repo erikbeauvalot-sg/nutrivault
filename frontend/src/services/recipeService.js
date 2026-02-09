@@ -122,11 +122,23 @@ export const duplicateRecipe = async (id) => {
  * @param {string} notes - Optional notes for the patient
  * @returns {Promise<object>}
  */
-export const shareRecipe = async (recipeId, patientId, notes = '') => {
+export const shareRecipe = async (recipeId, patientId, notes = '', sendEmail = false) => {
   const response = await api.post(`/recipes/${recipeId}/share`, {
     patient_id: patientId,
-    notes
+    notes,
+    send_email: sendEmail
   });
+  return extractData(response);
+};
+
+/**
+ * Set recipe visibility (private/public)
+ * @param {string} recipeId - Recipe UUID
+ * @param {string} visibility - 'private' or 'public'
+ * @returns {Promise<object>}
+ */
+export const setRecipeVisibility = async (recipeId, visibility) => {
+  const response = await api.put(`/recipes/${recipeId}/visibility`, { visibility });
   return extractData(response);
 };
 

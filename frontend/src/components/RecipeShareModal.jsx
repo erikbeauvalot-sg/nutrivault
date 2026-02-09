@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Modal, Form, Button, Spinner, ListGroup, Badge, Alert, InputGroup } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
-import { FaSearch, FaShare, FaTimes, FaUser, FaTrash, FaEdit, FaCheck, FaEnvelope } from 'react-icons/fa';
+import { FaSearch, FaShare, FaTimes, FaUser, FaTrash, FaEdit, FaCheck, FaEnvelope, FaGlobe, FaLock } from 'react-icons/fa';
 import * as recipeService from '../services/recipeService';
 import * as patientService from '../services/patientService';
 import { debounce } from 'lodash';
@@ -21,12 +21,15 @@ const RecipeShareModal = ({ show, onHide, recipe, onSuccess }) => {
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [notes, setNotes] = useState('');
+  const [sendEmail, setSendEmail] = useState(false);
   const [shares, setShares] = useState([]);
   const [editingShare, setEditingShare] = useState(null);
   const [editNotes, setEditNotes] = useState('');
   const [revokeAccessId, setRevokeAccessId] = useState(null);
   const [showRevokeModal, setShowRevokeModal] = useState(false);
   const [resendingId, setResendingId] = useState(null);
+  const [visibility, setVisibility] = useState('private');
+  const [visibilityLoading, setVisibilityLoading] = useState(false);
 
   // Load existing shares when modal opens
   useEffect(() => {
@@ -36,7 +39,9 @@ const RecipeShareModal = ({ show, onHide, recipe, onSuccess }) => {
       setPatients([]);
       setSelectedPatient(null);
       setNotes('');
+      setSendEmail(false);
       setEditingShare(null);
+      setVisibility(recipe.visibility || 'private');
     }
   }, [show, recipe]);
 
@@ -91,10 +96,11 @@ const RecipeShareModal = ({ show, onHide, recipe, onSuccess }) => {
 
     setLoading(true);
     try {
-      await recipeService.shareRecipe(recipe.id, selectedPatient.id, notes);
+      await recipeService.shareRecipe(recipe.id, selectedPatient.id, notes, sendEmail);
       toast.success(t('recipes.shareSuccess', 'Recipe shared successfully'));
       setSelectedPatient(null);
       setNotes('');
+      setSendEmail(false);
       loadShares();
       onSuccess && onSuccess();
     } catch (error) {
@@ -102,6 +108,27 @@ const RecipeShareModal = ({ show, onHide, recipe, onSuccess }) => {
       toast.error(error.response?.data?.error || t('common.error', 'An error occurred'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVisibilityToggle = async () => {
+    if (!recipe) return;
+    const newVisibility = visibility === 'public' ? 'private' : 'public';
+    setVisibilityLoading(true);
+    try {
+      await recipeService.setRecipeVisibility(recipe.id, newVisibility);
+      setVisibility(newVisibility);
+      toast.success(
+        newVisibility === 'public'
+          ? t('recipes.visibilityPublic', 'Recipe is now visible to all patients')
+          : t('recipes.visibilityPrivate', 'Recipe is now private')
+      );
+      onSuccess && onSuccess();
+    } catch (error) {
+      console.error('Error updating visibility:', error);
+      toast.error(error.response?.data?.error || t('common.error', 'An error occurred'));
+    } finally {
+      setVisibilityLoading(false);
     }
   };
 
@@ -187,6 +214,33 @@ const RecipeShareModal = ({ show, onHide, recipe, onSuccess }) => {
           </Alert>
         )}
 
+        {/* Visibility toggle */}
+        <div className="mb-4 p-3 border rounded">
+          <div className="d-flex justify-content-between align-items-center">
+            <div>
+              <h6 className="mb-1">
+                {visibility === 'public' ? <FaGlobe className="me-2 text-success" /> : <FaLock className="me-2 text-muted" />}
+                {t('recipes.visibility', 'Visibility')}
+              </h6>
+              <small className="text-muted">
+                {visibility === 'public'
+                  ? t('recipes.visibilityPublicDesc', 'All patients with a portal account can see this recipe')
+                  : t('recipes.visibilityPrivateDesc', 'Only individually shared patients can see this recipe')}
+              </small>
+            </div>
+            <Form.Check
+              type="switch"
+              id="visibility-switch"
+              checked={visibility === 'public'}
+              onChange={handleVisibilityToggle}
+              disabled={visibilityLoading}
+              label={visibility === 'public'
+                ? t('recipes.public', 'Public')
+                : t('recipes.private', 'Private')}
+            />
+          </div>
+        </div>
+
         {/* Share with new patient */}
         <div className="mb-4">
           <h6>{t('recipes.shareWith', 'Share with Patient')}</h6>
@@ -260,6 +314,20 @@ const RecipeShareModal = ({ show, onHide, recipe, onSuccess }) => {
                   placeholder={t('recipes.shareNotesPlaceholder', 'Add any special instructions or notes for this patient...')}
                 />
               </Form.Group>
+
+              <Form.Check
+                type="checkbox"
+                id="send-email-check"
+                className="mb-3"
+                checked={sendEmail}
+                onChange={(e) => setSendEmail(e.target.checked)}
+                label={
+                  <span>
+                    <FaEnvelope className="me-1" />
+                    {t('recipes.sendEmailNotification', 'Send email notification')}
+                  </span>
+                }
+              />
 
               <Button
                 variant="primary"

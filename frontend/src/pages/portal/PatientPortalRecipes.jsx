@@ -84,9 +84,9 @@ const PatientPortalRecipes = () => {
                           : recipe.description}
                       </Card.Text>
                     )}
-                    <div className="d-flex gap-2 flex-wrap">
+                    <div className="d-flex gap-1 flex-wrap" style={{ minWidth: 0 }}>
                       {recipe.category && (
-                        <Badge bg="info">{recipe.category.name}</Badge>
+                        <Badge bg="info" className="text-truncate" style={{ maxWidth: '100%' }}>{recipe.category.name}</Badge>
                       )}
                       {recipe.difficulty && (
                         <Badge bg={difficultyVariant[recipe.difficulty]}>
@@ -94,10 +94,10 @@ const PatientPortalRecipes = () => {
                         </Badge>
                       )}
                       {totalTime > 0 && (
-                        <Badge bg="secondary">⏱️ {totalTime} min</Badge>
+                        <Badge bg="secondary">{'\u23F1\uFE0F'} {totalTime} min</Badge>
                       )}
                       {recipe.servings && (
-                        <Badge bg="secondary">👥 {recipe.servings}</Badge>
+                        <Badge bg="secondary">{'\uD83D\uDC65'} {recipe.servings}</Badge>
                       )}
                     </div>
                   </Card.Body>

@@ -70,13 +70,13 @@ const PatientPortalRecipeDetail = () => {
         <Card.Body>
           {recipe.description && <p>{recipe.description}</p>}
 
-          <div className="d-flex gap-2 flex-wrap mb-4">
-            {recipe.category && <Badge bg="info">{recipe.category.name}</Badge>}
+          <div className="d-flex gap-1 flex-wrap mb-4">
+            {recipe.category && <Badge bg="info" style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>{recipe.category.name}</Badge>}
             {recipe.difficulty && <Badge bg="secondary">{t(`portal.recipe.difficulty.${recipe.difficulty}`, recipe.difficulty)}</Badge>}
-            {recipe.servings && <Badge bg="secondary">👥 {recipe.servings} {t('portal.recipe.servings', 'portions')}</Badge>}
-            {recipe.prep_time_minutes > 0 && <Badge bg="secondary">🔪 {recipe.prep_time_minutes} min {t('portal.recipe.prep', 'prépa')}</Badge>}
-            {recipe.cook_time_minutes > 0 && <Badge bg="secondary">🔥 {recipe.cook_time_minutes} min {t('portal.recipe.cooking', 'cuisson')}</Badge>}
-            {totalTime > 0 && <Badge bg="primary">⏱️ {totalTime} min {t('portal.recipe.total', 'total')}</Badge>}
+            {recipe.servings && <Badge bg="secondary">{'\uD83D\uDC65'} {recipe.servings} {t('portal.recipe.servings', 'portions')}</Badge>}
+            {recipe.prep_time_minutes > 0 && <Badge bg="secondary">{'\uD83D\uDD2A'} {recipe.prep_time_minutes} min {t('portal.recipe.prep', 'prepa')}</Badge>}
+            {recipe.cook_time_minutes > 0 && <Badge bg="secondary">{'\uD83D\uDD25'} {recipe.cook_time_minutes} min {t('portal.recipe.cooking', 'cuisson')}</Badge>}
+            {totalTime > 0 && <Badge bg="primary">{'\u23F1\uFE0F'} {totalTime} min {t('portal.recipe.total', 'total')}</Badge>}
           </div>
 
           {recipe.shared_notes && (

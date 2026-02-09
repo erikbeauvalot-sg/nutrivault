@@ -388,15 +388,15 @@ router.put(
       .optional()
       .trim(),
     body('prep_time_minutes')
-      .optional()
+      .optional({ values: 'null' })
       .isInt({ min: 0 })
       .withMessage('Prep time must be a positive integer'),
     body('cook_time_minutes')
-      .optional()
+      .optional({ values: 'null' })
       .isInt({ min: 0 })
       .withMessage('Cook time must be a positive integer'),
     body('servings')
-      .optional()
+      .optional({ values: 'null' })
       .isInt({ min: 1 })
       .withMessage('Servings must be at least 1'),
     body('difficulty')
@@ -404,16 +404,16 @@ router.put(
       .isIn(['easy', 'medium', 'hard'])
       .withMessage('Difficulty must be easy, medium, or hard'),
     body('image_url')
-      .optional()
+      .optional({ values: 'null' })
       .trim()
       .isLength({ max: 500 })
       .withMessage('Image URL must be less than 500 characters'),
     body('tags')
-      .optional()
+      .optional({ values: 'null' })
       .isArray()
       .withMessage('Tags must be an array'),
     body('category_id')
-      .optional()
+      .optional({ values: 'null' })
       .isUUID()
       .withMessage('Category ID must be a valid UUID'),
     validate
@@ -482,6 +482,23 @@ router.post(
 // ============================================
 
 /**
+ * PUT /api/recipes/:id/visibility - Update recipe visibility (private/public)
+ */
+router.put(
+  '/:id/visibility',
+  authenticate,
+  requirePermission('recipes.share'),
+  [
+    param('id').isUUID().withMessage('Recipe ID must be a valid UUID'),
+    body('visibility')
+      .isIn(['private', 'public'])
+      .withMessage('Visibility must be "private" or "public"'),
+    validate
+  ],
+  recipeController.setVisibility
+);
+
+/**
  * POST /api/recipes/:id/share - Share recipe with a patient
  */
 router.post(
@@ -496,6 +513,10 @@ router.post(
     body('notes')
       .optional()
       .trim(),
+    body('send_email')
+      .optional()
+      .isBoolean()
+      .withMessage('send_email must be a boolean'),
     validate
   ],
   recipeController.shareRecipe

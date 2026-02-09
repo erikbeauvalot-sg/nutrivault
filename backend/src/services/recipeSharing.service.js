@@ -116,8 +116,8 @@ async function shareRecipe(recipeId, patientId, options = {}, user, requestMetad
       status_code: 201
     });
 
-    // Send email notification to patient if they have an email
-    if (patient.email) {
+    // Send email notification to patient if requested and patient has email
+    if (options.send_email !== false && patient.email) {
       try {
         await emailService.sendRecipeShareEmail(
           recipe,
@@ -432,11 +432,65 @@ async function resendShareEmail(accessId, user, requestMetadata = {}) {
   }
 }
 
+/**
+ * Set recipe visibility (private/public)
+ * Public recipes are visible to all portal patients without individual shares
+ */
+async function setVisibility(recipeId, visibility, user, requestMetadata = {}) {
+  try {
+    if (!['private', 'public'].includes(visibility)) {
+      const error = new Error('Visibility must be "private" or "public"');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const recipe = await Recipe.findOne({
+      where: { id: recipeId, is_active: true }
+    });
+
+    if (!recipe) {
+      const error = new Error('Recipe not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (visibility === 'public' && recipe.status !== 'published') {
+      const error = new Error('Only published recipes can be made public');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const beforeVisibility = recipe.visibility;
+    recipe.visibility = visibility;
+    await recipe.save();
+
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'UPDATE',
+      resource_type: 'recipe',
+      resource_id: recipeId,
+      changes: { visibility: { before: beforeVisibility, after: visibility } },
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      request_method: requestMetadata.method,
+      request_path: requestMetadata.path,
+      status_code: 200
+    });
+
+    return { success: true, visibility: recipe.visibility };
+  } catch (error) {
+    if (!error.statusCode) error.statusCode = 500;
+    throw error;
+  }
+}
+
 module.exports = {
   shareRecipe,
   getRecipeShares,
   getPatientRecipes,
   revokeAccess,
   updateShareNotes,
-  resendShareEmail
+  resendShareEmail,
+  setVisibility
 };

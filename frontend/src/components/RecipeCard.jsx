@@ -5,6 +5,7 @@
 
 import { Card, Badge, Dropdown } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
+import { FaGlobe } from 'react-icons/fa';
 import RecipeStatusBadge from './RecipeStatusBadge';
 
 const RecipeCard = ({ recipe, onEdit, onDelete, onDuplicate, onPublish, onArchive, onShare, onExportJSON, onClick }) => {
@@ -139,8 +140,14 @@ const RecipeCard = ({ recipe, onEdit, onDelete, onDuplicate, onPublish, onArchiv
         )}
 
         <div className="mt-auto">
-          <div className="d-flex flex-wrap gap-1 mb-2">
+          <div className="d-flex flex-wrap gap-1 mb-2" style={{ minWidth: 0 }}>
             <RecipeStatusBadge status={recipe.status} />
+            {recipe.visibility === 'public' && (
+              <Badge bg="info">
+                <FaGlobe className="me-1" style={{ fontSize: '0.7em' }} />
+                {t('recipes.public', 'Public')}
+              </Badge>
+            )}
             <Badge bg={difficultyConfig.bg} text={difficultyConfig.text}>
               {difficultyConfig.label}
             </Badge>
@@ -148,7 +155,8 @@ const RecipeCard = ({ recipe, onEdit, onDelete, onDuplicate, onPublish, onArchiv
               <Badge
                 bg="light"
                 text="dark"
-                style={{ backgroundColor: recipe.category.color }}
+                className="text-truncate"
+                style={{ backgroundColor: recipe.category.color, maxWidth: '100%' }}
               >
                 {recipe.category.icon} {recipe.category.name}
               </Badge>
@@ -169,9 +177,9 @@ const RecipeCard = ({ recipe, onEdit, onDelete, onDuplicate, onPublish, onArchiv
           </div>
 
           {recipe.tags && recipe.tags.length > 0 && (
-            <div className="mt-2 d-flex flex-wrap gap-1">
+            <div className="mt-2 d-flex flex-wrap gap-1" style={{ minWidth: 0 }}>
               {recipe.tags.slice(0, 3).map((tag, index) => (
-                <Badge key={index} bg="light" text="dark" className="fw-normal">
+                <Badge key={index} bg="light" text="dark" className="fw-normal text-truncate" style={{ maxWidth: '100%' }}>
                   #{tag}
                 </Badge>
               ))}

@@ -123,6 +123,14 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
+    visibility: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: 'private',
+      validate: {
+        isIn: [['private', 'public']]
+      }
+    },
     is_active: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
@@ -173,6 +181,9 @@ module.exports = (sequelize, DataTypes) => {
       },
       {
         fields: ['status', 'is_active']
+      },
+      {
+        fields: ['visibility']
       }
     ]
   });

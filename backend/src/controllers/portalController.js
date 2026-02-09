@@ -407,12 +407,13 @@ exports.downloadDocument = async (req, res, next) => {
  */
 exports.getRecipes = async (req, res, next) => {
   try {
+    // Get individually shared recipes
     const access = await db.RecipePatientAccess.findAll({
       where: { patient_id: req.patient.id },
       include: [{
         model: db.Recipe,
         as: 'recipe',
-        attributes: ['id', 'title', 'description', 'prep_time_minutes', 'cook_time_minutes', 'servings', 'difficulty', 'image_url', 'source_url'],
+        attributes: ['id', 'title', 'description', 'prep_time_minutes', 'cook_time_minutes', 'servings', 'difficulty', 'image_url', 'source_url', 'visibility'],
         include: [{
           model: db.RecipeCategory,
           as: 'category',
@@ -426,7 +427,43 @@ exports.getRecipes = async (req, res, next) => {
       order: [['created_at', 'DESC']]
     });
 
-    res.json({ success: true, data: access });
+    // Get public recipes not already in the individual shares
+    const sharedRecipeIds = access.map(a => a.recipe?.id).filter(Boolean);
+    const publicWhere = {
+      visibility: 'public',
+      status: 'published',
+      is_active: true
+    };
+    if (sharedRecipeIds.length > 0) {
+      publicWhere.id = { [db.Sequelize.Op.notIn]: sharedRecipeIds };
+    }
+
+    const publicRecipes = await db.Recipe.findAll({
+      where: publicWhere,
+      attributes: ['id', 'title', 'description', 'prep_time_minutes', 'cook_time_minutes', 'servings', 'difficulty', 'image_url', 'source_url', 'visibility', 'created_at'],
+      include: [{
+        model: db.RecipeCategory,
+        as: 'category',
+        attributes: ['id', 'name']
+      }, {
+        model: db.User,
+        as: 'creator',
+        attributes: ['id', 'first_name', 'last_name']
+      }],
+      order: [['created_at', 'DESC']]
+    });
+
+    // Merge: individual shares first, then public recipes formatted as pseudo-access objects
+    const publicAsAccess = publicRecipes.map(r => ({
+      id: `public-${r.id}`,
+      recipe: r,
+      sharedByUser: r.creator,
+      created_at: r.created_at,
+      is_public: true
+    }));
+
+    const combined = [...access, ...publicAsAccess];
+    res.json({ success: true, data: combined });
   } catch (error) {
     next(error);
   }
@@ -439,14 +476,10 @@ exports.getRecipeDetail = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Verify access
+    // Verify access: individual share OR public recipe
     const access = await db.RecipePatientAccess.findOne({
       where: { recipe_id: id, patient_id: req.patient.id }
     });
-
-    if (!access) {
-      return res.status(404).json({ success: false, error: 'Recipe not found or not shared with you' });
-    }
 
     const recipe = await db.Recipe.findByPk(id, {
       include: [
@@ -471,12 +504,18 @@ exports.getRecipeDetail = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Recipe not found' });
     }
 
+    // Allow access if individually shared OR if recipe is public
+    const isPublic = recipe.visibility === 'public' && recipe.status === 'published' && recipe.is_active;
+    if (!access && !isPublic) {
+      return res.status(404).json({ success: false, error: 'Recipe not found or not shared with you' });
+    }
+
     res.json({
       success: true,
       data: {
         ...recipe.toJSON(),
-        shared_notes: access.notes,
-        shared_at: access.created_at
+        shared_notes: access ? access.notes : null,
+        shared_at: access ? access.created_at : null
       }
     });
   } catch (error) {

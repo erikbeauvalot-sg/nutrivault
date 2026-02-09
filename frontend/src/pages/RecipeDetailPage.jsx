@@ -477,7 +477,7 @@ const RecipeDetailPage = () => {
                   <Card.Title>{t('recipes.tags', 'Tags')}</Card.Title>
                   <div className="d-flex flex-wrap gap-1">
                     {recipe.tags.map((tag, index) => (
-                      <Badge key={index} bg="secondary" className="fw-normal">
+                      <Badge key={index} bg="secondary" className="fw-normal" style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>
                         #{tag}
                       </Badge>
                     ))}
