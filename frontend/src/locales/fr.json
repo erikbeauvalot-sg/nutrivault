@@ -94,7 +94,8 @@
     "emailTemplates": "Modèles d'e-mails",
     "invoiceCustomization": "Personnalisation des factures",
     "calendarSettings": "Paramètres Calendrier",
-    "scheduledTasks": "Tâches Planifiées"
+    "scheduledTasks": "Tâches Planifiées",
+    "discord": "Discord"
   },
   "scheduledTasks": {
     "title": "Tâches Planifiées",
@@ -2933,5 +2934,29 @@
       "semantic": "Couleurs sémantiques",
       "bootstrap": "Remplacements Bootstrap"
     }
+  },
+  "discord": {
+    "title": "Notifications Discord",
+    "subtitle": "Configurez les notifications webhook pour recevoir des alertes en temps réel dans votre salon Discord.",
+    "webhookUrl": "URL du Webhook",
+    "webhookUrlLabel": "URL du webhook Discord",
+    "webhookHelp": "Créez un webhook dans les paramètres de votre serveur Discord > Intégrations > Webhooks",
+    "test": "Tester",
+    "events": "Événements",
+    "eventsHelp": "Sélectionnez les événements qui déclencheront une notification Discord.",
+    "categoryUsers": "Utilisateurs",
+    "categoryPatients": "Patients",
+    "categoryVisits": "Consultations",
+    "categoryRecipes": "Recettes",
+    "categoryDocuments": "Documents",
+    "categoryBilling": "Facturation",
+    "categoryCampaigns": "Campagnes",
+    "fetchError": "Impossible de charger les paramètres Discord",
+    "saveSuccess": "Paramètres Discord enregistrés",
+    "saveError": "Impossible d'enregistrer les paramètres",
+    "urlRequired": "Veuillez entrer une URL de webhook",
+    "testSuccess": "Message de test envoyé ! Vérifiez votre salon Discord.",
+    "testError": "Échec de l'envoi du message de test. Vérifiez l'URL.",
+    "activeEvents": "{{count}} notification(s) active(s)"
   }
 }

@@ -78,7 +78,8 @@
     "campaigns": "Campaigns",
     "themes": "Themes",
     "calendarSettings": "Calendar Settings",
-    "scheduledTasks": "Scheduled Tasks"
+    "scheduledTasks": "Scheduled Tasks",
+    "discord": "Discord"
   },
   "scheduledTasks": {
     "title": "Scheduled Tasks",
@@ -2779,5 +2780,29 @@
       "semantic": "Semantic Colors",
       "bootstrap": "Bootstrap Overrides"
     }
+  },
+  "discord": {
+    "title": "Discord Notifications",
+    "subtitle": "Configure webhook notifications to receive real-time alerts in your Discord channel.",
+    "webhookUrl": "Webhook URL",
+    "webhookUrlLabel": "Discord Webhook URL",
+    "webhookHelp": "Create a webhook in your Discord server settings > Integrations > Webhooks",
+    "test": "Test",
+    "events": "Events",
+    "eventsHelp": "Select which events should trigger a Discord notification.",
+    "categoryUsers": "Users",
+    "categoryPatients": "Patients",
+    "categoryVisits": "Visits",
+    "categoryRecipes": "Recipes",
+    "categoryDocuments": "Documents",
+    "categoryBilling": "Billing",
+    "categoryCampaigns": "Campaigns",
+    "fetchError": "Failed to load Discord settings",
+    "saveSuccess": "Discord settings saved",
+    "saveError": "Failed to save settings",
+    "urlRequired": "Please enter a webhook URL",
+    "testSuccess": "Test message sent! Check your Discord channel.",
+    "testError": "Failed to send test message. Check the URL.",
+    "activeEvents": "{{count}} active notification(s)"
   }
 }

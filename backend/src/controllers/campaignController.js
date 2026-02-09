@@ -6,6 +6,7 @@
 
 const campaignService = require('../services/campaign.service');
 const campaignSenderService = require('../services/campaignSender.service');
+const auditService = require('../services/audit.service');
 
 /**
  * GET /api/campaigns - Get all campaigns
@@ -83,6 +84,13 @@ exports.createCampaign = async (req, res, next) => {
 
     const campaign = await campaignService.createCampaign(data, user);
 
+    auditService.log({
+      user_id: user.id, username: user.username,
+      action: 'CREATE', resource_type: 'campaigns', resource_id: campaign.id,
+      changes: { name: campaign.name },
+      ip_address: req.ip, request_method: req.method, request_path: req.originalUrl
+    }).catch(() => {});
+
     res.status(201).json({
       success: true,
       data: campaign
@@ -133,6 +141,12 @@ exports.deleteCampaign = async (req, res, next) => {
     const user = req.user;
 
     await campaignService.deleteCampaign(id, user);
+
+    auditService.log({
+      user_id: user.id, username: user.username,
+      action: 'DELETE', resource_type: 'campaigns', resource_id: id,
+      ip_address: req.ip, request_method: req.method, request_path: req.originalUrl
+    }).catch(() => {});
 
     res.json({
       success: true,
@@ -226,6 +240,13 @@ exports.sendCampaign = async (req, res, next) => {
 
     const campaign = await campaignService.sendCampaignNow(id, user);
 
+    auditService.log({
+      user_id: user.id, username: user.username,
+      action: 'SEND', resource_type: 'campaigns', resource_id: id,
+      changes: { name: campaign.name },
+      ip_address: req.ip, request_method: req.method, request_path: req.originalUrl
+    }).catch(() => {});
+
     res.json({
       success: true,
       message: 'Campaign is being sent',
@@ -266,6 +287,13 @@ exports.scheduleCampaign = async (req, res, next) => {
 
     const campaign = await campaignService.scheduleCampaign(id, scheduled_at, user);
 
+    auditService.log({
+      user_id: user.id, username: user.username,
+      action: 'SCHEDULE', resource_type: 'campaigns', resource_id: id,
+      changes: { name: campaign.name, scheduled_at },
+      ip_address: req.ip, request_method: req.method, request_path: req.originalUrl
+    }).catch(() => {});
+
     res.json({
       success: true,
       message: 'Campaign scheduled successfully',
@@ -297,6 +325,13 @@ exports.cancelCampaign = async (req, res, next) => {
     const user = req.user;
 
     const campaign = await campaignService.cancelCampaign(id, user);
+
+    auditService.log({
+      user_id: user.id, username: user.username,
+      action: 'CANCEL', resource_type: 'campaigns', resource_id: id,
+      changes: { name: campaign.name },
+      ip_address: req.ip, request_method: req.method, request_path: req.originalUrl
+    }).catch(() => {});
 
     res.json({
       success: true,

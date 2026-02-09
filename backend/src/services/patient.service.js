@@ -607,17 +607,20 @@ async function updatePatient(patientId, updateData, user, requestMetadata = {}) 
  */
 async function deletePatient(patientId, user, requestMetadata = {}) {
   try {
-    const patient = await Patient.findOne({
-      where: { 
-        id: patientId,
-        is_active: true
-      }
-    });
+    const patient = await Patient.findByPk(patientId);
 
     if (!patient) {
       const error = new Error('Patient not found');
       error.statusCode = 404;
       throw error;
+    }
+
+    // Already inactive — nothing to do
+    if (!patient.is_active) {
+      return {
+        success: true,
+        message: 'Patient deleted successfully'
+      };
     }
 
     // RBAC: In POC system, DIETITIANS can delete all patients

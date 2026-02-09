@@ -36,7 +36,8 @@ const Sidebar = ({ isOpen, onClose }) => {
       { path: '/settings/invoice-customization', icon: '🖼️', label: t('navigation.invoiceCustomization', 'Invoice Customization') },
       { path: '/settings/roles', icon: '🔐', label: t('navigation.roles', 'Manage Roles') },
       { path: '/settings/ai-config', icon: '🤖', label: t('navigation.aiConfig', 'AI Configuration') },
-      { path: '/settings/scheduled-tasks', icon: '⏱️', label: t('navigation.scheduledTasks', 'Scheduled Tasks') }
+      { path: '/settings/scheduled-tasks', icon: '⏱️', label: t('navigation.scheduledTasks', 'Scheduled Tasks') },
+      { path: '/settings/discord', icon: '🔔', label: t('navigation.discord', 'Discord') }
     ] : []),
   ];
 

@@ -7,6 +7,7 @@
 
 const db = require('../../../models');
 const AuditLog = db.AuditLog;
+const discordService = require('./discord.service');
 
 /**
  * Create an audit log entry
@@ -42,6 +43,9 @@ async function log(auditData) {
       status_code: auditData.status_code || null,
       error_message: auditData.error_message || null
     });
+
+    // Fire-and-forget Discord notification
+    discordService.notify(auditData).catch(() => {});
 
     return auditLog;
   } catch (error) {

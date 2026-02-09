@@ -55,6 +55,7 @@ const CampaignEditorPage = lazy(() => import('./pages/CampaignEditorPage'));
 const CampaignStatsPage = lazy(() => import('./pages/CampaignStatsPage'));
 const ThemeManagementPage = lazy(() => import('./pages/ThemeManagementPage'));
 const ScheduledTasksPage = lazy(() => import('./pages/ScheduledTasksPage'));
+const DiscordWebhookPage = lazy(() => import('./pages/DiscordWebhookPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -374,6 +375,15 @@ function App() {
         element={
           <ProtectedRoute>
             <ScheduledTasksPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/discord"
+        element={
+          <ProtectedRoute>
+            <DiscordWebhookPage />
           </ProtectedRoute>
         }
       />

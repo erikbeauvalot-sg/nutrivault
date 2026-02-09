@@ -209,6 +209,10 @@ app.use('/api/scheduler', schedulerRoutes);
 const campaignRoutes = require('./routes/campaigns');
 app.use('/api/campaigns', campaignRoutes);
 
+// Discord webhook routes (protected - Admin only)
+const discordRoutes = require('./routes/discord');
+app.use('/api/discord', discordRoutes);
+
 // Page Views routes (partially public - tracking is public, stats require auth)
 const pageViewsRoutes = require('./routes/pageViews');
 app.use('/api/page-views', pageViewsRoutes);

@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const db = require('../../../models');
 const { generateTokenPair } = require('../auth/jwt');
+const auditService = require('./audit.service');
 
 const MAX_LOGIN_ATTEMPTS = parseInt(process.env.MAX_LOGIN_ATTEMPTS) || 5;
 const LOCKOUT_DURATION_MINUTES = parseInt(process.env.LOCKOUT_DURATION_MINUTES) || 30;
@@ -64,6 +65,15 @@ class AuthService {
 
       // Update last login
       await user.update({ last_login: new Date() });
+
+      // Audit login event
+      auditService.log({
+        user_id: user.id,
+        username: user.username,
+        action: 'LOGIN',
+        resource_type: 'users',
+        resource_id: user.id
+      }).catch(() => {});
 
       // Generate token pair
       const tokens = generateTokenPair(user, rememberMe);
