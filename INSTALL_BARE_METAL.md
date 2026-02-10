@@ -21,6 +21,9 @@ cd nutrivault
 ## 2. Installer les dependances
 
 ```bash
+# Racine (config partagee, sequelize-cli, dotenv)
+cd /opt/nutrivault && npm ci --production
+
 # Backend
 cd backend && npm ci --production
 cd ..
