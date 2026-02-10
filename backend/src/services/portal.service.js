@@ -65,9 +65,15 @@ async function activatePortal(patientId, invitedByUserId) {
   const tempPassword = crypto.randomBytes(32).toString('hex');
   const passwordHash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
 
+  // Use email as username, but if already taken (e.g. same email used by a dietitian),
+  // prefix with "patient:" to avoid unique constraint violation
+  const normalizedEmail = patient.email.trim().toLowerCase();
+  const existingUsername = await db.User.findOne({ where: { username: normalizedEmail } });
+  const username = existingUsername ? `patient:${normalizedEmail}` : normalizedEmail;
+
   const portalUser = await db.User.create({
-    username: patient.email.trim().toLowerCase(),
-    email: patient.email.trim().toLowerCase(),
+    username,
+    email: normalizedEmail,
     password_hash: passwordHash,
     role_id: patientRole.id,
     first_name: patient.first_name,
