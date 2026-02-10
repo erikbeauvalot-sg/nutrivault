@@ -65,15 +65,19 @@ async function activatePortal(patientId, invitedByUserId) {
   const tempPassword = crypto.randomBytes(32).toString('hex');
   const passwordHash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
 
-  // Use email as username, but if already taken (e.g. same email used by a dietitian),
-  // prefix with "patient:" to avoid unique constraint violation
+  // If email/username already taken by another role (e.g. dietitian uses same email),
+  // prefix with "patient:" to avoid unique constraint violations on both fields.
+  // The login service finds PATIENT users by querying the linked patient's email.
   const normalizedEmail = patient.email.trim().toLowerCase();
-  const existingUsername = await db.User.findOne({ where: { username: normalizedEmail } });
-  const username = existingUsername ? `patient:${normalizedEmail}` : normalizedEmail;
+  const existingByUsername = await db.User.findOne({ where: { username: normalizedEmail } });
+  const existingByEmail = await db.User.findOne({ where: { email: normalizedEmail } });
+  const needsPrefix = !!(existingByUsername || existingByEmail);
+  const username = needsPrefix ? `patient:${normalizedEmail}` : normalizedEmail;
+  const userEmail = needsPrefix ? `patient:${normalizedEmail}` : normalizedEmail;
 
   const portalUser = await db.User.create({
     username,
-    email: normalizedEmail,
+    email: userEmail,
     password_hash: passwordHash,
     role_id: patientRole.id,
     first_name: patient.first_name,

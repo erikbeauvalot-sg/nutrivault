@@ -40,25 +40,43 @@ class AuthService {
       if (!user) {
         const patientRole = await db.Role.findOne({ where: { name: 'PATIENT' } });
         if (patientRole) {
+          const userInclude = [
+            {
+              model: db.Role,
+              as: 'role',
+              include: [
+                {
+                  model: db.Permission,
+                  as: 'permissions',
+                  through: { attributes: [] }
+                }
+              ]
+            }
+          ];
+
+          // Direct email match on users table
           user = await db.User.findOne({
             where: {
               email: username.trim().toLowerCase(),
               role_id: patientRole.id
             },
-            include: [
-              {
-                model: db.Role,
-                as: 'role',
-                include: [
-                  {
-                    model: db.Permission,
-                    as: 'permissions',
-                    through: { attributes: [] }
-                  }
-                ]
-              }
-            ]
+            include: userInclude
           });
+
+          // If not found, the user email may be prefixed (patient:email) when
+          // another role already uses the same email. Look up via the patients table.
+          if (!user) {
+            const patient = await db.Patient.findOne({
+              where: { email: username.trim().toLowerCase() },
+              attributes: ['user_id']
+            });
+            if (patient && patient.user_id) {
+              user = await db.User.findOne({
+                where: { id: patient.user_id, role_id: patientRole.id },
+                include: userInclude
+              });
+            }
+          }
         }
       }
 
