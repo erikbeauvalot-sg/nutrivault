@@ -4,7 +4,8 @@
  *
  * 1. Creates all tables from Sequelize models (sync)
  * 2. Marks all migrations as already applied (since sync covers them)
- * 3. Runs all seeders
+ * 3. Runs base seeders (roles, permissions, admin user)
+ * 4. Runs feature seeders (measures, templates, etc.)
  *
  * Usage: node scripts/init-bare-metal.js
  */
@@ -58,8 +59,15 @@ async function main() {
   }
   console.log(`      Marked ${migrationFiles.size} migrations.\n`);
 
-  // 3. Run seeders
-  console.log('[3/3] Running seeders...');
+  // 3. Run seeders (root first for base data, then backend for feature data)
+  console.log('[3/4] Running base seeders (roles, permissions, admin)...');
+  execFileSync('npx', ['sequelize-cli', 'db:seed:all'], {
+    cwd: path.join(__dirname, '..'),
+    stdio: 'inherit',
+    env: { ...process.env }
+  });
+
+  console.log('\n[4/4] Running feature seeders (measures, templates, etc.)...');
   execFileSync('npx', ['sequelize-cli', 'db:seed:all'], {
     cwd: path.join(__dirname, '..', 'backend'),
     stdio: 'inherit',
