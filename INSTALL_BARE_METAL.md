@@ -83,7 +83,8 @@ node scripts/init-bare-metal.js
 Ce script :
 1. Cree toutes les tables depuis les modeles Sequelize (`sync`)
 2. Marque toutes les migrations comme appliquees (evite les conflits `duplicate column/index`)
-3. Lance les seeders (roles, permissions, admin, donnees par defaut)
+3. Lance les seeders de base (roles, permissions, admin)
+4. Lance les seeders fonctionnels (mesures, templates, etc.)
 
 ## 5. Configurer nginx
 

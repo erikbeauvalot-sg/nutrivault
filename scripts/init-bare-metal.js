@@ -23,12 +23,12 @@ async function main() {
   console.log('=== NutriVault Bare Metal DB Init ===\n');
 
   // 1. Sync all models (creates tables, indexes, constraints)
-  console.log('[1/3] Creating tables from models...');
+  console.log('[1/4] Creating tables from models...');
   await db.sequelize.sync();
   console.log('      Done.\n');
 
   // 2. Mark all migrations as applied
-  console.log('[2/3] Marking migrations as applied...');
+  console.log('[2/4] Marking migrations as applied...');
 
   // Ensure SequelizeMeta table exists
   await db.sequelize.query(`
