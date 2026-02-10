@@ -75,11 +75,15 @@ MAX_FILE_SIZE=10485760
 
 ```bash
 mkdir -p backend/data backend/uploads backend/logs
-cd backend
-npx sequelize-cli db:migrate
-npx sequelize-cli db:seed:all
-cd ..
+
+# Script tout-en-un : cree les tables, marque les migrations, lance les seeds
+node scripts/init-bare-metal.js
 ```
+
+Ce script :
+1. Cree toutes les tables depuis les modeles Sequelize (`sync`)
+2. Marque toutes les migrations comme appliquees (evite les conflits `duplicate column/index`)
+3. Lance les seeders (roles, permissions, admin, donnees par defaut)
 
 ## 5. Configurer nginx
 
