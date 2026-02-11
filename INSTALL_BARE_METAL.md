@@ -88,7 +88,11 @@ Ce script :
 
 ## 5. Configurer nginx
 
-La config nginx complete est dans `nginx/bare-metal.conf` (2 server blocks : mariondiet + nutrivault).
+La config nginx complete est dans `nginx/bare-metal.conf` :
+- 3 server blocks HTTP (port 80) : redirect vers HTTPS + ACME challenge
+- 2 server blocks HTTPS (port 443) : mariondiet + nutrivault
+- Domaines `.com` et `.fr` supportes
+- SSL/TLS 1.2+, HSTS, OCSP Stapling
 
 ```bash
 cp /opt/nutrivault/nginx/bare-metal.conf /etc/nginx/sites-available/nutrivault
@@ -97,7 +101,7 @@ rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl restart nginx
 ```
 
-> Le script `deploy-bare-metal.sh` met a jour la config nginx automatiquement a chaque deploiement.
+> Le script `deploy-bare-metal.sh` met a jour la config nginx et les certificats SSL automatiquement a chaque deploiement.
 
 ## 6. Creer le service systemd
 
@@ -133,14 +137,33 @@ systemctl enable nutrivault
 systemctl start nutrivault
 ```
 
-## 7. SSL avec Let's Encrypt (recommande)
+## 7. SSL avec Let's Encrypt
+
+Le script `deploy-bare-metal.sh` gere automatiquement les certificats SSL :
+- Installe certbot si absent
+- Genere un certificat SAN couvrant les 4 domaines (nutrivault + mariondiet, .com + .fr)
+- Configure le renouvellement automatique avec reload nginx
+
+Pour une installation manuelle :
 
 ```bash
 apt install -y certbot python3-certbot-nginx
-certbot --nginx -d votre-domaine.com
+mkdir -p /var/www/certbot
+
+# Generer le certificat (les 4 domaines en un seul cert)
+certbot certonly --webroot --webroot-path /var/www/certbot \
+    --email mariondiet@beauvalot.com --agree-tos --no-eff-email \
+    --cert-name nutrivault.beauvalot.com \
+    -d nutrivault.beauvalot.com \
+    -d nutrivault.beauvalot.fr \
+    -d mariondiet.beauvalot.com \
+    -d mariondiet.beauvalot.fr
+
+# Recharger nginx
+nginx -t && systemctl reload nginx
 ```
 
-Le renouvellement est automatique via un timer systemd.
+Le renouvellement est automatique via le timer systemd de certbot.
 
 ## 8. Verification
 
@@ -151,8 +174,8 @@ systemctl status nutrivault
 # API repond
 curl http://localhost:3001/health
 
-# Nginx repond
-curl http://localhost/health
+# Nginx repond (HTTPS)
+curl https://localhost/health --insecure
 
 # Logs
 tail -f /opt/nutrivault/backend/logs/backend.log

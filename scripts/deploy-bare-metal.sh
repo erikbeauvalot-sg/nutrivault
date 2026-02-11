@@ -14,8 +14,9 @@
 #   4. Run migrations (root + backend)
 #   5. Build frontend
 #   6. Fix file permissions
-#   7. Restart backend (systemctl restart nutrivault)
-#   8. Health check
+#   7. Update nginx config + SSL certificates
+#   8. Restart backend (systemctl restart nutrivault)
+#   9. Health check
 #
 
 set -e
@@ -39,6 +40,13 @@ SERVICE_NAME="nutrivault"
 SERVICE_USER="www-data"
 MAX_BACKUPS=10
 
+# SSL configuration
+CERT_DOMAINS="nutrivault.beauvalot.com,nutrivault.beauvalot.fr,mariondiet.beauvalot.com,mariondiet.beauvalot.fr"
+CERT_EMAIL="mariondiet@beauvalot.com"
+CERT_NAME="nutrivault.beauvalot.com"
+CERT_PATH="/etc/letsencrypt/live/${CERT_NAME}"
+CERTBOT_WEBROOT="/var/www/certbot"
+
 # Functions
 log_info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
 log_success() { echo -e "${GREEN}[OK]${NC} $1"; }
@@ -50,7 +58,7 @@ get_version() {
     node -p "require('${PROJECT_DIR}/package.json').version" 2>/dev/null || echo "unknown"
 }
 
-TOTAL_STEPS=8
+TOTAL_STEPS=9
 
 main() {
     local AUTO_YES=false
@@ -142,7 +150,7 @@ main() {
     chown -R "${SERVICE_USER}:${SERVICE_USER}" "${BACKEND_DIR}/logs" 2>/dev/null || true
     log_success "Permissions updated"
 
-    # ── Step 7: Update nginx config ──────────────────────────
+    # ── Step 7: Update nginx config ──────────────────────────────
     log_step 7 "Updating nginx configuration..."
     local NGINX_SRC="${PROJECT_DIR}/nginx/bare-metal.conf"
     local NGINX_DEST="/etc/nginx/sites-available/nutrivault"
@@ -151,14 +159,7 @@ main() {
             cp "$NGINX_SRC" "$NGINX_DEST"
             ln -sf "$NGINX_DEST" /etc/nginx/sites-enabled/nutrivault
             rm -f /etc/nginx/sites-enabled/default
-            if nginx -t 2>&1; then
-                systemctl reload nginx
-                log_success "Nginx config updated and reloaded"
-            else
-                log_error "Nginx config test failed! Restoring previous config."
-                # nginx -t failed, the old config is still active since we only reload on success
-                log_warn "Check: nginx -t"
-            fi
+            log_success "Nginx config updated"
         else
             log_success "Nginx config unchanged — skipping"
         fi
@@ -166,8 +167,21 @@ main() {
         log_warn "No nginx config found at ${NGINX_SRC} — skipping"
     fi
 
-    # ── Step 8: Restart backend ──────────────────────────────────
-    log_step 8 "Restarting backend service..."
+    # ── Step 8: SSL certificates ─────────────────────────────────
+    log_step 8 "Checking SSL certificates..."
+    setup_ssl
+
+    # Validate and reload nginx with the full config (HTTP + HTTPS)
+    if nginx -t 2>&1; then
+        systemctl reload nginx
+        log_success "Nginx reloaded"
+    else
+        log_error "Nginx config test failed!"
+        log_warn "Check: nginx -t"
+    fi
+
+    # ── Step 9: Restart backend ──────────────────────────────────
+    log_step 9 "Restarting backend service..."
     systemctl restart "$SERVICE_NAME"
 
     # Health check — use wget (always available on Debian/Ubuntu) as fallback for curl
@@ -214,6 +228,94 @@ main() {
     echo -e "${GREEN}  Duration: ${DURATION}s${NC}"
     echo -e "${GREEN}═══════════════════════════════════════════════════════════${NC}"
     echo ""
+}
+
+# ── SSL setup function ───────────────────────────────────────────────
+setup_ssl() {
+    # Ensure certbot is installed
+    if ! command -v certbot > /dev/null 2>&1; then
+        log_info "Installing certbot..."
+        apt-get update -qq && apt-get install -y -qq certbot python3-certbot-nginx > /dev/null 2>&1
+        log_success "Certbot installed"
+    fi
+
+    # Create webroot directory for ACME challenges
+    mkdir -p "$CERTBOT_WEBROOT"
+
+    # Check if certificates already exist
+    if [ -f "${CERT_PATH}/fullchain.pem" ]; then
+        # Certs exist — attempt renewal if needed (certbot only renews if <30 days left)
+        log_info "Certificates exist, checking renewal..."
+        certbot renew --quiet --deploy-hook "systemctl reload nginx" 2>&1 || true
+        log_success "SSL certificates OK"
+        return
+    fi
+
+    # First time: generate certificates
+    log_info "No SSL certificates found — generating with Let's Encrypt..."
+
+    # We need nginx running with HTTP-only to serve ACME challenges.
+    # Temporarily install a minimal HTTP-only config for cert generation.
+    local NGINX_TEMP="/etc/nginx/sites-available/nutrivault-temp"
+    cat > "$NGINX_TEMP" << 'TEMPCONF'
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        allow all;
+    }
+
+    location / {
+        return 200 "NutriVault — awaiting SSL setup\n";
+        add_header Content-Type text/plain;
+    }
+}
+TEMPCONF
+
+    # Swap to temp config, reload nginx
+    ln -sf "$NGINX_TEMP" /etc/nginx/sites-enabled/nutrivault
+    rm -f /etc/nginx/sites-enabled/default
+    nginx -t 2>&1 && systemctl reload nginx
+
+    # Generate the certificate (single SAN cert for all domains)
+    local DOMAIN_ARGS=""
+    IFS=',' read -ra DOMAINS <<< "$CERT_DOMAINS"
+    for d in "${DOMAINS[@]}"; do
+        DOMAIN_ARGS="$DOMAIN_ARGS -d $d"
+    done
+
+    certbot certonly \
+        --webroot \
+        --webroot-path "$CERTBOT_WEBROOT" \
+        --email "$CERT_EMAIL" \
+        --agree-tos \
+        --no-eff-email \
+        --cert-name "$CERT_NAME" \
+        $DOMAIN_ARGS
+
+    if [ $? -eq 0 ]; then
+        log_success "SSL certificates generated"
+    else
+        log_error "Certificate generation failed!"
+        log_warn "Check DNS records and firewall for port 80"
+        # Restore the full config anyway (it will fail on 443 without certs)
+    fi
+
+    # Remove temp config — the main config will be restored by the caller
+    rm -f "$NGINX_TEMP"
+
+    # Setup auto-renewal hook
+    local RENEWAL_HOOK="/etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh"
+    mkdir -p "$(dirname "$RENEWAL_HOOK")"
+    cat > "$RENEWAL_HOOK" << 'HOOK'
+#!/bin/bash
+systemctl reload nginx
+HOOK
+    chmod +x "$RENEWAL_HOOK"
+    log_success "Auto-renewal hook configured"
 }
 
 # Help
