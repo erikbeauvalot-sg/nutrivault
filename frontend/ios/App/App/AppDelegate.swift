@@ -8,6 +8,7 @@ import UserNotifications
 class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate, UNUserNotificationCenterDelegate {
 
     var window: UIWindow?
+    private var lastFcmToken: String?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         FirebaseApp.configure()
@@ -50,12 +51,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate, UNUser
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         guard let token = fcmToken else { return }
         print("[AppDelegate] FCM token received: \(token.prefix(20))...")
+        lastFcmToken = token
+        dispatchFcmTokenToWebview(token)
+    }
 
-        // Post to webview — the frontend JS listens for this event
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            guard let vc = self?.window?.rootViewController as? CAPBridgeViewController else { return }
-            let js = "window.dispatchEvent(new CustomEvent('fcmToken', { detail: '\(token)' }))"
-            vc.webView?.evaluateJavaScript(js, completionHandler: nil)
+    /// Dispatch FCM token to the webview. Retries at 2s, 5s, 10s to handle timing issues.
+    private func dispatchFcmTokenToWebview(_ token: String) {
+        for delay in [2.0, 5.0, 10.0] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                guard let vc = self?.window?.rootViewController as? CAPBridgeViewController else { return }
+                let js = "window.dispatchEvent(new CustomEvent('fcmToken', { detail: '\(token)' }))"
+                vc.webView?.evaluateJavaScript(js, completionHandler: nil)
+            }
         }
     }
 
@@ -82,6 +89,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate, UNUser
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
+        // Re-dispatch FCM token when app becomes active (e.g., returning from background)
+        if let token = lastFcmToken {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                guard let vc = self?.window?.rootViewController as? CAPBridgeViewController else { return }
+                let js = "window.dispatchEvent(new CustomEvent('fcmToken', { detail: '\(token)' }))"
+                vc.webView?.evaluateJavaScript(js, completionHandler: nil)
+            }
+        }
     }
 
     func applicationWillTerminate(_ application: UIApplication) {

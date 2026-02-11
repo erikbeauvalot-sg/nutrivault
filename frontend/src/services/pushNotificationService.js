@@ -9,6 +9,7 @@ import api from './api';
 
 let PushNotifications = null;
 let setupDone = false;
+let pendingFcmToken = null; // Captured before auth is ready
 
 async function getPush() {
   if (!PushNotifications) {
@@ -19,32 +20,34 @@ async function getPush() {
 }
 
 /**
- * Request push notification permission and register for remote notifications
- * @returns {Promise<boolean>} true if permission granted
+ * Send device token to backend
  */
-export async function requestPermission() {
-  if (!isNative) return false;
+async function sendTokenToBackend(tokenValue) {
   try {
-    const push = await getPush();
-    const result = await push.requestPermissions();
-    return result.receive === 'granted';
-  } catch {
-    return false;
+    await api.post('/device-tokens', {
+      token: tokenValue,
+      platform: 'ios',
+    });
+    console.log('[Push] Token registered with backend');
+  } catch (err) {
+    console.error('[Push] Failed to register device token with backend:', err);
   }
 }
 
-/**
- * Register device for push notifications.
- * Listens for the registration event and sends the token to the backend.
- */
-export async function register() {
-  if (!isNative) return;
-  try {
-    const push = await getPush();
-    await push.register();
-  } catch (err) {
-    console.error('Push registration failed:', err);
-  }
+// Capture FCM token immediately at module load — before auth is ready.
+// The native AppDelegate dispatches this event ~2s after launch.
+if (isNative) {
+  window.addEventListener('fcmToken', (e) => {
+    const token = e.detail;
+    if (token) {
+      console.log('[Push] FCM token captured from native');
+      pendingFcmToken = token;
+      // If setup already ran, send it now
+      if (setupDone) {
+        sendTokenToBackend(token);
+      }
+    }
+  });
 }
 
 /**
@@ -71,82 +74,54 @@ function handleNotificationTap(data) {
 }
 
 /**
- * Add push notification event listeners
- * @param {object} callbacks - { onRegistration, onNotification, onAction, onError }
- */
-export async function addListeners({
-  onRegistration,
-  onNotification,
-  onAction,
-  onError,
-} = {}) {
-  if (!isNative) return;
-
-  const push = await getPush();
-
-  // Helper to send token to backend
-  const sendTokenToBackend = async (tokenValue) => {
-    try {
-      await api.post('/device-tokens', {
-        token: tokenValue,
-        platform: 'ios',
-      });
-    } catch (err) {
-      console.error('Failed to register device token with backend:', err);
-    }
-  };
-
-  // FCM token from native Firebase Messaging (preferred — works with firebase-admin)
-  window.addEventListener('fcmToken', async (e) => {
-    const fcmToken = e.detail;
-    if (fcmToken) {
-      await sendTokenToBackend(fcmToken);
-      if (onRegistration) onRegistration(fcmToken);
-    }
-  });
-
-  // Fallback: APNs token from Capacitor plugin (used if Firebase SDK not present)
-  push.addListener('registration', async (token) => {
-    // Only use this if we haven't received an FCM token
-    await sendTokenToBackend(token.value);
-    if (onRegistration) onRegistration(token.value);
-  });
-
-  // Push received while app is in foreground
-  push.addListener('pushNotificationReceived', (notification) => {
-    if (onNotification) onNotification(notification);
-  });
-
-  // User tapped on a push notification
-  push.addListener('pushNotificationActionPerformed', (action) => {
-    const data = action?.notification?.data;
-    handleNotificationTap(data);
-    if (onAction) onAction(action);
-  });
-
-  // Registration error
-  push.addListener('registrationError', (error) => {
-    console.error('Push registration error:', error);
-    if (onError) onError(error);
-  });
-}
-
-/**
- * Full push notification setup: request permission, add listeners, register.
+ * Full push notification setup: send pending token, add listeners, register.
  * Safe to call multiple times — only runs once per app session.
+ * Called after user is authenticated so we can send the token to backend.
  */
 export async function setup() {
   if (!isNative || setupDone) return;
   setupDone = true;
+
   try {
-    const granted = await requestPermission();
-    if (granted) {
-      await addListeners();
-      await register();
+    // If we already captured an FCM token before auth, send it now
+    if (pendingFcmToken) {
+      console.log('[Push] Sending pending FCM token to backend');
+      await sendTokenToBackend(pendingFcmToken);
     }
+
+    // Set up Capacitor push listeners for foreground notifications and taps
+    const push = await getPush();
+
+    // Capacitor registration event (fallback if fcmToken event was missed)
+    push.addListener('registration', async (token) => {
+      console.log('[Push] Capacitor registration token received');
+      if (!pendingFcmToken) {
+        await sendTokenToBackend(token.value);
+      }
+    });
+
+    // Push received while app is in foreground
+    push.addListener('pushNotificationReceived', (notification) => {
+      console.log('[Push] Notification received in foreground:', notification.title);
+    });
+
+    // User tapped on a push notification
+    push.addListener('pushNotificationActionPerformed', (action) => {
+      const data = action?.notification?.data;
+      handleNotificationTap(data);
+    });
+
+    // Registration error
+    push.addListener('registrationError', (error) => {
+      console.error('[Push] Registration error:', error);
+    });
+
+    // Call register to trigger Capacitor's registration flow
+    await push.register();
+    console.log('[Push] Setup complete');
   } catch (err) {
-    console.error('Push notification setup failed:', err);
-    setupDone = false; // Allow retry on next login
+    console.error('[Push] Setup failed:', err);
+    setupDone = false; // Allow retry
   }
 }
 
