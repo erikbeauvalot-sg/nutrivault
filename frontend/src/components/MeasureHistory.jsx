@@ -134,14 +134,20 @@ const MeasureHistory = ({ patientId }) => {
 
         // Apply translations based on current language
         const currentLanguage = i18n.resolvedLanguage || i18n.language || 'en';
-        const translatedDefinitions = definitions.map(def =>
-          applyMeasureTranslations(def, translations[def.id]?.[currentLanguage] || {})
-        );
+        const translatedDefinitions = definitions
+          .filter(def => !def.name?.startsWith('cle_'))
+          .map(def =>
+            applyMeasureTranslations(def, translations[def.id]?.[currentLanguage] || {})
+          );
         setMeasureDefinitions(translatedDefinitions);
 
-        // Auto-select first measure if available
-        setSelectedMeasureId(translatedDefinitions[0].id);
-        setSelectedDefinition(translatedDefinitions[0]);
+        // Auto-select weight measure, or first available
+        const weightMeasure = translatedDefinitions.find(d => d.name === 'weight');
+        const defaultMeasure = weightMeasure || translatedDefinitions[0];
+        if (defaultMeasure) {
+          setSelectedMeasureId(defaultMeasure.id);
+          setSelectedDefinition(defaultMeasure);
+        }
       } else {
         setMeasureDefinitions(definitions || []);
       }
