@@ -397,21 +397,52 @@ async function processScheduledReminders() {
       };
     }
 
-    // Get reminder time thresholds from settings
-    const reminderTimes = await SystemSetting.getValue('appointment_reminder_times') || [24, 168];
+    // Get system default reminder time thresholds
+    const systemReminderTimes = await SystemSetting.getValue('appointment_reminder_times') || [1, 24];
 
-    console.log(`[AppointmentReminder] Checking reminder windows: ${reminderTimes.join(', ')} hours before appointment`);
+    console.log(`[AppointmentReminder] System default reminder windows: ${systemReminderTimes.join(', ')} hours before appointment`);
 
     let totalSent = 0;
     let totalFailed = 0;
     const results = [];
 
+    // Collect all unique reminder times (system defaults + patient custom)
+    const allReminderTimes = new Set(systemReminderTimes);
+
+    // Load all custom patient reminder preferences
+    const customPrefs = await db.NotificationPreference.findAll({
+      where: { reminder_times_hours: { [Op.ne]: null } },
+      attributes: ['user_id', 'reminder_times_hours'],
+    });
+    const userCustomTimes = {};
+    for (const pref of customPrefs) {
+      const times = pref.reminder_times_hours;
+      if (Array.isArray(times)) {
+        userCustomTimes[pref.user_id] = times;
+        times.forEach(t => allReminderTimes.add(t));
+      }
+    }
+
     // Process each reminder threshold
-    for (const hours of reminderTimes) {
+    for (const hours of allReminderTimes) {
       const eligibleVisits = await getEligibleVisits(hours);
 
       for (const visit of eligibleVisits) {
         try {
+          // Check if this patient has custom reminder times
+          const patientUserId = visit.patient?.user_id;
+          if (patientUserId && userCustomTimes[patientUserId]) {
+            // Patient has custom times — only send if this hour is in their list
+            if (!userCustomTimes[patientUserId].includes(hours)) {
+              continue;
+            }
+          } else {
+            // No custom times — only send if this hour is in system defaults
+            if (!systemReminderTimes.includes(hours)) {
+              continue;
+            }
+          }
+
           // Use system user ID for automated sends (or first admin user)
           const systemUser = await User.findOne({
             include: [{

@@ -63,6 +63,8 @@ db.JournalEntry = require('./JournalEntry')(sequelize, DataTypes);
 db.JournalComment = require('./JournalComment')(sequelize, DataTypes);
 db.DeviceToken = require('./DeviceToken')(sequelize, DataTypes);
 db.NotificationPreference = require('./NotificationPreference')(sequelize, DataTypes);
+db.Conversation = require('./Conversation')(sequelize, DataTypes);
+db.Message = require('./Message')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -923,5 +925,15 @@ db.User.hasOne(db.NotificationPreference, {
   foreignKey: 'user_id',
   as: 'notification_preference'
 });
+
+// Conversation relationships
+db.Conversation.belongsTo(db.Patient, { foreignKey: 'patient_id', as: 'patient' });
+db.Patient.hasMany(db.Conversation, { foreignKey: 'patient_id', as: 'conversations' });
+db.Conversation.belongsTo(db.User, { foreignKey: 'dietitian_id', as: 'dietitian' });
+db.Conversation.hasMany(db.Message, { foreignKey: 'conversation_id', as: 'messages' });
+
+// Message relationships
+db.Message.belongsTo(db.Conversation, { foreignKey: 'conversation_id', as: 'conversation' });
+db.Message.belongsTo(db.User, { foreignKey: 'sender_id', as: 'sender' });
 
 module.exports = db;

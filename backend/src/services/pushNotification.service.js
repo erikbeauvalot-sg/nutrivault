@@ -167,10 +167,46 @@ async function sendMeasureAlert(userId, details) {
   );
 }
 
+/**
+ * Send journal comment notification to a patient
+ */
+async function sendJournalCommentNotification(patientUserId, authorName, entryTitle) {
+  const body = entryTitle
+    ? `${authorName} a commenté votre entrée "${entryTitle}"`
+    : `${authorName} a commenté votre journal`;
+
+  await sendToUser(
+    patientUserId,
+    {
+      title: 'Nouveau commentaire',
+      body,
+      data: { type: 'journal_comment' },
+    },
+    'journal_comments'
+  );
+}
+
+/**
+ * Send new message notification
+ */
+async function sendNewMessageNotification(userId, senderName, preview) {
+  await sendToUser(
+    userId,
+    {
+      title: `Message de ${senderName}`,
+      body: preview || 'Vous avez un nouveau message',
+      data: { type: 'new_message' },
+    },
+    'new_messages'
+  );
+}
+
 module.exports = {
   initialize,
   sendToUser,
   sendAppointmentReminder,
   sendNewDocumentNotification,
   sendMeasureAlert,
+  sendJournalCommentNotification,
+  sendNewMessageNotification,
 };

@@ -47,6 +47,29 @@ export async function register() {
 }
 
 /**
+ * Navigate based on notification type
+ */
+function handleNotificationTap(data) {
+  const type = data?.type;
+  switch (type) {
+    case 'journal_comment':
+      window.location.href = '/portal/journal';
+      break;
+    case 'new_message':
+      window.location.href = '/portal/messages';
+      break;
+    case 'appointment_reminder':
+      window.location.href = '/portal/visits';
+      break;
+    case 'new_document':
+      window.location.href = '/portal/documents';
+      break;
+    default:
+      break;
+  }
+}
+
+/**
  * Add push notification event listeners
  * @param {object} callbacks - { onRegistration, onNotification, onAction, onError }
  */
@@ -80,6 +103,8 @@ export async function addListeners({
 
   // User tapped on a push notification
   push.addListener('pushNotificationActionPerformed', (action) => {
+    const data = action?.notification?.data;
+    handleNotificationTap(data);
     if (onAction) onAction(action);
   });
 

@@ -760,6 +760,10 @@ exports.getJournalEntries = async (req, res, next) => {
         where: { is_active: true },
         required: false,
         attributes: ['id', 'file_name', 'file_path', 'file_size', 'mime_type', 'created_at']
+      }, {
+        model: db.User,
+        as: 'createdBy',
+        attributes: ['id', 'first_name', 'last_name']
       }],
       order: [['entry_date', 'DESC'], ['created_at', 'DESC']],
       limit: parseInt(limit),
@@ -834,6 +838,10 @@ exports.updateJournalEntry = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Journal entry not found' });
     }
 
+    if (entry.created_by_user_id) {
+      return res.status(403).json({ success: false, error: 'Vous ne pouvez pas modifier les notes de votre diététicien(ne)' });
+    }
+
     const { entry_date, entry_type, title, content, mood, energy_level, tags, is_private } = req.body;
 
     const updateData = {};
@@ -886,9 +894,53 @@ exports.deleteJournalEntry = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Journal entry not found' });
     }
 
+    if (entry.created_by_user_id) {
+      return res.status(403).json({ success: false, error: 'Vous ne pouvez pas supprimer les notes de votre diététicien(ne)' });
+    }
+
     await entry.destroy();
 
     res.json({ success: true, message: 'Journal entry deleted' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/portal/journal/:id/comments — Add comment to a journal entry
+ */
+exports.addJournalComment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ success: false, error: 'Content is required' });
+    }
+
+    const entry = await db.JournalEntry.findOne({
+      where: { id, patient_id: req.patient.id }
+    });
+
+    if (!entry) {
+      return res.status(404).json({ success: false, error: 'Journal entry not found' });
+    }
+
+    const comment = await db.JournalComment.create({
+      journal_entry_id: id,
+      user_id: req.patient.user_id,
+      content: content.trim()
+    });
+
+    const created = await db.JournalComment.findByPk(comment.id, {
+      include: [{
+        model: db.User,
+        as: 'author',
+        attributes: ['id', 'first_name', 'last_name']
+      }]
+    });
+
+    res.status(201).json({ success: true, data: created });
   } catch (error) {
     next(error);
   }

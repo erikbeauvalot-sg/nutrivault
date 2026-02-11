@@ -7,22 +7,41 @@ import { useState, useEffect } from 'react';
 import { Card, Form, Button, Row, Col, Spinner, Alert } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
-import { FiShield } from 'react-icons/fi';
+import { FiShield, FiLogOut, FiSun } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import * as portalService from '../../services/portalService';
 import useBiometricAuth from '../../hooks/useBiometricAuth';
 import * as tokenStorage from '../../utils/tokenStorage';
+import { isNative } from '../../utils/platform';
 import NotificationPreferences from '../../components/NotificationPreferences';
 
 const PatientPortalProfile = () => {
   const { t } = useTranslation();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
+  const { themes, currentTheme, setTheme } = useTheme();
   const { biometricAvailable, biometricName, biometricEnabled, enableBiometric, disableBiometric } = useBiometricAuth();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
   const [phone, setPhone] = useState('');
   const [language, setLanguage] = useState('fr');
   const [saving, setSaving] = useState(false);
+
+  const handleLogout = async () => {
+    if (isNative) {
+      tokenStorage.clearTokens();
+      tokenStorage.clearUser();
+      logout().catch(() => {});
+      window.location.replace('/login');
+      return;
+    }
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    window.location.href = '/login';
+  };
 
   // Password change
   const [currentPassword, setCurrentPassword] = useState('');
@@ -233,6 +252,44 @@ const PatientPortalProfile = () => {
             </Card>
           </Col>
         )}
+
+        {/* Appearance — Theme (native: replaces navbar ThemeSelector) */}
+        {themes && themes.length > 0 && (
+          <Col xs={12}>
+            <Card>
+              <Card.Header>
+                <FiSun className="me-2" />
+                {t('portal.appearance', 'Apparence')}
+              </Card.Header>
+              <Card.Body>
+                <Form.Group>
+                  <Form.Label>{t('portal.theme', 'Thème')}</Form.Label>
+                  <Form.Select
+                    value={currentTheme?.id || ''}
+                    onChange={(e) => setTheme(e.target.value)}
+                  >
+                    {themes.map((theme) => (
+                      <option key={theme.id} value={theme.id}>{theme.name}</option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </Card.Body>
+            </Card>
+          </Col>
+        )}
+
+        {/* Logout button */}
+        <Col xs={12}>
+          <Button
+            variant="danger"
+            size="lg"
+            className="w-100"
+            onClick={handleLogout}
+          >
+            <FiLogOut className="me-2" />
+            {t('navigation.logout')}
+          </Button>
+        </Col>
       </Row>
     </div>
   );

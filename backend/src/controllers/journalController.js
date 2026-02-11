@@ -286,6 +286,21 @@ exports.addComment = async (req, res, next) => {
       }]
     });
 
+    // Send push notification to patient if commenter is not the patient
+    if (patient.user_id && patient.user_id !== req.user.id) {
+      try {
+        const pushNotificationService = require('../services/pushNotification.service');
+        const authorName = `${created.author.first_name} ${created.author.last_name}`;
+        await pushNotificationService.sendJournalCommentNotification(
+          patient.user_id,
+          authorName,
+          entry.title
+        );
+      } catch (pushErr) {
+        console.error('[Journal] Push notification failed:', pushErr.message);
+      }
+    }
+
     res.status(201).json({ success: true, data: created });
   } catch (error) {
     next(error);

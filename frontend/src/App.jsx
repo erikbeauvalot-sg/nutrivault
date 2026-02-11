@@ -61,6 +61,7 @@ const CampaignStatsPage = lazy(() => import('./pages/CampaignStatsPage'));
 const ThemeManagementPage = lazy(() => import('./pages/ThemeManagementPage'));
 const ScheduledTasksPage = lazy(() => import('./pages/ScheduledTasksPage'));
 const DiscordWebhookPage = lazy(() => import('./pages/DiscordWebhookPage'));
+const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 
 // Patient Portal pages
 const PatientPortalDashboard = lazy(() => import('./pages/portal/PatientPortalDashboard'));
@@ -71,6 +72,7 @@ const PatientPortalRecipes = lazy(() => import('./pages/portal/PatientPortalReci
 const PatientPortalRecipeDetail = lazy(() => import('./pages/portal/PatientPortalRecipeDetail'));
 const PatientPortalProfile = lazy(() => import('./pages/portal/PatientPortalProfile'));
 const PatientPortalJournal = lazy(() => import('./pages/portal/PatientPortalJournal'));
+const PatientPortalMessages = lazy(() => import('./pages/portal/PatientPortalMessages'));
 const PatientPortalInvoices = lazy(() => import('./pages/portal/PatientPortalInvoices'));
 const PatientPortalRadar = lazy(() => import('./pages/portal/PatientPortalRadar'));
 const SetPasswordPage = lazy(() => import('./pages/portal/SetPasswordPage'));
@@ -433,6 +435,15 @@ function App() {
       />
 
       <Route
+        path="/messages"
+        element={
+          <ProtectedRoute>
+            <MessagesPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/settings/discord"
         element={
           <ProtectedRoute>
@@ -524,6 +535,7 @@ function App() {
       <Route path="/portal/visits" element={<PatientProtectedRoute><PatientPortalVisits /></PatientProtectedRoute>} />
       <Route path="/portal/documents" element={<PatientProtectedRoute><PatientPortalDocuments /></PatientProtectedRoute>} />
       <Route path="/portal/journal" element={<PatientProtectedRoute><PatientPortalJournal /></PatientProtectedRoute>} />
+      <Route path="/portal/messages" element={<PatientProtectedRoute><PatientPortalMessages /></PatientProtectedRoute>} />
       <Route path="/portal/invoices" element={<PatientProtectedRoute><PatientPortalInvoices /></PatientProtectedRoute>} />
       <Route path="/portal/recipes" element={<PatientProtectedRoute><PatientPortalRecipes /></PatientProtectedRoute>} />
       <Route path="/portal/recipes/:id" element={<PatientProtectedRoute><PatientPortalRecipeDetail /></PatientProtectedRoute>} />

@@ -3137,6 +3137,13 @@
       "deleteConfirm": "Delete this entry?",
       "deleteConfirmMessage": "This action cannot be undone. Are you sure you want to delete this journal entry?",
       "comments": "Comments",
+      "commentAdded": "Comment added",
+      "commentError": "Error adding comment",
+      "replyPlaceholder": "Write a comment...",
+      "reply": "Reply",
+      "send": "Send",
+      "dietitianNote": "Note from {{name}}",
+      "dietitianNoteGeneric": "Note from your dietitian",
       "type": {
         "food": "Food",
         "symptom": "Symptom",

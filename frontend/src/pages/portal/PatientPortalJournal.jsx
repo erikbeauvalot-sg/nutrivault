@@ -79,6 +79,11 @@ const PatientPortalJournal = () => {
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Comment/reply state
+  const [replyingTo, setReplyingTo] = useState(null); // entry id
+  const [replyContent, setReplyContent] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
+
   // Lightbox state
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
 
@@ -242,6 +247,22 @@ const PatientPortalJournal = () => {
       toast.error(t('portal.journal.deleteError', 'Erreur lors de la suppression'));
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleReply = async (entryId) => {
+    if (!replyContent.trim()) return;
+    setSendingReply(true);
+    try {
+      await portalService.addJournalComment(entryId, replyContent.trim());
+      toast.success(t('portal.journal.commentAdded', 'Commentaire ajouté'));
+      setReplyingTo(null);
+      setReplyContent('');
+      loadEntries();
+    } catch {
+      toast.error(t('portal.journal.commentError', 'Erreur lors de l\'ajout du commentaire'));
+    } finally {
+      setSendingReply(false);
     }
   };
 
@@ -662,8 +683,17 @@ const PatientPortalJournal = () => {
             const entryTags = entry.tags || [];
             const entryPhotos = entry.photos || [];
 
+            const isDietitianNote = !!entry.created_by_user_id;
+            const dietitianName = entry.createdBy
+              ? `${entry.createdBy.first_name} ${entry.createdBy.last_name}`
+              : null;
+
             return (
-              <Card key={entry.id} className="mb-3" style={entry.is_private ? { borderLeft: '4px solid #dc3545' } : {}}>
+              <Card key={entry.id} className="mb-3" style={
+                isDietitianNote
+                  ? { borderLeft: '4px solid #198754' }
+                  : entry.is_private ? { borderLeft: '4px solid #dc3545' } : {}
+              }>
                 <Card.Body>
                   {/* Header row */}
                   <div className="d-flex justify-content-between align-items-start mb-2">
@@ -676,20 +706,30 @@ const PatientPortalJournal = () => {
                           weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
                         })}
                       </small>
-                      {entry.is_private && (
+                      {isDietitianNote && (
+                        <Badge bg="success" className="px-2 py-1">
+                          {dietitianName
+                            ? t('portal.journal.dietitianNote', 'Note de {{name}}', { name: dietitianName })
+                            : t('portal.journal.dietitianNoteGeneric', 'Note de votre diététicien(ne)')
+                          }
+                        </Badge>
+                      )}
+                      {entry.is_private && !isDietitianNote && (
                         <Badge bg="danger" className="px-2 py-1">
-                          {'\uD83D\uDD12'} {t('portal.journal.private', 'Privee')}
+                          {t('portal.journal.private', 'Privee')}
                         </Badge>
                       )}
                     </div>
-                    <div className="d-flex gap-1">
-                      <Button size="sm" variant="outline-primary" onClick={() => handleEdit(entry)} title={t('common.edit', 'Modifier')}>
-                        {'\u270F\uFE0F'}
-                      </Button>
-                      <Button size="sm" variant="outline-danger" onClick={() => setDeleteId(entry.id)} title={t('common.delete', 'Supprimer')}>
-                        {'\uD83D\uDDD1\uFE0F'}
-                      </Button>
-                    </div>
+                    {!isDietitianNote && (
+                      <div className="d-flex gap-1">
+                        <Button size="sm" variant="outline-primary" onClick={() => handleEdit(entry)} title={t('common.edit', 'Modifier')}>
+                          {'\u270F\uFE0F'}
+                        </Button>
+                        <Button size="sm" variant="outline-danger" onClick={() => setDeleteId(entry.id)} title={t('common.delete', 'Supprimer')}>
+                          {'\uD83D\uDDD1\uFE0F'}
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Title */}
@@ -735,11 +775,11 @@ const PatientPortalJournal = () => {
                     ))}
                   </div>
 
-                  {/* Comments (from dietitian, read-only for patient) */}
+                  {/* Comments */}
                   {entry.comments && entry.comments.length > 0 && (
                     <div className="mt-3 pt-3 border-top">
                       <small className="text-muted fw-bold d-block mb-2">
-                        {'\uD83D\uDCAC'} {t('portal.journal.comments', 'Commentaires')} ({entry.comments.length})
+                        {t('portal.journal.comments', 'Commentaires')} ({entry.comments.length})
                       </small>
                       {entry.comments.map(comment => (
                         <div key={comment.id} className="mb-2 ps-3" style={{ borderLeft: '3px solid #0d6efd' }}>
@@ -756,6 +796,49 @@ const PatientPortalJournal = () => {
                       ))}
                     </div>
                   )}
+
+                  {/* Reply form */}
+                  <div className="mt-2 pt-2 border-top">
+                    {replyingTo === entry.id ? (
+                      <div className="d-flex gap-2">
+                        <Form.Control
+                          size="sm"
+                          as="textarea"
+                          rows={2}
+                          placeholder={t('portal.journal.replyPlaceholder', 'Écrire un commentaire...')}
+                          value={replyContent}
+                          onChange={(e) => setReplyContent(e.target.value)}
+                          disabled={sendingReply}
+                        />
+                        <div className="d-flex flex-column gap-1">
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            onClick={() => handleReply(entry.id)}
+                            disabled={sendingReply || !replyContent.trim()}
+                          >
+                            {sendingReply ? <Spinner animation="border" size="sm" /> : t('portal.journal.send', 'Envoyer')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline-secondary"
+                            onClick={() => { setReplyingTo(null); setReplyContent(''); }}
+                            disabled={sendingReply}
+                          >
+                            {t('common.cancel', 'Annuler')}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline-secondary"
+                        onClick={() => { setReplyingTo(entry.id); setReplyContent(''); }}
+                      >
+                        {t('portal.journal.reply', 'Répondre')}
+                      </Button>
+                    )}
+                  </div>
                 </Card.Body>
               </Card>
             );

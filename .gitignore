@@ -72,6 +72,10 @@ backend/data.BKP/nutrivault.db
 backend/data.BKP/old_nutrivault-01.db
 backend/nutrivault.db
 
+# Firebase
+config/firebase-service-account.json
+frontend/ios/App/App/GoogleService-Info.plist
+
 # Capacitor iOS
 frontend/ios/App/App/public/
 frontend/ios/App/Pods/

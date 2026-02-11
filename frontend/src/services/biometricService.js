@@ -10,16 +10,10 @@ const CREDENTIALS_SERVER = 'com.beauvalot.nutrivault';
 const BIOMETRIC_ENABLED_KEY = 'nutrivault_biometric_enabled';
 const BIOMETRIC_DONT_ASK_KEY = 'nutrivault_biometric_dont_ask';
 
-let NativeBiometric = null;
-
-async function getBiometric() {
-  if (!isNative) return null;
-  if (!NativeBiometric) {
-    const mod = await import('@capgo/capacitor-native-biometric');
-    NativeBiometric = mod.NativeBiometric;
-  }
-  return NativeBiometric;
-}
+// Eager import — resolved once, reused everywhere
+const biometricReady = isNative
+  ? import('@capgo/capacitor-native-biometric').then(mod => mod.NativeBiometric).catch(() => null)
+  : Promise.resolve(null);
 
 /**
  * Check if biometric authentication is available on this device
@@ -29,7 +23,8 @@ async function getBiometric() {
 export async function isAvailable() {
   if (!isNative) return { isAvailable: false, biometryType: 0 };
   try {
-    const bio = await getBiometric();
+    const bio = await biometricReady;
+    if (!bio) return { isAvailable: false, biometryType: 0 };
     const result = await bio.isAvailable();
     return result;
   } catch {
@@ -45,7 +40,7 @@ export async function isAvailable() {
 export async function authenticate(reason = 'Verify your identity') {
   if (!isNative) return false;
   try {
-    const bio = await getBiometric();
+    const bio = await biometricReady;
     await bio.verifyIdentity({ reason });
     return true;
   } catch {
@@ -59,7 +54,7 @@ export async function authenticate(reason = 'Verify your identity') {
 export async function saveCredentials(username, refreshToken) {
   if (!isNative) return;
   try {
-    const bio = await getBiometric();
+    const bio = await biometricReady;
     await bio.setCredentials({
       username,
       password: refreshToken,
@@ -77,7 +72,7 @@ export async function saveCredentials(username, refreshToken) {
 export async function getCredentials() {
   if (!isNative) return null;
   try {
-    const bio = await getBiometric();
+    const bio = await biometricReady;
     const creds = await bio.getCredentials({ server: CREDENTIALS_SERVER });
     return creds;
   } catch {
@@ -91,7 +86,7 @@ export async function getCredentials() {
 export async function deleteCredentials() {
   if (!isNative) return;
   try {
-    const bio = await getBiometric();
+    const bio = await biometricReady;
     await bio.deleteCredentials({ server: CREDENTIALS_SERVER });
   } catch {
     // Ignore — credentials may not exist

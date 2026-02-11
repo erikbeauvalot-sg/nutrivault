@@ -262,6 +262,15 @@ router.delete('/journal/:id',
 );
 
 /**
+ * POST /api/portal/journal/:id/comments — Add comment to a journal entry
+ */
+router.post('/journal/:id/comments',
+  param('id').isUUID(),
+  body('content').notEmpty().withMessage('Content is required'),
+  portalController.addJournalComment
+);
+
+/**
  * POST /api/portal/journal/:id/photos — Upload photos to journal entry (max 5)
  */
 router.post('/journal/:id/photos',
@@ -286,5 +295,157 @@ router.put('/theme',
   body('theme_id').optional({ nullable: true }).isUUID(),
   portalController.updateTheme
 );
+
+// ==========================================
+// MESSAGING ROUTES (Patient side)
+// ==========================================
+
+/**
+ * GET /api/portal/messages/conversations — List patient's conversations
+ */
+router.get('/messages/conversations', async (req, res) => {
+  try {
+    const conversations = await db.Conversation.findAll({
+      where: { patient_id: req.patient.id },
+      include: [
+        {
+          model: db.User,
+          as: 'dietitian',
+          attributes: ['id', 'first_name', 'last_name'],
+        },
+      ],
+      order: [['last_message_at', 'DESC NULLS LAST']],
+    });
+
+    res.json({ success: true, data: conversations });
+  } catch (error) {
+    console.error('Error listing patient conversations:', error);
+    res.status(500).json({ success: false, error: 'Failed to list conversations' });
+  }
+});
+
+/**
+ * GET /api/portal/messages/conversations/:id/messages — Get messages
+ */
+router.get('/messages/conversations/:id/messages',
+  param('id').isUUID(),
+  async (req, res) => {
+    try {
+      const conversation = await db.Conversation.findOne({
+        where: { id: req.params.id, patient_id: req.patient.id },
+      });
+      if (!conversation) {
+        return res.status(404).json({ success: false, error: 'Conversation not found' });
+      }
+
+      const where = { conversation_id: conversation.id };
+      if (req.query.before) {
+        where.created_at = { [db.Sequelize.Op.lt]: req.query.before };
+      }
+
+      const limit = parseInt(req.query.limit) || 50;
+
+      const messages = await db.Message.findAll({
+        where,
+        include: [
+          { model: db.User, as: 'sender', attributes: ['id', 'first_name', 'last_name'] },
+        ],
+        order: [['created_at', 'DESC']],
+        limit,
+      });
+
+      // Mark unread messages as read (for patient)
+      if (conversation.patient_unread_count > 0) {
+        await db.Message.update(
+          { is_read: true, read_at: new Date() },
+          {
+            where: {
+              conversation_id: conversation.id,
+              sender_id: { [db.Sequelize.Op.ne]: req.user.id },
+              is_read: false,
+            },
+          }
+        );
+        await conversation.update({ patient_unread_count: 0 });
+      }
+
+      res.json({ success: true, data: messages.reverse() });
+    } catch (error) {
+      console.error('Error listing patient messages:', error);
+      res.status(500).json({ success: false, error: 'Failed to list messages' });
+    }
+  }
+);
+
+/**
+ * POST /api/portal/messages/conversations/:id/messages — Send a message (patient)
+ */
+router.post('/messages/conversations/:id/messages',
+  param('id').isUUID(),
+  body('content').notEmpty().isLength({ max: 5000 }),
+  async (req, res) => {
+    try {
+      const conversation = await db.Conversation.findOne({
+        where: { id: req.params.id, patient_id: req.patient.id },
+        include: [
+          { model: db.User, as: 'dietitian', attributes: ['id', 'first_name', 'last_name'] },
+        ],
+      });
+      if (!conversation) {
+        return res.status(404).json({ success: false, error: 'Conversation not found' });
+      }
+
+      const message = await db.Message.create({
+        conversation_id: conversation.id,
+        sender_id: req.user.id,
+        content: req.body.content.trim(),
+      });
+
+      const preview = req.body.content.trim().substring(0, 200);
+      await conversation.update({
+        last_message_at: new Date(),
+        last_message_preview: preview,
+        dietitian_unread_count: conversation.dietitian_unread_count + 1,
+      });
+
+      // Send push notification to dietitian
+      try {
+        const pushNotificationService = require('../services/pushNotification.service');
+        const patient = req.patient;
+        const senderName = `${patient.first_name} ${patient.last_name}`;
+        await pushNotificationService.sendNewMessageNotification(
+          conversation.dietitian_id,
+          senderName,
+          preview
+        );
+      } catch (pushErr) {
+        console.error('[PortalMessages] Push notification failed:', pushErr.message);
+      }
+
+      const created = await db.Message.findByPk(message.id, {
+        include: [{ model: db.User, as: 'sender', attributes: ['id', 'first_name', 'last_name'] }],
+      });
+
+      res.status(201).json({ success: true, data: created });
+    } catch (error) {
+      console.error('Error sending patient message:', error);
+      res.status(500).json({ success: false, error: 'Failed to send message' });
+    }
+  }
+);
+
+/**
+ * GET /api/portal/messages/unread-count — Get total unread count for patient
+ */
+router.get('/messages/unread-count', async (req, res) => {
+  try {
+    const total = await db.Conversation.sum('patient_unread_count', {
+      where: { patient_id: req.patient.id },
+    }) || 0;
+    res.json({ success: true, data: { unread_count: total } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to get unread count' });
+  }
+});
 
 module.exports = router;

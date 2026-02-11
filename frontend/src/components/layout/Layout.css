@@ -1,21 +1,33 @@
 .layout-wrapper {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh; /* dynamic viewport height — excludes iOS browser chrome */
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .layout-container {
   display: flex;
   flex: 1;
   position: relative;
+  overflow: hidden;
+  min-height: 0; /* allow flex child to shrink below content size */
 }
 
 .layout-content {
   flex: 1;
   padding: 2rem;
   background-color: var(--nv-parchment-light);
+  overflow-x: hidden; /* prevent horizontal scroll on iOS native */
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   min-width: 0; /* prevent flex child overflow */
+  min-height: 0; /* allow flex child to shrink */
+}
+
+/* When bottom tabs are present, pad content so it isn't hidden behind the bar */
+.has-bottom-tabs .layout-content {
+  padding-bottom: calc(56px + env(safe-area-inset-bottom) + 1rem);
 }
 
 .sidebar-overlay {

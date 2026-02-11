@@ -3,6 +3,15 @@ const router = express.Router();
 const authenticate = require('../middleware/authenticate');
 const db = require('../../../models');
 
+const PREF_FIELDS = [
+  'appointment_reminders',
+  'new_documents',
+  'measure_alerts',
+  'journal_comments',
+  'new_messages',
+  'reminder_times_hours',
+];
+
 /**
  * GET /api/notification-preferences — Get current user's notification preferences
  */
@@ -12,20 +21,18 @@ router.get('/', authenticate, async (req, res) => {
       where: { user_id: req.user.id },
     });
 
-    // Create default preferences if none exist
     if (!prefs) {
       prefs = await db.NotificationPreference.create({
         user_id: req.user.id,
       });
     }
 
-    res.json({
-      data: {
-        appointment_reminders: prefs.appointment_reminders,
-        new_documents: prefs.new_documents,
-        measure_alerts: prefs.measure_alerts,
-      },
-    });
+    const data = {};
+    for (const key of PREF_FIELDS) {
+      data[key] = prefs[key];
+    }
+
+    res.json({ data });
   } catch (error) {
     console.error('Error fetching notification preferences:', error);
     res.status(500).json({ error: 'Failed to fetch notification preferences' });
@@ -37,29 +44,38 @@ router.get('/', authenticate, async (req, res) => {
  */
 router.put('/', authenticate, async (req, res) => {
   try {
-    const { appointment_reminders, new_documents, measure_alerts } = req.body;
-
     const [prefs] = await db.NotificationPreference.findOrCreate({
       where: { user_id: req.user.id },
-      defaults: { appointment_reminders, new_documents, measure_alerts },
     });
 
     const updates = {};
-    if (typeof appointment_reminders === 'boolean') updates.appointment_reminders = appointment_reminders;
-    if (typeof new_documents === 'boolean') updates.new_documents = new_documents;
-    if (typeof measure_alerts === 'boolean') updates.measure_alerts = measure_alerts;
+    const booleanKeys = ['appointment_reminders', 'new_documents', 'measure_alerts', 'journal_comments', 'new_messages'];
+    for (const key of booleanKeys) {
+      if (typeof req.body[key] === 'boolean') {
+        updates[key] = req.body[key];
+      }
+    }
+
+    // Handle reminder_times_hours (array of numbers or null)
+    if (req.body.reminder_times_hours !== undefined) {
+      const val = req.body.reminder_times_hours;
+      if (val === null) {
+        updates.reminder_times_hours = null;
+      } else if (Array.isArray(val) && val.every(h => typeof h === 'number' && h > 0)) {
+        updates.reminder_times_hours = val;
+      }
+    }
 
     if (Object.keys(updates).length > 0) {
       await prefs.update(updates);
     }
 
-    res.json({
-      data: {
-        appointment_reminders: prefs.appointment_reminders,
-        new_documents: prefs.new_documents,
-        measure_alerts: prefs.measure_alerts,
-      },
-    });
+    const data = {};
+    for (const key of PREF_FIELDS) {
+      data[key] = prefs[key];
+    }
+
+    res.json({ data });
   } catch (error) {
     console.error('Error updating notification preferences:', error);
     res.status(500).json({ error: 'Failed to update notification preferences' });

@@ -197,7 +197,11 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
         return Array.isArray(entityTypes) && entityTypes.includes('visit');
       });
 
-      const transformedCategories = visitCategories.map(category => ({
+      const transformedCategories = visitCategories.map(category => {
+        const defs = category.field_definitions || [];
+        const hasVisibleOnCreation = defs.some(def => def.visible_on_creation);
+
+        return {
         id: category.id,
         name: category.name,
         description: category.description,
@@ -205,8 +209,14 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
         color: category.color || '#3498db',
         visit_types: category.visit_types || null,
         entity_types: category.entity_types || ['patient'],
-        fields: (category.field_definitions || [])
-          .filter(def => def.is_active !== false && def.visible_on_creation)
+        fields: defs
+          .filter(def => {
+            if (def.is_active === false) return false;
+            // If any field has visible_on_creation set, use that flag
+            if (hasVisibleOnCreation) return def.visible_on_creation;
+            // Otherwise show all non-utility fields
+            return true;
+          })
           .map(def => {
           let validationRules = def.validation_rules;
           let selectOptions = def.select_options;
@@ -234,7 +244,8 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
             value: null
           };
         })
-      }));
+      };
+      });
 
       setCustomFieldCategories(transformedCategories);
     } catch (err) {
@@ -408,8 +419,8 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
           if (fieldsToSave.length > 0) {
             await visitCustomFieldService.updateVisitCustomFields(savedVisit.id, fieldsToSave);
           }
-        } catch {
-          // Don't block - custom fields are not critical
+        } catch (cfError) {
+          console.error('Error saving custom fields:', cfError);
         }
       }
 

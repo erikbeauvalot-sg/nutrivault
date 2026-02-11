@@ -15,9 +15,9 @@ export default function useBiometricAuth() {
     if (!isNative) return;
 
     const check = async () => {
-      const { isAvailable, biometryType } = await biometricService.isAvailable();
-      setBiometricAvailable(isAvailable);
-      setBiometricType(biometryType);
+      const result = await biometricService.isAvailable();
+      setBiometricAvailable(result.isAvailable);
+      setBiometricType(result.biometryType);
       setBiometricEnabled(biometricService.isBiometricEnabled());
     };
     check();

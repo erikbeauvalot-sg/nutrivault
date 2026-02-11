@@ -233,6 +233,19 @@ app.use('/api/device-tokens', deviceTokenRoutes);
 const notificationPreferencesRoutes = require('./routes/notificationPreferences');
 app.use('/api/notification-preferences', notificationPreferencesRoutes);
 
+// Messages routes (dietitian-facing messaging)
+const messagesRoutes = require('./routes/messages');
+app.use('/api/messages', messagesRoutes);
+
+// Apple App Site Association — iOS credential autofill
+app.get('/.well-known/apple-app-site-association', (req, res) => {
+  res.json({
+    webcredentials: {
+      apps: ['QH6XZ5KJ4Y.com.beauvalot.nutrivault']
+    }
+  });
+});
+
 // Serve uploaded files (logos, signatures)
 // Use /app in production (Docker), process.cwd() in development
 const uploadsBasePath = process.env.NODE_ENV === 'production' ? '/app/uploads' : path.join(process.cwd(), 'uploads');

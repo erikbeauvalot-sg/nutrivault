@@ -137,6 +137,11 @@ export const deleteJournalPhoto = async (entryId, photoId) => {
   return extractData(response);
 };
 
+export const addJournalComment = async (entryId, content) => {
+  const response = await api.post(`/portal/journal/${entryId}/comments`, { content });
+  return extractData(response);
+};
+
 export const getJournalPhotoUrl = (filePath) => {
   // On native, VITE_SERVER_URL provides the absolute server origin.
   // On web, empty string works because Nginx proxies /uploads.

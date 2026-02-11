@@ -676,7 +676,7 @@ const EditVisitPage = () => {
         try {
           await visitCustomFieldService.updateVisitCustomFields(id, customFieldsToSave);
         } catch (customFieldError) {
-          // Error saving custom fields - continue with visit save
+          console.error('Error saving custom fields:', customFieldError);
         }
       }
 

@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { FiHome, FiEdit3, FiActivity, FiFile, FiMoreHorizontal, FiCalendar, FiPieChart, FiCreditCard, FiUser, FiBook } from 'react-icons/fi';
+import { FiHome, FiEdit3, FiActivity, FiFile, FiMoreHorizontal, FiCalendar, FiPieChart, FiCreditCard, FiUser, FiBook, FiMessageSquare } from 'react-icons/fi';
 import useHaptics from '../../hooks/useHaptics';
 import './BottomTabBar.css';
 
@@ -27,6 +27,7 @@ const BottomTabBar = () => {
   ];
 
   const moreTabs = [
+    { path: '/portal/messages', icon: FiMessageSquare, label: t('portal.nav.messages', 'Messages') },
     { path: '/portal/visits', icon: FiCalendar, label: t('portal.nav.visits', 'Visits') },
     { path: '/portal/recipes', icon: FiBook, label: t('portal.nav.recipes', 'Recipes') },
     { path: '/portal/radar', icon: FiPieChart, label: t('portal.nav.radar', 'Radar') },

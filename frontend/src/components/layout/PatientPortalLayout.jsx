@@ -9,6 +9,7 @@ import { Navbar, Container, Nav, NavDropdown, Button } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { FiLogOut } from 'react-icons/fi';
 import LanguageSelector from '../LanguageSelector';
 import ThemeSelector from '../ThemeSelector';
 import PatientPortalSidebar from './PatientPortalSidebar';
@@ -65,37 +66,52 @@ const PatientPortalLayout = ({ children }) => {
             <span className="d-none d-sm-inline">{'\uD83C\uDF31'} NutriVault — {t('portal.title', 'Mon Portail')}</span>
             <span className="d-sm-none">{'\uD83C\uDF31'} {t('portal.title', 'Mon Portail')}</span>
           </Navbar.Brand>
-          <Navbar.Toggle aria-controls="portal-navbar-nav" />
-          <Navbar.Collapse id="portal-navbar-nav">
-            <Nav className="ms-auto align-items-lg-center flex-row flex-wrap gap-2 py-2 py-lg-0">
-              <div>
-                <ThemeSelector />
-              </div>
-              <div>
-                <LanguageSelector />
-              </div>
-              <NavDropdown
-                title={
-                  <>
-                    <i className="bi bi-person-circle me-1"></i>
-                    <span className="d-none d-md-inline">{user?.username || 'Patient'}</span>
-                  </>
-                }
-                id="portal-user-dropdown"
-                align="end"
+          {isNative ? (
+            <div className="d-flex align-items-center gap-2">
+              <ThemeSelector />
+              <button
+                onClick={handleLogout}
+                aria-label={t('navigation.logout')}
+                style={{ background: 'none', border: 'none', color: '#fff', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
               >
-                <NavDropdown.Item as={Link} to="/portal/profile">
-                  <i className="bi bi-gear me-2"></i>
-                  {t('portal.myProfile', 'Mon profil')}
-                </NavDropdown.Item>
-                <NavDropdown.Divider />
-                <NavDropdown.Item onClick={handleLogout}>
-                  <i className="bi bi-box-arrow-right me-2"></i>
-                  {t('navigation.logout')}
-                </NavDropdown.Item>
-              </NavDropdown>
-            </Nav>
-          </Navbar.Collapse>
+                <FiLogOut size={20} />
+              </button>
+            </div>
+          ) : (
+            <>
+              <Navbar.Toggle aria-controls="portal-navbar-nav" />
+              <Navbar.Collapse id="portal-navbar-nav">
+                <Nav className="ms-auto align-items-lg-center flex-row flex-wrap gap-2 py-2 py-lg-0">
+                  <div>
+                    <ThemeSelector />
+                  </div>
+                  <div>
+                    <LanguageSelector />
+                  </div>
+                  <NavDropdown
+                    title={
+                      <>
+                        <i className="bi bi-person-circle me-1"></i>
+                        <span className="d-none d-md-inline">{user?.username || 'Patient'}</span>
+                      </>
+                    }
+                    id="portal-user-dropdown"
+                    align="end"
+                  >
+                    <NavDropdown.Item as={Link} to="/portal/profile">
+                      <i className="bi bi-gear me-2"></i>
+                      {t('portal.myProfile', 'Mon profil')}
+                    </NavDropdown.Item>
+                    <NavDropdown.Divider />
+                    <NavDropdown.Item onClick={handleLogout}>
+                      <i className="bi bi-box-arrow-right me-2"></i>
+                      {t('navigation.logout')}
+                    </NavDropdown.Item>
+                  </NavDropdown>
+                </Nav>
+              </Navbar.Collapse>
+            </>
+          )}
         </Container>
       </Navbar>
       <OfflineBanner />

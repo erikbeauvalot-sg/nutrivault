@@ -61,24 +61,14 @@ cd frontend && npm run build # Production build
 
 **IMPORTANT: Always use the deployment script, never run Docker commands locally for production!**
 
-Production runs on a VM with hostname `nutrivault`. To deploy:
-
+Production runs on a VM with hostname `sd-161616`. To deploy:
+a script on the vm is availeble : 
 ```bash
-# Deploy with version from package.json
-./scripts/deploy-production.sh
-
-# Deploy specific version
-./scripts/deploy-production.sh 5.14.0
+./Update.sh
 ```
 
-This script automatically:
-1. Connects via SSH to `root@nutrivault`
-2. Goes to the `nutrivault` directory
-3. Runs `git pull origin main`
-4. Executes `./scripts/deploy.sh -y [VERSION]` on the server
-
-**DO NOT** run `docker-compose build/up` locally for production deployment!
-
+This script will:
+ cd /opt/nutrivault && git pull origin main && ./scripts/deploy-bare-metal.sh -y
 
 <use_interesting_fonts>
 Typography instantly signals quality. Avoid using boring, generic fonts.

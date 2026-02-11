@@ -5,7 +5,7 @@
  * Supports biometric setup prompt after first login on native
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Card, Form, Button, Alert } from 'react-bootstrap';
@@ -22,19 +22,57 @@ import './LoginPage.css';
 const LAST_USERNAME_KEY = 'nutrivault_last_username';
 
 const LoginPage = () => {
-  const { login } = useAuth();
+  const { login, biometricLogin } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const biometricAttempted = useRef(false);
 
   // Biometric state
-  const { biometricAvailable, biometricName, biometricEnabled, enableBiometric } = useBiometricAuth();
+  const { biometricAvailable, biometricName, biometricEnabled, enableBiometric, authenticateWithBiometric } = useBiometricAuth();
   const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
   const [pendingLoginData, setPendingLoginData] = useState(null);
 
   // Prefetch critical routes while user is on login page (US-9.2)
   usePrefetchRoutes(true);
+
+
+
+  // Biometric auto-login: attempt Face ID / Touch ID
+  const handleBiometricLogin = useCallback(async () => {
+    if (!biometricEnabled || loading) return;
+    setLoading(true);
+    setError('');
+    try {
+      const creds = await authenticateWithBiometric(t('auth.biometricReason', 'Connectez-vous avec ' + biometricName));
+      if (!creds) {
+        setLoading(false);
+        return;
+      }
+      const success = await biometricLogin(creds.refreshToken);
+      if (success) {
+        const storedUser = tokenStorage.getUser();
+        const roleName = typeof storedUser?.role === 'string' ? storedUser.role : storedUser?.role?.name;
+        navigate(roleName === 'PATIENT' ? '/portal' : '/dashboard');
+      } else {
+        setError(t('auth.biometricFailed', 'Échec de la connexion biométrique. Veuillez saisir vos identifiants.'));
+        setLoading(false);
+      }
+    } catch {
+      setError(t('auth.biometricFailed', 'Échec de la connexion biométrique. Veuillez saisir vos identifiants.'));
+      setLoading(false);
+    }
+  }, [biometricEnabled, biometricName, authenticateWithBiometric, biometricLogin, loading, t, navigate]);
+
+  // Auto-trigger Face ID on mount (native only, once)
+  useEffect(() => {
+    if (isNative && biometricEnabled && !biometricAttempted.current) {
+      biometricAttempted.current = true;
+      handleBiometricLogin();
+    }
+  }, [biometricEnabled, handleBiometricLogin]);
+
 
   // On native, pre-fill last username and always remember session
   const savedUsername = isNative ? localStorage.getItem(LAST_USERNAME_KEY) || '' : '';
@@ -145,6 +183,7 @@ const LoginPage = () => {
                   placeholder={t('auth.usernameOrEmail', 'Nom d\'utilisateur ou email')}
                   autoCapitalize="none"
                   autoCorrect="off"
+                  autoComplete="username"
                   {...register('username', {
                     required: t('forms.required'),
                     minLength: {
@@ -165,6 +204,7 @@ const LoginPage = () => {
                 <Form.Control
                   type="password"
                   placeholder={t('auth.password')}
+                  autoComplete="current-password"
                   {...register('password', {
                     required: t('forms.required'),
                     minLength: {
@@ -213,6 +253,20 @@ const LoginPage = () => {
                   t('auth.loginButton')
                 )}
               </Button>
+
+              {/* Face ID / Touch ID button on native */}
+              {isNative && biometricEnabled && (
+                <Button
+                  variant="outline-secondary"
+                  className="w-100 mt-3"
+                  size="lg"
+                  onClick={handleBiometricLogin}
+                  disabled={loading}
+                >
+                  {biometricName === 'Face ID' ? '😎' : '👆'}{' '}
+                  {t('auth.loginWithBiometric', { type: biometricName }, `Se connecter avec ${biometricName}`)}
+                </Button>
+              )}
             </Form>
           </Card.Body>
         </Card>

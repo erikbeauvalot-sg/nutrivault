@@ -3291,6 +3291,13 @@
       "deleteConfirm": "Supprimer cette entrée ?",
       "deleteConfirmMessage": "Cette action est irréversible. Voulez-vous vraiment supprimer cette entrée de votre journal ?",
       "comments": "Commentaires",
+      "commentAdded": "Commentaire ajouté",
+      "commentError": "Erreur lors de l'ajout du commentaire",
+      "replyPlaceholder": "Écrire un commentaire...",
+      "reply": "Répondre",
+      "send": "Envoyer",
+      "dietitianNote": "Note de {{name}}",
+      "dietitianNoteGeneric": "Note de votre diététicien(ne)",
       "type": {
         "food": "Alimentation",
         "symptom": "Symptôme",
