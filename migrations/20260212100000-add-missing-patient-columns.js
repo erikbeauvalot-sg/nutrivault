@@ -31,9 +31,16 @@ module.exports = {
     if (!hasColumn('unsubscribe_token')) {
       await queryInterface.addColumn('patients', 'unsubscribe_token', {
         type: Sequelize.STRING(100),
-        allowNull: true,
-        unique: true
+        allowNull: true
       });
+      try {
+        await queryInterface.addIndex('patients', ['unsubscribe_token'], {
+          unique: true,
+          name: 'patients_unsubscribe_token_unique'
+        });
+      } catch (e) {
+        // Index may already exist
+      }
     }
   },
 
