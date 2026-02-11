@@ -239,7 +239,12 @@ const PatientPortalMessages = () => {
   if (activeConvo) {
     return (
       <PullToRefreshWrapper onRefresh={() => openConversation(activeConvo)}>
-        <div className="d-flex flex-column" style={{ height: `calc(100vh - 180px${keyboardHeight > 0 ? ` - ${keyboardHeight}px` : ''})`, transition: 'height 0.15s ease-out' }}>
+        <div className="d-flex flex-column" style={{
+          height: keyboardHeight > 0
+            ? `calc(100vh - 120px - ${keyboardHeight}px)`
+            : 'calc(100vh - 120px - 56px - env(safe-area-inset-bottom))',
+          transition: 'height 0.15s ease-out',
+        }}>
           {/* Header */}
           <div className="d-flex align-items-center gap-2 mb-2">
             <Button variant="link" className="p-0 text-dark" onClick={() => setActiveConvo(null)}>
