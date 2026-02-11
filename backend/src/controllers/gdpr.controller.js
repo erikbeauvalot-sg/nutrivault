@@ -98,44 +98,84 @@ async function deletePatientPermanently(req, res) {
     const billingIds = billings.map(b => b.id);
 
     // Delete in order to respect foreign key constraints
-    if (visitIds.length > 0) {
-      await db.VisitMeasurement.destroy({
-        where: { visit_id: { [db.Sequelize.Op.in]: visitIds } },
+
+    // 1. Patient measures & annotations
+    const patientMeasures = await db.PatientMeasure.findAll({ where: { patient_id: id }, attributes: ['id'], raw: true, paranoid: false });
+    const measureIds = patientMeasures.map(m => m.id);
+    if (measureIds.length > 0) {
+      await db.MeasureAnnotation.destroy({
+        where: { patient_measure_id: { [db.Sequelize.Op.in]: measureIds } },
+        force: true
+      });
+      await db.MeasureAlert.destroy({
+        where: { patient_measure_id: { [db.Sequelize.Op.in]: measureIds } },
         force: true
       });
     }
+    await db.PatientMeasure.destroy({ where: { patient_id: id }, force: true });
 
-    await db.Visit.destroy({
-      where: { patient_id: id },
-      force: true
-    });
+    // 2. Visits
+    await db.Visit.destroy({ where: { patient_id: id }, force: true });
 
+    // 3. Billing & payments
     if (billingIds.length > 0) {
       await db.Payment.destroy({
         where: { billing_id: { [db.Sequelize.Op.in]: billingIds } },
         force: true
       });
+      if (db.InvoiceEmail) {
+        await db.InvoiceEmail.destroy({
+          where: { billing_id: { [db.Sequelize.Op.in]: billingIds } },
+          force: true
+        });
+      }
+    }
+    await db.Billing.destroy({ where: { patient_id: id }, force: true });
 
-      await db.InvoiceEmail.destroy({
-        where: { billing_id: { [db.Sequelize.Op.in]: billingIds } },
-        force: true
-      });
+    // 4. Documents & shares
+    if (db.DocumentShare) {
+      await db.DocumentShare.destroy({ where: { patient_id: id }, force: true });
+    }
+    await db.Document.destroy({ where: { patient_id: id }, force: true });
+
+    // 5. Journal entries & comments
+    if (db.JournalEntry) {
+      const journalEntries = await db.JournalEntry.findAll({ where: { patient_id: id }, attributes: ['id'], raw: true });
+      const journalIds = journalEntries.map(j => j.id);
+      if (journalIds.length > 0 && db.JournalComment) {
+        await db.JournalComment.destroy({
+          where: { entry_id: { [db.Sequelize.Op.in]: journalIds } },
+          force: true
+        });
+      }
+      await db.JournalEntry.destroy({ where: { patient_id: id }, force: true });
     }
 
-    await db.Billing.destroy({
-      where: { patient_id: id },
-      force: true
-    });
+    // 6. Custom field values
+    if (db.PatientCustomFieldValue) {
+      await db.PatientCustomFieldValue.destroy({ where: { patient_id: id }, force: true });
+    }
 
-    await db.Document.destroy({
-      where: { patient_id: id },
-      force: true
-    });
+    // 7. Tags, dietitian links, email logs, campaign recipients, recipe access
+    if (db.PatientTag) {
+      await db.PatientTag.destroy({ where: { patient_id: id }, force: true });
+    }
+    await db.PatientDietitian.destroy({ where: { patient_id: id }, force: true });
+    if (db.EmailLog) {
+      await db.EmailLog.destroy({ where: { patient_id: id }, force: true });
+    }
+    if (db.EmailCampaignRecipient) {
+      await db.EmailCampaignRecipient.destroy({ where: { patient_id: id }, force: true });
+    }
+    if (db.RecipePatientAccess) {
+      await db.RecipePatientAccess.destroy({ where: { patient_id: id }, force: true });
+    }
+    if (db.Task) {
+      await db.Task.destroy({ where: { patient_id: id }, force: true });
+    }
 
-    await db.Patient.destroy({
-      where: { id },
-      force: true // Hard delete (bypass soft delete)
-    });
+    // 8. Finally delete the patient
+    await db.Patient.destroy({ where: { id }, force: true });
 
     // Audit log deletion
     await auditService.log({
