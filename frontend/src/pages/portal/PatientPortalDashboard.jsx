@@ -102,7 +102,7 @@ const PatientPortalDashboard = () => {
   const [objectives, setObjectives] = useState([]);
   const [error, setError] = useState('');
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (silent = false) => {
     try {
       const [measuresData, journalData, radarData, objectivesData] = await Promise.all([
         portalService.getMeasures().catch(() => ({ measures: [] })),
@@ -116,7 +116,7 @@ const PatientPortalDashboard = () => {
       setRadarCategories(Array.isArray(radarData) ? radarData : []);
       setObjectives(Array.isArray(objectivesData) ? objectivesData : []);
     } catch (err) {
-      setError(t('portal.loadError', 'Erreur lors du chargement des donn\u00e9es'));
+      if (!silent) setError(t('portal.loadError', 'Erreur lors du chargement des donn\u00e9es'));
     } finally {
       setLoading(false);
     }
@@ -124,14 +124,16 @@ const PatientPortalDashboard = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  useRefreshOnFocus(loadData);
+  // Silent refresh for polling & focus return
+  const silentRefresh = useCallback(() => loadData(true), [loadData]);
+  useRefreshOnFocus(silentRefresh);
 
   // Poll every 60s for updates
   const pollRef = useRef(null);
   useEffect(() => {
-    pollRef.current = setInterval(() => { loadData(); }, 60000);
+    pollRef.current = setInterval(silentRefresh, 60000);
     return () => clearInterval(pollRef.current);
-  }, [loadData]);
+  }, [silentRefresh]);
 
   const measures = useMemo(() => buildSummaryMeasures(allMeasures, t), [allMeasures, t]);
   const miniRadar = useMemo(() => buildMiniRadarData(radarCategories), [radarCategories]);

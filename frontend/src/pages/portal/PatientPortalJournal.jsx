@@ -128,9 +128,9 @@ const PatientPortalJournal = () => {
     }
   };
 
-  const loadEntries = useCallback(async () => {
+  const loadEntries = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const params = { page, limit: 20 };
       if (filterType) params.entry_type = filterType;
       if (filterMood) params.mood = filterMood;
@@ -141,23 +141,26 @@ const PatientPortalJournal = () => {
       setEntries(result.data || []);
       setPagination(result.pagination || null);
     } catch {
-      setError(t('portal.journal.loadError', 'Erreur lors du chargement du journal'));
+      if (!silent) setError(t('portal.journal.loadError', 'Erreur lors du chargement du journal'));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [page, filterType, filterMood, filterStartDate, filterEndDate, t]);
 
   useEffect(() => { loadEntries(); }, [loadEntries]);
 
+  // Silent refresh for polling & focus return (no spinner)
+  const silentRefresh = useCallback(() => loadEntries(true), [loadEntries]);
+
   // Auto-refresh when page becomes visible (tab switch, app resume)
-  useRefreshOnFocus(loadEntries);
+  useRefreshOnFocus(silentRefresh);
 
   // Poll every 30s for new entries/comments
   const pollRef = useRef(null);
   useEffect(() => {
-    pollRef.current = setInterval(() => { loadEntries(); }, 30000);
+    pollRef.current = setInterval(silentRefresh, 30000);
     return () => clearInterval(pollRef.current);
-  }, [loadEntries]);
+  }, [silentRefresh]);
 
   // Cleanup preview URLs
   useEffect(() => {
