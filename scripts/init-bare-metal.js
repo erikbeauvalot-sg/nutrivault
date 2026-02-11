@@ -2,82 +2,57 @@
 /**
  * Initialize NutriVault database for bare-metal (non-Docker) installs.
  *
- * 1. Creates all tables from Sequelize models (sync)
- * 2. Marks all migrations as already applied (since sync covers them)
- * 3. Runs base seeders (roles, permissions, admin user)
- * 4. Runs feature seeders (measures, templates, etc.)
+ * 1. Runs root migrations (base schema + roles, permissions, etc.)
+ * 2. Runs backend migrations (features schema + data)
+ * 3. Runs root seeders (admin user, sample data)
+ * 4. Runs backend seeders (measures, templates, etc.)
  *
  * Usage: node scripts/init-bare-metal.js
  */
 
 const path = require('path');
-const fs = require('fs');
 const { execFileSync } = require('child_process');
 
 // Load env from backend/.env
 require('dotenv').config({ path: path.join(__dirname, '..', 'backend', '.env') });
 
-async function main() {
-  const db = require(path.join(__dirname, '..', 'models'));
+const rootDir = path.join(__dirname, '..');
+const backendDir = path.join(__dirname, '..', 'backend');
 
+function run(label, args, cwd) {
+  console.log(`      ${label}`);
+  execFileSync('npx', args, {
+    cwd,
+    stdio: 'inherit',
+    env: { ...process.env }
+  });
+}
+
+async function main() {
   console.log('=== NutriVault Bare Metal DB Init ===\n');
 
-  // 1. Sync all models (creates tables, indexes, constraints)
-  console.log('[1/4] Creating tables from models...');
-  await db.sequelize.sync();
+  // 1. Run root migrations (creates base tables + roles, permissions, custom fields, etc.)
+  console.log('[1/4] Running root migrations...');
+  run('npx sequelize-cli db:migrate', ['sequelize-cli', 'db:migrate'], rootDir);
   console.log('      Done.\n');
 
-  // 2. Mark all migrations as applied
-  console.log('[2/4] Marking migrations as applied...');
+  // 2. Run backend migrations (creates feature tables + settings, themes, portal, etc.)
+  console.log('[2/4] Running backend migrations...');
+  run('npx sequelize-cli db:migrate', ['sequelize-cli', 'db:migrate'], backendDir);
+  console.log('      Done.\n');
 
-  // Ensure SequelizeMeta table exists
-  await db.sequelize.query(`
-    CREATE TABLE IF NOT EXISTS "SequelizeMeta" (
-      "name" VARCHAR(255) NOT NULL UNIQUE PRIMARY KEY
-    )
-  `);
+  // 3. Run root seeders (roles, permissions, admin user, sample data)
+  console.log('[3/4] Running base seeders...');
+  run('npx sequelize-cli db:seed:all', ['sequelize-cli', 'db:seed:all'], rootDir);
+  console.log('      Done.\n');
 
-  // Read all migration files
-  const migrationsDir = path.join(__dirname, '..', 'migrations');
-  const backendMigrationsDir = path.join(__dirname, '..', 'backend', 'migrations');
+  // 4. Run backend seeders (measures, email templates, billing templates, etc.)
+  console.log('[4/4] Running feature seeders...');
+  run('npx sequelize-cli db:seed:all', ['sequelize-cli', 'db:seed:all'], backendDir);
+  console.log('      Done.\n');
 
-  const migrationFiles = new Set();
-
-  for (const dir of [migrationsDir, backendMigrationsDir]) {
-    if (fs.existsSync(dir)) {
-      for (const f of fs.readdirSync(dir)) {
-        if (f.endsWith('.js')) migrationFiles.add(f);
-      }
-    }
-  }
-
-  for (const name of [...migrationFiles].sort()) {
-    await db.sequelize.query(
-      `INSERT OR IGNORE INTO "SequelizeMeta" ("name") VALUES (?)`,
-      { replacements: [name] }
-    );
-  }
-  console.log(`      Marked ${migrationFiles.size} migrations.\n`);
-
-  // 3. Run seeders (root first for base data, then backend for feature data)
-  console.log('[3/4] Running base seeders (roles, permissions, admin)...');
-  execFileSync('npx', ['sequelize-cli', 'db:seed:all'], {
-    cwd: path.join(__dirname, '..'),
-    stdio: 'inherit',
-    env: { ...process.env }
-  });
-
-  console.log('\n[4/4] Running feature seeders (measures, templates, etc.)...');
-  execFileSync('npx', ['sequelize-cli', 'db:seed:all'], {
-    cwd: path.join(__dirname, '..', 'backend'),
-    stdio: 'inherit',
-    env: { ...process.env }
-  });
-
-  console.log('\n=== Init complete ===');
+  console.log('=== Init complete ===');
   console.log('You can now start the server: systemctl start nutrivault');
-
-  await db.sequelize.close();
 }
 
 main().catch(err => {

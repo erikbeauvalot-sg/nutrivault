@@ -36,6 +36,14 @@ module.exports = {
         is_active: true,
         created_at: new Date(),
         updated_at: new Date()
+      },
+      {
+        id: uuidv4(),
+        name: 'PATIENT',
+        description: 'Patient portal access - read-only access to own data',
+        is_active: true,
+        created_at: new Date(),
+        updated_at: new Date()
       }
     ];
 
@@ -47,7 +55,7 @@ module.exports = {
 
     if (existingRoles.length === 0) {
       await queryInterface.bulkInsert('roles', roles);
-      console.log('✅ Seeded 4 roles: ADMIN, DIETITIAN, ASSISTANT, VIEWER');
+      console.log('✅ Seeded 5 roles: ADMIN, DIETITIAN, ASSISTANT, VIEWER, PATIENT');
     } else {
       console.log('ℹ️  Roles already exist, skipping seed');
     }
