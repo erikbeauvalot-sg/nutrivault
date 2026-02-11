@@ -3,7 +3,7 @@
  * Simplified view: Objectives, Recent Measures, Recent Journal (with comments), Mini Radar
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, Row, Col, Spinner, Alert, Badge } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +11,7 @@ import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadius
 import { useAuth } from '../../contexts/AuthContext';
 import * as portalService from '../../services/portalService';
 import { normalizeValue } from '../../utils/radarUtils';
+import useRefreshOnFocus from '../../hooks/useRefreshOnFocus';
 
 /**
  * Build the summary measures list:
@@ -101,28 +102,29 @@ const PatientPortalDashboard = () => {
   const [objectives, setObjectives] = useState([]);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [measuresData, journalData, radarData, objectivesData] = await Promise.all([
-          portalService.getMeasures().catch(() => ({ measures: [] })),
-          portalService.getJournalEntries({ limit: 3 }).catch(() => ({ data: [] })),
-          portalService.getRadarData().catch(() => []),
-          portalService.getObjectives().catch(() => []),
-        ]);
-        setAllMeasures(Array.isArray(measuresData?.measures) ? measuresData.measures : []);
-        const jEntries = journalData?.data;
-        setJournalEntries(Array.isArray(jEntries) ? jEntries.slice(0, 3) : []);
-        setRadarCategories(Array.isArray(radarData) ? radarData : []);
-        setObjectives(Array.isArray(objectivesData) ? objectivesData : []);
-      } catch (err) {
-        setError(t('portal.loadError', 'Erreur lors du chargement des donn\u00e9es'));
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+  const loadData = useCallback(async () => {
+    try {
+      const [measuresData, journalData, radarData, objectivesData] = await Promise.all([
+        portalService.getMeasures().catch(() => ({ measures: [] })),
+        portalService.getJournalEntries({ limit: 3 }).catch(() => ({ data: [] })),
+        portalService.getRadarData().catch(() => []),
+        portalService.getObjectives().catch(() => []),
+      ]);
+      setAllMeasures(Array.isArray(measuresData?.measures) ? measuresData.measures : []);
+      const jEntries = journalData?.data;
+      setJournalEntries(Array.isArray(jEntries) ? jEntries.slice(0, 3) : []);
+      setRadarCategories(Array.isArray(radarData) ? radarData : []);
+      setObjectives(Array.isArray(objectivesData) ? objectivesData : []);
+    } catch (err) {
+      setError(t('portal.loadError', 'Erreur lors du chargement des donn\u00e9es'));
+    } finally {
+      setLoading(false);
+    }
   }, [t]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  useRefreshOnFocus(loadData);
 
   const measures = useMemo(() => buildSummaryMeasures(allMeasures, t), [allMeasures, t]);
   const miniRadar = useMemo(() => buildMiniRadarData(radarCategories), [radarCategories]);

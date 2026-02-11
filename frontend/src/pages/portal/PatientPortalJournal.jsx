@@ -12,6 +12,7 @@ import { toast } from 'react-toastify';
 import * as portalService from '../../services/portalService';
 import CameraButton from '../../components/CameraButton';
 import PullToRefreshWrapper from '../../components/common/PullToRefreshWrapper';
+import useRefreshOnFocus from '../../hooks/useRefreshOnFocus';
 import RemoteImage from '../../components/common/RemoteImage';
 
 const MAX_PHOTOS = 5;
@@ -147,6 +148,9 @@ const PatientPortalJournal = () => {
   }, [page, filterType, filterMood, filterStartDate, filterEndDate, t]);
 
   useEffect(() => { loadEntries(); }, [loadEntries]);
+
+  // Auto-refresh when page becomes visible (tab switch, app resume)
+  useRefreshOnFocus(loadEntries);
 
   // Cleanup preview URLs
   useEffect(() => {
