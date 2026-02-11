@@ -14,6 +14,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import * as portalMessageService from '../../services/portalMessageService';
 import * as portalService from '../../services/portalService';
 import PullToRefreshWrapper from '../../components/common/PullToRefreshWrapper';
+import { isNative } from '../../utils/platform';
 
 const POLL_INTERVAL = 12000;
 
@@ -31,6 +32,23 @@ const PatientPortalMessages = () => {
   const messagesContainerRef = useRef(null);
   const pollRef = useRef(null);
   const prevMessageCountRef = useRef(0);
+
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Track keyboard open/close on iOS native via visualViewport
+  useEffect(() => {
+    if (!isNative) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const handleResize = () => {
+      const kbH = window.innerHeight - vv.height;
+      setKeyboardHeight(kbH > 50 ? kbH : 0);
+    };
+
+    vv.addEventListener('resize', handleResize);
+    return () => vv.removeEventListener('resize', handleResize);
+  }, []);
 
   // New conversation state
   const [showNewConvo, setShowNewConvo] = useState(false);
@@ -73,6 +91,13 @@ const PatientPortalMessages = () => {
       container.scrollTop = container.scrollHeight;
     }
   }, []);
+
+  // Scroll to bottom when keyboard opens
+  useEffect(() => {
+    if (keyboardHeight > 0 && activeConvo) {
+      setTimeout(() => scrollToBottom(), 100);
+    }
+  }, [keyboardHeight, activeConvo, scrollToBottom]);
 
   // Auto-scroll when new messages arrive (polling or send)
   useEffect(() => {
@@ -204,7 +229,7 @@ const PatientPortalMessages = () => {
   if (activeConvo) {
     return (
       <PullToRefreshWrapper onRefresh={() => openConversation(activeConvo)}>
-        <div className="d-flex flex-column" style={{ height: 'calc(100vh - 180px)', minHeight: '400px' }}>
+        <div className="d-flex flex-column" style={{ height: `calc(100vh - 180px${keyboardHeight > 0 ? ` - ${keyboardHeight}px` : ''})`, transition: 'height 0.15s ease-out' }}>
           {/* Header */}
           <div className="d-flex align-items-center gap-2 mb-2">
             <Button variant="link" className="p-0 text-dark" onClick={() => setActiveConvo(null)}>
