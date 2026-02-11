@@ -242,13 +242,25 @@ setup_ssl() {
     # Create webroot directory for ACME challenges
     mkdir -p "$CERTBOT_WEBROOT"
 
-    # Check if certificates already exist
+    # Check if certificates already exist and cover all domains
     if [ -f "${CERT_PATH}/fullchain.pem" ]; then
-        # Certs exist — attempt renewal if needed (certbot only renews if <30 days left)
-        log_info "Certificates exist, checking renewal..."
-        certbot renew --quiet --deploy-hook "systemctl reload nginx" 2>&1 || true
-        log_success "SSL certificates OK"
-        return
+        # Verify the cert covers all required domains
+        local CERT_DOMAINS_IN_CERT
+        CERT_DOMAINS_IN_CERT=$(openssl x509 -in "${CERT_PATH}/fullchain.pem" -noout -text 2>/dev/null | grep -oP 'DNS:\K[^,\s]+' | sort | tr '\n' ',' | sed 's/,$//')
+        local EXPECTED_SORTED
+        EXPECTED_SORTED=$(echo "$CERT_DOMAINS" | tr ',' '\n' | sort | tr '\n' ',' | sed 's/,$//')
+
+        if [ "$CERT_DOMAINS_IN_CERT" = "$EXPECTED_SORTED" ]; then
+            # All domains covered — just check renewal
+            log_info "Certificates exist and cover all domains, checking renewal..."
+            certbot renew --quiet --deploy-hook "systemctl reload nginx" 2>&1 || true
+            log_success "SSL certificates OK"
+            return
+        else
+            log_warn "Certificate missing domains (has: ${CERT_DOMAINS_IN_CERT}, need: ${EXPECTED_SORTED})"
+            log_info "Expanding certificate to include all domains..."
+            # Fall through to regeneration below
+        fi
     fi
 
     # First time: generate certificates
