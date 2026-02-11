@@ -12,6 +12,8 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import MeasureDefinitionModal from '../components/MeasureDefinitionModal';
 import MeasureTranslationModal from '../components/MeasureTranslationModal';
+import ExportMeasuresModal from '../components/ExportMeasuresModal';
+import ImportMeasuresModal from '../components/ImportMeasuresModal';
 import * as measureService from '../services/measureService';
 import ActionButton from '../components/ActionButton';
 import i18n from '../i18n';
@@ -48,6 +50,8 @@ const MeasuresPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [measureToDelete, setMeasureToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Define available categories
   const categories = [
@@ -289,9 +293,17 @@ const MeasuresPage = () => {
         <Card>
           <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h5 className="mb-0">{t('measures.cardTitle', { count: measures.length })}</h5>
-            <Button variant="primary" size="sm" onClick={handleCreateMeasure}>
-              ➕ {t('measures.newMeasure')}
-            </Button>
+            <div className="d-flex gap-2">
+              <Button variant="outline-secondary" size="sm" onClick={() => setShowExportModal(true)}>
+                {t('measures.exportBtn', 'Export')}
+              </Button>
+              <Button variant="outline-secondary" size="sm" onClick={() => setShowImportModal(true)}>
+                {t('measures.importBtn', 'Import')}
+              </Button>
+              <Button variant="primary" size="sm" onClick={handleCreateMeasure}>
+                ➕ {t('measures.newMeasure')}
+              </Button>
+            </div>
           </Card.Header>
           <Card.Body>
             {/* Search Bar and Category Filter */}
@@ -609,6 +621,23 @@ const MeasuresPage = () => {
           onSuccess={() => {
             fetchMeasures();
           }}
+        />
+
+        {/* Export Measures Modal */}
+        <ExportMeasuresModal
+          show={showExportModal}
+          onHide={() => setShowExportModal(false)}
+          measures={measures}
+        />
+
+        {/* Import Measures Modal */}
+        <ImportMeasuresModal
+          show={showImportModal}
+          onHide={() => setShowImportModal(false)}
+          onSuccess={() => {
+            fetchMeasures();
+          }}
+          existingMeasures={measures}
         />
 
         {/* Delete Confirmation Modal */}

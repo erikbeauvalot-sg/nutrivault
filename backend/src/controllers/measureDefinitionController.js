@@ -234,6 +234,78 @@ async function getCategories(req, res) {
   }
 }
 
+/**
+ * POST /api/measures/export
+ * Export measure definitions with translations
+ */
+async function exportDefinitions(req, res) {
+  try {
+    const requestMetadata = {
+      ip_address: req.ip,
+      user_agent: req.headers['user-agent']
+    };
+
+    const exportData = await measureDefinitionService.exportDefinitions(
+      req.user,
+      req.body.categories || [],
+      requestMetadata
+    );
+
+    res.json({
+      success: true,
+      data: exportData,
+      message: 'Measures exported successfully'
+    });
+  } catch (error) {
+    console.error('Error in exportDefinitions:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to export measures'
+    });
+  }
+}
+
+/**
+ * POST /api/measures/import
+ * Import measure definitions with translations
+ */
+async function importDefinitions(req, res) {
+  try {
+    const requestMetadata = {
+      ip_address: req.ip,
+      user_agent: req.headers['user-agent']
+    };
+
+    const { importData, options } = req.body;
+
+    if (!importData || !importData.measures || !Array.isArray(importData.measures)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid import data: must contain a measures array'
+      });
+    }
+
+    const results = await measureDefinitionService.importDefinitions(
+      req.user,
+      importData,
+      options || {},
+      requestMetadata
+    );
+
+    res.json({
+      success: true,
+      data: results,
+      message: 'Import completed successfully'
+    });
+  } catch (error) {
+    console.error('Error in importDefinitions:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to import measures'
+    });
+  }
+}
+
 module.exports = {
   getAllDefinitions,
   getDefinitionById,
@@ -241,5 +313,7 @@ module.exports = {
   updateDefinition,
   deleteDefinition,
   getByCategory,
-  getCategories
+  getCategories,
+  exportDefinitions,
+  importDefinitions
 };

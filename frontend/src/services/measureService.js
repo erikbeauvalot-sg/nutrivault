@@ -374,3 +374,28 @@ export const getMeasureWithTranslations = async (measureId, languageCode, fallba
   const response = await api.get(`/measures/${measureId}/translated/${languageCode}?fallback=${fallbackLanguage}`);
   return response.data.data || response.data;
 };
+
+// ===========================================
+// Export/Import API Calls
+// ===========================================
+
+/**
+ * Export measure definitions with translations
+ * @param {Array<string>} categories - Category filter (empty = all)
+ * @returns {Promise<object>} Export data
+ */
+export const exportMeasures = async (categories = []) => {
+  const response = await api.post('/measures/export', { categories });
+  return response.data;
+};
+
+/**
+ * Import measure definitions with translations
+ * @param {object} importData - Import data from export file
+ * @param {object} options - Import options { skipExisting, updateExisting }
+ * @returns {Promise<object>} Import results
+ */
+export const importMeasures = async (importData, options = {}) => {
+  const response = await api.post('/measures/import', { importData, options });
+  return response.data;
+};

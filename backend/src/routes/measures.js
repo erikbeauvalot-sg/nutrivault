@@ -38,6 +38,30 @@ router.get(
 );
 
 /**
+ * POST /api/measures/export
+ * Export measure definitions with translations
+ * Permission: measures:read
+ */
+router.post(
+  '/export',
+  authenticate,
+  requirePermission('measures.read'),
+  measureDefinitionController.exportDefinitions
+);
+
+/**
+ * POST /api/measures/import
+ * Import measure definitions with translations
+ * Permission: measures:create
+ */
+router.post(
+  '/import',
+  authenticate,
+  requirePermission('measures.create'),
+  measureDefinitionController.importDefinitions
+);
+
+/**
  * GET /api/measures
  * Get all measure definitions
  * Permission: measures:read

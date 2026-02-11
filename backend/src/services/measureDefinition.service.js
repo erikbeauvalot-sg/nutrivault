@@ -503,6 +503,268 @@ async function getCategories(user, requestMetadata = {}) {
   }
 }
 
+// Fields to export for measure definitions (excludes IDs and timestamps)
+const MEASURE_EXPORT_FIELDS = [
+  'name', 'display_name', 'description', 'category', 'measure_type', 'unit',
+  'min_value', 'max_value', 'normal_range_min', 'normal_range_max',
+  'alert_threshold_min', 'alert_threshold_max', 'enable_alerts',
+  'decimal_places', 'is_active', 'display_order', 'is_system',
+  'formula', 'dependencies', 'trend_preference', 'patient_can_log'
+];
+
+/**
+ * Pick specified fields from an object
+ */
+function pickFields(obj, fields) {
+  return fields.reduce((result, field) => {
+    if (obj[field] !== undefined) {
+      result[field] = obj[field];
+    }
+    return result;
+  }, {});
+}
+
+/**
+ * Export measure definitions with their translations
+ * @param {Object} user - Authenticated user
+ * @param {Array<string>} categories - Category filter (empty = all)
+ * @param {Object} requestMetadata - Request metadata for audit
+ * @returns {Promise<Object>} Export data
+ */
+async function exportDefinitions(user, categories = [], requestMetadata = {}) {
+  try {
+    const where = { deleted_at: null };
+    if (categories && categories.length > 0) {
+      where.category = { [Op.in]: categories };
+    }
+
+    const measures = await MeasureDefinition.findAll({
+      where,
+      include: [{
+        model: MeasureTranslation,
+        as: 'translations',
+        required: false
+      }],
+      order: [['display_order', 'ASC'], ['display_name', 'ASC']]
+    });
+
+    const exportData = {
+      version: '1.0',
+      exportDate: new Date().toISOString(),
+      exportedBy: user.username,
+      measures: measures.map(measure => {
+        const measureJson = measure.toJSON();
+        const exportedMeasure = pickFields(measureJson, MEASURE_EXPORT_FIELDS);
+
+        // Group translations by language
+        const translations = {};
+        if (measureJson.translations && measureJson.translations.length > 0) {
+          for (const tr of measureJson.translations) {
+            if (!translations[tr.language_code]) {
+              translations[tr.language_code] = {};
+            }
+            translations[tr.language_code][tr.field_name] = tr.translated_value;
+          }
+        }
+
+        if (Object.keys(translations).length > 0) {
+          exportedMeasure.translations = translations;
+        }
+
+        return exportedMeasure;
+      })
+    };
+
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'EXPORT',
+      resource_type: 'measure_definitions',
+      resource_id: null,
+      details: {
+        categories_filter: categories,
+        total_measures: measures.length
+      },
+      ...requestMetadata
+    });
+
+    return exportData;
+  } catch (error) {
+    console.error('Error in exportDefinitions:', error);
+    throw error;
+  }
+}
+
+// Default values for imported measures
+const MEASURE_DEFAULTS = {
+  category: 'other',
+  measure_type: 'numeric',
+  decimal_places: 2,
+  is_active: true,
+  display_order: 0,
+  is_system: false,
+  enable_alerts: false,
+  patient_can_log: false
+};
+
+/**
+ * Apply defaults to data, only for fields that are undefined
+ */
+function applyDefaults(data, defaults) {
+  const result = { ...data };
+  for (const [key, defaultValue] of Object.entries(defaults)) {
+    if (result[key] === undefined) {
+      result[key] = defaultValue;
+    }
+  }
+  return result;
+}
+
+/**
+ * Import measure definitions with their translations
+ * @param {Object} user - Authenticated user
+ * @param {Object} importData - Import data with measures array
+ * @param {Object} options - Import options { skipExisting, updateExisting }
+ * @param {Object} requestMetadata - Request metadata for audit
+ * @returns {Promise<Object>} Import results
+ */
+async function importDefinitions(user, importData, options = {}, requestMetadata = {}) {
+  const transaction = await db.sequelize.transaction();
+
+  try {
+    const { skipExisting = true, updateExisting = false } = options;
+    const results = {
+      measuresCreated: 0,
+      measuresUpdated: 0,
+      measuresSkipped: 0,
+      translationsCreated: 0,
+      errors: []
+    };
+
+    if (!importData?.measures || !Array.isArray(importData.measures)) {
+      throw new Error('Invalid import data format');
+    }
+
+    for (const measureData of importData.measures) {
+      try {
+        if (!measureData.name || !measureData.display_name) {
+          results.errors.push({
+            type: 'measure',
+            name: measureData.name || 'unknown',
+            error: 'Missing required fields: name, display_name'
+          });
+          continue;
+        }
+
+        const existingMeasure = await MeasureDefinition.findOne({
+          where: { name: measureData.name },
+          paranoid: false,
+          transaction
+        });
+
+        let measure;
+        const translations = measureData.translations || {};
+        const cleanData = pickFields(measureData, MEASURE_EXPORT_FIELDS);
+
+        if (existingMeasure) {
+          if (updateExisting) {
+            // Don't overwrite is_system on existing measures
+            const updateData = { ...cleanData };
+            delete updateData.name;
+            delete updateData.is_system;
+
+            if (existingMeasure.deleted_at) {
+              await existingMeasure.restore({ transaction });
+            }
+            await existingMeasure.update(updateData, { transaction });
+            measure = existingMeasure;
+            results.measuresUpdated++;
+          } else if (skipExisting) {
+            measure = null;
+            results.measuresSkipped++;
+          } else {
+            // Create with "(imported)" suffix
+            measure = await MeasureDefinition.create({
+              ...applyDefaults(cleanData, MEASURE_DEFAULTS),
+              name: `${measureData.name}_imported`,
+              display_name: `${measureData.display_name} (imported)`,
+              is_system: false
+            }, { transaction });
+            results.measuresCreated++;
+          }
+        } else {
+          measure = await MeasureDefinition.create({
+            ...applyDefaults(cleanData, MEASURE_DEFAULTS),
+            is_system: measureData.is_system || false
+          }, { transaction });
+          results.measuresCreated++;
+        }
+
+        // Import translations if measure was created or updated
+        if (measure && Object.keys(translations).length > 0) {
+          for (const [langCode, fields] of Object.entries(translations)) {
+            for (const [fieldName, value] of Object.entries(fields)) {
+              if (!value) continue;
+
+              const existingTranslation = await MeasureTranslation.findOne({
+                where: {
+                  measure_definition_id: measure.id,
+                  language_code: langCode,
+                  field_name: fieldName
+                },
+                transaction
+              });
+
+              if (existingTranslation) {
+                if (updateExisting || !existingMeasure) {
+                  await existingTranslation.update({ translated_value: value }, { transaction });
+                  results.translationsCreated++;
+                }
+              } else {
+                await MeasureTranslation.create({
+                  measure_definition_id: measure.id,
+                  language_code: langCode,
+                  field_name: fieldName,
+                  translated_value: value
+                }, { transaction });
+                results.translationsCreated++;
+              }
+            }
+          }
+        }
+      } catch (measureError) {
+        results.errors.push({
+          type: 'measure',
+          name: measureData.name || 'unknown',
+          error: measureError.message
+        });
+      }
+    }
+
+    await transaction.commit();
+
+    await auditService.log({
+      user_id: user.id,
+      username: user.username,
+      action: 'IMPORT',
+      resource_type: 'measure_definitions',
+      resource_id: null,
+      details: {
+        import_results: results,
+        source_version: importData.version,
+        source_date: importData.exportDate
+      },
+      ...requestMetadata
+    });
+
+    return results;
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error in importDefinitions:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getAllDefinitions,
   getDefinitionById,
@@ -510,5 +772,7 @@ module.exports = {
   updateDefinition,
   deleteDefinition,
   getByCategory,
-  getCategories
+  getCategories,
+  exportDefinitions,
+  importDefinitions
 };
