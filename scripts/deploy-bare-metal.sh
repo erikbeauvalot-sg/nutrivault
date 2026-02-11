@@ -41,7 +41,7 @@ SERVICE_USER="www-data"
 MAX_BACKUPS=10
 
 # SSL configuration
-CERT_DOMAINS="nutrivault.beauvalot.fr,mariondiet.beauvalot.fr"
+CERT_DOMAINS="mariondiet.beauvalot.com,mariondiet.beauvalot.fr,nutrivault.beauvalot.com,nutrivault.beauvalot.fr"
 CERT_EMAIL="mariondiet@beauvalot.com"
 CERT_NAME="nutrivault.beauvalot.fr"
 CERT_PATH="/etc/letsencrypt/live/${CERT_NAME}"
