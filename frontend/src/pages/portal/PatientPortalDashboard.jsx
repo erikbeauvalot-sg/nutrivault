@@ -3,7 +3,7 @@
  * Simplified view: Objectives, Recent Measures, Recent Journal (with comments), Mini Radar
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Card, Row, Col, Spinner, Alert, Badge } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -125,6 +125,13 @@ const PatientPortalDashboard = () => {
   useEffect(() => { loadData(); }, [loadData]);
 
   useRefreshOnFocus(loadData);
+
+  // Poll every 60s for updates
+  const pollRef = useRef(null);
+  useEffect(() => {
+    pollRef.current = setInterval(() => { loadData(); }, 60000);
+    return () => clearInterval(pollRef.current);
+  }, [loadData]);
 
   const measures = useMemo(() => buildSummaryMeasures(allMeasures, t), [allMeasures, t]);
   const miniRadar = useMemo(() => buildMiniRadarData(radarCategories), [radarCategories]);

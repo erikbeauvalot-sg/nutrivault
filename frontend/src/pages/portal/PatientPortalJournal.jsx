@@ -4,7 +4,7 @@
  * Dietitian comments are displayed read-only
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, Row, Col, Form, Button, Badge, Spinner, Alert, Modal, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useDropzone } from 'react-dropzone';
@@ -151,6 +151,13 @@ const PatientPortalJournal = () => {
 
   // Auto-refresh when page becomes visible (tab switch, app resume)
   useRefreshOnFocus(loadEntries);
+
+  // Poll every 30s for new entries/comments
+  const pollRef = useRef(null);
+  useEffect(() => {
+    pollRef.current = setInterval(() => { loadEntries(); }, 30000);
+    return () => clearInterval(pollRef.current);
+  }, [loadEntries]);
 
   // Cleanup preview URLs
   useEffect(() => {
