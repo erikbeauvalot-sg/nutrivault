@@ -940,6 +940,25 @@ exports.addJournalComment = async (req, res, next) => {
       }]
     });
 
+    // Notify assigned dietitian(s) about the patient comment
+    try {
+      const pushNotificationService = require('../services/pushNotification.service');
+      const patientName = `${req.patient.first_name} ${req.patient.last_name}`;
+      const dietitianLinks = await db.PatientDietitian.findAll({
+        where: { patient_id: req.patient.id },
+        attributes: ['dietitian_id'],
+      });
+      for (const link of dietitianLinks) {
+        await pushNotificationService.sendJournalCommentNotification(
+          link.dietitian_id,
+          patientName,
+          entry.title
+        );
+      }
+    } catch (pushErr) {
+      console.error('[PortalJournal] Push notification failed:', pushErr.message);
+    }
+
     res.status(201).json({ success: true, data: created });
   } catch (error) {
     next(error);

@@ -182,8 +182,14 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
       const customFields = customFieldsResponse || [];
 
       const valuesMap = {};
-      customFields.forEach(field => {
-        valuesMap[field.field_definition_id] = field.value;
+      customFields.forEach(category => {
+        if (category.fields) {
+          category.fields.forEach(field => {
+            if (field.value !== null && field.value !== undefined) {
+              valuesMap[field.definition_id] = field.value;
+            }
+          });
+        }
       });
       setFieldValues(valuesMap);
       setError(null);
@@ -302,7 +308,7 @@ const EditPatientModal = ({ show, onHide, onSubmit, patient }) => {
 
       if (success) {
         const customFieldsData = Object.keys(fieldValues).map(fieldDefinitionId => ({
-          field_definition_id: fieldDefinitionId,
+          definition_id: fieldDefinitionId,
           value: fieldValues[fieldDefinitionId]
         }));
 

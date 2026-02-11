@@ -151,7 +151,7 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
           const fieldsToSave = Object.entries(fieldValues)
             .filter(([_, value]) => value !== null && value !== undefined && value !== '')
             .map(([definitionId, value]) => ({
-              field_definition_id: definitionId,
+              definition_id: definitionId,
               value
             }));
 

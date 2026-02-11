@@ -253,7 +253,7 @@ const CreatePatientModal = ({ show, onHide, onSubmit }) => {
         const customFieldsData = Object.keys(fieldValues)
           .filter(fieldId => fieldValues[fieldId] !== '' && fieldValues[fieldId] !== null)
           .map(fieldDefinitionId => ({
-            field_definition_id: fieldDefinitionId,
+            definition_id: fieldDefinitionId,
             value: fieldValues[fieldDefinitionId]
           }));
 
