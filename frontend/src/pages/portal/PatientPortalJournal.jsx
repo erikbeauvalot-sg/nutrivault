@@ -12,6 +12,7 @@ import { toast } from 'react-toastify';
 import * as portalService from '../../services/portalService';
 import CameraButton from '../../components/CameraButton';
 import PullToRefreshWrapper from '../../components/common/PullToRefreshWrapper';
+import RemoteImage from '../../components/common/RemoteImage';
 
 const MAX_PHOTOS = 5;
 
@@ -406,7 +407,7 @@ const PatientPortalJournal = () => {
                       <div className="d-flex flex-wrap gap-2 mt-2">
                         {existingPhotos.map(photo => (
                           <div key={photo.id} style={{ position: 'relative' }}>
-                            <img
+                            <RemoteImage
                               src={portalService.getJournalPhotoUrl(photo.file_path)}
                               alt={photo.file_name}
                               style={{
@@ -703,7 +704,7 @@ const PatientPortalJournal = () => {
                   {entryPhotos.length > 0 && (
                     <div className="d-flex flex-wrap gap-2 mb-2">
                       {entryPhotos.map(photo => (
-                        <img
+                        <RemoteImage
                           key={photo.id}
                           src={portalService.getJournalPhotoUrl(photo.file_path)}
                           alt={photo.file_name}
@@ -812,7 +813,7 @@ const PatientPortalJournal = () => {
         </Modal.Header>
         <Modal.Body className="text-center p-0">
           {lightboxPhoto && (
-            <img
+            <RemoteImage
               src={lightboxPhoto}
               alt="Journal photo"
               style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
