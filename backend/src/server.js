@@ -15,10 +15,13 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps, Postman, or same-origin)
     if (!origin) return callback(null, true);
 
+    // Always allow Capacitor native app
+    if (origin === 'capacitor://localhost') return callback(null, true);
+
     // In development, allow known local origins
     if (process.env.NODE_ENV === 'development') {
-      const devOrigins = ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001', 'capacitor://localhost'];
-      if (!origin || devOrigins.includes(origin)) {
+      const devOrigins = ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
+      if (devOrigins.includes(origin)) {
         return callback(null, true);
       }
       return callback(new Error('Not allowed by CORS'));

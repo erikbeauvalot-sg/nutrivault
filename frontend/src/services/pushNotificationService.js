@@ -42,10 +42,6 @@ if (isNative) {
     if (token) {
       console.log('[Push] FCM token captured from native');
       pendingFcmToken = token;
-      // If setup already ran, send it now
-      if (setupDone) {
-        sendTokenToBackend(token);
-      }
     }
   });
 }

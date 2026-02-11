@@ -27,8 +27,6 @@ export const AuthProvider = ({ children }) => {
           const currentUser = authService.getCurrentUser();
           setUser(currentUser);
           setIsAuthenticated(true);
-          // Register for push notifications on native (session restored)
-          pushNotificationService.setup();
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
