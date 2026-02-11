@@ -13,6 +13,7 @@ const multer = require('multer');
 const portalController = require('../controllers/portalController');
 const authenticate = require('../middleware/authenticate');
 const { resolvePatient } = require('../middleware/portalScope');
+const db = require('../../../models');
 
 // Multer config for journal photo uploads (images only, max 10MB per file)
 const journalPhotoUpload = multer({

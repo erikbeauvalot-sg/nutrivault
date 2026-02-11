@@ -423,12 +423,13 @@ exports.upsertPatientObjectives = async (req, res, next) => {
       if (!obj.objective_number || obj.objective_number < 1 || obj.objective_number > 3) continue;
       if (!obj.content || !obj.content.trim()) continue;
 
-      const [record] = await db.PatientObjective.upsert({
-        patient_id: patientId,
-        objective_number: obj.objective_number,
-        content: obj.content.trim(),
-        created_by: req.user.id
+      const [record, created] = await db.PatientObjective.findOrCreate({
+        where: { patient_id: patientId, objective_number: obj.objective_number },
+        defaults: { content: obj.content.trim(), created_by: req.user.id }
       });
+      if (!created) {
+        await record.update({ content: obj.content.trim(), created_by: req.user.id });
+      }
       results.push(record);
     }
 

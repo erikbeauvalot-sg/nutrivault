@@ -8,6 +8,7 @@ import { isNative } from '../utils/platform';
 import api from './api';
 
 let PushNotifications = null;
+let setupDone = false;
 
 async function getPush() {
   if (!PushNotifications) {
@@ -128,6 +129,25 @@ export async function addListeners({
     console.error('Push registration error:', error);
     if (onError) onError(error);
   });
+}
+
+/**
+ * Full push notification setup: request permission, add listeners, register.
+ * Safe to call multiple times — only runs once per app session.
+ */
+export async function setup() {
+  if (!isNative || setupDone) return;
+  setupDone = true;
+  try {
+    const granted = await requestPermission();
+    if (granted) {
+      await addListeners();
+      await register();
+    }
+  } catch (err) {
+    console.error('Push notification setup failed:', err);
+    setupDone = false; // Allow retry on next login
+  }
 }
 
 /**

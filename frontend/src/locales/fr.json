@@ -3112,6 +3112,10 @@
     "noJournal": "Aucune entrée dans votre journal",
     "recentRecipes": "Recettes récentes",
     "noMeasures": "Aucune mesure enregistrée",
+    "myObjectives": "Mes objectifs",
+    "noObjectives": "Vos objectifs seront définis avec votre diététicien",
+    "myAssessment": "Mon bilan",
+    "noAssessment": "Pas encore de bilan",
     "addMeasure": "Ajouter une mesure",
     "addMeasureTitle": "Ajouter une mesure",
     "selectMeasureType": "Type de mesure",
@@ -3356,5 +3360,12 @@
     "photoDeleted": "Photo supprimée",
     "viewPhoto": "Photo",
     "maxPhotosReached": "Maximum 5 photos atteint"
+  },
+  "objectives": {
+    "title": "Objectifs du patient",
+    "placeholder": "Objectif {{num}}",
+    "none": "Aucun objectif défini",
+    "saved": "Objectifs enregistrés",
+    "saveError": "Erreur lors de la sauvegarde des objectifs"
   }
 }

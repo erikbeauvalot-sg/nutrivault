@@ -2958,6 +2958,10 @@
     "noJournal": "No journal entries yet",
     "recentRecipes": "Recent recipes",
     "noMeasures": "No measures recorded",
+    "myObjectives": "My goals",
+    "noObjectives": "Your goals will be defined with your dietitian",
+    "myAssessment": "My assessment",
+    "noAssessment": "No assessment yet",
     "addMeasure": "Add a measure",
     "addMeasureTitle": "Add a measure",
     "selectMeasureType": "Measure type",
@@ -3202,5 +3206,12 @@
     "photoDeleted": "Photo deleted",
     "viewPhoto": "Photo",
     "maxPhotosReached": "Maximum 5 photos reached"
+  },
+  "objectives": {
+    "title": "Patient goals",
+    "placeholder": "Goal {{num}}",
+    "none": "No goals defined",
+    "saved": "Goals saved",
+    "saveError": "Error saving goals"
   }
 }

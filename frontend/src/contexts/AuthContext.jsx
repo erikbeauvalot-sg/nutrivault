@@ -27,6 +27,8 @@ export const AuthProvider = ({ children }) => {
           const currentUser = authService.getCurrentUser();
           setUser(currentUser);
           setIsAuthenticated(true);
+          // Register for push notifications on native (session restored)
+          pushNotificationService.setup();
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
@@ -54,17 +56,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
 
       // Register for push notifications on native after login
-      if (isNative) {
-        try {
-          const granted = await pushNotificationService.requestPermission();
-          if (granted) {
-            await pushNotificationService.addListeners();
-            await pushNotificationService.register();
-          }
-        } catch (pushErr) {
-          console.error('Push notification setup failed:', pushErr);
-        }
-      }
+      pushNotificationService.setup();
 
       return userData;
     } catch (error) {
@@ -99,6 +91,9 @@ export const AuthProvider = ({ children }) => {
       if (creds) {
         await biometricService.saveCredentials(creds.username, result.refreshToken);
       }
+
+      // Register for push notifications on native
+      pushNotificationService.setup();
 
       return true;
     } catch (error) {
