@@ -104,6 +104,15 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: 'User selected theme ID'
     },
+    // Password reset
+    password_reset_token: {
+      type: DataTypes.STRING(64),
+      allowNull: true
+    },
+    password_reset_expires_at: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
     // Landing page slug for dietitians (e.g. '/mariondiet')
     landing_page_slug: {
       type: DataTypes.STRING(255),

@@ -74,6 +74,8 @@ const PatientPortalJournal = lazy(() => import('./pages/portal/PatientPortalJour
 const PatientPortalInvoices = lazy(() => import('./pages/portal/PatientPortalInvoices'));
 const PatientPortalRadar = lazy(() => import('./pages/portal/PatientPortalRadar'));
 const SetPasswordPage = lazy(() => import('./pages/portal/SetPasswordPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -141,6 +143,10 @@ function App() {
               : <LoginPage />
           }
         />
+
+        {/* Forgot / Reset Password (Public) */}
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Shared Document Route (Public - No Auth Required) */}
         <Route

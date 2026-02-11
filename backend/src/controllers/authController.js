@@ -132,6 +132,66 @@ class AuthController {
   }
 
   /**
+   * Request password reset - POST /api/auth/request-password-reset
+   * Always returns 200 (security — don't reveal if email exists)
+   */
+  async requestPasswordReset(req, res, next) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          details: errors.array()
+        });
+      }
+
+      const { email } = req.body;
+      await authService.requestPasswordReset(email);
+
+      // Always return success
+      res.status(200).json({
+        success: true,
+        message: 'If an account exists with this email, a reset link has been sent.'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Reset password - POST /api/auth/reset-password
+   */
+  async resetPassword(req, res, next) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: 'Validation failed',
+          details: errors.array()
+        });
+      }
+
+      const { token, password } = req.body;
+      await authService.resetPassword(token, password);
+
+      res.status(200).json({
+        success: true,
+        message: 'Password has been reset successfully.'
+      });
+    } catch (error) {
+      if (error.message === 'Invalid or expired reset token') {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid or expired reset token'
+        });
+      }
+      next(error);
+    }
+  }
+
+  /**
    * Logout - POST /api/auth/logout
    * @param {Object} req.body.refreshToken - Refresh token to invalidate
    * @returns {Object} { success }

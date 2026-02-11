@@ -13,9 +13,17 @@
 
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const authController = require('../controllers/authController');
 const { body, param } = require('express-validator');
 const authenticate = require('../middleware/authenticate');
+
+// Rate limiter for password reset endpoints (5 per 15 min per IP)
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { success: false, error: 'Too many attempts. Please try again later.' }
+});
 
 /**
  * POST /api/auth/login
@@ -96,6 +104,50 @@ router.post(
       .trim()
   ],
   authController.register
+);
+
+/**
+ * POST /api/auth/request-password-reset
+ * Public endpoint - Rate limited
+ */
+router.post(
+  '/request-password-reset',
+  passwordResetLimiter,
+  [
+    body('email')
+      .notEmpty()
+      .withMessage('Email is required')
+      .isEmail()
+      .withMessage('Email must be a valid email address')
+      .normalizeEmail()
+  ],
+  authController.requestPasswordReset
+);
+
+/**
+ * POST /api/auth/reset-password
+ * Public endpoint - Rate limited
+ */
+router.post(
+  '/reset-password',
+  passwordResetLimiter,
+  [
+    body('token')
+      .notEmpty()
+      .withMessage('Token is required')
+      .isString()
+      .withMessage('Token must be a string')
+      .isLength({ min: 64, max: 64 })
+      .withMessage('Invalid token format'),
+    body('password')
+      .notEmpty()
+      .withMessage('Password is required')
+      .isString()
+      .withMessage('Password must be a string')
+      .isLength({ min: 8 })
+      .withMessage('Password must be at least 8 characters long')
+  ],
+  authController.resetPassword
 );
 
 /**

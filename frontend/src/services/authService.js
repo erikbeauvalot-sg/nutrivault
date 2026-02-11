@@ -96,6 +96,35 @@ export const refreshToken = async () => {
 };
 
 /**
+ * Request password reset email
+ * @param {string} email - User email
+ * @returns {Promise<object>}
+ */
+export const requestPasswordReset = async (email) => {
+  try {
+    const response = await api.post('/auth/request-password-reset', { email });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { error: 'Request failed' };
+  }
+};
+
+/**
+ * Reset password with token
+ * @param {string} token - Reset token from email
+ * @param {string} password - New password
+ * @returns {Promise<object>}
+ */
+export const resetPassword = async (token, password) => {
+  try {
+    const response = await api.post('/auth/reset-password', { token, password });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { error: 'Reset failed' };
+  }
+};
+
+/**
  * Get current user from storage
  * @returns {object|null} User object or null if not authenticated
  */

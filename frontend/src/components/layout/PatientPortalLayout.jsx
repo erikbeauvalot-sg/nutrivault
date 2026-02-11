@@ -15,6 +15,7 @@ import PatientPortalSidebar from './PatientPortalSidebar';
 import BottomTabBar from '../portal/BottomTabBar';
 import OfflineBanner from '../common/OfflineBanner';
 import { isNative } from '../../utils/platform';
+import * as tokenStorage from '../../utils/tokenStorage';
 import './Layout.css';
 
 const PatientPortalLayout = ({ children }) => {
@@ -29,12 +30,20 @@ const PatientPortalLayout = ({ children }) => {
   const closeSidebar = () => setSidebarOpen(false);
 
   const handleLogout = async () => {
+    if (isNative) {
+      // Clear tokens synchronously THEN redirect — async cleanup runs in background
+      tokenStorage.clearTokens();
+      tokenStorage.clearUser();
+      logout().catch(() => {});
+      window.location.replace('/login');
+      return;
+    }
     try {
       await logout();
-      navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
     }
+    navigate('/login');
   };
 
   return (

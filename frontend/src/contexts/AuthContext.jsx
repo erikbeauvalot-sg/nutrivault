@@ -121,18 +121,18 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await authService.logout();
-    } finally {
-      // Clear biometric credentials on logout
-      if (isNative) {
-        await biometricService.deleteCredentials();
-        biometricService.clearBiometricPrefs();
-      }
-      // Clear offline cache
-      await offlineCache.clear();
-      setUser(null);
-      setIsAuthenticated(false);
-      setBiometricUnlocked(!isNative);
+    } catch (e) {
+      console.error('authService.logout failed:', e);
     }
+    // Always clear state, even if API call failed
+    if (isNative) {
+      try { await biometricService.deleteCredentials(); } catch {}
+      biometricService.clearBiometricPrefs();
+    }
+    try { await offlineCache.clear(); } catch {}
+    setUser(null);
+    setIsAuthenticated(false);
+    setBiometricUnlocked(!isNative);
   };
 
   /**

@@ -7,6 +7,8 @@ import { Navbar, Container, Nav, NavDropdown, Button } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { isNative } from '../../utils/platform';
+import * as tokenStorage from '../../utils/tokenStorage';
 import LanguageSelector from '../LanguageSelector';
 import ThemeSelector from '../ThemeSelector';
 
@@ -16,12 +18,20 @@ const Header = ({ onToggleSidebar, hideHamburger = false }) => {
   const { t } = useTranslation();
 
   const handleLogout = async () => {
+    if (isNative) {
+      // Clear tokens synchronously THEN redirect — async cleanup runs in background
+      tokenStorage.clearTokens();
+      tokenStorage.clearUser();
+      logout().catch(() => {});
+      window.location.replace('/login');
+      return;
+    }
     try {
       await logout();
-      navigate('/login');
     } catch (error) {
       console.error('Logout error:', error);
     }
+    navigate('/login');
   };
 
   return (

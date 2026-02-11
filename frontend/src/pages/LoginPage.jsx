@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Card, Form, Button, Alert } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
@@ -179,6 +179,12 @@ const LoginPage = () => {
                   {errors.password?.message}
                 </Form.Control.Feedback>
               </Form.Group>
+
+              <div className="text-end mb-2">
+                <Link to="/forgot-password" style={{ color: 'rgba(196, 164, 52, 0.6)', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.7rem', letterSpacing: '0.05em' }}>
+                  {t('auth.forgotPassword', 'Mot de passe oublié ?')}
+                </Link>
+              </div>
 
               {/* On native, session is always persisted — hide checkbox */}
               {!isNative && (

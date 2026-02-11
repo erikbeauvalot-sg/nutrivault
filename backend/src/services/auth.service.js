@@ -1,8 +1,10 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const { Op } = require('sequelize');
 const db = require('../../../models');
 const { generateTokenPair } = require('../auth/jwt');
 const auditService = require('./audit.service');
+const { sendEmail } = require('./email.service');
 
 const MAX_LOGIN_ATTEMPTS = parseInt(process.env.MAX_LOGIN_ATTEMPTS) || 5;
 const LOCKOUT_DURATION_MINUTES = parseInt(process.env.LOCKOUT_DURATION_MINUTES) || 30;
@@ -438,6 +440,153 @@ class AuthService {
     });
 
     return apiKeys;
+  }
+
+  /**
+   * Request a password reset — generates a token and sends email
+   * Always returns silently (security: don't reveal if email exists)
+   * @param {string} email - User email
+   */
+  async requestPasswordReset(email) {
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+
+      // Find user by email on users table
+      let user = await db.User.findOne({
+        where: { email: normalizedEmail }
+      });
+
+      // Also check patients table → user_id (patient may have prefixed user email)
+      if (!user) {
+        const patient = await db.Patient.findOne({
+          where: { email: normalizedEmail },
+          attributes: ['user_id']
+        });
+        if (patient && patient.user_id) {
+          user = await db.User.findByPk(patient.user_id);
+        }
+      }
+
+      if (!user || !user.is_active) {
+        return; // Silent — don't reveal whether email exists
+      }
+
+      // Generate token (64 hex chars)
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      await user.update({
+        password_reset_token: token,
+        password_reset_expires_at: expiresAt
+      });
+
+      // Build reset link
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const resetLink = `${frontendUrl}/reset-password?token=${token}`;
+      const displayName = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username;
+
+      const subject = 'Réinitialisation de votre mot de passe NutriVault';
+
+      const text = `
+Bonjour ${displayName},
+
+Une demande de réinitialisation de mot de passe a été effectuée pour votre compte NutriVault.
+
+Pour définir un nouveau mot de passe, cliquez sur le lien suivant :
+${resetLink}
+
+Ce lien est valable 1 heure.
+
+Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet email.
+
+Cordialement,
+L'équipe NutriVault
+      `.trim();
+
+      const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #2d5016 0%, #4a7c25 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { padding: 30px; background-color: #f9f9f9; }
+    .cta-button { display: inline-block; background: #4a7c25; color: white !important; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; }
+    .info-box { background-color: white; padding: 15px; margin: 20px 0; border-left: 4px solid #4a7c25; border-radius: 4px; }
+    .footer { text-align: center; padding: 20px; color: #777; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Réinitialisation du mot de passe</h1>
+      <p>NutriVault</p>
+    </div>
+    <div class="content">
+      <p>Bonjour <strong>${displayName}</strong>,</p>
+      <p>Une demande de réinitialisation de mot de passe a été effectuée pour votre compte.</p>
+
+      <div style="text-align: center;">
+        <a href="${resetLink}" class="cta-button">Définir un nouveau mot de passe</a>
+      </div>
+
+      <div class="info-box">
+        <p><strong>Validité du lien :</strong> 1 heure</p>
+      </div>
+
+      <p>Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet email. Votre mot de passe actuel reste inchangé.</p>
+      <p>Cordialement,<br><strong>L'équipe NutriVault</strong></p>
+    </div>
+    <div class="footer">
+      <p>Ceci est un email automatique. Veuillez ne pas répondre à ce message.</p>
+    </div>
+  </div>
+</body>
+</html>
+      `.trim();
+
+      await sendEmail({ to: normalizedEmail, subject, text, html });
+    } catch (error) {
+      // Log but don't throw — always return silently
+      console.error('Password reset email error:', error.message);
+    }
+  }
+
+  /**
+   * Reset password using a valid token
+   * @param {string} token - Password reset token
+   * @param {string} newPassword - New plain text password
+   */
+  async resetPassword(token, newPassword) {
+    const user = await db.User.findOne({
+      where: {
+        password_reset_token: token,
+        password_reset_expires_at: { [Op.gt]: new Date() }
+      }
+    });
+
+    if (!user) {
+      throw new Error('Invalid or expired reset token');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    await user.update({
+      password_hash: passwordHash,
+      password_reset_token: null,
+      password_reset_expires_at: null,
+      failed_login_attempts: 0,
+      locked_until: null
+    });
+
+    // Revoke all refresh tokens for security
+    await db.RefreshToken.update(
+      { is_revoked: true, revoked_at: new Date() },
+      { where: { user_id: user.id, is_revoked: false } }
+    );
+
+    return true;
   }
 
   /**
