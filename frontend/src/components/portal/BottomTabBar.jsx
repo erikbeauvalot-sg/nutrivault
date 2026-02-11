@@ -20,19 +20,19 @@ const BottomTabBar = () => {
   const [showMore, setShowMore] = useState(false);
 
   const tabs = [
-    { path: '/portal', icon: FiHome, label: t('portal.nav.home', 'Home'), exact: true },
+    { path: '/portal', icon: FiHome, label: t('portal.nav.home', 'Accueil'), exact: true },
+    { path: '/portal/messages', icon: FiMessageSquare, label: t('portal.nav.messages', 'Messages') },
     { path: '/portal/journal', icon: FiEdit3, label: t('portal.nav.journal', 'Journal') },
-    { path: '/portal/measures', icon: FiActivity, label: t('portal.nav.measures', 'Measures') },
-    { path: '/portal/documents', icon: FiFile, label: t('portal.nav.documents', 'Docs') },
+    { path: '/portal/measures', icon: FiActivity, label: t('portal.nav.measures', 'Mesures') },
   ];
 
   const moreTabs = [
-    { path: '/portal/messages', icon: FiMessageSquare, label: t('portal.nav.messages', 'Messages') },
-    { path: '/portal/visits', icon: FiCalendar, label: t('portal.nav.visits', 'Visits') },
-    { path: '/portal/recipes', icon: FiBook, label: t('portal.nav.recipes', 'Recipes') },
-    { path: '/portal/radar', icon: FiPieChart, label: t('portal.nav.radar', 'Radar') },
-    { path: '/portal/invoices', icon: FiCreditCard, label: t('portal.nav.invoices', 'Invoices') },
-    { path: '/portal/profile', icon: FiUser, label: t('portal.nav.profile', 'Profile') },
+    { path: '/portal/visits', icon: FiCalendar, label: t('portal.nav.visits', 'Consultations') },
+    { path: '/portal/recipes', icon: FiBook, label: t('portal.nav.recipes', 'Recettes') },
+    { path: '/portal/documents', icon: FiFile, label: t('portal.nav.documents', 'Documents') },
+    { path: '/portal/radar', icon: FiPieChart, label: t('portal.nav.radar', 'Bilan') },
+    { path: '/portal/invoices', icon: FiCreditCard, label: t('portal.nav.invoices', 'Factures') },
+    { path: '/portal/profile', icon: FiUser, label: t('portal.nav.profile', 'Profil') },
   ];
 
   const isActive = (tab) => {
