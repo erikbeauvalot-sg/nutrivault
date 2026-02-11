@@ -32,10 +32,14 @@ import {
   FaToggleOn,
   FaToggleOff,
   FaSearch,
-  FaEnvelope
+  FaEnvelope,
+  FaFileExport,
+  FaFileImport
 } from 'react-icons/fa';
 import ActionButton from '../components/ActionButton';
 import ConfirmModal from '../components/ConfirmModal';
+import ExportEmailTemplatesModal from '../components/ExportEmailTemplatesModal';
+import ImportEmailTemplatesModal from '../components/ImportEmailTemplatesModal';
 
 const EmailTemplatesPage = () => {
   const { t } = useTranslation();
@@ -57,6 +61,8 @@ const EmailTemplatesPage = () => {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState(null);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Category options
   const categories = [
@@ -225,13 +231,29 @@ const EmailTemplatesPage = () => {
                 </h2>
                 <p className="text-muted mb-0">Manage email templates for automated notifications</p>
               </div>
-              <Button
-                variant="primary"
-                onClick={handleCreateTemplate}
-              >
-                <FaPlus className="me-2" />
-                Create Template
-              </Button>
+              <ButtonGroup>
+                <Button
+                  variant="outline-primary"
+                  onClick={() => setShowExportModal(true)}
+                >
+                  <FaFileExport className="me-2" />
+                  {t('emailTemplates.export', 'Export')}
+                </Button>
+                <Button
+                  variant="outline-primary"
+                  onClick={() => setShowImportModal(true)}
+                >
+                  <FaFileImport className="me-2" />
+                  {t('emailTemplates.import', 'Import')}
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleCreateTemplate}
+                >
+                  <FaPlus className="me-2" />
+                  Create Template
+                </Button>
+              </ButtonGroup>
             </div>
           </Col>
         </Row>
@@ -415,6 +437,25 @@ const EmailTemplatesPage = () => {
             onHide={() => setShowTranslationModal(false)}
             template={selectedTemplate}
             onSaved={fetchTemplates}
+          />
+        )}
+
+        {/* Export Modal */}
+        {showExportModal && (
+          <ExportEmailTemplatesModal
+            show={showExportModal}
+            onHide={() => setShowExportModal(false)}
+            templates={templates}
+          />
+        )}
+
+        {/* Import Modal */}
+        {showImportModal && (
+          <ImportEmailTemplatesModal
+            show={showImportModal}
+            onHide={() => setShowImportModal(false)}
+            onSuccess={fetchTemplates}
+            existingTemplates={templates}
           />
         )}
 

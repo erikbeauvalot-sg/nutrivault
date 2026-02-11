@@ -57,6 +57,30 @@ router.get(
 );
 
 /**
+ * POST /api/email-templates/export
+ * Export email templates with translations
+ * Role: ADMIN only
+ */
+router.post(
+  '/export',
+  authenticate,
+  requireRole('ADMIN'),
+  emailTemplateController.exportTemplates
+);
+
+/**
+ * POST /api/email-templates/import
+ * Import email templates with translations
+ * Role: ADMIN only
+ */
+router.post(
+  '/import',
+  authenticate,
+  requireRole('ADMIN'),
+  emailTemplateController.importTemplates
+);
+
+/**
  * GET /api/email-templates/:id
  * Get template by ID
  * Permission: users.read

@@ -236,6 +236,208 @@ async function getTemplateStats() {
   };
 }
 
+// Fields to export for email templates (excludes IDs, timestamps, version)
+const TEMPLATE_EXPORT_FIELDS = [
+  'name', 'slug', 'category', 'description', 'subject', 'body_html', 'body_text',
+  'available_variables', 'is_active', 'is_system'
+];
+
+function pickFields(obj, fields) {
+  return fields.reduce((result, field) => {
+    if (obj[field] !== undefined) {
+      result[field] = obj[field];
+    }
+    return result;
+  }, {});
+}
+
+/**
+ * Export email templates with their translations
+ * @param {Array<string>} categories - Category filter (empty = all)
+ * @returns {Promise<Object>} Export data
+ */
+async function exportTemplates(categories = []) {
+  const MeasureTranslation = db.MeasureTranslation;
+  const where = {};
+  if (categories && categories.length > 0) {
+    where.category = { [Op.in]: categories };
+  }
+
+  const templates = await EmailTemplate.findAll({
+    where,
+    order: [['category', 'ASC'], ['name', 'ASC']]
+  });
+
+  const exportData = {
+    version: '1.0',
+    type: 'email_templates',
+    exportDate: new Date().toISOString(),
+    templates: []
+  };
+
+  for (const template of templates) {
+    const templateJson = template.toJSON();
+    const exported = pickFields(templateJson, TEMPLATE_EXPORT_FIELDS);
+
+    // Fetch translations for this template
+    const translations = await MeasureTranslation.findAll({
+      where: {
+        entity_type: 'email_template',
+        entity_id: template.id
+      },
+      order: [['language_code', 'ASC'], ['field_name', 'ASC']]
+    });
+
+    if (translations.length > 0) {
+      exported.translations = {};
+      for (const tr of translations) {
+        if (!exported.translations[tr.language_code]) {
+          exported.translations[tr.language_code] = {};
+        }
+        exported.translations[tr.language_code][tr.field_name] = tr.translated_value;
+      }
+    }
+
+    exportData.templates.push(exported);
+  }
+
+  return exportData;
+}
+
+/**
+ * Import email templates with their translations
+ * @param {Object} importData - Import data with templates array
+ * @param {Object} options - { skipExisting, updateExisting }
+ * @param {string} userId - User performing the import
+ * @returns {Promise<Object>} Import results
+ */
+async function importTemplates(importData, options = {}, userId) {
+  const MeasureTranslation = db.MeasureTranslation;
+  const transaction = await db.sequelize.transaction();
+
+  try {
+    const { skipExisting = true, updateExisting = false } = options;
+    const results = {
+      templatesCreated: 0,
+      templatesUpdated: 0,
+      templatesSkipped: 0,
+      translationsCreated: 0,
+      errors: []
+    };
+
+    if (!importData?.templates || !Array.isArray(importData.templates)) {
+      throw new Error('Invalid import data format');
+    }
+
+    for (const tplData of importData.templates) {
+      try {
+        if (!tplData.slug || !tplData.name) {
+          results.errors.push({
+            type: 'template',
+            name: tplData.name || 'unknown',
+            error: 'Missing required fields: name, slug'
+          });
+          continue;
+        }
+
+        const existingTemplate = await EmailTemplate.findOne({
+          where: { slug: tplData.slug },
+          paranoid: false,
+          transaction
+        });
+
+        let template;
+        const translations = tplData.translations || {};
+        const cleanData = pickFields(tplData, TEMPLATE_EXPORT_FIELDS);
+
+        if (existingTemplate) {
+          if (updateExisting) {
+            const updateData = { ...cleanData };
+            delete updateData.slug;
+            delete updateData.is_system;
+            updateData.updated_by = userId;
+
+            if (existingTemplate.deleted_at) {
+              await existingTemplate.restore({ transaction });
+            }
+            await existingTemplate.update(updateData, { transaction });
+            template = existingTemplate;
+            results.templatesUpdated++;
+          } else if (skipExisting) {
+            template = null;
+            results.templatesSkipped++;
+          } else {
+            // Create with "(imported)" suffix
+            template = await EmailTemplate.create({
+              ...cleanData,
+              slug: `${tplData.slug}_imported`,
+              name: `${tplData.name} (imported)`,
+              is_system: false,
+              created_by: userId
+            }, { transaction });
+            results.templatesCreated++;
+          }
+        } else {
+          template = await EmailTemplate.create({
+            ...cleanData,
+            is_system: tplData.is_system || false,
+            created_by: userId
+          }, { transaction });
+          results.templatesCreated++;
+        }
+
+        // Import translations
+        if (template && Object.keys(translations).length > 0) {
+          for (const [langCode, fields] of Object.entries(translations)) {
+            for (const [fieldName, value] of Object.entries(fields)) {
+              if (!value) continue;
+
+              const existingTr = await MeasureTranslation.findOne({
+                where: {
+                  entity_type: 'email_template',
+                  entity_id: template.id,
+                  language_code: langCode,
+                  field_name: fieldName
+                },
+                transaction
+              });
+
+              if (existingTr) {
+                if (updateExisting || !existingTemplate) {
+                  await existingTr.update({ translated_value: value }, { transaction });
+                  results.translationsCreated++;
+                }
+              } else {
+                await MeasureTranslation.create({
+                  entity_type: 'email_template',
+                  entity_id: template.id,
+                  language_code: langCode,
+                  field_name: fieldName,
+                  translated_value: value
+                }, { transaction });
+                results.translationsCreated++;
+              }
+            }
+          }
+        }
+      } catch (tplError) {
+        results.errors.push({
+          type: 'template',
+          name: tplData.name || 'unknown',
+          error: tplError.message
+        });
+      }
+    }
+
+    await transaction.commit();
+    return results;
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error in importTemplates:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getAllTemplates,
   getTemplateById,
@@ -247,5 +449,7 @@ module.exports = {
   toggleActive,
   getTemplatesByCategory,
   isSlugAvailable,
-  getTemplateStats
+  getTemplateStats,
+  exportTemplates,
+  importTemplates
 };

@@ -198,6 +198,31 @@ export const previewTranslation = async (templateId, languageCode, sampleData = 
   return response;
 };
 
+// ==========================================
+// Export/Import Functions
+// ==========================================
+
+/**
+ * Export email templates with translations
+ * @param {Array<string>} categories - Categories to export (empty = all)
+ * @returns {Promise<object>} Export data
+ */
+export const exportTemplates = async (categories = []) => {
+  const response = await api.post('/email-templates/export', { categories });
+  return response.data;
+};
+
+/**
+ * Import email templates with translations
+ * @param {object} importData - Import data with templates array
+ * @param {object} options - { skipExisting, updateExisting }
+ * @returns {Promise<object>} Import results
+ */
+export const importTemplates = async (importData, options = {}) => {
+  const response = await api.post('/email-templates/import', { importData, options });
+  return response.data;
+};
+
 export default {
   getAllTemplates,
   getTemplateById,
@@ -216,5 +241,8 @@ export default {
   deleteTranslation,
   getBaseContent,
   getSupportedLanguages,
-  previewTranslation
+  previewTranslation,
+  // Export/Import functions
+  exportTemplates,
+  importTemplates
 };

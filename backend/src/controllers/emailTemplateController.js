@@ -605,6 +605,65 @@ const previewTranslation = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/email-templates/export
+ * Export email templates with translations
+ */
+const exportTemplates = async (req, res) => {
+  try {
+    const exportData = await emailTemplateService.exportTemplates(
+      req.body.categories || []
+    );
+
+    res.json({
+      success: true,
+      data: exportData,
+      message: 'Templates exported successfully'
+    });
+  } catch (error) {
+    console.error('Export templates error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to export templates'
+    });
+  }
+};
+
+/**
+ * POST /api/email-templates/import
+ * Import email templates with translations
+ */
+const importTemplates = async (req, res) => {
+  try {
+    const { importData, options } = req.body;
+
+    if (!importData || !importData.templates || !Array.isArray(importData.templates)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid import data: must contain a templates array'
+      });
+    }
+
+    const results = await emailTemplateService.importTemplates(
+      importData,
+      options || {},
+      req.user.id
+    );
+
+    res.json({
+      success: true,
+      data: results,
+      message: 'Import completed successfully'
+    });
+  } catch (error) {
+    console.error('Import templates error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to import templates'
+    });
+  }
+};
+
 module.exports = {
   validateCreateTemplate,
   validateUpdateTemplate,
@@ -625,5 +684,8 @@ module.exports = {
   deleteTranslation,
   getBaseContent,
   getSupportedLanguages,
-  previewTranslation
+  previewTranslation,
+  // Export/Import
+  exportTemplates,
+  importTemplates
 };
