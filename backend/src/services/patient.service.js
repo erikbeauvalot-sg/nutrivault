@@ -279,10 +279,10 @@ async function getPatientById(patientId, user, requestMetadata = {}) {
  */
 async function getPatientDetails(patientId, user, requestMetadata = {}) {
   try {
+    // Note: We don't filter by is_active here to allow viewing/deleting inactive patients
     const patient = await Patient.findOne({
       where: {
-        id: patientId,
-        is_active: true
+        id: patientId
       },
       include: [
         {
