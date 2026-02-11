@@ -26,7 +26,9 @@ const MessagesPage = () => {
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const pollRef = useRef(null);
+  const prevMessageCountRef = useRef(0);
 
   // New conversation modal state
   const [showNewConvo, setShowNewConvo] = useState(false);
@@ -69,8 +71,19 @@ const MessagesPage = () => {
   }, [activeConvo, loadConversations]);
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, []);
+
+  // Auto-scroll when new messages arrive (polling or send)
+  useEffect(() => {
+    if (messages.length > prevMessageCountRef.current) {
+      setTimeout(() => scrollToBottom(), 50);
+    }
+    prevMessageCountRef.current = messages.length;
+  }, [messages, scrollToBottom]);
 
   const openConversation = async (convo) => {
     setActiveConvo(convo);
@@ -257,7 +270,7 @@ const MessagesPage = () => {
               </Card.Header>
 
               {/* Messages */}
-              <Card.Body className="flex-grow-1 p-3" style={{ overflowY: 'auto' }}>
+              <Card.Body ref={messagesContainerRef} className="flex-grow-1 p-3" style={{ overflowY: 'auto' }}>
                 {loadingMessages ? (
                   <div className="text-center py-4"><Spinner size="sm" animation="border" /></div>
                 ) : messages.length === 0 ? (

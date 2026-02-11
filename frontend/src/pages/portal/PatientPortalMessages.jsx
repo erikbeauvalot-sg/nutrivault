@@ -28,7 +28,9 @@ const PatientPortalMessages = () => {
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const pollRef = useRef(null);
+  const prevMessageCountRef = useRef(0);
 
   // New conversation state
   const [showNewConvo, setShowNewConvo] = useState(false);
@@ -65,9 +67,20 @@ const PatientPortalMessages = () => {
     return () => clearInterval(pollRef.current);
   }, [activeConvo, loadConversations]);
 
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = useCallback((behavior = 'smooth') => {
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, []);
+
+  // Auto-scroll when new messages arrive (polling or send)
+  useEffect(() => {
+    if (messages.length > prevMessageCountRef.current) {
+      setTimeout(() => scrollToBottom(), 50);
+    }
+    prevMessageCountRef.current = messages.length;
+  }, [messages, scrollToBottom]);
 
   const openConversation = async (convo) => {
     setActiveConvo(convo);
@@ -204,7 +217,7 @@ const PatientPortalMessages = () => {
 
           {/* Messages */}
           <Card className="flex-grow-1 d-flex flex-column" style={{ overflow: 'hidden' }}>
-            <Card.Body className="flex-grow-1 p-3" style={{ overflowY: 'auto' }}>
+            <Card.Body ref={messagesContainerRef} className="flex-grow-1 p-3" style={{ overflowY: 'auto' }}>
               {loadingMessages ? (
                 <div className="text-center py-4"><Spinner size="sm" animation="border" /></div>
               ) : messages.length === 0 ? (
