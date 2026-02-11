@@ -99,14 +99,16 @@ async function deletePatientPermanently(req, res) {
 
     // Delete in order to respect foreign key constraints
 
-    // 1. Patient measures & annotations
+    // 1. Patient measures, annotations & alerts
     const patientMeasures = await db.PatientMeasure.findAll({ where: { patient_id: id }, attributes: ['id'], raw: true, paranoid: false });
     const measureIds = patientMeasures.map(m => m.id);
+    // MeasureAnnotation uses patient_id (not patient_measure_id)
+    await db.MeasureAnnotation.destroy({
+      where: { patient_id: id },
+      force: true
+    });
+    // MeasureAlert uses patient_measure_id
     if (measureIds.length > 0) {
-      await db.MeasureAnnotation.destroy({
-        where: { patient_measure_id: { [db.Sequelize.Op.in]: measureIds } },
-        force: true
-      });
       await db.MeasureAlert.destroy({
         where: { patient_measure_id: { [db.Sequelize.Op.in]: measureIds } },
         force: true
