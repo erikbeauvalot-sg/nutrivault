@@ -16,8 +16,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate, UNUser
         // Set notification center delegate for foreground notifications
         UNUserNotificationCenter.current().delegate = self
 
-        // Register for remote notifications so iOS generates an APNs token
-        application.registerForRemoteNotifications()
+        // Request notification authorization — this shows the iOS permission popup
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+            print("[AppDelegate] Notification authorization granted: \(granted)")
+            if let error = error {
+                print("[AppDelegate] Authorization error: \(error.localizedDescription)")
+            }
+            if granted {
+                DispatchQueue.main.async {
+                    application.registerForRemoteNotifications()
+                }
+            }
+        }
 
         return true
     }

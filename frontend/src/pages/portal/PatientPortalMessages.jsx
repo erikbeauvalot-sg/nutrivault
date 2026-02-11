@@ -2,15 +2,17 @@
  * Patient Portal Messages Page
  * Patient's messaging with their dietitian(s).
  * Conversations listed, click to open thread. Polls every 12s.
+ * Patient can start a new conversation with any linked dietitian.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, Form, Button, Spinner, Badge, ListGroup, InputGroup } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { FiMessageSquare, FiSend, FiUser, FiArrowLeft } from 'react-icons/fi';
+import { FiMessageSquare, FiSend, FiUser, FiArrowLeft, FiPlus } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../contexts/AuthContext';
 import * as portalMessageService from '../../services/portalMessageService';
+import * as portalService from '../../services/portalService';
 import PullToRefreshWrapper from '../../components/common/PullToRefreshWrapper';
 
 const POLL_INTERVAL = 12000;
@@ -27,6 +29,12 @@ const PatientPortalMessages = () => {
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
   const pollRef = useRef(null);
+
+  // New conversation state
+  const [showNewConvo, setShowNewConvo] = useState(false);
+  const [dietitians, setDietitians] = useState([]);
+  const [loadingDietitians, setLoadingDietitians] = useState(false);
+  const [creatingConvo, setCreatingConvo] = useState(false);
 
   const loadConversations = useCallback(async () => {
     try {
@@ -94,11 +102,92 @@ const PatientPortalMessages = () => {
     }
   };
 
+  const handleNewConversation = async () => {
+    setShowNewConvo(true);
+    setLoadingDietitians(true);
+    try {
+      const data = await portalService.getMyDietitians();
+      setDietitians(Array.isArray(data) ? data : []);
+    } catch {
+      setDietitians([]);
+    } finally {
+      setLoadingDietitians(false);
+    }
+  };
+
+  const handleStartConversation = async (dietitianId) => {
+    setCreatingConvo(true);
+    try {
+      const convo = await portalMessageService.createConversation(dietitianId);
+      await loadConversations();
+      setShowNewConvo(false);
+      openConversation(convo);
+    } catch {
+      toast.error(t('messages.createError', 'Erreur lors de la cr\u00e9ation'));
+    } finally {
+      setCreatingConvo(false);
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-5"><Spinner animation="border" /></div>;
   }
 
-  // Mobile: show either list or thread (not both)
+  // Dietitian selection view
+  if (showNewConvo) {
+    return (
+      <PullToRefreshWrapper onRefresh={handleNewConversation}>
+        <div className="d-flex align-items-center gap-2 mb-3">
+          <Button variant="link" className="p-0 text-dark" onClick={() => setShowNewConvo(false)}>
+            <FiArrowLeft size={20} />
+          </Button>
+          <h2 className="mb-0" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.75rem)' }}>
+            {t('messages.chooseDietitian', 'Choisir un(e) di\u00e9t\u00e9ticien(ne)')}
+          </h2>
+        </div>
+
+        {loadingDietitians ? (
+          <div className="text-center py-5"><Spinner animation="border" /></div>
+        ) : dietitians.length === 0 ? (
+          <Card>
+            <Card.Body className="text-center text-muted py-4">
+              {t('messages.noDietitians', 'Aucun(e) di\u00e9t\u00e9ticien(ne) li\u00e9(e) \u00e0 votre compte')}
+            </Card.Body>
+          </Card>
+        ) : (
+          <ListGroup>
+            {dietitians.map(d => {
+              const hasConvo = conversations.some(c => c.dietitian?.id === d.id);
+              return (
+                <ListGroup.Item
+                  key={d.id}
+                  action
+                  disabled={creatingConvo}
+                  onClick={() => !creatingConvo && handleStartConversation(d.id)}
+                  className="d-flex align-items-center gap-3 py-3"
+                >
+                  <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0"
+                    style={{ width: 44, height: 44 }}>
+                    <FiUser size={20} className="text-primary" />
+                  </div>
+                  <div className="flex-grow-1">
+                    <strong>{d.first_name} {d.last_name}</strong>
+                  </div>
+                  {hasConvo && (
+                    <Badge bg="secondary" style={{ fontSize: '0.7rem' }}>
+                      {t('messages.existingConvo', 'Conversation existante')}
+                    </Badge>
+                  )}
+                </ListGroup.Item>
+              );
+            })}
+          </ListGroup>
+        )}
+      </PullToRefreshWrapper>
+    );
+  }
+
+  // Active conversation thread
   if (activeConvo) {
     return (
       <PullToRefreshWrapper onRefresh={() => openConversation(activeConvo)}>
@@ -174,17 +263,26 @@ const PatientPortalMessages = () => {
   // Conversation list
   return (
     <PullToRefreshWrapper onRefresh={loadConversations}>
-      <h2 className="mb-3" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.75rem)' }}>
-        <FiMessageSquare className="me-2" />
-        {t('messages.title', 'Messages')}
-      </h2>
+      <div className="d-flex align-items-center justify-content-between mb-3">
+        <h2 className="mb-0" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.75rem)' }}>
+          <FiMessageSquare className="me-2" />
+          {t('messages.title', 'Messages')}
+        </h2>
+        <Button variant="primary" size="sm" onClick={handleNewConversation}>
+          <FiPlus className="me-1" />
+          {t('messages.newMessage', 'Nouveau message')}
+        </Button>
+      </div>
 
       {conversations.length === 0 ? (
         <Card>
           <Card.Body className="text-center text-muted py-5">
             <FiMessageSquare size={40} className="mb-3 opacity-25" />
-            <p className="mb-0">{t('messages.noConversations', 'Aucune conversation')}</p>
-            <small>{t('messages.patientNoConvoHint', 'Votre dieteticien(ne) doit initier la conversation')}</small>
+            <p className="mb-2">{t('messages.noConversations', 'Aucune conversation')}</p>
+            <Button variant="outline-primary" size="sm" onClick={handleNewConversation}>
+              <FiPlus className="me-1" />
+              {t('messages.startFirst', 'Envoyer un premier message')}
+            </Button>
           </Card.Body>
         </Card>
       ) : (

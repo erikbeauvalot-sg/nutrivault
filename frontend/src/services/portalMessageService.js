@@ -10,6 +10,11 @@ export async function getConversations() {
   return response.data.data;
 }
 
+export async function createConversation(dietitianId) {
+  const response = await api.post('/portal/messages/conversations', { dietitian_id: dietitianId });
+  return response.data.data;
+}
+
 export async function getMessages(conversationId, { before, limit } = {}) {
   const params = {};
   if (before) params.before = before;

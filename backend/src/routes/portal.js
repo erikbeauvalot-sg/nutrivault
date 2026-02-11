@@ -133,8 +133,9 @@ router.get('/visit-types', requireBookingFeature, portalController.getVisitTypes
 
 /**
  * GET /api/portal/my-dietitians — Get dietitians linked to this patient
+ * (No feature flag — needed for messaging and booking)
  */
-router.get('/my-dietitians', requireBookingFeature, portalController.getMyDietitians);
+router.get('/my-dietitians', portalController.getMyDietitians);
 
 /**
  * POST /api/portal/visits — Request a visit appointment
@@ -309,6 +310,42 @@ router.put('/theme',
 // ==========================================
 // MESSAGING ROUTES (Patient side)
 // ==========================================
+
+/**
+ * POST /api/portal/messages/conversations — Patient creates a conversation with a linked dietitian
+ */
+router.post('/messages/conversations',
+  body('dietitian_id').isUUID(),
+  async (req, res) => {
+    try {
+      const { dietitian_id } = req.body;
+
+      // Verify the dietitian is linked to this patient
+      const link = await db.PatientDietitian.findOne({
+        where: { patient_id: req.patient.id, dietitian_id }
+      });
+      if (!link) {
+        return res.status(403).json({ success: false, error: 'This dietitian is not linked to your account' });
+      }
+
+      const [conversation, created] = await db.Conversation.findOrCreate({
+        where: { patient_id: req.patient.id, dietitian_id },
+        defaults: {},
+      });
+
+      const full = await db.Conversation.findByPk(conversation.id, {
+        include: [
+          { model: db.User, as: 'dietitian', attributes: ['id', 'first_name', 'last_name'] },
+        ],
+      });
+
+      res.status(created ? 201 : 200).json({ success: true, data: full });
+    } catch (error) {
+      console.error('Error creating patient conversation:', error);
+      res.status(500).json({ success: false, error: 'Failed to create conversation' });
+    }
+  }
+);
 
 /**
  * GET /api/portal/messages/conversations — List patient's conversations

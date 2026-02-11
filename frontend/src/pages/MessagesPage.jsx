@@ -5,11 +5,12 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Row, Col, Card, Form, Button, Spinner, Badge, ListGroup, InputGroup } from 'react-bootstrap';
+import { Row, Col, Card, Form, Button, Spinner, Badge, ListGroup, InputGroup, Modal } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { FiMessageSquare, FiSend, FiUser, FiSearch } from 'react-icons/fi';
+import { FiMessageSquare, FiSend, FiUser, FiSearch, FiPlus } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import * as messageService from '../services/messageService';
+import * as patientService from '../services/patientService';
 import Layout from '../components/layout/Layout';
 
 const POLL_INTERVAL = 12000;
@@ -26,6 +27,14 @@ const MessagesPage = () => {
   const [search, setSearch] = useState('');
   const messagesEndRef = useRef(null);
   const pollRef = useRef(null);
+
+  // New conversation modal state
+  const [showNewConvo, setShowNewConvo] = useState(false);
+  const [patientSearch, setPatientSearch] = useState('');
+  const [patientResults, setPatientResults] = useState([]);
+  const [searchingPatients, setSearchingPatients] = useState(false);
+  const [creatingConvo, setCreatingConvo] = useState(false);
+  const searchTimeout = useRef(null);
 
   const loadConversations = useCallback(async () => {
     try {
@@ -97,6 +106,43 @@ const MessagesPage = () => {
     }
   };
 
+  // Patient search for new conversation
+  const handlePatientSearch = (value) => {
+    setPatientSearch(value);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (!value.trim()) {
+      setPatientResults([]);
+      return;
+    }
+    searchTimeout.current = setTimeout(async () => {
+      setSearchingPatients(true);
+      try {
+        const result = await patientService.getPatients({ search: value.trim(), limit: 10 });
+        setPatientResults(result.data || []);
+      } catch {
+        setPatientResults([]);
+      } finally {
+        setSearchingPatients(false);
+      }
+    }, 300);
+  };
+
+  const handleStartConversation = async (patient) => {
+    setCreatingConvo(true);
+    try {
+      const convo = await messageService.createConversation(patient.id);
+      await loadConversations();
+      setShowNewConvo(false);
+      setPatientSearch('');
+      setPatientResults([]);
+      openConversation(convo);
+    } catch {
+      toast.error(t('messages.createError', 'Erreur lors de la cr\u00e9ation de la conversation'));
+    } finally {
+      setCreatingConvo(false);
+    }
+  };
+
   const filteredConvos = conversations.filter(c => {
     if (!search) return true;
     const name = `${c.patient?.first_name} ${c.patient?.last_name}`.toLowerCase();
@@ -118,6 +164,15 @@ const MessagesPage = () => {
         <h2 className="mb-0" style={{ fontSize: 'clamp(1.2rem, 3vw, 1.5rem)' }}>
           {t('messages.title', 'Messages')}
         </h2>
+        <Button
+          variant="primary"
+          size="sm"
+          className="ms-auto"
+          onClick={() => setShowNewConvo(true)}
+        >
+          <FiPlus className="me-1" />
+          {t('messages.newConversation', 'Nouvelle conversation')}
+        </Button>
       </div>
 
       <Row style={{ height: 'calc(100vh - 180px)', minHeight: '400px' }}>
@@ -126,7 +181,7 @@ const MessagesPage = () => {
           <InputGroup className="mb-2" size="sm">
             <InputGroup.Text><FiSearch size={14} /></InputGroup.Text>
             <Form.Control
-              placeholder={t('messages.searchPatients', 'Search patients...')}
+              placeholder={t('messages.searchPatients', 'Chercher un patient...')}
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
@@ -135,7 +190,11 @@ const MessagesPage = () => {
             <ListGroup variant="flush" style={{ overflowY: 'auto', maxHeight: '100%' }}>
               {filteredConvos.length === 0 && (
                 <ListGroup.Item className="text-muted text-center py-4">
-                  {t('messages.noConversations', 'No conversations yet')}
+                  <FiMessageSquare size={32} className="mb-2 opacity-25 d-block mx-auto" />
+                  {conversations.length === 0
+                    ? t('messages.noConversations', 'Aucune conversation')
+                    : t('messages.noResults', 'Aucun r\u00e9sultat')
+                  }
                 </ListGroup.Item>
               )}
               {filteredConvos.map(c => (
@@ -184,7 +243,7 @@ const MessagesPage = () => {
             <Card className="flex-grow-1 d-flex align-items-center justify-content-center">
               <div className="text-center text-muted py-5">
                 <FiMessageSquare size={48} className="mb-3 opacity-25" />
-                <p>{t('messages.selectConversation', 'Select a conversation to start messaging')}</p>
+                <p>{t('messages.selectConversation', 'S\u00e9lectionnez une conversation ou cr\u00e9ez-en une nouvelle')}</p>
               </div>
             </Card>
           ) : (
@@ -203,7 +262,7 @@ const MessagesPage = () => {
                   <div className="text-center py-4"><Spinner size="sm" animation="border" /></div>
                 ) : messages.length === 0 ? (
                   <div className="text-center text-muted py-4">
-                    {t('messages.noMessages', 'No messages yet. Start the conversation!')}
+                    {t('messages.noMessages', 'Aucun message. Envoyez le premier !')}
                   </div>
                 ) : (
                   messages.map(msg => {
@@ -237,7 +296,7 @@ const MessagesPage = () => {
                 <Form onSubmit={handleSend}>
                   <InputGroup>
                     <Form.Control
-                      placeholder={t('messages.typePlaceholder', 'Type a message...')}
+                      placeholder={t('messages.typePlaceholder', 'Votre message...')}
                       value={newMessage}
                       onChange={e => setNewMessage(e.target.value)}
                       maxLength={5000}
@@ -253,6 +312,57 @@ const MessagesPage = () => {
           )}
         </Col>
       </Row>
+
+      {/* New Conversation Modal */}
+      <Modal show={showNewConvo} onHide={() => { setShowNewConvo(false); setPatientSearch(''); setPatientResults([]); }} centered>
+        <Modal.Header closeButton>
+          <Modal.Title style={{ fontSize: '1.1rem' }}>
+            {t('messages.newConversation', 'Nouvelle conversation')}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Control
+            placeholder={t('messages.searchPatientName', 'Nom du patient...')}
+            value={patientSearch}
+            onChange={e => handlePatientSearch(e.target.value)}
+            autoFocus
+          />
+          {searchingPatients && (
+            <div className="text-center py-3"><Spinner size="sm" animation="border" /></div>
+          )}
+          {!searchingPatients && patientResults.length > 0 && (
+            <ListGroup className="mt-2" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+              {patientResults.map(p => {
+                const hasConvo = conversations.some(c => c.patient?.id === p.id);
+                return (
+                  <ListGroup.Item
+                    key={p.id}
+                    action
+                    disabled={creatingConvo}
+                    onClick={() => !creatingConvo && handleStartConversation(p)}
+                    className="d-flex justify-content-between align-items-center"
+                  >
+                    <div>
+                      <strong>{p.first_name} {p.last_name}</strong>
+                      {p.email && <small className="text-muted ms-2">{p.email}</small>}
+                    </div>
+                    {hasConvo && (
+                      <Badge bg="secondary" style={{ fontSize: '0.7rem' }}>
+                        {t('messages.existingConvo', 'D\u00e9j\u00e0 existante')}
+                      </Badge>
+                    )}
+                  </ListGroup.Item>
+                );
+              })}
+            </ListGroup>
+          )}
+          {!searchingPatients && patientSearch.trim() && patientResults.length === 0 && (
+            <p className="text-muted text-center mt-3 mb-0">
+              {t('messages.noPatientFound', 'Aucun patient trouv\u00e9')}
+            </p>
+          )}
+        </Modal.Body>
+      </Modal>
     </Layout>
   );
 };
