@@ -29,6 +29,7 @@ import customFieldService from '../services/customFieldService';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import { getBMICategory, calculateBMI } from '../utils/bmiUtils';
 import { applyTranslationsToMeasures, fetchMeasureTranslations } from '../utils/measureTranslations';
+import { toast } from 'react-toastify';
 import * as gdprService from '../services/gdprService';
 import * as billingService from '../services/billingService';
 import * as measureService from '../services/measureService';
@@ -413,7 +414,7 @@ const PatientDetailPage = () => {
       setIsExporting(true);
       setError(null);
       await gdprService.exportPatientData(id, format);
-      alert(t('gdpr.exportSuccess', 'Patient data exported successfully'));
+      toast.success(t('gdpr.exportSuccess', 'Patient data exported successfully'));
     } catch (err) {
       setError(t('gdpr.exportFailed') + ': ' + (err.response?.data?.error || err.message));
       console.error('Export error:', err);
@@ -427,7 +428,7 @@ const PatientDetailPage = () => {
       setIsDeleting(true);
       setError(null);
       await gdprService.deletePatientPermanently(id);
-      alert(t('gdpr.deleteSuccess', 'Patient permanently deleted'));
+      toast.success(t('gdpr.deleteSuccess', 'Patient permanently deleted'));
       navigate('/patients');
     } catch (err) {
       setError(t('gdpr.deleteFailed') + ': ' + (err.response?.data?.error || err.message));
