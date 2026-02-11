@@ -10,18 +10,24 @@ const getActualVersion = () => {
   if (process.env.APP_VERSION && process.env.APP_VERSION !== 'latest') {
     return process.env.APP_VERSION;
   }
-  // Fallback to package.json (try multiple paths for Docker compatibility)
+  // Fallback to package.json (try multiple paths for Docker/bare-metal compatibility)
   try {
-    // In Docker, package.json is at /app/package.json
-    const packageJson = require('../../package.json');
+    // Root package.json (3 levels up from backend/src/services/)
+    const packageJson = require('../../../package.json');
     return packageJson.version;
   } catch {
     try {
-      // Alternative path for Docker container
-      const packageJson = require('/app/package.json');
+      // In Docker, backend package.json is at /app/package.json
+      const packageJson = require('../../package.json');
       return packageJson.version;
     } catch {
-      return '5.15.0';
+      try {
+        // Alternative path for Docker container
+        const packageJson = require('/app/package.json');
+        return packageJson.version;
+      } catch {
+        return '8.6.3';
+      }
     }
   }
 };
