@@ -379,3 +379,79 @@ exports.sendPortalPasswordReset = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * GET /api/patients/:patientId/objectives — Get patient objectives
+ */
+exports.getPatientObjectives = async (req, res, next) => {
+  try {
+    const patientId = req.params.patientId || req.params.id;
+    const hasAccess = await canAccessPatient(req.user, patientId);
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const objectives = await db.PatientObjective.findAll({
+      where: { patient_id: patientId },
+      order: [['objective_number', 'ASC']],
+      include: [{ model: db.User, as: 'creator', attributes: ['id', 'first_name', 'last_name'] }]
+    });
+    res.json({ success: true, data: objectives });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/patients/:patientId/objectives — Upsert patient objectives (max 3)
+ */
+exports.upsertPatientObjectives = async (req, res, next) => {
+  try {
+    const patientId = req.params.patientId || req.params.id;
+    const hasAccess = await canAccessPatient(req.user, patientId);
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const objectives = req.body;
+    if (!Array.isArray(objectives)) {
+      return res.status(400).json({ success: false, error: 'Body must be an array of objectives' });
+    }
+
+    const results = [];
+    for (const obj of objectives) {
+      if (!obj.objective_number || obj.objective_number < 1 || obj.objective_number > 3) continue;
+      if (!obj.content || !obj.content.trim()) continue;
+
+      const [record] = await db.PatientObjective.upsert({
+        patient_id: patientId,
+        objective_number: obj.objective_number,
+        content: obj.content.trim(),
+        created_by: req.user.id
+      });
+      results.push(record);
+    }
+
+    // Delete objectives that were not included
+    const includedNumbers = objectives.filter(o => o.content && o.content.trim()).map(o => o.objective_number);
+    if (includedNumbers.length > 0) {
+      await db.PatientObjective.destroy({
+        where: {
+          patient_id: patientId,
+          objective_number: { [db.Sequelize.Op.notIn]: includedNumbers }
+        }
+      });
+    } else {
+      await db.PatientObjective.destroy({ where: { patient_id: patientId } });
+    }
+
+    const finalObjectives = await db.PatientObjective.findAll({
+      where: { patient_id: patientId },
+      order: [['objective_number', 'ASC']],
+      include: [{ model: db.User, as: 'creator', attributes: ['id', 'first_name', 'last_name'] }]
+    });
+    res.json({ success: true, data: finalObjectives });
+  } catch (error) {
+    next(error);
+  }
+};

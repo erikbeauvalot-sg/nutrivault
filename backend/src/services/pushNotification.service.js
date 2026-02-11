@@ -168,17 +168,36 @@ async function sendMeasureAlert(userId, details) {
 }
 
 /**
- * Send journal comment notification to a patient
+ * Send journal comment notification
  */
-async function sendJournalCommentNotification(patientUserId, authorName, entryTitle) {
+async function sendJournalCommentNotification(userId, authorName, entryTitle) {
   const body = entryTitle
-    ? `${authorName} a commenté votre entrée "${entryTitle}"`
+    ? `${authorName} a commenté l'entrée "${entryTitle}"`
     : `${authorName} a commenté votre journal`;
+
+  await sendToUser(
+    userId,
+    {
+      title: 'Nouveau commentaire',
+      body,
+      data: { type: 'journal_comment' },
+    },
+    'journal_comments'
+  );
+}
+
+/**
+ * Send journal note notification (dietitian added a note for the patient)
+ */
+async function sendJournalNoteNotification(patientUserId, authorName, noteTitle) {
+  const body = noteTitle
+    ? `${authorName} a ajouté une note "${noteTitle}" dans votre journal`
+    : `${authorName} a ajouté une note dans votre journal`;
 
   await sendToUser(
     patientUserId,
     {
-      title: 'Nouveau commentaire',
+      title: 'Nouvelle note',
       body,
       data: { type: 'journal_comment' },
     },
@@ -208,5 +227,6 @@ module.exports = {
   sendNewDocumentNotification,
   sendMeasureAlert,
   sendJournalCommentNotification,
+  sendJournalNoteNotification,
   sendNewMessageNotification,
 };

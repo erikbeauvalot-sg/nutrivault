@@ -620,6 +620,36 @@ router.delete(
 );
 
 // =============================================
+// OBJECTIVES ROUTES
+// =============================================
+
+/**
+ * GET /api/patients/:patientId/objectives - Get patient objectives
+ * Requires: patients.read permission
+ */
+router.get(
+  '/:patientId/objectives',
+  authenticate,
+  requirePermission('patients.read'),
+  param('patientId').isUUID().withMessage('Invalid patient ID'),
+  validate,
+  patientController.getPatientObjectives
+);
+
+/**
+ * PUT /api/patients/:patientId/objectives - Upsert patient objectives
+ * Requires: patients.update permission
+ */
+router.put(
+  '/:patientId/objectives',
+  authenticate,
+  requirePermission('patients.update'),
+  param('patientId').isUUID().withMessage('Invalid patient ID'),
+  validate,
+  patientController.upsertPatientObjectives
+);
+
+// =============================================
 // EMAIL LOG ROUTES
 // =============================================
 

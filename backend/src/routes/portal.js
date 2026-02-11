@@ -184,6 +184,15 @@ router.get('/recipes/:id',
 );
 
 // ==========================================
+// OBJECTIVES ROUTES
+// ==========================================
+
+/**
+ * GET /api/portal/objectives — Get patient's objectives
+ */
+router.get('/objectives', portalController.getObjectives);
+
+// ==========================================
 // RADAR CHART (WIND ROSE) ROUTES
 // ==========================================
 

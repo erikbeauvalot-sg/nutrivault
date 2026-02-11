@@ -35,8 +35,6 @@ const NotificationPreferences = () => {
     reminder_times_hours: null,
   });
 
-  if (!isNative) return null;
-
   useEffect(() => {
     const load = async () => {
       try {
@@ -81,6 +79,8 @@ const NotificationPreferences = () => {
     }
   };
 
+  if (!isNative) return null;
+
   if (loading) {
     return (
       <Card>
@@ -96,28 +96,28 @@ const NotificationPreferences = () => {
   const items = [
     {
       key: 'appointment_reminders',
-      label: t('notifications.appointmentReminders', 'Appointment Reminders'),
-      description: t('notifications.appointmentRemindersDesc', 'Get notified before your appointments'),
+      label: isFr ? 'Rappels de rendez-vous' : 'Appointment Reminders',
+      description: isFr ? 'Recevoir une notification avant vos rendez-vous' : 'Get notified before your appointments',
     },
     {
       key: 'new_documents',
-      label: t('notifications.newDocuments', 'New Documents'),
-      description: t('notifications.newDocumentsDesc', 'Get notified when new documents are shared'),
+      label: isFr ? 'Nouveaux documents' : 'New Documents',
+      description: isFr ? 'Recevoir une notification quand un document est partagé' : 'Get notified when new documents are shared',
     },
     {
       key: 'measure_alerts',
-      label: t('notifications.measureAlerts', 'Measure Alerts'),
-      description: t('notifications.measureAlertsDesc', 'Get notified about measure alerts'),
+      label: isFr ? 'Alertes mesures' : 'Measure Alerts',
+      description: isFr ? 'Recevoir une notification pour les alertes de mesures' : 'Get notified about measure alerts',
     },
     {
       key: 'journal_comments',
-      label: t('notifications.journalComments', 'Journal Comments'),
-      description: t('notifications.journalCommentsDesc', 'Get notified when someone comments on your journal'),
+      label: isFr ? 'Activité journal' : 'Journal Activity',
+      description: isFr ? 'Notes et commentaires ajoutés à votre journal' : 'Notes and comments added to your journal',
     },
     {
       key: 'new_messages',
-      label: t('notifications.newMessages', 'New Messages'),
-      description: t('notifications.newMessagesDesc', 'Get notified when you receive a new message'),
+      label: isFr ? 'Nouveaux messages' : 'New Messages',
+      description: isFr ? 'Recevoir une notification pour les nouveaux messages' : 'Get notified when you receive a new message',
     },
   ];
 
@@ -149,10 +149,10 @@ const NotificationPreferences = () => {
         {prefs.appointment_reminders && (
           <div className="mt-2 pt-3 border-top">
             <strong style={{ fontSize: '0.9rem' }}>
-              {t('notifications.reminderTimes', 'Reminder timing')}
+              {isFr ? 'Délai de rappel' : 'Reminder timing'}
             </strong>
             <p className="text-muted mb-2" style={{ fontSize: '0.8rem' }}>
-              {t('notifications.reminderTimesDesc', 'Choose when to be notified before appointments')}
+              {isFr ? 'Choisissez quand être notifié avant vos rendez-vous' : 'Choose when to be notified before appointments'}
             </p>
             <div className="d-flex flex-wrap gap-2">
               {REMINDER_OPTIONS.map(opt => {

@@ -144,6 +144,21 @@ exports.createJournalEntry = async (req, res, next) => {
       ]
     });
 
+    // Notify patient about the new note
+    if (patient.user_id && patient.user_id !== req.user.id) {
+      try {
+        const pushNotificationService = require('../services/pushNotification.service');
+        const authorName = `${created.createdBy.first_name} ${created.createdBy.last_name}`;
+        await pushNotificationService.sendJournalNoteNotification(
+          patient.user_id,
+          authorName,
+          created.title
+        );
+      } catch (pushErr) {
+        console.error('[Journal] Push notification failed:', pushErr.message);
+      }
+    }
+
     res.status(201).json({ success: true, data: created });
   } catch (error) {
     next(error);

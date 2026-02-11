@@ -83,16 +83,31 @@ export async function addListeners({
 
   const push = await getPush();
 
-  // Token received — send to backend
-  push.addListener('registration', async (token) => {
+  // Helper to send token to backend
+  const sendTokenToBackend = async (tokenValue) => {
     try {
       await api.post('/device-tokens', {
-        token: token.value,
+        token: tokenValue,
         platform: 'ios',
       });
     } catch (err) {
       console.error('Failed to register device token with backend:', err);
     }
+  };
+
+  // FCM token from native Firebase Messaging (preferred — works with firebase-admin)
+  window.addEventListener('fcmToken', async (e) => {
+    const fcmToken = e.detail;
+    if (fcmToken) {
+      await sendTokenToBackend(fcmToken);
+      if (onRegistration) onRegistration(fcmToken);
+    }
+  });
+
+  // Fallback: APNs token from Capacitor plugin (used if Firebase SDK not present)
+  push.addListener('registration', async (token) => {
+    // Only use this if we haven't received an FCM token
+    await sendTokenToBackend(token.value);
     if (onRegistration) onRegistration(token.value);
   });
 

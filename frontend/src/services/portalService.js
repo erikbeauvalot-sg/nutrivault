@@ -150,6 +150,15 @@ export const getJournalPhotoUrl = (filePath) => {
 };
 
 // =============================================
+// Objectives
+// =============================================
+
+export const getObjectives = async () => {
+  const response = await api.get('/portal/objectives');
+  return extractData(response);
+};
+
+// =============================================
 // Radar Chart (Wind Rose)
 // =============================================
 

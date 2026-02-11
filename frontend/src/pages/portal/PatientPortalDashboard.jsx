@@ -1,15 +1,16 @@
 /**
  * Patient Portal Dashboard
- * Welcome page with summary of recent measures, upcoming visits, and documents
+ * Simplified view: Objectives, Recent Measures, Recent Journal (with comments), Mini Radar
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { Card, Row, Col, Spinner, Alert, Modal, Button } from 'react-bootstrap';
+import { Card, Row, Col, Spinner, Alert, Badge } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'react-toastify';
+import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
 import * as portalService from '../../services/portalService';
+import { normalizeValue } from '../../utils/radarUtils';
 
 /**
  * Build the summary measures list:
@@ -47,7 +48,7 @@ const buildSummaryMeasures = (allMeasures, t) => {
         _calculated: true,
         _displayName: t('portal.bmi', 'IMC'),
         _value: bmi,
-        _unit: 'kg/m²'
+        _unit: 'kg/m\u00B2'
       });
     }
   }
@@ -61,63 +62,61 @@ const buildSummaryMeasures = (allMeasures, t) => {
   return result.slice(0, 5);
 };
 
+/**
+ * Build mini radar chart data from the first category with values
+ */
+const buildMiniRadarData = (categories) => {
+  if (!categories?.length) return null;
+  const excludeTypes = ['separator', 'blank', 'heading', 'paragraph', 'file', 'image'];
+
+  for (const category of categories) {
+    if (!category?.fields?.length) continue;
+    const chartData = category.fields
+      .filter(f => !excludeTypes.includes(f.field_type))
+      .map(field => {
+        const normalized = normalizeValue(field.value, field);
+        return {
+          field: field.field_label || field.field_name,
+          value: normalized !== null ? normalized : 0,
+          hasValue: normalized !== null,
+          fullMark: 10
+        };
+      });
+
+    const fieldsWithValues = chartData.filter(d => d.hasValue).length;
+    if (fieldsWithValues > 0) {
+      return { data: chartData, color: category.color || '#3498db', name: category.name };
+    }
+  }
+  return null;
+};
+
 const PatientPortalDashboard = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [allMeasures, setAllMeasures] = useState([]);
-  const [visits, setVisits] = useState([]);
-  const [documents, setDocuments] = useState([]);
-  const [recipes, setRecipes] = useState([]);
-  const [error, setError] = useState('');
-  const [invoices, setInvoices] = useState([]);
   const [journalEntries, setJournalEntries] = useState([]);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [previewDoc, setPreviewDoc] = useState(null);
-  const [bookingEnabled, setBookingEnabled] = useState(false);
-
-  const handlePreviewDoc = async (doc) => {
-    try {
-      const blob = await portalService.downloadDocument(doc.id);
-      const url = window.URL.createObjectURL(new Blob([blob], { type: doc.mime_type }));
-      setPreviewUrl(url);
-      setPreviewDoc(doc);
-    } catch {
-      toast.error(t('portal.previewError', 'Erreur lors de la visualisation'));
-    }
-  };
-
-  const closePreview = () => {
-    if (previewUrl) window.URL.revokeObjectURL(previewUrl);
-    setPreviewUrl(null);
-    setPreviewDoc(null);
-  };
-
-  useEffect(() => {
-    portalService.getFeatures()
-      .then(f => setBookingEnabled(f?.patientBooking === true))
-      .catch(() => {});
-  }, []);
+  const [radarCategories, setRadarCategories] = useState([]);
+  const [objectives, setObjectives] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [measuresData, visitsData, docsData, recipesData, journalData, invoicesData] = await Promise.all([
+        const [measuresData, journalData, radarData, objectivesData] = await Promise.all([
           portalService.getMeasures().catch(() => ({ measures: [] })),
-          portalService.getVisits().catch(() => []),
-          portalService.getDocuments().catch(() => []),
-          portalService.getRecipes().catch(() => []),
           portalService.getJournalEntries({ limit: 3 }).catch(() => ({ data: [] })),
-          portalService.getInvoices().catch(() => [])
+          portalService.getRadarData().catch(() => []),
+          portalService.getObjectives().catch(() => []),
         ]);
-        setAllMeasures(measuresData?.measures || []);
-        setVisits((visitsData || []).slice(0, 5));
-        setDocuments((docsData || []).slice(0, 5));
-        setRecipes((recipesData || []).slice(0, 5));
-        setJournalEntries((journalData?.data || []).slice(0, 3));
-        setInvoices((invoicesData || []).slice(0, 3));
+        setAllMeasures(Array.isArray(measuresData?.measures) ? measuresData.measures : []);
+        const jEntries = journalData?.data;
+        setJournalEntries(Array.isArray(jEntries) ? jEntries.slice(0, 3) : []);
+        setRadarCategories(Array.isArray(radarData) ? radarData : []);
+        setObjectives(Array.isArray(objectivesData) ? objectivesData : []);
       } catch (err) {
-        setError(t('portal.loadError', 'Erreur lors du chargement des données'));
+        setError(t('portal.loadError', 'Erreur lors du chargement des donn\u00e9es'));
       } finally {
         setLoading(false);
       }
@@ -126,6 +125,7 @@ const PatientPortalDashboard = () => {
   }, [t]);
 
   const measures = useMemo(() => buildSummaryMeasures(allMeasures, t), [allMeasures, t]);
+  const miniRadar = useMemo(() => buildMiniRadarData(radarCategories), [radarCategories]);
 
   if (loading) {
     return (
@@ -134,6 +134,8 @@ const PatientPortalDashboard = () => {
       </div>
     );
   }
+
+  const moodEmojis = { very_bad: '\uD83D\uDE2B', bad: '\uD83D\uDE1F', neutral: '\uD83D\uDE10', good: '\uD83D\uDE42', very_good: '\uD83D\uDE04' };
 
   return (
     <div>
@@ -144,18 +146,46 @@ const PatientPortalDashboard = () => {
       {error && <Alert variant="warning">{error}</Alert>}
 
       <Row className="g-3">
-        {/* Recent Measures */}
+        {/* A. Objectives */}
         <Col xs={12} md={6}>
           <Card className="h-100">
             <Card.Header className="d-flex justify-content-between align-items-center py-2">
-              <span style={{ fontSize: '0.9em' }}>{'\uD83D\uDCCA'} {t('portal.recentMeasures', 'Mesures recentes')}</span>
+              <span style={{ fontSize: '0.9em' }}>{'\uD83C\uDFAF'} {t('portal.myObjectives', 'Mes objectifs')}</span>
+            </Card.Header>
+            <Card.Body className="py-2 px-3">
+              {objectives.length === 0 ? (
+                <p className="text-muted mb-0" style={{ fontSize: '0.9em' }}>
+                  {t('portal.noObjectives', 'Vos objectifs seront d\u00e9finis avec votre di\u00e9t\u00e9ticien')}
+                </p>
+              ) : (
+                <ol className="mb-0 ps-3" style={{ fontSize: '0.9em' }}>
+                  {[1, 2, 3].map(num => {
+                    const obj = objectives.find(o => o.objective_number === num);
+                    if (!obj) return null;
+                    return (
+                      <li key={num} className="py-1">
+                        {obj.content}
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+
+        {/* B. Recent Measures */}
+        <Col xs={12} md={6}>
+          <Card className="h-100">
+            <Card.Header className="d-flex justify-content-between align-items-center py-2">
+              <span style={{ fontSize: '0.9em' }}>{'\uD83D\uDCCA'} {t('portal.recentMeasures', 'Mesures r\u00e9centes')}</span>
               <Link to="/portal/measures" className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.8em' }}>
                 {t('common.viewAll', 'Voir tout')}
               </Link>
             </Card.Header>
             <Card.Body className="py-2 px-3">
               {measures.length === 0 ? (
-                <p className="text-muted mb-0">{t('portal.noMeasures', 'Aucune mesure enregistree')}</p>
+                <p className="text-muted mb-0">{t('portal.noMeasures', 'Aucune mesure enregistr\u00e9e')}</p>
               ) : (
                 <ul className="list-unstyled mb-0">
                   {measures.map(m => {
@@ -165,12 +195,12 @@ const PatientPortalDashboard = () => {
                       <li key={m.id}>
                         <Link to={linkTo} className="d-flex justify-content-between align-items-center py-2 border-bottom text-decoration-none text-body" style={{ gap: '0.5rem', cursor: 'pointer' }}>
                           <span className="text-truncate" style={{ minWidth: 0 }}>
-                            {m._calculated ? m._displayName : (m.measureDefinition?.display_name || m.measureDefinition?.name || '—')}
+                            {m._calculated ? m._displayName : (m.measureDefinition?.display_name || m.measureDefinition?.name || '\u2014')}
                           </span>
                           <span className="fw-bold text-nowrap">
                             {m._calculated
                               ? `${m._value} ${m._unit}`
-                              : `${m.numeric_value ?? m.text_value ?? (m.boolean_value != null ? String(m.boolean_value) : '—')} ${m.measureDefinition?.unit || ''}`
+                              : `${m.numeric_value ?? m.text_value ?? (m.boolean_value != null ? String(m.boolean_value) : '\u2014')} ${m.measureDefinition?.unit || ''}`
                             }
                           </span>
                         </Link>
@@ -183,143 +213,49 @@ const PatientPortalDashboard = () => {
           </Card>
         </Col>
 
-        {/* Recent Visits */}
+        {/* C. Recent Journal (with comments) */}
         <Col xs={12} md={6}>
           <Card className="h-100">
             <Card.Header className="d-flex justify-content-between align-items-center py-2">
-              <span style={{ fontSize: '0.9em' }}>
-                {'\uD83D\uDCCB'} {t('portal.recentVisits', 'Consultations recentes')}
-                {bookingEnabled && (() => {
-                  const pendingCount = visits.filter(v => v.status === 'REQUESTED').length;
-                  return pendingCount > 0 ? (
-                    <span className="badge bg-warning text-dark ms-2" style={{ fontSize: '0.75em' }}>
-                      {pendingCount} {t('portal.pendingRequests', 'en attente')}
-                    </span>
-                  ) : null;
-                })()}
-              </span>
-              <Link to="/portal/visits" className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.8em' }}>
-                {t('common.viewAll', 'Voir tout')}
-              </Link>
-            </Card.Header>
-            <Card.Body className="py-2 px-3">
-              {visits.length === 0 ? (
-                <p className="text-muted mb-0">{t('portal.noVisits', 'Aucune consultation')}</p>
-              ) : (
-                <ul className="list-unstyled mb-0">
-                  {visits.map(v => (
-                    <li key={v.id}>
-                      <Link to="/portal/visits" className="d-flex flex-column flex-sm-row justify-content-between py-2 border-bottom text-decoration-none text-body" style={{ cursor: 'pointer', gap: '0.25rem' }}>
-                        <span className="text-truncate" style={{ minWidth: 0 }}>
-                          {new Date(v.visit_date).toLocaleDateString('fr-FR')}
-                          {v.dietitian ? ` — ${v.dietitian.first_name} ${v.dietitian.last_name}` : ''}
-                        </span>
-                        <span className="text-muted text-nowrap" style={{ fontSize: '0.85em' }}>{v.visit_type || '—'}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-
-        {/* Documents */}
-        <Col xs={12} md={6}>
-          <Card className="h-100">
-            <Card.Header className="d-flex justify-content-between align-items-center py-2">
-              <span style={{ fontSize: '0.9em' }}>{'\uD83D\uDCC4'} {t('portal.recentDocuments', 'Documents recents')}</span>
-              <Link to="/portal/documents" className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.8em' }}>
-                {t('common.viewAll', 'Voir tout')}
-              </Link>
-            </Card.Header>
-            <Card.Body className="py-2 px-3">
-              {documents.length === 0 ? (
-                <p className="text-muted mb-0">{t('portal.noDocuments', 'Aucun document partage')}</p>
-              ) : (
-                <ul className="list-unstyled mb-0">
-                  {documents.map(d => (
-                    <li
-                      key={d.id}
-                      className="d-flex justify-content-between align-items-center py-2 border-bottom"
-                      style={{ cursor: 'pointer', gap: '0.5rem' }}
-                      onClick={() => d.document && handlePreviewDoc(d.document)}
-                    >
-                      <span className="text-truncate" style={{ minWidth: 0 }}>{d.document?.file_name || '—'}</span>
-                      <span className="text-muted text-nowrap" style={{ fontSize: '0.85em' }}>{new Date(d.created_at).toLocaleDateString('fr-FR')}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-
-        {/* Invoices */}
-        <Col xs={12} md={6}>
-          <Card className="h-100">
-            <Card.Header className="d-flex justify-content-between align-items-center py-2">
-              <span style={{ fontSize: '0.9em' }}>{'\uD83D\uDCB0'} {t('portal.recentInvoices', 'Factures recentes')}</span>
-              <Link to="/portal/invoices" className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.8em' }}>
-                {t('common.viewAll', 'Voir tout')}
-              </Link>
-            </Card.Header>
-            <Card.Body className="py-2 px-3">
-              {invoices.length === 0 ? (
-                <p className="text-muted mb-0">{t('portal.noInvoices', 'Aucune facture')}</p>
-              ) : (
-                <ul className="list-unstyled mb-0">
-                  {invoices.map(inv => {
-                    const statusColors = { PAID: 'success', OVERDUE: 'warning', SENT: 'info' };
-                    const statusLabels = {
-                      PAID: t('portal.invoiceStatus.paid', 'Paid'),
-                      OVERDUE: t('portal.invoiceStatus.overdue', 'Overdue'),
-                      SENT: t('portal.invoiceStatus.sent', 'Sent')
-                    };
-                    return (
-                      <li key={inv.id}>
-                        <Link to="/portal/invoices" className="d-flex justify-content-between align-items-center py-2 border-bottom text-decoration-none text-body" style={{ cursor: 'pointer', gap: '0.5rem' }}>
-                          <span className="text-truncate" style={{ minWidth: 0 }}>
-                            {inv.invoice_number} — {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(parseFloat(inv.amount_total))}
-                          </span>
-                          <span className={`badge bg-${statusColors[inv.status] || 'secondary'}`} style={{ fontSize: '0.75em' }}>
-                            {statusLabels[inv.status] || inv.status}
-                          </span>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-
-        {/* Journal */}
-        <Col xs={12} md={6}>
-          <Card className="h-100">
-            <Card.Header className="d-flex justify-content-between align-items-center py-2">
-              <span style={{ fontSize: '0.9em' }}>{'\uD83D\uDCD3'} {t('portal.recentJournal', 'Journal recent')}</span>
+              <span style={{ fontSize: '0.9em' }}>{'\uD83D\uDCD3'} {t('portal.recentJournal', 'Journal r\u00e9cent')}</span>
               <Link to="/portal/journal" className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.8em' }}>
                 {t('common.viewAll', 'Voir tout')}
               </Link>
             </Card.Header>
             <Card.Body className="py-2 px-3">
               {journalEntries.length === 0 ? (
-                <p className="text-muted mb-0">{t('portal.noJournal', 'Aucune entree dans votre journal')}</p>
+                <p className="text-muted mb-0">{t('portal.noJournal', 'Aucune entr\u00e9e dans votre journal')}</p>
               ) : (
                 <ul className="list-unstyled mb-0">
                   {journalEntries.map(entry => {
-                    const moodEmojis = { very_bad: '\uD83D\uDE2B', bad: '\uD83D\uDE1F', neutral: '\uD83D\uDE10', good: '\uD83D\uDE42', very_good: '\uD83D\uDE04' };
+                    const commentCount = entry.comments?.length || 0;
+                    const lastComment = commentCount > 0 ? entry.comments[entry.comments.length - 1] : null;
                     return (
-                      <li key={entry.id}>
-                        <Link to="/portal/journal" className="d-flex justify-content-between align-items-center py-2 border-bottom text-decoration-none text-body" style={{ cursor: 'pointer', gap: '0.5rem' }}>
+                      <li key={entry.id} className="py-2 border-bottom">
+                        <Link to="/portal/journal" className="d-flex justify-content-between align-items-center text-decoration-none text-body" style={{ cursor: 'pointer', gap: '0.5rem' }}>
                           <span className="text-truncate" style={{ minWidth: 0 }}>
                             {entry.mood && moodEmojis[entry.mood] ? `${moodEmojis[entry.mood]} ` : ''}
                             {entry.title || (entry.content?.substring(0, 40) + (entry.content?.length > 40 ? '...' : ''))}
                           </span>
-                          <small className="text-muted text-nowrap">{new Date(entry.entry_date + 'T00:00:00').toLocaleDateString('fr-FR')}</small>
+                          <span className="d-flex align-items-center gap-2">
+                            {commentCount > 0 && (
+                              <Badge bg="info" pill style={{ fontSize: '0.7em' }}>
+                                {'\uD83D\uDCAC'} {commentCount}
+                              </Badge>
+                            )}
+                            <small className="text-muted text-nowrap">{new Date(entry.entry_date + 'T00:00:00').toLocaleDateString('fr-FR')}</small>
+                          </span>
                         </Link>
+                        {lastComment && (
+                          <div className="mt-1 ps-2" style={{ fontSize: '0.8em', borderLeft: '2px solid #dee2e6' }}>
+                            <span className="text-muted">
+                              {lastComment.author?.first_name || t('portal.someone', 'Quelqu\'un')}:
+                            </span>{' '}
+                            <span className="text-truncate d-inline-block" style={{ maxWidth: '200px', verticalAlign: 'bottom' }}>
+                              {lastComment.content?.substring(0, 60)}{lastComment.content?.length > 60 ? '...' : ''}
+                            </span>
+                          </div>
+                        )}
                       </li>
                     );
                   })}
@@ -329,63 +265,46 @@ const PatientPortalDashboard = () => {
           </Card>
         </Col>
 
-        {/* Recipes */}
+        {/* D. Mini Radar (Bilan) */}
         <Col xs={12} md={6}>
           <Card className="h-100">
             <Card.Header className="d-flex justify-content-between align-items-center py-2">
-              <span style={{ fontSize: '0.9em' }}>{'\uD83C\uDF7D\uFE0F'} {t('portal.recentRecipes', 'Recettes recentes')}</span>
-              <Link to="/portal/recipes" className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.8em' }}>
+              <span style={{ fontSize: '0.9em' }}>{'\uD83C\uDF00'} {t('portal.myAssessment', 'Mon bilan')}</span>
+              <Link to="/portal/radar" className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.8em' }}>
                 {t('common.viewAll', 'Voir tout')}
               </Link>
             </Card.Header>
-            <Card.Body className="py-2 px-3">
-              {recipes.length === 0 ? (
-                <p className="text-muted mb-0">{t('portal.noRecipes', 'Aucune recette partagee')}</p>
+            <Card.Body className="py-2 px-3 d-flex align-items-center justify-content-center">
+              {!miniRadar ? (
+                <p className="text-muted mb-0">{t('portal.noAssessment', 'Pas encore de bilan')}</p>
               ) : (
-                <ul className="list-unstyled mb-0">
-                  {recipes.map(r => (
-                    <li key={r.id} className="py-2 border-bottom">
-                      <Link to={`/portal/recipes/${r.recipe?.id}`} className="text-truncate d-block">
-                        {r.recipe?.title || '—'}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+                <div style={{ width: '100%', maxWidth: '280px' }}>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <RadarChart cx="50%" cy="50%" outerRadius="65%" data={miniRadar.data}>
+                      <PolarGrid gridType="polygon" />
+                      <PolarAngleAxis
+                        dataKey="field"
+                        tick={{ fontSize: 9 }}
+                        tickLine={false}
+                      />
+                      <PolarRadiusAxis angle={90} domain={[0, 10]} tick={false} axisLine={false} />
+                      <Radar
+                        name={miniRadar.name}
+                        dataKey="value"
+                        stroke={miniRadar.color}
+                        fill={miniRadar.color}
+                        fillOpacity={0.3}
+                        strokeWidth={2}
+                        dot={{ fill: miniRadar.color, r: 3 }}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </Card.Body>
           </Card>
         </Col>
       </Row>
-
-      {/* Document Preview Modal */}
-      <Modal show={!!previewUrl} onHide={closePreview} size="xl" centered fullscreen="md-down">
-        <Modal.Header closeButton>
-          <Modal.Title>{previewDoc?.file_name}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="p-0" style={{ minHeight: '70vh' }}>
-          {previewUrl && previewDoc?.mime_type === 'application/pdf' && (
-            <iframe
-              src={previewUrl}
-              title={previewDoc.file_name}
-              style={{ width: '100%', height: '75vh', border: 'none' }}
-            />
-          )}
-          {previewUrl && previewDoc?.mime_type?.startsWith('image/') && (
-            <div className="text-center p-3">
-              <img
-                src={previewUrl}
-                alt={previewDoc.file_name}
-                style={{ maxWidth: '100%', maxHeight: '75vh', objectFit: 'contain' }}
-              />
-            </div>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={closePreview}>
-            {t('common.close', 'Fermer')}
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </div>
   );
 };

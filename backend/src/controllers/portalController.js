@@ -1440,6 +1440,22 @@ exports.deleteJournalPhoto = async (req, res, next) => {
 /**
  * POST /api/portal/set-password — Set password from invitation token (public)
  */
+/**
+ * GET /api/portal/objectives — Get patient's objectives
+ */
+exports.getObjectives = async (req, res, next) => {
+  try {
+    const objectives = await db.PatientObjective.findAll({
+      where: { patient_id: req.patient.id },
+      order: [['objective_number', 'ASC']],
+      attributes: ['id', 'objective_number', 'content', 'created_at', 'updated_at']
+    });
+    res.json({ success: true, data: objectives });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.setPassword = async (req, res, next) => {
   try {
     const portalService = require('../services/portal.service');
