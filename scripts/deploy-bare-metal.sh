@@ -145,34 +145,38 @@ main() {
     # ── Step 7: Restart backend ──────────────────────────────────
     log_step 7 "Restarting backend service..."
     systemctl restart "$SERVICE_NAME"
-    sleep 2
 
-    # Health check
-    local RETRIES=5
+    # Health check — use wget (always available on Debian/Ubuntu) as fallback for curl
+    local RETRIES=10
     local HEALTHY=false
+    log_info "Waiting for backend to start..."
+    sleep 5
+
     for i in $(seq 1 $RETRIES); do
-        if curl -sf http://localhost:3001/health > /dev/null 2>&1; then
-            HEALTHY=true
+        if command -v curl > /dev/null 2>&1; then
+            curl -sf http://localhost:3001/health > /dev/null 2>&1 && HEALTHY=true
+        elif command -v wget > /dev/null 2>&1; then
+            wget -q --spider http://localhost:3001/health 2>/dev/null && HEALTHY=true
+        else
+            # Fallback: use node to check
+            node -e "require('http').get('http://localhost:3001/health', r => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))" 2>/dev/null && HEALTHY=true
+        fi
+
+        if [ "$HEALTHY" = true ]; then
             break
         fi
-        log_info "Waiting for backend to start... (${i}/${RETRIES})"
-        sleep 2
+        log_info "  Attempt ${i}/${RETRIES}..."
+        sleep 3
     done
 
     if [ "$HEALTHY" = true ]; then
         log_success "Backend is healthy"
     else
-        log_error "Backend health check failed! Check logs:"
-        log_error "  tail -50 ${BACKEND_DIR}/logs/backend.log"
-        echo ""
-        log_warn "Rolling back database..."
-        if [ -f "$BACKUP_FILE" ]; then
-            systemctl stop "$SERVICE_NAME"
-            cp "$BACKUP_FILE" "$DB_PATH"
-            chown "${SERVICE_USER}:${SERVICE_USER}" "$DB_PATH"
-            systemctl start "$SERVICE_NAME"
-            log_warn "Database restored from backup. Backend restarted with old DB."
-        fi
+        log_error "Backend health check failed after ${RETRIES} attempts!"
+        log_error "Check logs: tail -50 ${BACKEND_DIR}/logs/backend.log"
+        log_warn "The backend may still be starting. Check manually:"
+        log_warn "  systemctl status ${SERVICE_NAME}"
+        # Don't rollback if the server is just slow to start — the DB migration already ran
         exit 1
     fi
 
