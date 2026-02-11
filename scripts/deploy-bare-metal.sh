@@ -147,6 +147,7 @@ main() {
     log_step 6 "Fixing file permissions..."
     chown -R "${SERVICE_USER}:${SERVICE_USER}" "${BACKEND_DIR}/data" 2>/dev/null || true
     chown -R "${SERVICE_USER}:${SERVICE_USER}" "${BACKEND_DIR}/uploads" 2>/dev/null || true
+    chown -R "${SERVICE_USER}:${SERVICE_USER}" "${BACKEND_DIR}/temp_uploads" 2>/dev/null || true
     chown -R "${SERVICE_USER}:${SERVICE_USER}" "${BACKEND_DIR}/logs" 2>/dev/null || true
     log_success "Permissions updated"
 
