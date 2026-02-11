@@ -88,103 +88,16 @@ Ce script :
 
 ## 5. Configurer nginx
 
+La config nginx complete est dans `nginx/bare-metal.conf` (2 server blocks : mariondiet + nutrivault).
+
 ```bash
-cat > /etc/nginx/sites-available/nutrivault << 'NGINX'
-server {
-    listen 80;
-    server_name votre-domaine.com;
-
-    client_max_body_size 50M;
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-
-    # Gzip
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_proxied any;
-    gzip_comp_level 6;
-    gzip_types text/plain text/css text/xml text/javascript application/json application/javascript application/xml+rss font/truetype font/opentype application/vnd.ms-fontobject image/svg+xml;
-
-    # Frontend (fichiers statiques)
-    root /opt/nutrivault/frontend/dist;
-    index index.html;
-
-    # API proxy
-    location /api {
-        proxy_pass http://127.0.0.1:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-    }
-
-    # Public documents (no auth)
-    location /public {
-        proxy_pass http://127.0.0.1:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_send_timeout 120s;
-        proxy_read_timeout 120s;
-    }
-
-    # Uploads proxy
-    location ^~ /uploads {
-        proxy_pass http://127.0.0.1:3001/uploads;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        expires 1h;
-        add_header Cache-Control "public";
-    }
-
-    # Static assets (long cache)
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        try_files $uri =404;
-    }
-
-    # SPA fallback (React Router)
-    location / {
-        try_files $uri $uri/ /index.html;
-
-        location = /index.html {
-            add_header Cache-Control "no-cache, no-store, must-revalidate";
-            add_header Pragma "no-cache";
-            add_header Expires "0";
-        }
-    }
-
-    # Health check
-    location /health {
-        access_log off;
-        return 200 "healthy\n";
-        add_header Content-Type text/plain;
-    }
-}
-NGINX
-
+cp /opt/nutrivault/nginx/bare-metal.conf /etc/nginx/sites-available/nutrivault
 ln -sf /etc/nginx/sites-available/nutrivault /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl restart nginx
 ```
+
+> Le script `deploy-bare-metal.sh` met a jour la config nginx automatiquement a chaque deploiement.
 
 ## 6. Creer le service systemd
 

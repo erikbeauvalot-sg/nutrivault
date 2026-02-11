@@ -50,7 +50,7 @@ get_version() {
     node -p "require('${PROJECT_DIR}/package.json').version" 2>/dev/null || echo "unknown"
 }
 
-TOTAL_STEPS=7
+TOTAL_STEPS=8
 
 main() {
     local AUTO_YES=false
@@ -142,8 +142,32 @@ main() {
     chown -R "${SERVICE_USER}:${SERVICE_USER}" "${BACKEND_DIR}/logs" 2>/dev/null || true
     log_success "Permissions updated"
 
-    # ── Step 7: Restart backend ──────────────────────────────────
-    log_step 7 "Restarting backend service..."
+    # ── Step 7: Update nginx config ──────────────────────────
+    log_step 7 "Updating nginx configuration..."
+    local NGINX_SRC="${PROJECT_DIR}/nginx/bare-metal.conf"
+    local NGINX_DEST="/etc/nginx/sites-available/nutrivault"
+    if [ -f "$NGINX_SRC" ]; then
+        if ! diff -q "$NGINX_SRC" "$NGINX_DEST" > /dev/null 2>&1; then
+            cp "$NGINX_SRC" "$NGINX_DEST"
+            ln -sf "$NGINX_DEST" /etc/nginx/sites-enabled/nutrivault
+            rm -f /etc/nginx/sites-enabled/default
+            if nginx -t 2>&1; then
+                systemctl reload nginx
+                log_success "Nginx config updated and reloaded"
+            else
+                log_error "Nginx config test failed! Restoring previous config."
+                # nginx -t failed, the old config is still active since we only reload on success
+                log_warn "Check: nginx -t"
+            fi
+        else
+            log_success "Nginx config unchanged — skipping"
+        fi
+    else
+        log_warn "No nginx config found at ${NGINX_SRC} — skipping"
+    fi
+
+    # ── Step 8: Restart backend ──────────────────────────────────
+    log_step 8 "Restarting backend service..."
     systemctl restart "$SERVICE_NAME"
 
     # Health check — use wget (always available on Debian/Ubuntu) as fallback for curl
