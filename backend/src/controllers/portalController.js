@@ -1142,7 +1142,7 @@ exports.getRadarData = async (req, res, next) => {
             patient_id: patientId,
             measure_definition_id: measureDef.id
           },
-          order: [['recorded_at', 'DESC']],
+          order: [['measured_at', 'DESC']],
           limit: 1
         });
 
