@@ -316,7 +316,8 @@ TEMPCONF
         # Restore the full config anyway (it will fail on 443 without certs)
     fi
 
-    # Remove temp config — the main config will be restored by the caller
+    # Restore symlink to the real config and remove temp file
+    ln -sf /etc/nginx/sites-available/nutrivault /etc/nginx/sites-enabled/nutrivault
     rm -f "$NGINX_TEMP"
 
     # Setup auto-renewal hook
