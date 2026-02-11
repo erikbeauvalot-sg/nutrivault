@@ -7,6 +7,10 @@ import { isNative, isIOS } from './utils/platform';
 export async function initCapacitor() {
   if (!isNative) return;
 
+  // Add native-mobile and has-bottom-tabs body classes for CSS adjustments
+  document.body.classList.add('native-mobile');
+  document.body.classList.add('has-bottom-tabs');
+
   const { StatusBar, Style } = await import('@capacitor/status-bar');
   const { SplashScreen } = await import('@capacitor/splash-screen');
   const { Keyboard } = await import('@capacitor/keyboard');
@@ -39,4 +43,13 @@ export async function initCapacitor() {
       App.exitApp();
     }
   });
+
+  // Initialize network listener for offline/online status
+  const { Network } = await import('@capacitor/network');
+  Network.addListener('networkStatusChange', (status) => {
+    document.body.classList.toggle('is-offline', !status.connected);
+  });
+  // Set initial state
+  const status = await Network.getStatus();
+  document.body.classList.toggle('is-offline', !status.connected);
 }

@@ -167,6 +167,15 @@ async function sendVisitReminder(visitId, userId, manual = false) {
       last_reminder_date: new Date()
     });
 
+    // Send push notification in addition to email
+    try {
+      const pushNotificationService = require('./pushNotification.service');
+      await pushNotificationService.sendAppointmentReminder(visit);
+    } catch (pushErr) {
+      // Non-critical: log and continue
+      console.error('[AppointmentReminder] Push notification failed:', pushErr.message);
+    }
+
     // Log email
     await EmailLog.create({
       template_id: template.id,

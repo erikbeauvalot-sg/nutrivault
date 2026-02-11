@@ -8,6 +8,7 @@ import { Spinner, Alert, Badge, Accordion, Pagination, Button, Form, Modal } fro
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import * as portalService from '../../services/portalService';
+import PullToRefreshWrapper from '../../components/common/PullToRefreshWrapper';
 
 const VISITS_PER_PAGE = 10;
 
@@ -212,6 +213,7 @@ const PatientPortalVisits = () => {
   const pendingCount = visits.filter(v => v.status === 'REQUESTED').length;
 
   return (
+    <PullToRefreshWrapper onRefresh={loadVisits}>
     <div>
       <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-3 gap-2">
         <div className="d-flex align-items-center gap-2">
@@ -482,6 +484,7 @@ const PatientPortalVisits = () => {
         </Modal.Footer>
       </Modal>
     </div>
+    </PullToRefreshWrapper>
   );
 };
 

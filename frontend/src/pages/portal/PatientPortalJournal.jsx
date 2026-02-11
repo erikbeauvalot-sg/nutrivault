@@ -10,6 +10,8 @@ import { useTranslation } from 'react-i18next';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'react-toastify';
 import * as portalService from '../../services/portalService';
+import CameraButton from '../../components/CameraButton';
+import PullToRefreshWrapper from '../../components/common/PullToRefreshWrapper';
 
 const MAX_PHOTOS = 5;
 
@@ -265,6 +267,7 @@ const PatientPortalJournal = () => {
   const hasActiveFilters = filterType || filterMood || filterStartDate || filterEndDate;
 
   return (
+    <PullToRefreshWrapper onRefresh={loadEntries}>
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3 gap-2">
         <h2 className="mb-0" style={{ fontSize: 'clamp(1.1rem, 4vw, 1.75rem)' }}>{t('portal.journal.title', 'Mon journal de suivi')}</h2>
@@ -364,6 +367,14 @@ const PatientPortalJournal = () => {
                     <Form.Label className="small mb-1">
                       {t('journal.photos', 'Photos')} <small className="text-muted">({totalPhotoCount}/{MAX_PHOTOS})</small>
                     </Form.Label>
+                    <CameraButton
+                      disabled={totalPhotoCount >= MAX_PHOTOS}
+                      onCapture={(file) => {
+                        if (totalPhotoCount < MAX_PHOTOS) {
+                          setPendingPhotos(prev => [...prev, file]);
+                        }
+                      }}
+                    />
                     <div
                       {...getRootProps()}
                       style={{
@@ -820,6 +831,7 @@ const PatientPortalJournal = () => {
         </Modal.Footer>
       </Modal>
     </div>
+    </PullToRefreshWrapper>
   );
 };
 

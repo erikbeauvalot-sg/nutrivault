@@ -138,8 +138,10 @@ export const deleteJournalPhoto = async (entryId, photoId) => {
 };
 
 export const getJournalPhotoUrl = (filePath) => {
-  const baseUrl = api.defaults.baseURL?.replace('/api', '') || '';
-  return `${baseUrl}/uploads/${filePath}`;
+  // On native, VITE_SERVER_URL provides the absolute server origin.
+  // On web, empty string works because Nginx proxies /uploads.
+  const serverUrl = import.meta.env.VITE_SERVER_URL || '';
+  return `${serverUrl}/uploads/${filePath}`;
 };
 
 // =============================================

@@ -34,6 +34,31 @@ body.keyboard-open {
   bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
 }
 
+/* ============================================
+   BOTTOM TAB BAR SPACING (Native Mobile)
+   ============================================ */
+
+/* When bottom tabs are active, add padding so content isn't hidden behind the bar */
+body.has-bottom-tabs {
+  padding-bottom: calc(56px + env(safe-area-inset-bottom));
+}
+
+body.has-bottom-tabs.keyboard-open {
+  padding-bottom: 0;
+}
+
+/* Move toasts above bottom tab bar */
+body.has-bottom-tabs .Toastify__toast-container--bottom-center,
+body.has-bottom-tabs .Toastify__toast-container--bottom-left,
+body.has-bottom-tabs .Toastify__toast-container--bottom-right {
+  bottom: calc(56px + env(safe-area-inset-bottom) + 0.5rem) !important;
+}
+
+/* Layout content fills width without sidebar on native */
+.layout-content.no-sidebar {
+  margin-left: 0 !important;
+}
+
 body {
   font-family: var(--nv-font-display);
   font-weight: 400;

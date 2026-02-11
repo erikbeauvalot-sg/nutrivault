@@ -1,10 +1,12 @@
 /**
  * Axios Instance with Interceptors
- * Handles automatic token injection and token refresh on 401 errors
+ * Handles automatic token injection, token refresh on 401 errors,
+ * and offline caching for GET requests.
  */
 
 import axios from 'axios';
 import * as tokenStorage from '../utils/tokenStorage';
+import * as offlineCache from './offlineCache';
 
 // Create axios instance with base configuration
 // Nginx proxies /api/* requests to backend:3001
@@ -32,7 +34,38 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// Request interceptor: Add Authorization header if token exists
+// Endpoint-specific TTL configuration (in milliseconds)
+const CACHE_TTL = {
+  '/portal/profile': 7 * 24 * 60 * 60 * 1000,    // 7 days
+  '/portal/measures': 4 * 60 * 60 * 1000,          // 4 hours
+  '/portal/visits': 12 * 60 * 60 * 1000,           // 12 hours
+  '/portal/documents': 24 * 60 * 60 * 1000,        // 24 hours
+  '/portal/recipes': 7 * 24 * 60 * 60 * 1000,      // 7 days
+  '/portal/journal': 4 * 60 * 60 * 1000,           // 4 hours
+};
+
+const DEFAULT_CACHE_TTL = 4 * 60 * 60 * 1000; // 4 hours default
+
+/**
+ * Get cache TTL for a given URL
+ */
+function getCacheTTL(url) {
+  for (const [pattern, ttl] of Object.entries(CACHE_TTL)) {
+    if (url.includes(pattern)) return ttl;
+  }
+  return DEFAULT_CACHE_TTL;
+}
+
+/**
+ * Generate a cache key from a request config
+ */
+function getCacheKey(config) {
+  const url = config.url || '';
+  const params = config.params ? JSON.stringify(config.params) : '';
+  return `${url}${params}`;
+}
+
+// Request interceptor: Add Authorization header (synchronous — no network checks)
 api.interceptors.request.use(
   (config) => {
     const token = tokenStorage.getAccessToken();
@@ -46,13 +79,48 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor: Handle 401 errors and token refresh
+// Response interceptor: Handle 401 errors, token refresh, and cache successful GETs
 api.interceptors.response.use(
   (response) => {
+    // Cache successful GET responses (fire-and-forget, non-blocking)
+    if (
+      response.config &&
+      (response.config.method === 'get' || !response.config.method) &&
+      response.status === 200
+    ) {
+      const cacheKey = getCacheKey(response.config);
+      const ttl = getCacheTTL(response.config.url || '');
+      offlineCache.set(cacheKey, response.data, ttl).catch(() => {});
+    }
+
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
+
+    // Network error (no response = server unreachable / offline):
+    // try serving from cache as fallback
+    if (
+      !error.response &&
+      originalRequest &&
+      (originalRequest.method === 'get' || !originalRequest.method)
+    ) {
+      try {
+        const cacheKey = getCacheKey(originalRequest);
+        const cached = await offlineCache.get(cacheKey);
+        if (cached) {
+          return {
+            data: cached,
+            status: 200,
+            statusText: 'OK (cached)',
+            headers: {},
+            config: originalRequest,
+          };
+        }
+      } catch {
+        // Cache read failed, fall through to normal error handling
+      }
+    }
 
     // If already redirecting to login, reject silently (don't show error messages)
     if (isRedirectingToLogin) {

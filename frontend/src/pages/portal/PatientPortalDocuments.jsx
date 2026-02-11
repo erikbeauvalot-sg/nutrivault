@@ -8,6 +8,7 @@ import { Card, Spinner, Alert, Table, Button, Modal } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
 import * as portalService from '../../services/portalService';
+import PullToRefreshWrapper from '../../components/common/PullToRefreshWrapper';
 
 const formatFileSize = (bytes) => {
   if (!bytes) return '—';
@@ -45,18 +46,19 @@ const PatientPortalDocuments = () => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [previewDoc, setPreviewDoc] = useState(null);
 
+  const loadDocuments = async () => {
+    try {
+      const data = await portalService.getDocuments();
+      setDocuments(data || []);
+    } catch (err) {
+      setError(t('portal.loadError', 'Erreur lors du chargement'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await portalService.getDocuments();
-        setDocuments(data || []);
-      } catch (err) {
-        setError(t('portal.loadError', 'Erreur lors du chargement'));
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    loadDocuments();
   }, [t]);
 
   const handleDownload = async (documentId, fileName) => {
@@ -136,6 +138,7 @@ const PatientPortalDocuments = () => {
   );
 
   return (
+    <PullToRefreshWrapper onRefresh={loadDocuments}>
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2 className="mb-0">{'\uD83D\uDCC4'} {t('portal.nav.documents', 'Mes documents')}</h2>
@@ -274,6 +277,7 @@ const PatientPortalDocuments = () => {
         </Modal.Footer>
       </Modal>
     </div>
+    </PullToRefreshWrapper>
   );
 };
 

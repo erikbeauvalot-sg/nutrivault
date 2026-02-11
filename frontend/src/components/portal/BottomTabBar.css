@@ -1,0 +1,138 @@
+/* ============================================
+   BOTTOM TAB BAR — Solarpunk Glass Morphism
+   ============================================ */
+
+.bottom-tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(56px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  z-index: 1050;
+}
+
+/* Dark theme support */
+[data-bs-theme="dark"] .bottom-tab-bar,
+.dark-theme .bottom-tab-bar {
+  background: rgba(26, 42, 58, 0.9);
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.bottom-tab-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  height: 56px;
+  border: none;
+  background: none;
+  color: var(--nv-warm-500, #78716c);
+  font-size: 0.65rem;
+  font-weight: 500;
+  padding: 4px 0;
+  cursor: pointer;
+  transition: color 0.15s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-tab-item:active {
+  transform: scale(0.92);
+}
+
+.bottom-tab-item.active {
+  color: var(--nv-accent-600, #2e7d32);
+}
+
+[data-bs-theme="dark"] .bottom-tab-item.active,
+.dark-theme .bottom-tab-item.active {
+  color: var(--nv-gold-400, #c4a434);
+}
+
+.bottom-tab-label {
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 64px;
+}
+
+/* ============================================
+   MORE MENU — Expandable Grid
+   ============================================ */
+
+.bottom-tab-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1049;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: calc(56px + env(safe-area-inset-bottom) + 8px);
+}
+
+.bottom-tab-more-menu {
+  width: 100%;
+  margin: 0 8px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 16px;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+}
+
+[data-bs-theme="dark"] .bottom-tab-more-menu,
+.dark-theme .bottom-tab-more-menu {
+  background: rgba(26, 42, 58, 0.95);
+}
+
+.bottom-tab-more-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 4px;
+  border: none;
+  background: none;
+  border-radius: 12px;
+  color: var(--nv-warm-600, #57534e);
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-tab-more-item:active {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.bottom-tab-more-item.active {
+  color: var(--nv-accent-600, #2e7d32);
+  background: rgba(46, 125, 50, 0.08);
+}
+
+[data-bs-theme="dark"] .bottom-tab-more-item,
+.dark-theme .bottom-tab-more-item {
+  color: var(--nv-warm-300, #d6d3d1);
+}
+
+[data-bs-theme="dark"] .bottom-tab-more-item.active,
+.dark-theme .bottom-tab-more-item.active {
+  color: var(--nv-gold-400, #c4a434);
+  background: rgba(196, 164, 52, 0.1);
+}

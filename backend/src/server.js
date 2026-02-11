@@ -225,6 +225,14 @@ app.use('/api/discord', discordRoutes);
 const pageViewsRoutes = require('./routes/pageViews');
 app.use('/api/page-views', pageViewsRoutes);
 
+// Device Tokens routes (push notification registration)
+const deviceTokenRoutes = require('./routes/deviceTokens');
+app.use('/api/device-tokens', deviceTokenRoutes);
+
+// Notification Preferences routes
+const notificationPreferencesRoutes = require('./routes/notificationPreferences');
+app.use('/api/notification-preferences', notificationPreferencesRoutes);
+
 // Serve uploaded files (logos, signatures)
 // Use /app in production (Docker), process.cwd() in development
 const uploadsBasePath = process.env.NODE_ENV === 'production' ? '/app/uploads' : path.join(process.cwd(), 'uploads');
@@ -285,6 +293,10 @@ db.sequelize.sync()
     console.log('Initializing scheduled jobs...');
     await schedulerService.initializeScheduledJobs();
     console.log('Scheduled jobs initialized');
+
+    // Initialize push notification service (silent if Firebase config missing)
+    const pushNotificationService = require('./services/pushNotification.service');
+    await pushNotificationService.initialize();
 
     const appVersion = process.env.APP_VERSION || require('../../package.json').version || 'dev';
     console.log(`Starting server on port ${PORT}...`);

@@ -6,6 +6,10 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import * as authService from '../services/authService';
 import * as tokenStorage from '../utils/tokenStorage';
+import * as biometricService from '../services/biometricService';
+import * as pushNotificationService from '../services/pushNotificationService';
+import * as offlineCache from '../services/offlineCache';
+import { isNative } from '../utils/platform';
 
 export const AuthContext = createContext(null);
 
@@ -13,6 +17,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [biometricUnlocked, setBiometricUnlocked] = useState(!isNative);
 
   // Initialize auth state from stored token on mount
   useEffect(() => {
@@ -47,6 +52,20 @@ export const AuthProvider = ({ children }) => {
       const userData = await authService.login(username, password, rememberMe);
       setUser(userData);
       setIsAuthenticated(true);
+
+      // Register for push notifications on native after login
+      if (isNative) {
+        try {
+          const granted = await pushNotificationService.requestPermission();
+          if (granted) {
+            await pushNotificationService.addListeners();
+            await pushNotificationService.register();
+          }
+        } catch (pushErr) {
+          console.error('Push notification setup failed:', pushErr);
+        }
+      }
+
       return userData;
     } catch (error) {
       setUser(null);
@@ -56,6 +75,46 @@ export const AuthProvider = ({ children }) => {
   };
 
   /**
+   * Login via biometric — retrieves refreshToken from Keychain, calls /auth/refresh
+   * @returns {Promise<boolean>} true if login succeeded
+   */
+  const biometricLogin = async (refreshToken) => {
+    try {
+      // Use the refresh token from Keychain to get a new session
+      const baseURL = import.meta.env.VITE_API_URL || '/api';
+      const { default: axios } = await import('axios');
+      const { data } = await axios.post(`${baseURL}/auth/refresh`, { refreshToken });
+      const result = data.data || data;
+
+      tokenStorage.setTokens(result.accessToken, result.refreshToken, true);
+      if (result.user) {
+        tokenStorage.setUser(result.user, true);
+        setUser(result.user);
+      }
+      setIsAuthenticated(true);
+      setBiometricUnlocked(true);
+
+      // Update Keychain with the new refresh token
+      const creds = await biometricService.getCredentials();
+      if (creds) {
+        await biometricService.saveCredentials(creds.username, result.refreshToken);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Biometric login failed:', error);
+      return false;
+    }
+  };
+
+  /**
+   * Mark biometric as unlocked (for lock screen flow)
+   */
+  const setBiometricUnlockedState = useCallback((val) => {
+    setBiometricUnlocked(val);
+  }, []);
+
+  /**
    * Logout user
    * @returns {Promise<void>}
    */
@@ -63,8 +122,16 @@ export const AuthProvider = ({ children }) => {
     try {
       await authService.logout();
     } finally {
+      // Clear biometric credentials on logout
+      if (isNative) {
+        await biometricService.deleteCredentials();
+        biometricService.clearBiometricPrefs();
+      }
+      // Clear offline cache
+      await offlineCache.clear();
       setUser(null);
       setIsAuthenticated(false);
+      setBiometricUnlocked(!isNative);
     }
   };
 
@@ -127,8 +194,11 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     isAuthenticated,
+    biometricUnlocked,
     login,
     logout,
+    biometricLogin,
+    setBiometricUnlockedState,
     hasPermission,
     hasRole,
     isAdmin,

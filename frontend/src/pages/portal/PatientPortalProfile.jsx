@@ -7,12 +7,17 @@ import { useState, useEffect } from 'react';
 import { Card, Form, Button, Row, Col, Spinner, Alert } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
+import { FiShield } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
 import * as portalService from '../../services/portalService';
+import useBiometricAuth from '../../hooks/useBiometricAuth';
+import * as tokenStorage from '../../utils/tokenStorage';
+import NotificationPreferences from '../../components/NotificationPreferences';
 
 const PatientPortalProfile = () => {
   const { t } = useTranslation();
   const { user, updateUser } = useAuth();
+  const { biometricAvailable, biometricName, biometricEnabled, enableBiometric, disableBiometric } = useBiometricAuth();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
   const [phone, setPhone] = useState('');
@@ -185,6 +190,49 @@ const PatientPortalProfile = () => {
             </Card.Body>
           </Card>
         </Col>
+        {/* Notification Preferences (native only) */}
+        <Col xs={12}>
+          <NotificationPreferences />
+        </Col>
+
+        {/* Security — Biometric (native only) */}
+        {biometricAvailable && (
+          <Col xs={12}>
+            <Card>
+              <Card.Header>
+                <FiShield className="me-2" />
+                {t('portal.security', 'Security')}
+              </Card.Header>
+              <Card.Body>
+                <div className="d-flex align-items-center justify-content-between">
+                  <div>
+                    <strong>{biometricName}</strong>
+                    <p className="text-muted mb-0" style={{ fontSize: '0.85rem' }}>
+                      {t('portal.biometricDescription', { type: biometricName }, `Quickly unlock the app with ${biometricName}`)}
+                    </p>
+                  </div>
+                  <Form.Check
+                    type="switch"
+                    id="biometric-toggle"
+                    checked={biometricEnabled}
+                    onChange={async (e) => {
+                      if (e.target.checked) {
+                        const refreshToken = tokenStorage.getRefreshToken();
+                        if (refreshToken && user?.username) {
+                          await enableBiometric(user.username, refreshToken);
+                          toast.success(t('portal.biometricEnabled', { type: biometricName }, `${biometricName} enabled`));
+                        }
+                      } else {
+                        await disableBiometric();
+                        toast.success(t('portal.biometricDisabled', { type: biometricName }, `${biometricName} disabled`));
+                      }
+                    }}
+                  />
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+        )}
       </Row>
     </div>
   );

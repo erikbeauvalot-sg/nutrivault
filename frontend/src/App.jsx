@@ -4,7 +4,7 @@
  * Implements lazy loading for performance optimization (US-9.2)
  */
 
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useCallback } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Spinner } from 'react-bootstrap';
 import { ToastContainer } from 'react-toastify';
@@ -13,6 +13,10 @@ import { useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PatientProtectedRoute from './components/PatientProtectedRoute';
 import usePageTracking from './hooks/usePageTracking';
+import useBiometricAuth from './hooks/useBiometricAuth';
+import BiometricLockScreen from './components/BiometricLockScreen';
+import { isNative } from './utils/platform';
+import * as biometricService from './services/biometricService';
 
 // Eager load: Login page (first page users see)
 import LoginPage from './pages/LoginPage';
@@ -84,8 +88,24 @@ const PageLoader = () => (
 );
 
 function App() {
-  const { loading, isAuthenticated, user } = useAuth();
+  const { loading, isAuthenticated, user, biometricUnlocked, biometricLogin, setBiometricUnlockedState } = useAuth();
+  const { biometricName, biometricEnabled, authenticateWithBiometric } = useBiometricAuth();
   usePageTracking();
+
+  // Biometric lock screen handler
+  const handleBiometricAuth = useCallback(async () => {
+    const result = await authenticateWithBiometric('Unlock NutriVault');
+    if (result) {
+      const success = await biometricLogin(result.refreshToken);
+      return success;
+    }
+    return false;
+  }, [authenticateWithBiometric, biometricLogin]);
+
+  const handleFallbackToPassword = useCallback(() => {
+    // Clear biometric state and go to login
+    setBiometricUnlockedState(true);
+  }, [setBiometricUnlockedState]);
 
   // Show loading spinner while checking authentication
   if (loading) {
@@ -95,6 +115,17 @@ function App() {
           <span className="visually-hidden">Loading...</span>
         </div>
       </div>
+    );
+  }
+
+  // Show biometric lock screen on native when biometric is enabled but not yet unlocked
+  if (isNative && biometricEnabled && biometricService.isBiometricEnabled() && !biometricUnlocked && !isAuthenticated) {
+    return (
+      <BiometricLockScreen
+        biometricName={biometricName}
+        onAuthenticated={handleBiometricAuth}
+        onFallbackToPassword={handleFallbackToPassword}
+      />
     );
   }
 

@@ -1,6 +1,7 @@
 /**
  * Patient Portal Layout
  * Simplified layout for patient-facing portal
+ * On native mobile: hides sidebar/hamburger, shows BottomTabBar
  */
 
 import { useState } from 'react';
@@ -11,6 +12,9 @@ import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../LanguageSelector';
 import ThemeSelector from '../ThemeSelector';
 import PatientPortalSidebar from './PatientPortalSidebar';
+import BottomTabBar from '../portal/BottomTabBar';
+import OfflineBanner from '../common/OfflineBanner';
+import { isNative } from '../../utils/platform';
 import './Layout.css';
 
 const PatientPortalLayout = ({ children }) => {
@@ -18,6 +22,8 @@ const PatientPortalLayout = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
+
+  const useBottomTabs = isNative;
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const closeSidebar = () => setSidebarOpen(false);
@@ -32,20 +38,23 @@ const PatientPortalLayout = ({ children }) => {
   };
 
   return (
-    <div className="layout-wrapper">
+    <div className={`layout-wrapper ${useBottomTabs ? 'has-bottom-tabs' : ''}`}>
       <Navbar bg="dark" variant="dark" expand="lg" className="portal-navbar">
         <Container fluid>
-          <Button
-            variant="dark"
-            className="d-lg-none me-2 hamburger-menu p-1"
-            onClick={toggleSidebar}
-            aria-label="Toggle sidebar"
-          >
-            <span className="navbar-toggler-icon"></span>
-          </Button>
+          {/* Hide hamburger on native mobile (bottom tabs replace sidebar) */}
+          {!useBottomTabs && (
+            <Button
+              variant="dark"
+              className="d-lg-none me-2 hamburger-menu p-1"
+              onClick={toggleSidebar}
+              aria-label="Toggle sidebar"
+            >
+              <span className="navbar-toggler-icon"></span>
+            </Button>
+          )}
           <Navbar.Brand as={Link} to="/portal" className="me-auto portal-brand">
-            <span className="d-none d-sm-inline">🌱 NutriVault — {t('portal.title', 'Mon Portail')}</span>
-            <span className="d-sm-none">🌱 {t('portal.title', 'Mon Portail')}</span>
+            <span className="d-none d-sm-inline">{'\uD83C\uDF31'} NutriVault — {t('portal.title', 'Mon Portail')}</span>
+            <span className="d-sm-none">{'\uD83C\uDF31'} {t('portal.title', 'Mon Portail')}</span>
           </Navbar.Brand>
           <Navbar.Toggle aria-controls="portal-navbar-nav" />
           <Navbar.Collapse id="portal-navbar-nav">
@@ -80,13 +89,22 @@ const PatientPortalLayout = ({ children }) => {
           </Navbar.Collapse>
         </Container>
       </Navbar>
+      <OfflineBanner />
       <div className="layout-container">
-        <PatientPortalSidebar isOpen={sidebarOpen} onClose={closeSidebar} />
-        {sidebarOpen && <div className="sidebar-overlay" onClick={closeSidebar} />}
-        <main className="layout-content">
+        {/* Hide sidebar on native mobile */}
+        {!useBottomTabs && (
+          <>
+            <PatientPortalSidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+            {sidebarOpen && <div className="sidebar-overlay" onClick={closeSidebar} />}
+          </>
+        )}
+        <main className={`layout-content ${useBottomTabs ? 'no-sidebar' : ''}`}>
           {children}
         </main>
       </div>
+
+      {/* Bottom tab bar on native mobile */}
+      {useBottomTabs && <BottomTabBar />}
     </div>
   );
 };

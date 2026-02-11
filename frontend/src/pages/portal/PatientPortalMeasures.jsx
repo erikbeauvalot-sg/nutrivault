@@ -10,6 +10,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import * as portalService from '../../services/portalService';
+import PullToRefreshWrapper from '../../components/common/PullToRefreshWrapper';
 
 const CHART_COLORS = ['#0d6efd', '#198754', '#dc3545', '#ffc107', '#6610f2', '#fd7e14', '#20c997', '#6c757d'];
 
@@ -287,6 +288,7 @@ const PatientPortalMeasures = () => {
   }
 
   return (
+    <PullToRefreshWrapper onRefresh={() => fetchMeasures({})}>
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2 className="mb-0" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.75rem)' }}>
@@ -542,6 +544,7 @@ const PatientPortalMeasures = () => {
         </Form>
       </Modal>
     </div>
+    </PullToRefreshWrapper>
   );
 };
 

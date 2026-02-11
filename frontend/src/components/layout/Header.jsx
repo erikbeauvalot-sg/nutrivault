@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import LanguageSelector from '../LanguageSelector';
 import ThemeSelector from '../ThemeSelector';
 
-const Header = ({ onToggleSidebar }) => {
+const Header = ({ onToggleSidebar, hideHamburger = false }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -27,14 +27,16 @@ const Header = ({ onToggleSidebar }) => {
   return (
     <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
       <Container fluid>
-        <Button
-          variant="dark"
-          className="d-lg-none me-2 hamburger-menu"
-          onClick={onToggleSidebar}
-          aria-label="Toggle sidebar"
-        >
-          <span className="navbar-toggler-icon"></span>
-        </Button>
+        {!hideHamburger && (
+          <Button
+            variant="dark"
+            className="d-lg-none me-2 hamburger-menu"
+            onClick={onToggleSidebar}
+            aria-label="Toggle sidebar"
+          >
+            <span className="navbar-toggler-icon"></span>
+          </Button>
+        )}
         <Navbar.Brand as={Link} to="/dashboard">
           🌱 NutriVault
         </Navbar.Brand>

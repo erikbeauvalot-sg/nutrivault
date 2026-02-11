@@ -61,6 +61,8 @@ db.UserSupervisor = require('./UserSupervisor')(sequelize, DataTypes);
 db.PatientDietitian = require('./PatientDietitian')(sequelize, DataTypes);
 db.JournalEntry = require('./JournalEntry')(sequelize, DataTypes);
 db.JournalComment = require('./JournalComment')(sequelize, DataTypes);
+db.DeviceToken = require('./DeviceToken')(sequelize, DataTypes);
+db.NotificationPreference = require('./NotificationPreference')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -900,6 +902,26 @@ db.JournalEntry.hasMany(db.Document, {
   constraints: false,
   scope: { resource_type: 'journal_entry' },
   as: 'photos'
+});
+
+// DeviceToken - User relationship
+db.DeviceToken.belongsTo(db.User, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
+db.User.hasMany(db.DeviceToken, {
+  foreignKey: 'user_id',
+  as: 'device_tokens'
+});
+
+// NotificationPreference - User relationship
+db.NotificationPreference.belongsTo(db.User, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
+db.User.hasOne(db.NotificationPreference, {
+  foreignKey: 'user_id',
+  as: 'notification_preference'
 });
 
 module.exports = db;
