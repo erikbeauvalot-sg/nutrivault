@@ -25,7 +25,7 @@ const config: CapacitorConfig = {
       spinnerColor: "#c4a434",
     },
     Keyboard: {
-      resize: "body",
+      resize: "none",
       resizeOnFullScreen: true,
     },
   },

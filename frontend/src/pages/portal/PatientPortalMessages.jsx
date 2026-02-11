@@ -35,19 +35,29 @@ const PatientPortalMessages = () => {
 
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // Track keyboard open/close on iOS native via visualViewport
+  // Track keyboard open/close on iOS native via Capacitor Keyboard plugin
   useEffect(() => {
     if (!isNative) return;
-    const vv = window.visualViewport;
-    if (!vv) return;
+    let showListener = null;
+    let hideListener = null;
 
-    const handleResize = () => {
-      const kbH = window.innerHeight - vv.height;
-      setKeyboardHeight(kbH > 50 ? kbH : 0);
+    const setup = async () => {
+      try {
+        const { Keyboard } = await import('@capacitor/keyboard');
+        showListener = await Keyboard.addListener('keyboardWillShow', (info) => {
+          setKeyboardHeight(info.keyboardHeight || 300);
+        });
+        hideListener = await Keyboard.addListener('keyboardWillHide', () => {
+          setKeyboardHeight(0);
+        });
+      } catch {}
     };
+    setup();
 
-    vv.addEventListener('resize', handleResize);
-    return () => vv.removeEventListener('resize', handleResize);
+    return () => {
+      showListener?.remove?.();
+      hideListener?.remove?.();
+    };
   }, []);
 
   // New conversation state
