@@ -98,9 +98,6 @@ const PatientDetailPage = () => {
   const [availableGuides, setAvailableGuides] = useState([]);
   const [sharingGuide, setSharingGuide] = useState(false);
   const [patientObjectives, setPatientObjectives] = useState([]);
-  const [objectivesEditing, setObjectivesEditing] = useState(false);
-  const [objectivesDraft, setObjectivesDraft] = useState(['', '', '']);
-  const [objectivesSaving, setObjectivesSaving] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -161,30 +158,9 @@ const PatientDetailPage = () => {
   const fetchPatientObjectives = async () => {
     try {
       const res = await api.get(`/patients/${id}/objectives`);
-      const data = res.data?.data || [];
-      setPatientObjectives(data);
-      const draft = ['', '', ''];
-      data.forEach(o => { if (o.objective_number >= 1 && o.objective_number <= 3) draft[o.objective_number - 1] = o.content; });
-      setObjectivesDraft(draft);
+      setPatientObjectives(res.data?.data || []);
     } catch {
       // silent
-    }
-  };
-
-  const handleSaveObjectives = async () => {
-    setObjectivesSaving(true);
-    try {
-      const body = objectivesDraft
-        .map((content, i) => ({ objective_number: i + 1, content: content.trim() }))
-        .filter(o => o.content);
-      await api.put(`/patients/${id}/objectives`, body);
-      await fetchPatientObjectives();
-      setObjectivesEditing(false);
-      toast.success(t('objectives.saved', 'Objectifs enregistr\u00e9s'));
-    } catch (err) {
-      toast.error(err.response?.data?.error || t('objectives.saveError', 'Erreur lors de la sauvegarde'));
-    } finally {
-      setObjectivesSaving(false);
     }
   };
 
@@ -874,58 +850,27 @@ const PatientDetailPage = () => {
                   </Card.Body>
                 </Card>
 
-                {/* Patient Objectives */}
+                {/* Patient Objectives (read-only, from latest visit) */}
                 <Card className="mb-3">
-                  <Card.Header className="d-flex justify-content-between align-items-center">
+                  <Card.Header>
                     <h6 className="mb-0">{'\uD83C\uDFAF'} {t('objectives.title', 'Objectifs du patient')}</h6>
-                    {!objectivesEditing ? (
-                      <Button variant="outline-primary" size="sm" onClick={() => setObjectivesEditing(true)}>
-                        {t('common.edit', 'Modifier')}
-                      </Button>
-                    ) : (
-                      <div className="d-flex gap-2">
-                        <Button variant="outline-secondary" size="sm" onClick={() => {
-                          setObjectivesEditing(false);
-                          const draft = ['', '', ''];
-                          patientObjectives.forEach(o => { if (o.objective_number >= 1 && o.objective_number <= 3) draft[o.objective_number - 1] = o.content; });
-                          setObjectivesDraft(draft);
-                        }}>
-                          {t('common.cancel', 'Annuler')}
-                        </Button>
-                        <Button variant="primary" size="sm" onClick={handleSaveObjectives} disabled={objectivesSaving}>
-                          {objectivesSaving ? <Spinner animation="border" size="sm" /> : t('common.save', 'Enregistrer')}
-                        </Button>
-                      </div>
-                    )}
                   </Card.Header>
                   <Card.Body>
-                    {objectivesEditing ? (
-                      <div>
-                        {[0, 1, 2].map(i => (
-                          <InputGroup key={i} className="mb-2">
-                            <InputGroup.Text style={{ minWidth: '40px' }}>{i + 1}.</InputGroup.Text>
-                            <Form.Control
-                              type="text"
-                              placeholder={t('objectives.placeholder', 'Objectif {{num}}', { num: i + 1 })}
-                              value={objectivesDraft[i]}
-                              onChange={e => {
-                                const next = [...objectivesDraft];
-                                next[i] = e.target.value;
-                                setObjectivesDraft(next);
-                              }}
-                              maxLength={500}
-                            />
-                          </InputGroup>
-                        ))}
-                      </div>
-                    ) : patientObjectives.length === 0 ? (
-                      <p className="text-muted mb-0">{t('objectives.none', 'Aucun objectif d\u00e9fini')}</p>
+                    {patientObjectives.length === 0 ? (
+                      <p className="text-muted mb-0">{t('objectives.none', 'Aucun objectif défini')}</p>
                     ) : (
                       <ol className="mb-0 ps-3">
                         {[1, 2, 3].map(num => {
                           const obj = patientObjectives.find(o => o.objective_number === num);
                           if (!obj) return null;
-                          return <li key={num} className="mb-1">{obj.content}</li>;
+                          return (
+                            <li key={num} className="mb-1">
+                              {obj.content}
+                              {obj.visit_date && (
+                                <small className="text-muted ms-2">({new Date(obj.visit_date).toLocaleDateString()})</small>
+                              )}
+                            </li>
+                          );
                         })}
                       </ol>
                     )}

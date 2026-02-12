@@ -1445,12 +1445,9 @@ exports.deleteJournalPhoto = async (req, res, next) => {
  */
 exports.getObjectives = async (req, res, next) => {
   try {
-    const objectives = await db.PatientObjective.findAll({
-      where: { patient_id: req.patient.id },
-      order: [['objective_number', 'ASC']],
-      attributes: ['id', 'objective_number', 'content', 'created_at', 'updated_at']
-    });
-    res.json({ success: true, data: objectives });
+    const { getObjectivesFromVisits } = require('./patientController');
+    const data = await getObjectivesFromVisits(req.patient.id);
+    res.json({ success: true, data });
   } catch (error) {
     next(error);
   }

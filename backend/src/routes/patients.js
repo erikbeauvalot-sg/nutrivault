@@ -649,18 +649,6 @@ router.get(
   patientController.getPatientObjectives
 );
 
-/**
- * PUT /api/patients/:patientId/objectives - Upsert patient objectives
- * Requires: patients.update permission
- */
-router.put(
-  '/:patientId/objectives',
-  authenticate,
-  requirePermission('patients.update'),
-  param('patientId').isUUID().withMessage('Invalid patient ID'),
-  validate,
-  patientController.upsertPatientObjectives
-);
 
 // =============================================
 // EMAIL LOG ROUTES

@@ -381,7 +381,58 @@ exports.sendPortalPasswordReset = async (req, res, next) => {
 };
 
 /**
- * GET /api/patients/:patientId/objectives — Get patient objectives
+ * Shared helper: for each objectif_1/2/3, independently find the most recent visit
+ * where that field has a non-empty value. Each objective can come from a different visit.
+ * Returns array: [{ objective_number, content, visit_date }]
+ */
+async function getObjectivesFromVisits(patientId) {
+  const OBJECTIVE_FIELDS = ['objectif_1', 'objectif_2', 'objectif_3'];
+
+  // 1. Find the 3 field definitions
+  const definitions = await db.CustomFieldDefinition.findAll({
+    where: { field_name: OBJECTIVE_FIELDS },
+    attributes: ['id', 'field_name']
+  });
+  if (definitions.length === 0) return [];
+
+  // 2. For each definition, find the most recent non-empty value via a single query
+  //    JOIN visit_custom_field_values → visits, filter by patient, order by visit_date DESC, LIMIT 1
+  const results = [];
+
+  for (const def of definitions) {
+    const num = OBJECTIVE_FIELDS.indexOf(def.field_name) + 1;
+
+    const value = await db.VisitCustomFieldValue.findOne({
+      where: {
+        field_definition_id: def.id,
+        value_text: { [db.Sequelize.Op.and]: [
+          { [db.Sequelize.Op.ne]: null },
+          { [db.Sequelize.Op.ne]: '' }
+        ]}
+      },
+      include: [{
+        model: db.Visit,
+        as: 'visit',
+        where: { patient_id: patientId },
+        attributes: ['visit_date']
+      }],
+      order: [[{ model: db.Visit, as: 'visit' }, 'visit_date', 'DESC']],
+    });
+
+    if (value && value.value_text && value.value_text.trim()) {
+      results.push({
+        objective_number: num,
+        content: value.value_text.trim(),
+        visit_date: value.visit?.visit_date || null
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * GET /api/patients/:patientId/objectives — Get patient objectives from latest visit custom fields
  */
 exports.getPatientObjectives = async (req, res, next) => {
   try {
@@ -391,68 +442,12 @@ exports.getPatientObjectives = async (req, res, next) => {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
-    const objectives = await db.PatientObjective.findAll({
-      where: { patient_id: patientId },
-      order: [['objective_number', 'ASC']],
-      include: [{ model: db.User, as: 'creator', attributes: ['id', 'first_name', 'last_name'] }]
-    });
-    res.json({ success: true, data: objectives });
+    const data = await getObjectivesFromVisits(patientId);
+    res.json({ success: true, data });
   } catch (error) {
     next(error);
   }
 };
 
-/**
- * PUT /api/patients/:patientId/objectives — Upsert patient objectives (max 3)
- */
-exports.upsertPatientObjectives = async (req, res, next) => {
-  try {
-    const patientId = req.params.patientId || req.params.id;
-    const hasAccess = await canAccessPatient(req.user, patientId);
-    if (!hasAccess) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
-    }
-
-    const objectives = req.body;
-    if (!Array.isArray(objectives)) {
-      return res.status(400).json({ success: false, error: 'Body must be an array of objectives' });
-    }
-
-    const results = [];
-    for (const obj of objectives) {
-      if (!obj.objective_number || obj.objective_number < 1 || obj.objective_number > 3) continue;
-      if (!obj.content || !obj.content.trim()) continue;
-
-      const [record, created] = await db.PatientObjective.findOrCreate({
-        where: { patient_id: patientId, objective_number: obj.objective_number },
-        defaults: { content: obj.content.trim(), created_by: req.user.id }
-      });
-      if (!created) {
-        await record.update({ content: obj.content.trim(), created_by: req.user.id });
-      }
-      results.push(record);
-    }
-
-    // Delete objectives that were not included
-    const includedNumbers = objectives.filter(o => o.content && o.content.trim()).map(o => o.objective_number);
-    if (includedNumbers.length > 0) {
-      await db.PatientObjective.destroy({
-        where: {
-          patient_id: patientId,
-          objective_number: { [db.Sequelize.Op.notIn]: includedNumbers }
-        }
-      });
-    } else {
-      await db.PatientObjective.destroy({ where: { patient_id: patientId } });
-    }
-
-    const finalObjectives = await db.PatientObjective.findAll({
-      where: { patient_id: patientId },
-      order: [['objective_number', 'ASC']],
-      include: [{ model: db.User, as: 'creator', attributes: ['id', 'first_name', 'last_name'] }]
-    });
-    res.json({ success: true, data: finalObjectives });
-  } catch (error) {
-    next(error);
-  }
-};
+// Export helper for use in portalController
+exports.getObjectivesFromVisits = getObjectivesFromVisits;
