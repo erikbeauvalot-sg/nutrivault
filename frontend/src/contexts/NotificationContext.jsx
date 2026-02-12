@@ -17,6 +17,10 @@ export const NotificationProvider = ({ children }) => {
     try {
       const count = await notificationService.getUnreadCount();
       setUnreadCount(count);
+      // Sync iOS badge: reset when no unread (clears stale badges from before DB tracking)
+      if (isNative && count === 0) {
+        notificationService.resetBadge().catch(() => {});
+      }
     } catch {
       // silent
     }
