@@ -24,36 +24,33 @@ const { requirePermission, requireRole } = require('../middleware/rbac');
 /**
  * GET /api/email-templates
  * Get all email templates with optional filtering
- * Permission: users.read (all authenticated users)
+ * All authenticated users (dietitians can customize templates)
  */
 router.get(
   '/',
   authenticate,
-  requirePermission('users.read'),
   emailTemplateController.getAllTemplates
 );
 
 /**
  * GET /api/email-templates/stats
  * Get template statistics
- * Permission: users.read
+ * All authenticated users
  */
 router.get(
   '/stats',
   authenticate,
-  requirePermission('users.read'),
   emailTemplateController.getTemplateStats
 );
 
 /**
  * GET /api/email-templates/categories/:category/variables
  * Get available variables for a category
- * Permission: users.read
+ * All authenticated users
  */
 router.get(
   '/categories/:category/variables',
   authenticate,
-  requirePermission('users.read'),
   emailTemplateController.getAvailableVariables
 );
 
@@ -84,12 +81,11 @@ router.post(
 /**
  * GET /api/email-templates/:id
  * Get template by ID
- * Permission: users.read
+ * All authenticated users
  */
 router.get(
   '/:id',
   authenticate,
-  requirePermission('users.read'),
   emailTemplateController.getTemplateById
 );
 
@@ -217,12 +213,11 @@ router.delete(
 /**
  * POST /api/email-templates/:id/preview
  * Preview template with sample data
- * Permission: users.read
+ * All authenticated users
  */
 router.post(
   '/:id/preview',
   authenticate,
-  requirePermission('users.read'),
   emailTemplateController.previewTemplate
 );
 
@@ -233,36 +228,33 @@ router.post(
 /**
  * GET /api/email-templates/supported-languages
  * Get list of supported languages
- * Permission: users.read
+ * All authenticated users
  */
 router.get(
   '/supported-languages',
   authenticate,
-  requirePermission('users.read'),
   emailTemplateController.getSupportedLanguages
 );
 
 /**
  * GET /api/email-templates/:id/translations
  * Get all translations for a template
- * Permission: users.read
+ * All authenticated users
  */
 router.get(
   '/:id/translations',
   authenticate,
-  requirePermission('users.read'),
   emailTemplateController.getTranslations
 );
 
 /**
  * GET /api/email-templates/:id/translations/:languageCode
  * Get translation for a specific language
- * Permission: users.read
+ * All authenticated users
  */
 router.get(
   '/:id/translations/:languageCode',
   authenticate,
-  requirePermission('users.read'),
   emailTemplateController.getTranslation
 );
 
@@ -305,24 +297,22 @@ router.delete(
 /**
  * GET /api/email-templates/:id/base-content
  * Get base template content for copying to translation
- * Permission: users.read
+ * All authenticated users
  */
 router.get(
   '/:id/base-content',
   authenticate,
-  requirePermission('users.read'),
   emailTemplateController.getBaseContent
 );
 
 /**
  * POST /api/email-templates/:id/preview-translation
  * Preview template in a specific language
- * Permission: users.read
+ * All authenticated users
  */
 router.post(
   '/:id/preview-translation',
   authenticate,
-  requirePermission('users.read'),
   emailTemplateController.previewTranslation
 );
 
