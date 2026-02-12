@@ -58,7 +58,10 @@ export const NotificationProvider = ({ children }) => {
     return () => window.removeEventListener('notificationReceived', handler);
   }, [refreshCount]);
 
-  // On app resume (iOS foreground), refresh count + reset badge
+  // On app resume (iOS foreground), refresh count only.
+  // Badge sync is handled inside refreshCount (resets to 0 when no unread).
+  // Do NOT call resetBadge() unconditionally here — it would wipe the badge
+  // even when there ARE unread notifications (push already set it correctly).
   useEffect(() => {
     if (!isNative || !isAuthenticated) return;
 
@@ -67,10 +70,9 @@ export const NotificationProvider = ({ children }) => {
       try {
         const mod = await import('@capacitor/app');
         App = mod.App;
-        App.addListener('appStateChange', async ({ isActive }) => {
+        App.addListener('appStateChange', ({ isActive }) => {
           if (isActive) {
             refreshCount();
-            notificationService.resetBadge().catch(() => {});
           }
         });
       } catch {
@@ -82,7 +84,7 @@ export const NotificationProvider = ({ children }) => {
     return () => {
       if (App) App.removeAllListeners().catch(() => {});
     };
-  }, [isNative, isAuthenticated, refreshCount]);
+  }, [isAuthenticated, refreshCount]);
 
   return (
     <NotificationContext.Provider value={{ unreadCount, refreshCount, markAllRead }}>
