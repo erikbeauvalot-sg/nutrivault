@@ -6,7 +6,6 @@ import { FiBell, FiCalendar, FiMessageSquare, FiFile, FiEdit3, FiActivity, FiChe
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import * as notificationService from '../services/notificationService';
-import PatientPortalLayout from '../components/layout/PatientPortalLayout';
 import Layout from '../components/layout/Layout';
 
 const ICONS = {
@@ -231,17 +230,14 @@ const NotificationCenterContent = () => {
   );
 };
 
-// Wrapper that picks the right layout based on role
+// Wrapper: patient routes already get PatientPortalLayout from PatientProtectedRoute,
+// dietitian routes need Layout since ProtectedRoute doesn't provide one.
 const NotificationCenterPage = () => {
   const { user } = useAuth();
   const isPatient = user?.role === 'PATIENT';
 
   if (isPatient) {
-    return (
-      <PatientPortalLayout>
-        <NotificationCenterContent />
-      </PatientPortalLayout>
-    );
+    return <NotificationCenterContent />;
   }
 
   return (
