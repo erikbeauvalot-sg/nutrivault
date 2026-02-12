@@ -6,6 +6,7 @@
 
 const path = require('path');
 const db = require('../../../models');
+const { formatDateTimeLong } = require('../utils/timezone');
 
 let admin = null;
 let initialized = false;
@@ -118,13 +119,7 @@ async function sendToUser(userId, { title, body, data = {} }, preferenceKey = nu
 async function sendAppointmentReminder(visit) {
   if (!visit?.patient?.user_id) return;
 
-  const dateStr = new Date(visit.scheduled_at || visit.date).toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const dateStr = formatDateTimeLong(visit.visit_date, 'fr');
 
   await sendToUser(
     visit.patient.user_id,
