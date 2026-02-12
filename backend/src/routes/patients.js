@@ -259,6 +259,19 @@ router.delete(
  */
 
 /**
+ * GET /api/patients/:patientId/custom-fields/history - Get visit field history for a category
+ * Requires: patients.read permission
+ */
+router.get(
+  '/:patientId/custom-fields/history',
+  authenticate,
+  requirePermission('patients.read'),
+  param('patientId').isUUID().withMessage('Invalid patient ID'),
+  validate,
+  patientCustomFieldController.getVisitFieldHistory
+);
+
+/**
  * GET /api/patients/:patientId/custom-fields - Get all custom field values for a patient
  * Requires: patients.read permission
  */

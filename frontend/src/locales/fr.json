@@ -1783,7 +1783,17 @@
     "showInPortalHelp": "Si coché, ce champ sera visible par les patients dans le détail de leurs consultations",
     "fieldRequired": "{{field}} est obligatoire",
     "reorderError": "Échec du réordonnancement",
-    "cannotDeleteCategoryWithFields": "Impossible de supprimer une catégorie contenant des champs"
+    "cannotDeleteCategoryWithFields": "Impossible de supprimer une catégorie contenant des champs",
+    "showHistoryAtPatientLevel": "Afficher l'historique sur le profil patient",
+    "showHistoryAtPatientLevelHelp": "Affiche un tableau/graphique des valeurs à travers toutes les visites",
+    "visitHistory": "Historique des visites",
+    "visitHistoryReadOnly": "Données en lecture seule. Cliquez sur une date pour modifier.",
+    "noVisitHistory": "Aucune donnée de visite pour cette catégorie.",
+    "tableView": "Tableau",
+    "chartView": "Graphique",
+    "visitDate": "Date de visite",
+    "visitType": "Type de visite",
+    "viewsCount": "{{count}} visite(s)"
   },
   "visitTypes": {
     "title": "Types de Consultation",

@@ -5,6 +5,8 @@
  * Sprint 4: US-5.4.1 - Trend Visualization with Charts
  */
 
+import { formatDate } from './dateUtils';
+
 /**
  * Calculate basic statistics from an array of values
  * @param {Array<number>} values - Numeric values array
@@ -252,7 +254,7 @@ export function getMAColor(window) {
 export function formatDataPointForChart(point, index) {
   return {
     index,
-    date: new Date(point.measured_at || point.date).toLocaleDateString(),
+    date: formatDate(point.measured_at || point.date),
     fullDate: point.measured_at || point.date,
     value: point.value,
     notes: point.notes,
@@ -275,7 +277,7 @@ export function mergeChartData(data, movingAverages = {}, trendLine = null) {
   // Create base dataset from main data
   const merged = data.map((point, index) => ({
     index,
-    date: new Date(point.measured_at || point.date).toLocaleDateString(),
+    date: formatDate(point.measured_at || point.date),
     fullDate: point.measured_at || point.date,
     value: point.value,
     isOutlier: point.isOutlier || false,

@@ -7,6 +7,7 @@
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { saveAs } from 'file-saver';
+import { formatDate } from './dateUtils';
 
 /**
  * Export chart as image (PNG or SVG)
@@ -137,7 +138,7 @@ export async function generatePDFReport(options) {
     // Add date
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Generated: ${new Date().toLocaleDateString()}`, margin, yPos);
+    pdf.text(`Generated: ${formatDate(new Date())}`, margin, yPos);
     yPos += 10;
 
     // Add patient info

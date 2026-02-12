@@ -10,10 +10,11 @@ import { toast } from 'react-toastify';
 import { FaSearch, FaShare, FaTimes, FaUser, FaTrash, FaEdit, FaCheck, FaEnvelope, FaGlobe, FaLock } from 'react-icons/fa';
 import * as recipeService from '../services/recipeService';
 import * as patientService from '../services/patientService';
+import { formatDate } from '../utils/dateUtils';
 import { debounce } from 'lodash';
 
 const RecipeShareModal = ({ show, onHide, recipe, onSuccess }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [sharesLoading, setSharesLoading] = useState(false);
@@ -380,7 +381,7 @@ const RecipeShareModal = ({ show, onHide, recipe, onSuccess }) => {
                       <small className="text-muted">
                         {t('recipes.sharedBy', 'Shared by')} {share.sharedByUser?.first_name} {share.sharedByUser?.last_name}
                         {' - '}
-                        {new Date(share.shared_at).toLocaleDateString()}
+                        {formatDate(share.shared_at, i18n.language)}
                       </small>
                     </div>
                     <div className="d-flex gap-1">

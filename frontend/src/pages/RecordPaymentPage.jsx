@@ -10,9 +10,10 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import { getInvoiceById, recordPayment } from '../services/billingService';
+import { formatDate } from '../utils/dateUtils';
 
 const RecordPaymentPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -297,7 +298,7 @@ const RecordPaymentPage = () => {
                     <div><strong>{t('billing.amountPaid', 'Amount Paid')}:</strong> {formatCurrency(invoice.amount_paid)}</div>
                     <div><strong>{t('billing.amountDue', 'Amount Due')}:</strong> {formatCurrency(invoice.amount_due)}</div>
                     {invoice.due_date && (
-                      <div><strong>{t('billing.dueDate', 'Due Date')}:</strong> {new Date(invoice.due_date).toLocaleDateString()}</div>
+                      <div><strong>{t('billing.dueDate', 'Due Date')}:</strong> {formatDate(invoice.due_date, i18n.language)}</div>
                     )}
                   </div>
                 </Card.Body>

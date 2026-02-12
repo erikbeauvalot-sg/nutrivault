@@ -14,9 +14,10 @@ import SearchableSelect from '../components/ui/SearchableSelect';
 import { createInvoice } from '../services/billingService';
 import { getPatients } from '../services/patientService';
 import visitService from '../services/visitService';
+import { formatDate } from '../utils/dateUtils';
 
 const CreateInvoicePage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -243,7 +244,7 @@ const CreateInvoicePage = () => {
                         <option value="">{t('billing.noVisit', 'No associated visit')}</option>
                         {visits.map(visit => (
                           <option key={visit.id} value={visit.id}>
-                            {new Date(visit.visit_date).toLocaleDateString()} - {visit.visit_type}
+                            {formatDate(visit.visit_date, i18n.language)} - {visit.visit_type}
                             {visit.status && ` (${getStatusText(visit.status)})`}
                           </option>
                         ))}

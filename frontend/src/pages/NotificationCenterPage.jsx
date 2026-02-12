@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import * as notificationService from '../services/notificationService';
 import Layout from '../components/layout/Layout';
+import { formatDate } from '../utils/dateUtils';
 
 const ICONS = {
   appointment_reminder: FiCalendar,
@@ -24,7 +25,7 @@ const ICON_COLORS = {
   measure_alert: '#e53e3e',
 };
 
-function timeAgo(dateStr, t) {
+function timeAgo(dateStr, t, language) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return t('notifications.justNow', 'Just now');
@@ -33,7 +34,7 @@ function timeAgo(dateStr, t) {
   if (hours < 24) return t('notifications.hoursAgo', '{{count}}h ago', { count: hours });
   const days = Math.floor(hours / 24);
   if (days < 7) return t('notifications.daysAgo', '{{count}}d ago', { count: days });
-  return new Date(dateStr).toLocaleDateString();
+  return formatDate(dateStr, language);
 }
 
 function getNavigationTarget(notification, isPatient) {
@@ -55,7 +56,7 @@ function getNavigationTarget(notification, isPatient) {
   }
 }
 
-const NotificationItem = ({ notification, isPatient, onRead, onDelete, t }) => {
+const NotificationItem = ({ notification, isPatient, onRead, onDelete, t, language }) => {
   const navigate = useNavigate();
   const Icon = ICONS[notification.type] || FiBell;
   const iconColor = ICON_COLORS[notification.type] || '#718096';
@@ -92,7 +93,7 @@ const NotificationItem = ({ notification, isPatient, onRead, onDelete, t }) => {
             {notification.title}
           </div>
           <small className="text-muted flex-shrink-0 ms-2" style={{ fontSize: '0.75rem' }}>
-            {timeAgo(notification.created_at, t)}
+            {timeAgo(notification.created_at, t, language)}
           </small>
         </div>
         {notification.body && (
@@ -113,7 +114,7 @@ const NotificationItem = ({ notification, isPatient, onRead, onDelete, t }) => {
 };
 
 const NotificationCenterContent = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { unreadCount, refreshCount, markAllRead } = useNotifications();
   const [notifications, setNotifications] = useState([]);
@@ -214,6 +215,7 @@ const NotificationCenterContent = () => {
               onRead={handleRead}
               onDelete={handleDelete}
               t={t}
+              language={i18n.language}
             />
           ))}
         </div>

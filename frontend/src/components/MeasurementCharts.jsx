@@ -7,9 +7,10 @@ import { useState, useEffect } from 'react';
 import { Card, Row, Col } from 'react-bootstrap';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useTranslation } from 'react-i18next';
+import { formatDate } from '../utils/dateUtils';
 
 const MeasurementCharts = ({ visits }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -40,7 +41,7 @@ const MeasurementCharts = ({ visits }) => {
 
           data.push({
             date: date,
-            visitDate: date.toLocaleDateString(),
+            visitDate: formatDate(date, i18n.language),
             visitTime: date.toLocaleString(),
             weight_kg: measurement.weight_kg || null,
             height_cm: measurement.height_cm || null,

@@ -9,9 +9,10 @@ import { useTranslation } from 'react-i18next';
 import * as patientService from '../services/patientService';
 import * as visitService from '../services/visitService';
 import SearchableSelect from './ui/SearchableSelect';
+import { formatDate } from '../utils/dateUtils';
 
 const EditInvoiceModal = ({ show, onHide, onSubmit, invoice }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -206,7 +207,7 @@ const EditInvoiceModal = ({ show, onHide, onSubmit, invoice }) => {
                   </option>
                   {visits.map(visit => (
                     <option key={visit.id} value={visit.id}>
-                      {new Date(visit.visit_date).toLocaleDateString()} - {visit.visit_type || 'Visit'}
+                      {formatDate(visit.visit_date, i18n.language)} - {visit.visit_type || 'Visit'}
                     </option>
                   ))}
                 </Form.Select>

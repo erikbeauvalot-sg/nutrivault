@@ -20,6 +20,7 @@ import {
 } from 'recharts';
 import { getMeasureDefinitions, getAllMeasureTranslations } from '../services/measureService';
 import { fetchMeasureTranslations, applyMeasureTranslations } from '../utils/measureTranslations';
+import { formatDate } from '../utils/dateUtils';
 import api from '../services/api';
 
 const MeasureComparison = ({ patientId }) => {
@@ -164,7 +165,7 @@ const MeasureComparison = ({ patientId }) => {
     dataToUse.forEach(measure => {
       const dataArray = normalizeView ? measure.normalizedData : measure.data;
       dataArray.forEach(point => {
-        const dateStr = new Date(point.date).toLocaleDateString();
+        const dateStr = formatDate(point.date, i18n.language);
         if (!dateMap.has(dateStr)) {
           dateMap.set(dateStr, { date: dateStr });
         }

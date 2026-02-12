@@ -25,6 +25,7 @@ import {
 } from '../utils/chartExportUtils';
 import { fetchMeasureTranslations, applyMeasureTranslations } from '../utils/measureTranslations';
 import AnnotationModal from './AnnotationModal';
+import { formatDate } from '../utils/dateUtils';
 import api from '../services/api';
 
 const MeasureHistory = ({ patientId }) => {
@@ -991,7 +992,7 @@ const MeasureHistory = ({ patientId }) => {
                 )}
                 {/* Annotation Markers (Phase 3) */}
                 {annotations.map(annotation => {
-                  const annotDate = new Date(annotation.event_date).toLocaleDateString();
+                  const annotDate = formatDate(annotation.event_date, i18n.language);
                   return (
                     <ReferenceLine
                       key={annotation.id}
@@ -1058,7 +1059,7 @@ const MeasureHistory = ({ patientId }) => {
                       setShowAnnotationModal(true);
                     }}
                   >
-                    {new Date(annotation.event_date).toLocaleDateString()}: {annotation.title}
+                    {formatDate(annotation.event_date, i18n.language)}: {annotation.title}
                   </Badge>
                 ))}
               </div>

@@ -19,6 +19,7 @@ import {
 import { Line, Bar } from 'react-chartjs-2';
 import { useTranslation } from 'react-i18next';
 import { getPatientDetails } from '../services/patientService';
+import { formatDate } from '../utils/dateUtils';
 
 // Register Chart.js components
 ChartJS.register(
@@ -33,7 +34,7 @@ ChartJS.register(
 );
 
 const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -79,7 +80,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
     if (validMeasurements.length === 0) return null;
 
     return {
-      labels: validMeasurements.map(m => new Date(m.created_at).toLocaleDateString()),
+      labels: validMeasurements.map(m => formatDate(m.created_at, i18n.language)),
       datasets: [{
         label: field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
         data: validMeasurements.map(m => parseFloat(m[field])),
@@ -286,7 +287,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                       <Col sm={6}>
                         <strong>{t('patients.lastVisit')}:</strong><br />
                         {patient.visits?.length > 0
-                          ? new Date(Math.max(...patient.visits.map(v => new Date(v.visit_date)))).toLocaleDateString()
+                          ? formatDate(new Date(Math.max(...patient.visits.map(v => new Date(v.visit_date)))), i18n.language)
                           : t('patients.none')
                         }
                       </Col>
@@ -354,7 +355,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                           data={{
                             labels: allMeasurements
                               .filter(m => m.blood_pressure_systolic)
-                              .map(m => new Date(m.created_at).toLocaleDateString()),
+                              .map(m => formatDate(m.created_at, i18n.language)),
                             datasets: [
                               {
                                 label: t('patients.systolic'),
@@ -396,7 +397,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                           data={{
                             labels: allMeasurements
                               .filter(m => m.body_fat_percentage)
-                              .map(m => new Date(m.created_at).toLocaleDateString()),
+                              .map(m => formatDate(m.created_at, i18n.language)),
                             datasets: [
                               {
                                 label: t('patients.bodyFatPercentage'),
@@ -442,7 +443,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                       <Row>
                         <Col>
                           <h6 className="mb-0">
-                            📅 {new Date(visit.visit_date).toLocaleDateString()} - {visit.visit_type || t('visits.visit')}
+                            📅 {formatDate(visit.visit_date, i18n.language)} - {visit.visit_type || t('visits.visit')}
                           </h6>
                         </Col>
                         <Col xs="auto">
@@ -486,7 +487,7 @@ const PatientDetailModal = ({ patientId, show, onHide, onScheduleVisit }) => {
                                     {measurement.bmi && `BMI: ${measurement.bmi} `}
                                     {measurement.blood_pressure_systolic && `${t('visits.bloodPressure')}: ${measurement.blood_pressure_systolic}/${measurement.blood_pressure_diastolic} `}
                                     <span className="text-muted">
-                                      ({new Date(measurement.created_at).toLocaleDateString()})
+                                      ({formatDate(measurement.created_at, i18n.language)})
                                     </span>
                                   </li>
                                 ))}

@@ -7,6 +7,7 @@ import ActionButton from './ActionButton';
 import ConfirmModal from './ConfirmModal';
 import SyncStatusBadge from './SyncStatusBadge';
 import SyncConflictModal from './SyncConflictModal';
+import { formatDate } from '../utils/dateUtils';
 
 /**
  * Google Calendar Settings Component
@@ -14,7 +15,7 @@ import SyncConflictModal from './SyncConflictModal';
  * Allows users to connect/disconnect Google Calendar and manage sync settings
  */
 const GoogleCalendarSettings = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -432,7 +433,7 @@ const GoogleCalendarSettings = () => {
                     <div>
                       <div className="fw-bold">{visit.patient}</div>
                       <small className="text-muted">
-                        {new Date(visit.visit_date).toLocaleDateString()} - {visit.status}
+                        {formatDate(visit.visit_date, i18n.language)} - {visit.status}
                       </small>
                       {visit.sync_error_message && (
                         <div className="text-danger small mt-1">

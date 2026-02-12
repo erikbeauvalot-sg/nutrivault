@@ -1734,7 +1734,17 @@
     "showInPortalHelp": "If checked, this field will be visible to patients in their portal visit details",
     "fieldRequired": "{{field}} is required",
     "reorderError": "Failed to reorder items",
-    "cannotDeleteCategoryWithFields": "Cannot delete category with fields"
+    "cannotDeleteCategoryWithFields": "Cannot delete category with fields",
+    "showHistoryAtPatientLevel": "Show visit history on patient profile",
+    "showHistoryAtPatientLevelHelp": "Display a historical table/chart of values across all visits",
+    "visitHistory": "Visit History",
+    "visitHistoryReadOnly": "Read-only data. Click a visit date to edit values.",
+    "noVisitHistory": "No visit data yet for this category.",
+    "tableView": "Table",
+    "chartView": "Chart",
+    "visitDate": "Visit Date",
+    "visitType": "Visit Type",
+    "viewsCount": "{{count}} visit(s)"
   },
   "visitTypes": {
     "title": "Visit Types",

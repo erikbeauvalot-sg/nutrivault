@@ -13,6 +13,7 @@ import Layout from '../components/layout/Layout';
 import userService from '../services/userService';
 import customFieldService from '../services/customFieldService';
 import CustomFieldInput from '../components/CustomFieldInput';
+import VisitFieldHistoryPanel from '../components/VisitFieldHistoryPanel';
 import PatientMeasuresTable from '../components/PatientMeasuresTable';
 import api from '../services/api';
 
@@ -208,6 +209,11 @@ const EditPatientPage = () => {
     let firstErrorTab = null;
 
     customFieldCategories.forEach((category, index) => {
+      // Skip validation for history-only categories (read-only)
+      const entityTypes = category.entity_types || ['patient'];
+      const isVisitOnly = entityTypes.includes('visit') && !entityTypes.includes('patient');
+      if (isVisitOnly && category.show_history_at_patient_level) return;
+
       category.fields.forEach(field => {
         const value = fieldValues[field.definition_id];
 
@@ -578,6 +584,9 @@ const EditPatientPage = () => {
                   customFieldCategories.map((category) => {
                     const displayLayout = category.display_layout || { type: 'columns', columns: 2 };
                     const columnWidth = displayLayout.type === 'list' ? 12 : Math.floor(12 / (displayLayout.columns || 2));
+                    const entityTypes = category.entity_types || ['patient'];
+                    const isVisitOnly = entityTypes.includes('visit') && !entityTypes.includes('patient');
+                    const showHistory = isVisitOnly && category.show_history_at_patient_level;
 
                     return (
                     <Tab
@@ -621,7 +630,13 @@ const EditPatientPage = () => {
                           </Alert>
                         )}
 
-                        {category.fields.length === 0 ? (
+                        {showHistory ? (
+                          <VisitFieldHistoryPanel
+                            patientId={id}
+                            categoryId={category.id}
+                            categoryColor={category.color}
+                          />
+                        ) : category.fields.length === 0 ? (
                           <Alert variant="warning">
                             Aucun champ défini pour cette catégorie
                           </Alert>

@@ -169,6 +169,7 @@ async function createCategory(user, categoryData, requestMetadata = {}) {
       entity_types: categoryData.entity_types || ['patient'],
       visit_types: categoryData.visit_types || null,
       display_layout: categoryData.display_layout || { type: 'columns', columns: 1 },
+      show_history_at_patient_level: categoryData.show_history_at_patient_level || false,
       created_by: user.id
     });
 
@@ -221,6 +222,7 @@ async function updateCategory(user, categoryId, updateData, requestMetadata = {}
     if (updateData.entity_types !== undefined) category.entity_types = updateData.entity_types;
     if (updateData.visit_types !== undefined) category.visit_types = updateData.visit_types;
     if (updateData.display_layout !== undefined) category.display_layout = updateData.display_layout;
+    if (updateData.show_history_at_patient_level !== undefined) category.show_history_at_patient_level = updateData.show_history_at_patient_level;
 
     console.log('Color after assignment:', category.color);
 
@@ -400,6 +402,7 @@ async function duplicateCategory(user, categoryId, overrides = {}, requestMetada
       entity_types: overrides.entity_types || originalCategory.entity_types,
       visit_types: overrides.visit_types !== undefined ? overrides.visit_types : originalCategory.visit_types,
       display_layout: overrides.display_layout !== undefined ? overrides.display_layout : originalCategory.display_layout,
+      show_history_at_patient_level: overrides.show_history_at_patient_level !== undefined ? overrides.show_history_at_patient_level : originalCategory.show_history_at_patient_level,
       is_active: overrides.is_active !== undefined ? overrides.is_active : true
     };
 
@@ -434,7 +437,7 @@ async function duplicateCategory(user, categoryId, overrides = {}, requestMetada
 // Fields to export for categories (excludes IDs and timestamps)
 const CATEGORY_EXPORT_FIELDS = [
   'name', 'description', 'display_order', 'is_active', 'color',
-  'entity_types', 'visit_types', 'display_layout'
+  'entity_types', 'visit_types', 'display_layout', 'show_history_at_patient_level'
 ];
 
 // Fields to export for field definitions (excludes IDs and timestamps)
@@ -522,7 +525,8 @@ const CATEGORY_DEFAULTS = {
   color: '#3498db',
   entity_types: ['patient'],
   visit_types: null,
-  display_layout: { type: 'columns', columns: 1 }
+  display_layout: { type: 'columns', columns: 1 },
+  show_history_at_patient_level: false
 };
 
 // Default values for imported field definitions

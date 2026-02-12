@@ -189,6 +189,20 @@ export const updatePatientCustomFields = async (patientId, fields) => {
 };
 
 /**
+ * Get visit field history for a category
+ * @param {string} patientId - Patient UUID
+ * @param {string} categoryId - Category UUID
+ * @param {string} language - Optional language code
+ * @returns {Promise<object>} History data { category, fields, visits }
+ */
+export const getVisitFieldHistory = async (patientId, categoryId, language = null) => {
+  const params = { category_id: categoryId };
+  if (language) params.language = language;
+  const response = await api.get(`/patients/${patientId}/custom-fields/history`, { params });
+  return response.data.data || response.data;
+};
+
+/**
  * Delete a custom field value for a patient
  * @param {string} patientId - Patient UUID
  * @param {string} fieldValueId - Field value UUID
@@ -325,6 +339,7 @@ export default {
   getPatientCustomFields,
   updatePatientCustomFields,
   deletePatientCustomField,
+  getVisitFieldHistory,
 
   // Translations
   getAllTranslations,

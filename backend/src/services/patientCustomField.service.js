@@ -136,6 +136,7 @@ async function getPatientCustomFields(user, patientId, language = 'fr', requestM
       return entityTypes.includes('patient') || entityTypes.includes('visit');
     });
 
+
     // Get patient's custom field values (patient-level)
     const patientValues = await PatientCustomFieldValue.findAll({
       where: { patient_id: patientId },
@@ -400,6 +401,8 @@ async function getPatientCustomFields(user, patientId, language = 'fr', requestM
         color: translatedCategory.color || '#3498db',
         display_layout: translatedCategory.display_layout || { type: 'columns', columns: 2 },
         visit_types: translatedCategory.visit_types || [],
+        entity_types: translatedCategory.entity_types || ['patient'],
+        show_history_at_patient_level: !!translatedCategory.show_history_at_patient_level,
         fields
       };
     }));
@@ -1050,11 +1053,156 @@ async function recalculateAllValuesForField(fieldDefinitionId, user) {
   }
 }
 
+/**
+ * Get visit field history for a category
+ * Returns all visit values for a visit-only category across all patient visits
+ *
+ * @param {Object} user - Authenticated user object
+ * @param {string} patientId - Patient UUID
+ * @param {string} categoryId - Category UUID
+ * @param {string} language - Language code for translations
+ * @returns {Promise<Object>} History data with category, fields, and visits
+ */
+async function getVisitFieldHistory(user, patientId, categoryId, language = 'fr') {
+  try {
+    // Check patient access
+    const hasAccess = await checkPatientAccess(user, patientId);
+    if (!hasAccess) {
+      throw new Error('Access denied to this patient');
+    }
+
+    // Load category
+    const category = await CustomFieldCategory.findByPk(categoryId);
+    if (!category) {
+      throw new Error('Category not found');
+    }
+
+    const entityTypes = category.entity_types || ['patient'];
+    if (!entityTypes.includes('visit')) {
+      throw new Error('Category is not a visit-level category');
+    }
+
+    // Load active definitions for this category
+    const definitions = await CustomFieldDefinition.findAll({
+      where: {
+        category_id: categoryId,
+        is_active: true
+      },
+      order: [['display_order', 'ASC']]
+    });
+
+    if (definitions.length === 0) {
+      return {
+        category: { id: category.id, name: category.name, color: category.color },
+        fields: [],
+        visits: []
+      };
+    }
+
+    // Apply translations if needed
+    let translatedDefs = definitions;
+    if (language && language !== 'fr') {
+      translatedDefs = await Promise.all(
+        definitions.map(def => translationService.applyTranslations(def, 'field_definition', language))
+      );
+    }
+
+    let translatedCategoryName = category.name;
+    if (language && language !== 'fr') {
+      const translatedCat = await translationService.applyTranslations(category, 'category', language);
+      translatedCategoryName = translatedCat.name;
+    }
+
+    // Load ALL visits for this patient, sorted by visit_date DESC
+    const visits = await db.Visit.findAll({
+      where: { patient_id: patientId },
+      order: [['visit_date', 'DESC']],
+      attributes: ['id', 'visit_date', 'visit_type', 'status']
+    });
+
+    if (visits.length === 0) {
+      return {
+        category: { id: category.id, name: translatedCategoryName, color: category.color },
+        fields: translatedDefs.map(def => ({
+          id: def.id,
+          field_name: def.field_name,
+          field_label: def.field_label,
+          field_type: def.field_type,
+          validation_rules: def.validation_rules,
+          select_options: def.select_options,
+          decimal_places: def.decimal_places
+        })),
+        visits: []
+      };
+    }
+
+    const visitIds = visits.map(v => v.id);
+    const fieldDefIds = definitions.map(d => d.id);
+
+    // Batch-fetch all VisitCustomFieldValues
+    const allValues = await db.VisitCustomFieldValue.findAll({
+      where: {
+        visit_id: { [Op.in]: visitIds },
+        field_definition_id: { [Op.in]: fieldDefIds }
+      },
+      include: [{
+        model: CustomFieldDefinition,
+        as: 'field_definition',
+        attributes: ['field_type', 'allow_multiple']
+      }]
+    });
+
+    // Group values by visit_id
+    const valuesByVisit = {};
+    allValues.forEach(val => {
+      if (!valuesByVisit[val.visit_id]) {
+        valuesByVisit[val.visit_id] = {};
+      }
+      const fieldType = val.field_definition?.field_type || 'text';
+      const allowMultiple = val.field_definition?.allow_multiple || false;
+      valuesByVisit[val.visit_id][val.field_definition_id] = val.getValue(fieldType, allowMultiple);
+    });
+
+    // Build response
+    return {
+      category: { id: category.id, name: translatedCategoryName, color: category.color },
+      fields: translatedDefs.map(def => {
+        let selectOptions = null;
+        try {
+          selectOptions = def.select_options ? (typeof def.select_options === 'string' ? JSON.parse(def.select_options) : def.select_options) : null;
+        } catch (e) {
+          selectOptions = def.select_options;
+        }
+        return {
+          id: def.id,
+          field_name: def.field_name,
+          field_label: def.field_label,
+          field_type: def.field_type,
+          validation_rules: def.validation_rules,
+          select_options: selectOptions,
+          decimal_places: def.decimal_places
+        };
+      }),
+      visits: visits.map(visit => ({
+        visit_id: visit.id,
+        visit_date: visit.visit_date,
+        visit_type: visit.visit_type,
+        status: visit.status,
+        values: valuesByVisit[visit.id] || {}
+      }))
+    };
+  } catch (error) {
+    console.error('Error in getVisitFieldHistory:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getPatientCustomFields,
   setPatientCustomField,
   bulkUpdatePatientFields,
   deletePatientCustomField,
   recalculateAllValuesForField,
-  clearCalculatedFieldsCache
+  clearCalculatedFieldsCache,
+  getVisitFieldHistory
 };

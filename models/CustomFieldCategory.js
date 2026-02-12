@@ -110,6 +110,11 @@ module.exports = (sequelize, DataTypes) => {
         }
       }
     },
+    show_history_at_patient_level: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
     created_by: {
       type: DataTypes.UUID,
       allowNull: true

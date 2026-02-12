@@ -16,10 +16,11 @@ import UserModal from '../components/UserModal';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import ActionButton from '../components/ActionButton';
 import ConfirmModal from '../components/ConfirmModal';
+import { getLocale, getTimezone } from '../utils/dateUtils';
 import './UsersPage.css';
 
 const UsersPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
@@ -184,7 +185,7 @@ const UsersPage = () => {
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleDateString(getLocale(i18n.language), { timeZone: getTimezone(), year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
   // Redirect early if no access

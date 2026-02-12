@@ -115,6 +115,42 @@ const deletePatientCustomField = async (req, res) => {
   }
 };
 
+/**
+ * Get visit field history for a category
+ * GET /api/patients/:patientId/custom-fields/history?category_id=xxx
+ */
+const getVisitFieldHistory = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const { category_id } = req.query;
+    const user = req.user;
+    const language = req.query.language || user.language_preference || 'fr';
+
+    if (!category_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'category_id query parameter is required'
+      });
+    }
+
+    const data = await patientCustomFieldService.getVisitFieldHistory(user, patientId, category_id, language);
+
+    res.json({
+      success: true,
+      data
+    });
+  } catch (error) {
+    console.error('Get visit field history error:', error);
+    const statusCode = error.message === 'Access denied to this patient' ? 403
+      : error.message === 'Category not found' ? 404
+      : (error.statusCode || 500);
+    res.status(statusCode).json({
+      success: false,
+      error: error.message || 'Failed to get visit field history'
+    });
+  }
+};
+
 // Validation middleware
 const validateUpdatePatientCustomFields = [
   param('patientId').isUUID().withMessage('Invalid patient ID'),
@@ -138,6 +174,7 @@ module.exports = {
   getPatientCustomFields,
   updatePatientCustomFields,
   deletePatientCustomField,
+  getVisitFieldHistory,
   validateUpdatePatientCustomFields,
   validateDeletePatientCustomField
 };

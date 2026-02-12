@@ -17,6 +17,7 @@ import InvoiceList from '../components/InvoiceList';
 import CustomFieldInput from '../components/CustomFieldInput';
 import CustomFieldDisplay from '../components/CustomFieldDisplay';
 import CustomFieldRadarChart from '../components/CustomFieldRadarChart';
+import VisitFieldHistoryPanel from '../components/VisitFieldHistoryPanel';
 import MeasureHistory from '../components/MeasureHistory';
 import MeasureComparison from '../components/MeasureComparison';
 import EmailHistory from '../components/EmailHistory';
@@ -873,9 +874,6 @@ const PatientDetailPage = () => {
                   </Card.Body>
                 </Card>
 
-                {/* Portal Status Card */}
-                <PortalStatusCard patientId={id} patientEmail={patient?.email} />
-
                 {/* Patient Objectives */}
                 <Card className="mb-3">
                   <Card.Header className="d-flex justify-content-between align-items-center">
@@ -989,6 +987,9 @@ const PatientDetailPage = () => {
                 // Get display layout configuration
                 const displayLayout = category.display_layout || { type: 'columns', columns: 2 };
                 const columnWidth = getColumnWidth(displayLayout.columns || 2);
+                const entityTypes = category.entity_types || ['patient'];
+                const isVisitOnly = entityTypes.includes('visit') && !entityTypes.includes('patient');
+                const showHistory = isVisitOnly && category.show_history_at_patient_level;
 
                 return (
                   <Tab
@@ -1030,7 +1031,13 @@ const PatientDetailPage = () => {
                           {category.description}
                         </Alert>
                       )}
-                      {category.fields.length === 0 ? (
+                      {showHistory ? (
+                        <VisitFieldHistoryPanel
+                          patientId={id}
+                          categoryId={category.id}
+                          categoryColor={category.color}
+                        />
+                      ) : category.fields.length === 0 ? (
                         <Alert variant="warning">
                           Aucun champ défini pour cette catégorie
                         </Alert>
@@ -1447,6 +1454,9 @@ const PatientDetailPage = () => {
                       </Row>
                     </Card.Body>
                   </Card>
+
+                  {/* Portal Status */}
+                  <PortalStatusCard patientId={id} patientEmail={patient?.email} />
 
                   {/* Email Communication History */}
                   <EmailHistory patientId={id} />

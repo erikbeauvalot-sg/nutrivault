@@ -44,6 +44,7 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
   const [visitTypes, setVisitTypes] = useState([]);
   const [selectedVisitTypes, setSelectedVisitTypes] = useState(null); // null = all types
   const [displayLayout, setDisplayLayout] = useState({ type: 'columns', columns: 1 });
+  const [showHistoryAtPatientLevel, setShowHistoryAtPatientLevel] = useState(false);
 
   const isEditing = !!category;
 
@@ -88,6 +89,7 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
       setEntityTypes(categoryEntityTypes);
       setSelectedVisitTypes(categoryVisitTypes);
       setDisplayLayout(categoryDisplayLayout);
+      setShowHistoryAtPatientLevel(category.show_history_at_patient_level || false);
       reset({
         name: category.name || '',
         description: category.description || '',
@@ -100,6 +102,7 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
       setEntityTypes(['patient']);
       setSelectedVisitTypes(null);
       setDisplayLayout({ type: 'columns', columns: 1 });
+      setShowHistoryAtPatientLevel(false);
       reset({
         name: '',
         description: '',
@@ -128,7 +131,8 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
         ...data,
         entity_types: entityTypes,
         visit_types: selectedVisitTypes,
-        display_layout: displayLayout
+        display_layout: displayLayout,
+        show_history_at_patient_level: showHistoryAtPatientLevel
       };
 
       if (isEditing) {
@@ -159,6 +163,7 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
     setEntityTypes(['patient']);
     setSelectedVisitTypes(null);
     setDisplayLayout({ type: 'columns', columns: 1 });
+    setShowHistoryAtPatientLevel(false);
     onHide();
   };
 
@@ -365,6 +370,22 @@ const CustomFieldCategoryModal = ({ show, onHide, category, onSuccess }) => {
               )}
               <Form.Text className="text-muted d-block mt-2">
                 {t('customFields.visitTypesHelp', 'Choose which visit types should display this category. If "All visit types" is selected, this category appears on every visit.')}
+              </Form.Text>
+            </Form.Group>
+          )}
+
+          {/* Show History at Patient Level - Only for visit-only categories */}
+          {entityTypes.includes('visit') && !entityTypes.includes('patient') && (
+            <Form.Group className="mb-3">
+              <Form.Check
+                type="checkbox"
+                id="show-history-at-patient-level"
+                label={t('customFields.showHistoryAtPatientLevel', 'Afficher l\'historique sur le profil patient')}
+                checked={showHistoryAtPatientLevel}
+                onChange={(e) => setShowHistoryAtPatientLevel(e.target.checked)}
+              />
+              <Form.Text className="text-muted d-block mt-1">
+                {t('customFields.showHistoryAtPatientLevelHelp', 'Affiche un tableau/graphique des valeurs à travers toutes les visites')}
               </Form.Text>
             </Form.Group>
           )}

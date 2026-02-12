@@ -13,9 +13,10 @@ import visitTypeService from '../services/visitTypeService';
 import SlidePanel from './ui/SlidePanel';
 import FormSection from './ui/FormSection';
 import SearchableSelect from './ui/SearchableSelect';
+import { formatDate } from '../utils/dateUtils';
 
 const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -128,7 +129,7 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
           setFormData(prev => ({
             ...prev,
             amount_total: parseFloat(matchedType.default_price).toFixed(2),
-            description: prev.description || `${selectedVisit.visit_type} - ${new Date(selectedVisit.visit_date).toLocaleDateString()}`
+            description: prev.description || `${selectedVisit.visit_type} - ${formatDate(selectedVisit.visit_date, i18n.language)}`
           }));
         }
       }
@@ -261,7 +262,7 @@ const CreateInvoiceModal = ({ show, onHide, onSubmit, preSelectedPatient }) => {
               <option value="">{t('billing.noVisit', 'No associated visit')}</option>
               {visits.map(visit => (
                 <option key={visit.id} value={visit.id}>
-                  {new Date(visit.visit_date).toLocaleDateString()} - {visit.visit_type}
+                  {formatDate(visit.visit_date, i18n.language)} - {visit.visit_type}
                   {visit.status && ` (${getStatusText(visit.status)})`}
                 </option>
               ))}

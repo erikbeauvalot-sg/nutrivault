@@ -31,9 +31,10 @@ import {
   FaEyeSlash,
   FaSave
 } from 'react-icons/fa';
+import { formatDate } from '../utils/dateUtils';
 
 const EmailConfigPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -214,7 +215,7 @@ const EmailConfigPage = () => {
                         {t('emailConfig.verified', 'Verified')}
                         {config.verified_at && (
                           <small className="ms-1 opacity-75">
-                            ({new Date(config.verified_at).toLocaleDateString()})
+                            ({formatDate(config.verified_at, i18n.language)})
                           </small>
                         )}
                       </Badge>

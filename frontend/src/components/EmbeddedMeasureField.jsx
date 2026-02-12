@@ -13,9 +13,10 @@ import {
   logPatientMeasure,
   updatePatientMeasure
 } from '../services/measureService';
+import { formatDateTimeShort } from '../utils/dateUtils';
 
 const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, readOnly = false }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [measureDefinition, setMeasureDefinition] = useState(null);
@@ -201,16 +202,8 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
     saveValue(checked);
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const formatMeasureDate = (dateString) => {
+    return formatDateTimeShort(dateString, i18n.language);
   };
 
   if (loading) {
@@ -270,7 +263,7 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
         </span>
         {latestMeasure?.measured_at && (
           <small className="text-muted d-block" style={{ fontSize: '0.75rem' }}>
-            {t('measures.lastRecorded', 'Last')}: {formatDate(latestMeasure.measured_at)}
+            {t('measures.lastRecorded', 'Last')}: {formatMeasureDate(latestMeasure.measured_at)}
           </small>
         )}
       </div>
@@ -350,7 +343,7 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
       {renderInput()}
       {latestMeasure?.measured_at && (
         <small className="text-muted" style={{ fontSize: '0.75rem' }}>
-          {t('measures.lastRecorded', 'Last')}: {formatDate(latestMeasure.measured_at)}
+          {t('measures.lastRecorded', 'Last')}: {formatMeasureDate(latestMeasure.measured_at)}
         </small>
       )}
     </div>
