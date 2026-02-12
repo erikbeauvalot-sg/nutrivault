@@ -12,6 +12,7 @@ import * as tokenStorage from '../../utils/tokenStorage';
 import { FiLogOut } from 'react-icons/fi';
 import LanguageSelector from '../LanguageSelector';
 import ThemeSelector from '../ThemeSelector';
+import NotificationBell from '../common/NotificationBell';
 
 const Header = ({ onToggleSidebar, hideHamburger = false }) => {
   const { user, logout } = useAuth();
@@ -53,6 +54,7 @@ const Header = ({ onToggleSidebar, hideHamburger = false }) => {
         </Navbar.Brand>
         {isNative ? (
           <div className="d-flex align-items-center gap-2">
+            <NotificationBell />
             <ThemeSelector />
             <button
               onClick={handleLogout}
@@ -71,6 +73,9 @@ const Header = ({ onToggleSidebar, hideHamburger = false }) => {
                 <Nav.Link as={Link} to="/patients">{t('navigation.patients')}</Nav.Link>
               </Nav>
               <Nav className="align-items-center">
+                <div className="me-2">
+                  <NotificationBell />
+                </div>
                 <div className="me-2">
                   <ThemeSelector />
                 </div>

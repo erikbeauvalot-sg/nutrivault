@@ -240,6 +240,10 @@ app.use('/api/notification-preferences', notificationPreferencesRoutes);
 const messagesRoutes = require('./routes/messages');
 app.use('/api/messages', messagesRoutes);
 
+// Notifications routes (in-app notification center)
+const notificationRoutes = require('./routes/notifications');
+app.use('/api/notifications', notificationRoutes);
+
 // Apple App Site Association — iOS credential autofill
 app.get('/.well-known/apple-app-site-association', (req, res) => {
   res.json({

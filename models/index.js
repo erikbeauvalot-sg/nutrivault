@@ -66,6 +66,7 @@ db.NotificationPreference = require('./NotificationPreference')(sequelize, DataT
 db.Conversation = require('./Conversation')(sequelize, DataTypes);
 db.Message = require('./Message')(sequelize, DataTypes);
 db.PatientObjective = require('./PatientObjective')(sequelize, DataTypes);
+db.Notification = require('./Notification')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -942,5 +943,9 @@ db.PatientObjective.belongsTo(db.Patient, { foreignKey: 'patient_id', as: 'patie
 db.Patient.hasMany(db.PatientObjective, { foreignKey: 'patient_id', as: 'objectives' });
 db.PatientObjective.belongsTo(db.User, { foreignKey: 'created_by', as: 'creator' });
 db.User.hasMany(db.PatientObjective, { foreignKey: 'created_by', as: 'created_objectives' });
+
+// Notification associations
+db.Notification.belongsTo(db.User, { foreignKey: 'user_id', as: 'user' });
+db.User.hasMany(db.Notification, { foreignKey: 'user_id', as: 'notifications' });
 
 module.exports = db;

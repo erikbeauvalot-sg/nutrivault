@@ -48,8 +48,6 @@ async function initialize() {
  * @param {string} [preferenceKey] - Optional preference key to check (e.g., 'appointment_reminders')
  */
 async function sendToUser(userId, { title, body, data = {} }, preferenceKey = null) {
-  if (!initialized) return;
-
   try {
     // Check notification preferences if a key is specified
     if (preferenceKey) {
@@ -61,12 +59,32 @@ async function sendToUser(userId, { title, body, data = {} }, preferenceKey = nu
       }
     }
 
+    // Persist notification in DB (always, even if push is disabled)
+    try {
+      await db.Notification.create({
+        user_id: userId,
+        type: data.type || 'general',
+        title,
+        body,
+        data,
+      });
+    } catch (dbErr) {
+      console.error('[PushNotification] Failed to persist notification:', dbErr.message);
+    }
+
+    if (!initialized) return;
+
     // Get all active device tokens for this user
     const tokens = await db.DeviceToken.findAll({
       where: { user_id: userId, is_active: true },
     });
 
     if (tokens.length === 0) return;
+
+    // Get dynamic unread count for iOS badge
+    const unreadCount = await db.Notification.count({
+      where: { user_id: userId, is_read: false },
+    });
 
     // Send to each token
     const results = await Promise.allSettled(
@@ -81,7 +99,7 @@ async function sendToUser(userId, { title, body, data = {} }, preferenceKey = nu
                 aps: {
                   alert: { title, body },
                   sound: 'default',
-                  badge: 1,
+                  badge: unreadCount,
                 },
               },
             },
@@ -215,6 +233,48 @@ async function sendNewMessageNotification(userId, senderName, preview) {
   );
 }
 
+/**
+ * Reset iOS badge to 0 via silent push to all user devices
+ */
+async function resetBadge(userId) {
+  if (!initialized) return;
+
+  try {
+    const tokens = await db.DeviceToken.findAll({
+      where: { user_id: userId, is_active: true },
+    });
+
+    if (tokens.length === 0) return;
+
+    await Promise.allSettled(
+      tokens.map(async (deviceToken) => {
+        try {
+          await admin.messaging().send({
+            token: deviceToken.token,
+            apns: {
+              payload: {
+                aps: {
+                  badge: 0,
+                  'content-available': 1,
+                },
+              },
+            },
+          });
+        } catch (sendError) {
+          if (
+            sendError.code === 'messaging/invalid-registration-token' ||
+            sendError.code === 'messaging/registration-token-not-registered'
+          ) {
+            await deviceToken.update({ is_active: false });
+          }
+        }
+      })
+    );
+  } catch (error) {
+    console.error('[PushNotification] resetBadge error:', error.message);
+  }
+}
+
 module.exports = {
   initialize,
   sendToUser,
@@ -224,4 +284,5 @@ module.exports = {
   sendJournalCommentNotification,
   sendJournalNoteNotification,
   sendNewMessageNotification,
+  resetBadge,
 };

@@ -3367,5 +3367,23 @@
     "none": "Aucun objectif défini",
     "saved": "Objectifs enregistrés",
     "saveError": "Erreur lors de la sauvegarde des objectifs"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "Aucune notification pour le moment",
+    "markAllRead": "Tout marquer comme lu",
+    "loadMore": "Charger plus",
+    "justNow": "À l'instant",
+    "minutesAgo": "Il y a {{count}}min",
+    "hoursAgo": "Il y a {{count}}h",
+    "daysAgo": "Il y a {{count}}j",
+    "types": {
+      "appointment_reminder": "Rappel de rendez-vous",
+      "new_message": "Nouveau message",
+      "new_document": "Nouveau document",
+      "journal_comment": "Commentaire journal",
+      "measure_alert": "Alerte mesure",
+      "general": "Notification"
+    }
   }
 }

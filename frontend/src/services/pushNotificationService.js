@@ -47,24 +47,38 @@ if (isNative) {
 }
 
 /**
- * Navigate based on notification type
+ * Navigate based on notification type — detects role for correct prefix
  */
 function handleNotificationTap(data) {
   const type = data?.type;
+  // Detect role from stored user data
+  let storedUser = null;
+  try {
+    const raw = localStorage.getItem('user');
+    if (raw) storedUser = JSON.parse(raw);
+  } catch { /* ignore */ }
+  const isPatient = storedUser?.role === 'PATIENT';
+  const prefix = isPatient ? '/portal' : '';
+
   switch (type) {
     case 'journal_comment':
-      window.location.href = '/portal/journal';
+      window.location.href = isPatient ? '/portal/journal' : '/dashboard';
       break;
     case 'new_message':
-      window.location.href = '/portal/messages';
+      window.location.href = `${prefix}/messages`;
       break;
     case 'appointment_reminder':
-      window.location.href = '/portal/visits';
+      window.location.href = isPatient ? '/portal/visits' : '/agenda';
       break;
     case 'new_document':
-      window.location.href = '/portal/documents';
+      window.location.href = `${prefix}/documents`;
+      break;
+    case 'measure_alert':
+      window.location.href = isPatient ? '/portal/measures' : '/dashboard';
       break;
     default:
+      // Default: go to notification center
+      window.location.href = isPatient ? '/portal/notifications' : '/notifications';
       break;
   }
 }
@@ -96,9 +110,10 @@ export async function setup() {
       }
     });
 
-    // Push received while app is in foreground
+    // Push received while app is in foreground — dispatch event for NotificationContext
     push.addListener('pushNotificationReceived', (notification) => {
       console.log('[Push] Notification received in foreground:', notification.title);
+      window.dispatchEvent(new CustomEvent('notificationReceived'));
     });
 
     // User tapped on a push notification

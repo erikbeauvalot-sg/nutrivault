@@ -62,6 +62,7 @@ const ThemeManagementPage = lazy(() => import('./pages/ThemeManagementPage'));
 const ScheduledTasksPage = lazy(() => import('./pages/ScheduledTasksPage'));
 const DiscordWebhookPage = lazy(() => import('./pages/DiscordWebhookPage'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
+const NotificationCenterPage = lazy(() => import('./pages/NotificationCenterPage'));
 
 // Patient Portal pages
 const PatientPortalDashboard = lazy(() => import('./pages/portal/PatientPortalDashboard'));
@@ -444,6 +445,15 @@ function App() {
       />
 
       <Route
+        path="/notifications"
+        element={
+          <ProtectedRoute>
+            <NotificationCenterPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/settings/discord"
         element={
           <ProtectedRoute>
@@ -539,6 +549,7 @@ function App() {
       <Route path="/portal/invoices" element={<PatientProtectedRoute><PatientPortalInvoices /></PatientProtectedRoute>} />
       <Route path="/portal/recipes" element={<PatientProtectedRoute><PatientPortalRecipes /></PatientProtectedRoute>} />
       <Route path="/portal/recipes/:id" element={<PatientProtectedRoute><PatientPortalRecipeDetail /></PatientProtectedRoute>} />
+      <Route path="/portal/notifications" element={<PatientProtectedRoute><NotificationCenterPage /></PatientProtectedRoute>} />
       <Route path="/portal/profile" element={<PatientProtectedRoute><PatientPortalProfile /></PatientProtectedRoute>} />
 
       {/* Default Route */}

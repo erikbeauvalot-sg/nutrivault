@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { FiLogOut } from 'react-icons/fi';
 import LanguageSelector from '../LanguageSelector';
 import ThemeSelector from '../ThemeSelector';
+import NotificationBell from '../common/NotificationBell';
 import PatientPortalSidebar from './PatientPortalSidebar';
 import BottomTabBar from '../portal/BottomTabBar';
 import OfflineBanner from '../common/OfflineBanner';
@@ -68,6 +69,7 @@ const PatientPortalLayout = ({ children }) => {
           </Navbar.Brand>
           {isNative ? (
             <div className="d-flex align-items-center gap-2">
+              <NotificationBell />
               <ThemeSelector />
               <button
                 onClick={handleLogout}
@@ -82,6 +84,9 @@ const PatientPortalLayout = ({ children }) => {
               <Navbar.Toggle aria-controls="portal-navbar-nav" />
               <Navbar.Collapse id="portal-navbar-nav">
                 <Nav className="ms-auto align-items-lg-center flex-row flex-wrap gap-2 py-2 py-lg-0">
+                  <div>
+                    <NotificationBell />
+                  </div>
                   <div>
                     <ThemeSelector />
                   </div>

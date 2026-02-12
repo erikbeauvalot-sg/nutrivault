@@ -3213,5 +3213,23 @@
     "none": "No goals defined",
     "saved": "Goals saved",
     "saveError": "Error saving goals"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications yet",
+    "markAllRead": "Mark all as read",
+    "loadMore": "Load more",
+    "justNow": "Just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago",
+    "types": {
+      "appointment_reminder": "Appointment reminder",
+      "new_message": "New message",
+      "new_document": "New document",
+      "journal_comment": "Journal comment",
+      "measure_alert": "Measure alert",
+      "general": "Notification"
+    }
   }
 }

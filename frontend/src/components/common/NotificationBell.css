@@ -1,0 +1,32 @@
+.notification-bell-btn {
+  position: relative;
+  background: none;
+  border: none;
+  color: #fff;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.notification-bell-btn:hover {
+  opacity: 0.8;
+}
+
+.notification-bell-badge {
+  position: absolute;
+  top: -2px;
+  right: 0;
+  background: #e53e3e;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  border-radius: 8px;
+  padding: 0 4px;
+  pointer-events: none;
+}
