@@ -13,6 +13,7 @@
 const express = require('express');
 const router = express.Router();
 const emailTemplateController = require('../controllers/emailTemplateController');
+const emailTemplateService = require('../services/emailTemplate.service');
 const authenticate = require('../middleware/authenticate');
 const { requirePermission, requireRole } = require('../middleware/rbac');
 
@@ -108,25 +109,45 @@ router.post(
 /**
  * PUT /api/email-templates/:id
  * Update an email template
- * Role: ADMIN only
+ * Admin can edit any, dietitian can edit their own overrides
  */
 router.put(
   '/:id',
   authenticate,
-  requireRole('ADMIN'),
+  async (req, res, next) => {
+    // Admin can edit anything
+    if (req.user.role === 'ADMIN') return next();
+    // Non-admin: check they own this template
+    try {
+      const template = await emailTemplateService.getTemplateById(req.params.id);
+      if (template.user_id && template.user_id === req.user.id) return next();
+      return res.status(403).json({ success: false, error: 'You can only edit your own template overrides' });
+    } catch (error) {
+      return res.status(404).json({ success: false, error: 'Template not found' });
+    }
+  },
   emailTemplateController.validateUpdateTemplate,
   emailTemplateController.updateTemplate
 );
 
 /**
  * DELETE /api/email-templates/:id
- * Delete an email template (soft delete)
- * Role: ADMIN only
+ * Delete an email template
+ * Admin can delete any non-system, dietitian can delete their own overrides
  */
 router.delete(
   '/:id',
   authenticate,
-  requireRole('ADMIN'),
+  async (req, res, next) => {
+    if (req.user.role === 'ADMIN') return next();
+    try {
+      const template = await emailTemplateService.getTemplateById(req.params.id);
+      if (template.user_id && template.user_id === req.user.id) return next();
+      return res.status(403).json({ success: false, error: 'You can only delete your own template overrides' });
+    } catch (error) {
+      return res.status(404).json({ success: false, error: 'Template not found' });
+    }
+  },
   emailTemplateController.deleteTemplate
 );
 
@@ -152,6 +173,45 @@ router.patch(
   authenticate,
   requireRole('ADMIN'),
   emailTemplateController.toggleActive
+);
+
+/**
+ * POST /api/email-templates/:id/customize
+ * Clone a system template for the current dietitian
+ * All authenticated users (non-admin creates their own override)
+ */
+router.post(
+  '/:id/customize',
+  authenticate,
+  async (req, res) => {
+    try {
+      const template = await emailTemplateService.customizeTemplate(req.params.id, req.user.id);
+      res.status(201).json({ success: true, data: template });
+    } catch (error) {
+      console.error('Error customizing template:', error);
+      const status = error.message.includes('already have') ? 409 : 400;
+      res.status(status).json({ success: false, error: error.message });
+    }
+  }
+);
+
+/**
+ * DELETE /api/email-templates/:id/reset-to-default
+ * Delete dietitian's override, returning to system template
+ * All authenticated users (can only reset their own)
+ */
+router.delete(
+  '/:id/reset-to-default',
+  authenticate,
+  async (req, res) => {
+    try {
+      await emailTemplateService.resetToDefault(req.params.id, req.user.id);
+      res.json({ success: true, message: 'Template reset to default' });
+    } catch (error) {
+      console.error('Error resetting template:', error);
+      res.status(400).json({ success: false, error: error.message });
+    }
+  }
 );
 
 /**

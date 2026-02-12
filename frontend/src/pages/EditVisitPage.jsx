@@ -1030,12 +1030,7 @@ const EditVisitPage = () => {
                   const displayLayout = category.display_layout || { type: 'columns', columns: 1 };
                   const columnWidth = getColumnWidth(displayLayout);
 
-                  // Debug: Log layout info for each category
-                  console.log(`[DEBUG] Rendering category "${category.name}":`, {
-                    display_layout: category.display_layout,
-                    resolved_layout: displayLayout,
-                    columnWidth
-                  });
+
 
                   return (
                     <Tab

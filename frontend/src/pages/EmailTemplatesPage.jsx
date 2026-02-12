@@ -34,7 +34,9 @@ import {
   FaSearch,
   FaEnvelope,
   FaFileExport,
-  FaFileImport
+  FaFileImport,
+  FaMagic,
+  FaUndo
 } from 'react-icons/fa';
 import ActionButton from '../components/ActionButton';
 import ConfirmModal from '../components/ConfirmModal';
@@ -75,15 +77,10 @@ const EmailTemplatesPage = () => {
     { value: 'general', label: 'General', icon: '✉️' }
   ];
 
-  // Redirect if not admin
-  useEffect(() => {
-    if (user && user.role !== 'ADMIN') {
-      navigate('/dashboard');
-    }
-  }, [user, navigate]);
+  const isAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
-    if (user && user.role === 'ADMIN') {
+    if (user) {
       fetchTemplates();
     }
   }, [user, categoryFilter, activeFilter]);
@@ -147,6 +144,29 @@ const EmailTemplatesPage = () => {
     } catch (err) {
       console.error('Error duplicating template:', err);
       alert(err.response?.data?.error || 'Failed to duplicate template');
+    }
+  };
+
+  const handleCustomizeTemplate = async (template) => {
+    try {
+      await emailTemplateService.customizeTemplate(template.id);
+      fetchTemplates();
+    } catch (err) {
+      console.error('Error customizing template:', err);
+      alert(err.response?.data?.error || t('emailTemplates.customizeFailed', 'Failed to customize template'));
+    }
+  };
+
+  const handleResetToDefault = async (template) => {
+    if (!window.confirm(t('emailTemplates.confirmReset', 'Reset this template to the system default? Your customizations will be lost.'))) {
+      return;
+    }
+    try {
+      await emailTemplateService.resetToDefault(template.id);
+      fetchTemplates();
+    } catch (err) {
+      console.error('Error resetting template:', err);
+      alert(err.response?.data?.error || t('emailTemplates.resetFailed', 'Failed to reset template'));
     }
   };
 
@@ -231,29 +251,31 @@ const EmailTemplatesPage = () => {
                 </h2>
                 <p className="text-muted mb-0">Manage email templates for automated notifications</p>
               </div>
-              <ButtonGroup>
-                <Button
-                  variant="outline-primary"
-                  onClick={() => setShowExportModal(true)}
-                >
-                  <FaFileExport className="me-2" />
-                  {t('emailTemplates.export', 'Export')}
-                </Button>
-                <Button
-                  variant="outline-primary"
-                  onClick={() => setShowImportModal(true)}
-                >
-                  <FaFileImport className="me-2" />
-                  {t('emailTemplates.import', 'Import')}
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={handleCreateTemplate}
-                >
-                  <FaPlus className="me-2" />
-                  Create Template
-                </Button>
-              </ButtonGroup>
+              {isAdmin && (
+                <ButtonGroup>
+                  <Button
+                    variant="outline-primary"
+                    onClick={() => setShowExportModal(true)}
+                  >
+                    <FaFileExport className="me-2" />
+                    {t('emailTemplates.export', 'Export')}
+                  </Button>
+                  <Button
+                    variant="outline-primary"
+                    onClick={() => setShowImportModal(true)}
+                  >
+                    <FaFileImport className="me-2" />
+                    {t('emailTemplates.import', 'Import')}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleCreateTemplate}
+                  >
+                    <FaPlus className="me-2" />
+                    Create Template
+                  </Button>
+                </ButtonGroup>
+              )}
             </div>
           </Col>
         </Row>
@@ -334,9 +356,13 @@ const EmailTemplatesPage = () => {
                         <Badge bg="info" className="me-2">
                           v{template.version}
                         </Badge>
-                        {template.is_system && (
+                        {!template.user_id ? (
                           <Badge bg="warning" text="dark">
-                            System
+                            {t('emailTemplates.systemBadge', 'System')}
+                          </Badge>
+                        ) : (
+                          <Badge bg="success">
+                            {t('emailTemplates.yourVersionBadge', 'Your Version')}
                           </Badge>
                         )}
                       </div>
@@ -380,32 +406,67 @@ const EmailTemplatesPage = () => {
                         onClick={() => handlePreviewTemplate(template)}
                         title={t('common.preview', 'Preview')}
                       />
-                      <ActionButton
-                        action="edit"
-                        onClick={() => handleEditTemplate(template)}
-                        title={t('common.edit', 'Edit')}
-                      />
-                      <ActionButton
-                        action="duplicate"
-                        onClick={() => handleDuplicateTemplate(template)}
-                        title={t('common.duplicate', 'Duplicate')}
-                      />
-                      <ActionButton
-                        action="translate"
-                        onClick={() => handleTranslations(template)}
-                        title={t('common.translations', 'Translations')}
-                      />
-                      <ActionButton
-                        action={template.is_active ? 'disable' : 'enable'}
-                        onClick={() => handleToggleActive(template)}
-                        title={template.is_active ? t('common.deactivate', 'Deactivate') : t('common.activate', 'Activate')}
-                      />
-                      <ActionButton
-                        action="delete"
-                        onClick={() => handleDeleteTemplate(template)}
-                        disabled={template.is_system}
-                        title={template.is_system ? t('emailTemplates.cannotDeleteSystem', 'System templates cannot be deleted') : t('common.delete', 'Delete')}
-                      />
+                      {/* Admin: full control on all templates */}
+                      {isAdmin && (
+                        <>
+                          <ActionButton
+                            action="edit"
+                            onClick={() => handleEditTemplate(template)}
+                            title={t('common.edit', 'Edit')}
+                          />
+                          <ActionButton
+                            action="duplicate"
+                            onClick={() => handleDuplicateTemplate(template)}
+                            title={t('common.duplicate', 'Duplicate')}
+                          />
+                          <ActionButton
+                            action="translate"
+                            onClick={() => handleTranslations(template)}
+                            title={t('common.translations', 'Translations')}
+                          />
+                          <ActionButton
+                            action={template.is_active ? 'disable' : 'enable'}
+                            onClick={() => handleToggleActive(template)}
+                            title={template.is_active ? t('common.deactivate', 'Deactivate') : t('common.activate', 'Activate')}
+                          />
+                          <ActionButton
+                            action="delete"
+                            onClick={() => handleDeleteTemplate(template)}
+                            disabled={template.is_system}
+                            title={template.is_system ? t('emailTemplates.cannotDeleteSystem', 'System templates cannot be deleted') : t('common.delete', 'Delete')}
+                          />
+                        </>
+                      )}
+                      {/* Non-admin: customize system templates or edit/reset own overrides */}
+                      {!isAdmin && !template.user_id && (
+                        <Button
+                          size="sm"
+                          variant="outline-primary"
+                          onClick={() => handleCustomizeTemplate(template)}
+                          title={t('emailTemplates.customize', 'Customize')}
+                        >
+                          <FaMagic className="me-1" />
+                          {t('emailTemplates.customize', 'Customize')}
+                        </Button>
+                      )}
+                      {!isAdmin && template.user_id && (
+                        <>
+                          <ActionButton
+                            action="edit"
+                            onClick={() => handleEditTemplate(template)}
+                            title={t('common.edit', 'Edit')}
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline-warning"
+                            onClick={() => handleResetToDefault(template)}
+                            title={t('emailTemplates.resetToDefault', 'Reset to Default')}
+                          >
+                            <FaUndo className="me-1" />
+                            {t('emailTemplates.resetToDefault', 'Reset')}
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </Card.Footer>
                 </Card>

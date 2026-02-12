@@ -4,10 +4,11 @@
  */
 
 const nodemailer = require('nodemailer');
-const { getTemplateBySlug } = require('./emailTemplate.service');
+const { getTemplateBySlug, getTemplateBySlugForUser } = require('./emailTemplate.service');
 const { renderTemplate, buildVariableContext } = require('./templateRenderer.service');
 const { generateInvoicePDF } = require('./invoicePDF.service');
 const emailTemplateTranslationService = require('./emailTemplateTranslation.service');
+const userEmailConfigService = require('./userEmailConfig.service');
 const db = require('../../../models');
 const EmailLog = db.EmailLog;
 const { formatDate } = require('../utils/timezone');
@@ -53,6 +54,33 @@ const createTransporter = () => {
 };
 
 /**
+ * Create a transporter for a specific user (uses their SMTP config if available)
+ * Falls back to the global transporter if no user config found
+ * @param {string} userId - User ID to get config for
+ * @returns {Promise<{transporter: Object, fromAddress: string|null}>}
+ */
+async function createTransporterForUser(userId) {
+  if (userId) {
+    try {
+      const config = await userEmailConfigService.getConfig(userId);
+      if (config && config.is_active && config.is_verified && config.smtp_host && config.smtp_password) {
+        const transporter = userEmailConfigService.createTransporterFromConfig(config);
+        const fromName = config.from_name || 'NutriVault';
+        const fromEmail = config.from_email || config.smtp_user;
+        const fromAddress = `"${fromName}" <${fromEmail}>`;
+        return { transporter, fromAddress };
+      }
+    } catch (err) {
+      console.warn(`[Email] Failed to load user SMTP config for ${userId}, falling back to global:`, err.message);
+    }
+  }
+
+  // Fallback to global
+  const transporter = createTransporter();
+  return { transporter, fromAddress: null };
+}
+
+/**
  * Send a generic email
  * @param {Object} options - Email options
  * @param {string} options.to - Recipient email address
@@ -62,11 +90,12 @@ const createTransporter = () => {
  * @param {string} options.from - Sender email (optional)
  * @param {Array} options.attachments - Email attachments (optional)
  * @param {Object} options.icalEvent - iCalendar event for calendar invitations (optional)
+ * @param {string} options.sendingUserId - User ID whose SMTP config to use (optional)
  * @returns {Promise<Object>} Email send result
  */
-async function sendEmail({ to, subject, text, html, from, attachments, icalEvent }) {
+async function sendEmail({ to, subject, text, html, from, attachments, icalEvent, sendingUserId }) {
   try {
-    const transporter = createTransporter();
+    const { transporter, fromAddress } = await createTransporterForUser(sendingUserId);
 
     if (!transporter) {
       console.log('📧 Email not sent (service not configured):', { to, subject });
@@ -78,7 +107,7 @@ async function sendEmail({ to, subject, text, html, from, attachments, icalEvent
     }
 
     const mailOptions = {
-      from: from || `"${process.env.EMAIL_FROM_NAME || 'NutriVault'}" <${process.env.EMAIL_USER}>`,
+      from: from || fromAddress || `"${process.env.EMAIL_FROM_NAME || 'NutriVault'}" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       text,
@@ -120,7 +149,7 @@ async function sendEmail({ to, subject, text, html, from, attachments, icalEvent
  * @param {Object} patient - Patient object
  * @returns {Promise<Object>} Email send result
  */
-async function sendInvoiceEmail(invoice, patient) {
+async function sendInvoiceEmail(invoice, patient, { sendingUserId } = {}) {
   const subject = `Facture #${invoice.invoice_number} - NutriVault`;
 
   const text = `
@@ -192,7 +221,8 @@ L'équipe NutriVault
     to: patient.email,
     subject,
     text,
-    html
+    html,
+    sendingUserId
   });
 }
 
@@ -204,7 +234,7 @@ L'équipe NutriVault
  * @param {string} notes - Optional notes about the sharing
  * @returns {Promise<Object>} Email send result
  */
-async function sendDocumentShareEmail(document, patient, sharedBy, notes = null) {
+async function sendDocumentShareEmail(document, patient, sharedBy, notes = null, { sendingUserId } = {}) {
   const subject = `Document partagé : ${document.file_name} - NutriVault`;
 
   const text = `
@@ -270,7 +300,8 @@ L'équipe NutriVault
     to: patient.email,
     subject,
     text,
-    html
+    html,
+    sendingUserId
   });
 }
 
@@ -301,7 +332,7 @@ async function verifyEmailConfig() {
  * @param {Object} patient - Patient object
  * @returns {Promise<Object>} Email send result
  */
-async function sendPaymentReminderEmail(invoice, patient) {
+async function sendPaymentReminderEmail(invoice, patient, { sendingUserId } = {}) {
   const daysOverdue = invoice.due_date
     ? Math.floor((new Date() - new Date(invoice.due_date)) / (1000 * 60 * 60 * 24))
     : 0;
@@ -380,7 +411,8 @@ L'équipe NutriVault
     to: patient.email,
     subject,
     text,
-    html
+    html,
+    sendingUserId
   });
 }
 
@@ -411,11 +443,14 @@ async function sendEmailFromTemplate({
   attachments = null,
   languageCode = null,
   visitId = null,
-  billingId = null
+  billingId = null,
+  sendingUserId = null
 }) {
   try {
-    // Get template
-    const template = await getTemplateBySlug(templateSlug);
+    // Get template: user-specific first, then system fallback
+    const template = sendingUserId
+      ? await getTemplateBySlugForUser(templateSlug, sendingUserId)
+      : await getTemplateBySlug(templateSlug);
 
     if (!template.is_active) {
       throw new Error(`Template '${templateSlug}' is not active`);
@@ -502,7 +537,8 @@ async function sendEmailFromTemplate({
         text,
         html,
         from,
-        attachments
+        attachments,
+        sendingUserId
       });
 
       // Update log entry on success
@@ -543,7 +579,7 @@ async function sendEmailFromTemplate({
  * @param {string} message - Optional custom message
  * @returns {Promise<Object>} Email send result
  */
-async function sendDocumentAsAttachment(document, patient, sharedBy, filePath, message = null) {
+async function sendDocumentAsAttachment(document, patient, sharedBy, filePath, message = null, { sendingUserId } = {}) {
   const subject = `Document : ${document.file_name} - NutriVault`;
 
   const customMessage = message ? `<p style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 15px 0;"><strong>Message :</strong><br>${message.replace(/\n/g, '<br>')}</p>` : '';
@@ -637,7 +673,8 @@ L'équipe NutriVault
       subject,
       text,
       html,
-      attachments
+      attachments,
+      sendingUserId
     });
 
     // Update log entry on success
@@ -670,7 +707,7 @@ L'équipe NutriVault
  * @param {string} notes - Optional notes about the sharing
  * @returns {Promise<Object>} Email send result
  */
-async function sendRecipeShareEmail(recipe, patient, sharedBy, notes = null) {
+async function sendRecipeShareEmail(recipe, patient, sharedBy, notes = null, { sendingUserId } = {}) {
   const { generateRecipePDF } = require('./recipePDF.service');
 
   const subject = `Recette partagée : ${recipe.title} - NutriVault`;
@@ -813,7 +850,8 @@ L'équipe NutriVault
       subject,
       text,
       html,
-      attachments: attachments.length > 0 ? attachments : undefined
+      attachments: attachments.length > 0 ? attachments : undefined,
+      sendingUserId
     });
 
     // Update log entry on success

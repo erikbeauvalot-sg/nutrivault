@@ -130,7 +130,8 @@ async function sendToRecipient(campaign, recipient) {
       to: recipient.email,
       subject,
       html,
-      text
+      text,
+      sendingUserId: campaign.sender_id
     });
 
     if (result.success || result.messageId) {

@@ -575,7 +575,11 @@ const EditPatientPage = () => {
                     </div>
                   </Tab>
                 ) : (
-                  customFieldCategories.map((category) => (
+                  customFieldCategories.map((category) => {
+                    const displayLayout = category.display_layout || { type: 'columns', columns: 2 };
+                    const columnWidth = displayLayout.type === 'list' ? 12 : Math.floor(12 / (displayLayout.columns || 2));
+
+                    return (
                     <Tab
                       key={category.id}
                       eventKey={`category-${category.id}`}
@@ -624,7 +628,7 @@ const EditPatientPage = () => {
                         ) : (
                           <Row>
                             {category.fields.map((field) => (
-                              <Col xs={12} md={6} key={field.definition_id}>
+                              <Col xs={12} md={columnWidth} key={field.definition_id}>
                                 <Form.Group className="mb-3">
                                   <CustomFieldInput
                                     fieldDefinition={field}
@@ -646,7 +650,8 @@ const EditPatientPage = () => {
                         )}
                       </div>
                     </Tab>
-                  ))
+                    );
+                  })
                 )}
 
                 {/* 3. Measures Tab */}

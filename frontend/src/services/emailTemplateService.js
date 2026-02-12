@@ -223,6 +223,26 @@ export const importTemplates = async (importData, options = {}) => {
   return response.data;
 };
 
+/**
+ * Customize a system template (create user override)
+ * @param {string} id - System template UUID to clone
+ * @returns {Promise<object>} New user-owned template
+ */
+export const customizeTemplate = async (id) => {
+  const response = await api.post(`/email-templates/${id}/customize`);
+  return response.data;
+};
+
+/**
+ * Reset a user template override to system default
+ * @param {string} id - User template UUID to delete
+ * @returns {Promise<void>}
+ */
+export const resetToDefault = async (id) => {
+  const response = await api.delete(`/email-templates/${id}/reset-to-default`);
+  return response.data;
+};
+
 export default {
   getAllTemplates,
   getTemplateById,
@@ -244,5 +264,8 @@ export default {
   previewTranslation,
   // Export/Import functions
   exportTemplates,
-  importTemplates
+  importTemplates,
+  // Customize functions
+  customizeTemplate,
+  resetToDefault
 };

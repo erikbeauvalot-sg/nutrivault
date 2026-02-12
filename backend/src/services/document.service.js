@@ -805,7 +805,8 @@ async function sendDocumentToPatient(user, documentId, patientId, shareData = {}
           notes: shareData.notes
         },
         patient: patient,
-        user: user
+        user: user,
+        sendingUserId: user.id
       });
     } else {
       console.log(`📄 Document shared with patient via ${shareData.sent_via}: ${patient.email}`);
@@ -1519,7 +1520,8 @@ async function sendDocumentByEmail(user, documentId, patientId, message = null, 
       patient,
       user,
       filePath,
-      message
+      message,
+      { sendingUserId: user.id }
     );
 
     // Create a document share record to track the send

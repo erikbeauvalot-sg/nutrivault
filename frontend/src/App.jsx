@@ -47,6 +47,7 @@ const MeasureDetailPage = lazy(() => import('./pages/MeasureDetailPage'));
 const CustomFieldCategoryDetailPage = lazy(() => import('./pages/CustomFieldCategoryDetailPage'));
 const CustomFieldDefinitionDetailPage = lazy(() => import('./pages/CustomFieldDefinitionDetailPage'));
 const EmailTemplatesPage = lazy(() => import('./pages/EmailTemplatesPage'));
+const EmailConfigPage = lazy(() => import('./pages/EmailConfigPage'));
 const BillingTemplatesPage = lazy(() => import('./pages/BillingTemplatesPage'));
 const InvoiceCustomizationPage = lazy(() => import('./pages/InvoiceCustomizationPage'));
 const AIConfigPage = lazy(() => import('./pages/AIConfigPage'));
@@ -63,6 +64,7 @@ const ScheduledTasksPage = lazy(() => import('./pages/ScheduledTasksPage'));
 const DiscordWebhookPage = lazy(() => import('./pages/DiscordWebhookPage'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const NotificationCenterPage = lazy(() => import('./pages/NotificationCenterPage'));
+const SidebarMenuConfigPage = lazy(() => import('./pages/SidebarMenuConfigPage'));
 
 // Patient Portal pages
 const PatientPortalDashboard = lazy(() => import('./pages/portal/PatientPortalDashboard'));
@@ -390,6 +392,15 @@ function App() {
       />
 
       <Route
+        path="/settings/email-config"
+        element={
+          <ProtectedRoute>
+            <EmailConfigPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/settings/billing-templates"
         element={
           <ProtectedRoute permission="billing.read">
@@ -458,6 +469,15 @@ function App() {
         element={
           <ProtectedRoute>
             <DiscordWebhookPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/sidebar-config"
+        element={
+          <ProtectedRoute>
+            <SidebarMenuConfigPage />
           </ProtectedRoute>
         }
       />

@@ -16,11 +16,18 @@ module.exports = (sequelize, DataTypes) => {
     slug: {
       type: DataTypes.STRING(100),
       allowNull: false,
-      unique: true,
       validate: {
         notEmpty: true,
         is: /^[a-z0-9_-]+$/i,
         len: [3, 100]
+      }
+    },
+    user_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id'
       }
     },
     category: {

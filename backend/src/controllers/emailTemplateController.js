@@ -95,6 +95,11 @@ const getAllTemplates = async (req, res) => {
       search: req.query.search
     };
 
+    // Non-admin users: scope to their own templates + system templates
+    if (req.user && req.user.role !== 'ADMIN') {
+      filters.userId = req.user.id;
+    }
+
     const templates = await emailTemplateService.getAllTemplates(filters);
 
     res.json({

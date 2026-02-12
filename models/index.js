@@ -67,6 +67,8 @@ db.Conversation = require('./Conversation')(sequelize, DataTypes);
 db.Message = require('./Message')(sequelize, DataTypes);
 db.PatientObjective = require('./PatientObjective')(sequelize, DataTypes);
 db.Notification = require('./Notification')(sequelize, DataTypes);
+db.UserEmailConfig = require('./UserEmailConfig')(sequelize, DataTypes);
+db.SidebarMenuConfig = require('./SidebarMenuConfig')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -947,5 +949,12 @@ db.User.hasMany(db.PatientObjective, { foreignKey: 'created_by', as: 'created_ob
 // Notification associations
 db.Notification.belongsTo(db.User, { foreignKey: 'user_id', as: 'user' });
 db.User.hasMany(db.Notification, { foreignKey: 'user_id', as: 'notifications' });
+
+// UserEmailConfig - User relationship
+db.UserEmailConfig.belongsTo(db.User, { foreignKey: 'user_id', as: 'user' });
+db.User.hasOne(db.UserEmailConfig, { foreignKey: 'user_id', as: 'emailConfig' });
+
+// EmailTemplate - User (owner) relationship for per-dietitian overrides
+db.EmailTemplate.belongsTo(db.User, { foreignKey: 'user_id', as: 'owner' });
 
 module.exports = db;

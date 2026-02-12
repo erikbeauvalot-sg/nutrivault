@@ -145,6 +145,10 @@ app.use('/api', measureAlertsRoutes);
 const emailTemplatesRoutes = require('./routes/emailTemplates');
 app.use('/api/email-templates', emailTemplatesRoutes);
 
+// Email Config routes (per-user SMTP configuration)
+const emailConfigRoutes = require('./routes/emailConfig');
+app.use('/api/email-config', emailConfigRoutes);
+
 // Appointment Reminders routes (protected - RBAC enforced in routes file)
 const appointmentRemindersRoutes = require('./routes/appointmentReminders');
 app.use('/api/appointment-reminders', appointmentRemindersRoutes);
@@ -243,6 +247,10 @@ app.use('/api/messages', messagesRoutes);
 // Notifications routes (in-app notification center)
 const notificationRoutes = require('./routes/notifications');
 app.use('/api/notifications', notificationRoutes);
+
+// Sidebar Menu Config routes (admin management + sidebar reads)
+const sidebarMenuConfigRoutes = require('./routes/sidebarMenuConfigs');
+app.use('/api/sidebar-menu-configs', sidebarMenuConfigRoutes);
 
 // Apple App Site Association — iOS credential autofill
 app.get('/.well-known/apple-app-site-association', (req, res) => {

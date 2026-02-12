@@ -42,6 +42,25 @@ async function getAllTemplates(filters = {}) {
     ];
   }
 
+  // User-specific filtering: dietitian sees their own + system templates
+  if (filters.userId) {
+    where[Op.or] = where[Op.or] || [];
+    // Merge with existing Op.or (search) or create new
+    const userFilter = { [Op.or]: [{ user_id: filters.userId }, { user_id: null }] };
+    if (where[Op.or].length > 0) {
+      // Wrap existing search OR in an AND with user filter
+      const searchOr = where[Op.or];
+      delete where[Op.or];
+      where[Op.and] = [
+        { [Op.or]: searchOr },
+        userFilter
+      ];
+    } else {
+      delete where[Op.or];
+      Object.assign(where, userFilter);
+    }
+  }
+
   return EmailTemplate.findAll({
     where,
     order: [
@@ -68,13 +87,13 @@ async function getTemplateById(id) {
 }
 
 /**
- * Get template by slug
+ * Get template by slug (system template only - user_id IS NULL)
  * @param {string} slug - Template slug
  * @returns {Promise<Object>} Template object
  */
 async function getTemplateBySlug(slug) {
   const template = await EmailTemplate.findOne({
-    where: { slug }
+    where: { slug, user_id: null }
   });
 
   if (!template) {
@@ -82,6 +101,83 @@ async function getTemplateBySlug(slug) {
   }
 
   return template;
+}
+
+/**
+ * Get template by slug for a specific user (user override → system fallback)
+ * @param {string} slug - Template slug
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} Template object
+ */
+async function getTemplateBySlugForUser(slug, userId) {
+  // Try user-specific template first
+  if (userId) {
+    const userTemplate = await EmailTemplate.findOne({
+      where: { slug, user_id: userId }
+    });
+    if (userTemplate) return userTemplate;
+  }
+
+  // Fallback to system template
+  return getTemplateBySlug(slug);
+}
+
+/**
+ * Clone a system template for a dietitian (customize)
+ * @param {string} templateId - System template ID to clone
+ * @param {string} userId - User ID of the dietitian
+ * @returns {Promise<Object>} New user-owned template
+ */
+async function customizeTemplate(templateId, userId) {
+  const source = await getTemplateById(templateId);
+
+  // Only system templates (user_id IS NULL) can be customized
+  if (source.user_id) {
+    throw new Error('Can only customize system templates');
+  }
+
+  // Check if user already has an override for this slug
+  const existing = await EmailTemplate.findOne({
+    where: { slug: source.slug, user_id: userId }
+  });
+  if (existing) {
+    throw new Error('You already have a custom version of this template');
+  }
+
+  const clone = await EmailTemplate.create({
+    name: source.name,
+    slug: source.slug,
+    category: source.category,
+    description: source.description,
+    subject: source.subject,
+    body_html: source.body_html,
+    body_text: source.body_text,
+    available_variables: source.available_variables,
+    is_active: true,
+    is_system: false,
+    user_id: userId,
+    created_by: userId,
+    version: 1
+  });
+
+  return clone;
+}
+
+/**
+ * Delete a user's template override (reset to system default)
+ * @param {string} templateId - User template ID
+ * @param {string} userId - User ID
+ * @returns {Promise<boolean>}
+ */
+async function resetToDefault(templateId, userId) {
+  const template = await getTemplateById(templateId);
+
+  if (!template.user_id || template.user_id !== userId) {
+    throw new Error('Can only reset your own template overrides');
+  }
+
+  await template.destroy({ force: true });
+  return true;
 }
 
 /**
@@ -442,6 +538,9 @@ module.exports = {
   getAllTemplates,
   getTemplateById,
   getTemplateBySlug,
+  getTemplateBySlugForUser,
+  customizeTemplate,
+  resetToDefault,
   createTemplate,
   updateTemplate,
   deleteTemplate,

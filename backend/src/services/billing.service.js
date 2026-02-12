@@ -650,6 +650,7 @@ async function sendInvoiceEmail(invoiceId, user, requestMetadata = {}) {
         user: user,
         visitId: invoice.visit_id || null,
         billingId: invoice.id,
+        sendingUserId: user.id,
         attachments: [
           {
             filename: `facture_${invoice.invoice_number}.pdf`,
@@ -906,7 +907,7 @@ async function sendReminderBatch(invoiceIds, user, requestMetadata = {}) {
         }
 
         // Send reminder email
-        await emailService.sendPaymentReminderEmail(invoice, invoice.patient);
+        await emailService.sendPaymentReminderEmail(invoice, invoice.patient, { sendingUserId: user.id });
 
         // Update invoice metadata to track reminder sent
         const remindersSent = invoice.reminders_sent || 0;

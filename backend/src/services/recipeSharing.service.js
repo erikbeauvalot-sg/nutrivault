@@ -123,7 +123,8 @@ async function shareRecipe(recipeId, patientId, options = {}, user, requestMetad
           recipe,
           patient,
           user,
-          options.notes
+          options.notes,
+          { sendingUserId: user.id }
         );
       } catch (emailError) {
         // Log email error but don't fail the sharing operation
@@ -399,7 +400,8 @@ async function resendShareEmail(accessId, user, requestMetadata = {}) {
       access.recipe,
       access.patient,
       user,
-      access.notes
+      access.notes,
+      { sendingUserId: user.id }
     );
 
     // Log the resend action

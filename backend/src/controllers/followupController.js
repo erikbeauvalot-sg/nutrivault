@@ -114,7 +114,8 @@ const sendFollowup = async (req, res) => {
       to: visit.patient.email,
       subject,
       html: body_html,
-      text: body_text || ''
+      text: body_text || '',
+      sendingUserId: req.user.id
     });
 
     // Log the email with full content

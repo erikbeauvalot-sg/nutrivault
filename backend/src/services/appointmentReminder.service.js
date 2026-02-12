@@ -158,7 +158,8 @@ async function sendVisitReminder(visitId, userId, manual = false) {
       to: visit.patient.email,
       subject: rendered.subject,
       html: rendered.html,
-      text: rendered.text
+      text: rendered.text,
+      sendingUserId: visit.dietitian_id
     });
 
     // Update visit reminder tracking
@@ -320,7 +321,8 @@ async function sendVisitInvitation(visitId, userId) {
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
-      icalEvent
+      icalEvent,
+      sendingUserId: visit.dietitian_id || userId
     });
 
     // Log email
