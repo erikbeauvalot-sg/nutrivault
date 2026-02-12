@@ -17,10 +17,6 @@ export const NotificationProvider = ({ children }) => {
     try {
       const count = await notificationService.getUnreadCount();
       setUnreadCount(count);
-      // Sync iOS badge: reset when no unread (clears stale badges from before DB tracking)
-      if (isNative && count === 0) {
-        notificationService.resetBadge().catch(() => {});
-      }
     } catch {
       // silent
     }
@@ -30,10 +26,6 @@ export const NotificationProvider = ({ children }) => {
     try {
       await notificationService.markAllAsRead();
       setUnreadCount(0);
-      // Reset iOS badge
-      if (isNative) {
-        notificationService.resetBadge().catch(() => {});
-      }
     } catch {
       // silent
     }
@@ -58,10 +50,8 @@ export const NotificationProvider = ({ children }) => {
     return () => window.removeEventListener('notificationReceived', handler);
   }, [refreshCount]);
 
-  // On app resume (iOS foreground), refresh count only.
-  // Badge sync is handled inside refreshCount (resets to 0 when no unread).
-  // Do NOT call resetBadge() unconditionally here — it would wipe the badge
-  // even when there ARE unread notifications (push already set it correctly).
+  // On app resume (iOS foreground), refresh the in-app unread count.
+  // iOS badge is cleared natively in AppDelegate.applicationDidBecomeActive.
   useEffect(() => {
     if (!isNative || !isAuthenticated) return;
 

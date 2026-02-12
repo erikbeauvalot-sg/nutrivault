@@ -89,6 +89,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate, UNUser
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
+        // Clear badge instantly on device — no network round-trip needed
+        application.applicationIconBadgeNumber = 0
+
         // Re-dispatch FCM token when app becomes active (e.g., returning from background)
         if let token = lastFcmToken {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
