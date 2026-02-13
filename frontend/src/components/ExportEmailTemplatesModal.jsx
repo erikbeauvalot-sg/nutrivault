@@ -14,6 +14,7 @@ const CATEGORIES = [
   { id: 'payment_reminder', icon: '\u{1F514}' },
   { id: 'appointment_reminder', icon: '\u{1F4C5}' },
   { id: 'follow_up', icon: '\u{1F4CB}' },
+  { id: 'quote', icon: '\u{1F4DD}' },
   { id: 'general', icon: '\u{2709}\u{FE0F}' }
 ];
 

@@ -12,7 +12,9 @@ import {
   FaEuroSign,
   FaChartLine,
   FaArrowUp,
-  FaArrowDown
+  FaArrowDown,
+  FaFileInvoice,
+  FaCheckCircle
 } from 'react-icons/fa';
 import { getOverview } from '../../services/dashboardService';
 
@@ -134,29 +136,61 @@ const PracticeOverviewWidget = () => {
     }
   ];
 
+  const quoteKpis = (data.pendingQuotesCount > 0 || data.acceptedQuotesThisMonth > 0) ? [
+    {
+      icon: <FaFileInvoice size={24} />,
+      color: 'info',
+      title: t('dashboard.pendingQuotes', 'Devis en attente'),
+      value: data.pendingQuotesCount || 0,
+      subtitle: data.pendingQuotesAmount > 0
+        ? formatCurrency(data.pendingQuotesAmount)
+        : t('dashboard.noPendingQuotes', 'Aucun devis en attente'),
+      noChange: true
+    },
+    {
+      icon: <FaCheckCircle size={24} />,
+      color: 'success',
+      title: t('dashboard.acceptedQuotesMonth', 'Devis acceptés ce mois'),
+      value: data.acceptedQuotesThisMonth || 0,
+      subtitle: data.acceptedQuotesAmount > 0
+        ? formatCurrency(data.acceptedQuotesAmount)
+        : '-',
+      noChange: true
+    }
+  ] : [];
+
+  const renderKpiCard = (kpi, index) => (
+    <Col key={index} md={6} lg={3} className="mb-3">
+      <Card className="h-100 border-0 shadow-sm">
+        <Card.Body>
+          <div className="d-flex align-items-center mb-3">
+            <div className={`rounded-circle p-2 bg-${kpi.color} bg-opacity-10 text-${kpi.color}`}>
+              {kpi.icon}
+            </div>
+            <span className="ms-auto text-muted small">{kpi.title}</span>
+          </div>
+          <h3 className="mb-1">
+            {kpi.value}
+            {!kpi.noChange && !kpi.isCurrency && renderChange(kpi.change)}
+            {!kpi.noChange && kpi.isCurrency && renderCurrencyChange(kpi.change)}
+          </h3>
+          <small className="text-muted">{kpi.subtitle}</small>
+        </Card.Body>
+      </Card>
+    </Col>
+  );
+
   return (
-    <Row className="mb-4">
-      {kpis.map((kpi, index) => (
-        <Col key={index} md={6} lg={3} className="mb-3">
-          <Card className="h-100 border-0 shadow-sm">
-            <Card.Body>
-              <div className="d-flex align-items-center mb-3">
-                <div className={`rounded-circle p-2 bg-${kpi.color} bg-opacity-10 text-${kpi.color}`}>
-                  {kpi.icon}
-                </div>
-                <span className="ms-auto text-muted small">{kpi.title}</span>
-              </div>
-              <h3 className="mb-1">
-                {kpi.value}
-                {!kpi.noChange && !kpi.isCurrency && renderChange(kpi.change)}
-                {!kpi.noChange && kpi.isCurrency && renderCurrencyChange(kpi.change)}
-              </h3>
-              <small className="text-muted">{kpi.subtitle}</small>
-            </Card.Body>
-          </Card>
-        </Col>
-      ))}
-    </Row>
+    <>
+      <Row className="mb-4">
+        {kpis.map(renderKpiCard)}
+      </Row>
+      {quoteKpis.length > 0 && (
+        <Row className="mb-4">
+          {quoteKpis.map((kpi, i) => renderKpiCard(kpi, i + kpis.length))}
+        </Row>
+      )}
+    </>
   );
 };
 

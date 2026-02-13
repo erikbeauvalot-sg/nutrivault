@@ -18,6 +18,7 @@ const Visit = db.Visit;
 const Billing = db.Billing;
 const EmailLog = db.EmailLog;
 const trendAnalysis = require('./trendAnalysis.service');
+const { getScopedDietitianIds } = require('../helpers/scopeHelper');
 
 /**
  * Get health trends analytics
@@ -698,9 +699,197 @@ async function calculatePatientHealthScore(patientId) {
   }
 }
 
+/**
+ * Get quote metrics analytics
+ * @param {Object} options - Filter options
+ * @param {Object} options.user - Authenticated user for scoping
+ * @returns {Promise<Object>} Quote analytics data
+ */
+async function getQuoteMetrics(options = {}) {
+  const { startDate, endDate, user } = options;
+
+  const dateFilter = {};
+  if (startDate) dateFilter[Op.gte] = new Date(startDate);
+  if (endDate) dateFilter[Op.lte] = new Date(endDate);
+
+  const hasDateFilter = startDate || endDate;
+  const quoteDateFilter = hasDateFilter
+    ? { quote_date: dateFilter }
+    : {};
+
+  // Build scope filter on created_by
+  const scopeFilter = {};
+  if (user) {
+    const dietitianIds = await getScopedDietitianIds(user);
+    if (dietitianIds !== null) {
+      if (dietitianIds.length === 0) {
+        return { summary: {}, quotesByStatus: [], monthlyQuotes: [], conversionFunnel: {} };
+      }
+      scopeFilter.created_by = { [Op.in]: dietitianIds };
+    }
+  }
+
+  const baseWhere = { ...quoteDateFilter, ...scopeFilter, is_active: true };
+
+  try {
+    // 1. Summary statistics
+    const totalStats = await db.Quote.findOne({
+      attributes: [
+        [fn('COUNT', col('id')), 'total_quotes'],
+        [fn('SUM', col('amount_total')), 'total_value'],
+        [fn('AVG', col('amount_total')), 'avg_value']
+      ],
+      where: baseWhere,
+      raw: true
+    });
+
+    const acceptedStats = await db.Quote.findOne({
+      attributes: [
+        [fn('SUM', col('amount_total')), 'accepted_value']
+      ],
+      where: { ...baseWhere, status: 'ACCEPTED' },
+      raw: true
+    });
+
+    const pendingStats = await db.Quote.findOne({
+      attributes: [
+        [fn('SUM', col('amount_total')), 'pending_value']
+      ],
+      where: { ...baseWhere, status: 'SENT' },
+      raw: true
+    });
+
+    // Conversion rate: ACCEPTED / (ACCEPTED + DECLINED + EXPIRED)
+    const decidedQuotes = await db.Quote.findAll({
+      attributes: [
+        'status',
+        [fn('COUNT', col('id')), 'count']
+      ],
+      where: {
+        ...baseWhere,
+        status: { [Op.in]: ['ACCEPTED', 'DECLINED', 'EXPIRED'] }
+      },
+      group: ['status'],
+      raw: true
+    });
+
+    let acceptedCount = 0;
+    let totalDecided = 0;
+    decidedQuotes.forEach(d => {
+      const cnt = parseInt(d.count) || 0;
+      totalDecided += cnt;
+      if (d.status === 'ACCEPTED') acceptedCount = cnt;
+    });
+    const conversionRate = totalDecided > 0
+      ? parseFloat(((acceptedCount / totalDecided) * 100).toFixed(1))
+      : 0;
+
+    // Average acceptance days (SENT → ACCEPTED)
+    const acceptedWithDates = await db.Quote.findAll({
+      attributes: ['quote_date', 'accepted_date'],
+      where: {
+        ...baseWhere,
+        status: 'ACCEPTED',
+        accepted_date: { [Op.not]: null }
+      },
+      raw: true
+    });
+
+    let avgAcceptanceDays = 0;
+    if (acceptedWithDates.length > 0) {
+      const totalDays = acceptedWithDates.reduce((sum, q) => {
+        const start = new Date(q.quote_date);
+        const end = new Date(q.accepted_date);
+        return sum + Math.max(0, (end - start) / (1000 * 60 * 60 * 24));
+      }, 0);
+      avgAcceptanceDays = Math.round(totalDays / acceptedWithDates.length);
+    }
+
+    // 2. Quotes by status (for pie chart)
+    const quotesByStatus = await db.Quote.findAll({
+      attributes: [
+        'status',
+        [fn('COUNT', col('id')), 'count'],
+        [fn('SUM', col('amount_total')), 'total']
+      ],
+      where: baseWhere,
+      group: ['status'],
+      raw: true
+    });
+
+    // 3. Monthly quotes (for bar chart)
+    const monthlyQuotes = await db.Quote.findAll({
+      attributes: [
+        [fn('strftime', '%Y-%m', col('quote_date')), 'month'],
+        [fn('COUNT', col('id')), 'created'],
+        [fn('SUM', col('amount_total')), 'total_value'],
+        [fn('SUM', literal("CASE WHEN status = 'ACCEPTED' THEN 1 ELSE 0 END")), 'accepted'],
+        [fn('SUM', literal("CASE WHEN status = 'ACCEPTED' THEN amount_total ELSE 0 END")), 'accepted_value']
+      ],
+      where: baseWhere,
+      group: [fn('strftime', '%Y-%m', col('quote_date'))],
+      order: [[fn('strftime', '%Y-%m', col('quote_date')), 'ASC']],
+      raw: true
+    });
+
+    // 4. Conversion funnel
+    const funnelCounts = await db.Quote.findAll({
+      attributes: [
+        'status',
+        [fn('COUNT', col('id')), 'count']
+      ],
+      where: baseWhere,
+      group: ['status'],
+      raw: true
+    });
+
+    const funnelMap = {};
+    funnelCounts.forEach(f => { funnelMap[f.status] = parseInt(f.count) || 0; });
+
+    const totalQuotes = parseInt(totalStats?.total_quotes) || 0;
+    const convertedCount = await db.Quote.count({
+      where: { ...baseWhere, billing_id: { [Op.not]: null } }
+    });
+
+    return {
+      summary: {
+        totalQuotes,
+        totalValue: parseFloat(totalStats?.total_value) || 0,
+        acceptedValue: parseFloat(acceptedStats?.accepted_value) || 0,
+        pendingValue: parseFloat(pendingStats?.pending_value) || 0,
+        conversionRate,
+        avgQuoteValue: parseFloat(totalStats?.avg_value) || 0,
+        avgAcceptanceDays
+      },
+      quotesByStatus: quotesByStatus.map(r => ({
+        status: r.status,
+        count: parseInt(r.count) || 0,
+        total: parseFloat(r.total) || 0
+      })),
+      monthlyQuotes: monthlyQuotes.map(m => ({
+        month: m.month,
+        created: parseInt(m.created) || 0,
+        accepted: parseInt(m.accepted) || 0,
+        total_value: parseFloat(m.total_value) || 0,
+        accepted_value: parseFloat(m.accepted_value) || 0
+      })),
+      conversionFunnel: {
+        total: totalQuotes,
+        sent: (funnelMap['SENT'] || 0) + (funnelMap['ACCEPTED'] || 0) + (funnelMap['DECLINED'] || 0) + (funnelMap['EXPIRED'] || 0),
+        accepted: funnelMap['ACCEPTED'] || 0,
+        converted: convertedCount
+      }
+    };
+  } catch (error) {
+    console.error('Error in getQuoteMetrics:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   getHealthTrends,
   getFinancialMetrics,
   getCommunicationEffectiveness,
-  calculatePatientHealthScore
+  calculatePatientHealthScore,
+  getQuoteMetrics
 };

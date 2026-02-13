@@ -37,6 +37,7 @@ module.exports = (sequelize, DataTypes) => {
         'payment_reminder',
         'appointment_reminder',
         'follow_up',
+        'quote',
         'general'
       ),
       allowNull: false

@@ -97,6 +97,26 @@ app.use('/api/users', userRoutes);
 const billingRoutes = require('./routes/billing');
 app.use('/api/billing', billingRoutes);
 
+// Client routes (protected - RBAC enforced in routes file)
+const clientRoutes = require('./routes/clients');
+app.use('/api/clients', clientRoutes);
+
+// Quote routes (protected - RBAC enforced in routes file)
+const quoteRoutes = require('./routes/quotes');
+app.use('/api/quotes', quoteRoutes);
+
+// Expense routes (protected - RBAC enforced in routes file)
+const expenseRoutes = require('./routes/expenses');
+app.use('/api/expenses', expenseRoutes);
+
+// Finance routes (protected - RBAC enforced in routes file)
+const financeRoutes = require('./routes/finance');
+app.use('/api/finance', financeRoutes);
+
+// Accounting Entry routes (protected - RBAC enforced in routes file)
+const accountingEntryRoutes = require('./routes/accountingEntries');
+app.use('/api/accounting-entries', accountingEntryRoutes);
+
 // Document routes (protected - RBAC enforced in routes file)
 const documentRoutes = require('./routes/documents');
 app.use('/api/documents', documentRoutes);

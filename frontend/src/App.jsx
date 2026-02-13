@@ -65,6 +65,9 @@ const DiscordWebhookPage = lazy(() => import('./pages/DiscordWebhookPage'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const NotificationCenterPage = lazy(() => import('./pages/NotificationCenterPage'));
 const SidebarMenuConfigPage = lazy(() => import('./pages/SidebarMenuConfigPage'));
+const ClientsPage = lazy(() => import('./pages/ClientsPage'));
+const QuotesPage = lazy(() => import('./pages/QuotesPage'));
+const FinancePage = lazy(() => import('./pages/FinancePage'));
 
 // Patient Portal pages
 const PatientPortalDashboard = lazy(() => import('./pages/portal/PatientPortalDashboard'));
@@ -297,6 +300,42 @@ function App() {
         element={
           <ProtectedRoute>
             <InvoiceDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/clients"
+        element={
+          <ProtectedRoute permission="clients.read">
+            <ClientsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/quotes"
+        element={
+          <ProtectedRoute permission="quotes.read">
+            <QuotesPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/quotes/:id"
+        element={
+          <ProtectedRoute permission="quotes.read">
+            <QuotesPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/finance"
+        element={
+          <ProtectedRoute permission="finance.read">
+            <FinancePage />
           </ProtectedRoute>
         }
       />

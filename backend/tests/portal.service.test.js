@@ -125,18 +125,25 @@ describe('Portal Service', () => {
       expect(result.status).toBe('invitation_pending');
     });
 
-    it('should create patient User with same email as dietitian User', async () => {
+    it('should create patient User with sub-addressed email when dietitian has same email', async () => {
       const admin = await testAuth.createAdmin();
       const patient = await createPatientRecord({ email: admin.user.email });
 
       const result = await portalService.activatePortal(patient.id, admin.user.id);
       expect(result.status).toBe('invitation_pending');
 
-      // Verify both Users now exist with the same email
-      const users = await db.User.findAll({
-        where: { email: admin.user.email.trim().toLowerCase() }
-      });
-      expect(users.length).toBe(2);
+      // When email conflicts, portal creates a sub-addressed email (user+patient@domain)
+      const normalizedEmail = admin.user.email.trim().toLowerCase();
+      const [local, domain] = normalizedEmail.split('@');
+      const aliasEmail = `${local}+patient@${domain}`;
+
+      const portalUser = await db.User.findOne({ where: { email: aliasEmail } });
+      expect(portalUser).not.toBeNull();
+
+      // Original admin user should still exist
+      const adminUser = await db.User.findOne({ where: { email: normalizedEmail } });
+      expect(adminUser).not.toBeNull();
+      expect(portalUser.id).not.toBe(adminUser.id);
     });
 
     it('should throw if patient not found', async () => {

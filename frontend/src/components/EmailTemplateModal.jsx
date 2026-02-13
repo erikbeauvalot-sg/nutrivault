@@ -31,6 +31,7 @@ const getCategories = (t) => [
   { value: 'payment_reminder', label: t('emailTemplates.categories.paymentReminder', 'Payment Reminder'), icon: '🔔' },
   { value: 'appointment_reminder', label: t('emailTemplates.categories.appointmentReminder', 'Appointment Reminder'), icon: '📅' },
   { value: 'follow_up', label: t('emailTemplates.categories.followUp', 'Follow-up'), icon: '📋' },
+  { value: 'quote', label: t('emailTemplates.categories.quote', 'Quote'), icon: '📝' },
   { value: 'general', label: t('emailTemplates.categories.general', 'General'), icon: '✉️' }
 ];
 

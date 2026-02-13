@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.7.0] - 2026-02-13
+
+### Added — Module Finance & Comptabilité
+- **Clients** : gestion complète des clients (personnes / entreprises) avec CRUD, RBAC et sidebar
+- **Devis** : création, édition avec versionnement automatique (-02, -03…), statuts (DRAFT → SENT → ACCEPTED/DECLINED), conversion en facture, envoi par email avec PDF, duplication
+- **Devis — validité +30j** : la date de validité est pré-remplie à J+30 par défaut
+- **Dépenses** : suivi des dépenses par catégorie (loyer, logiciel, assurance…), récurrentes ou ponctuelles, avec résumé
+- **Écritures comptables** : ajustements signés (crédits/débits) pour réconciliation — intégrés dans le dashboard P&L et le cash flow
+- **Dashboard Finance** : KPI (revenu, dépenses, ajustements, profit net, taux de recouvrement), balance âgée, cash flow 12 mois avec graphique
+- **Tests** : 85 tests unitaires couvrant les services accounting entries (36), finance (15) et quotes (34) + infrastructure de test mise à jour (permissions, routes, modèles)
+- **i18n** : traductions FR/EN complètes pour tous les modules finance/comptabilité
+
+---
+
 ## [5.4.3] - 2026-01-30
 
 ### Fixed

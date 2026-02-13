@@ -52,6 +52,18 @@ router.get(
 );
 
 /**
+ * @route   GET /api/analytics/quote-metrics
+ * @desc    Get quote analytics (pipeline, conversion, monthly trends)
+ * @access  ADMIN, DIETITIAN
+ * @query   startDate, endDate (optional date filters)
+ */
+router.get(
+  '/quote-metrics',
+  requirePermission('quotes.read'),
+  analyticsController.getQuoteMetrics
+);
+
+/**
  * @route   GET /api/analytics/patient-health-score/:patientId
  * @desc    Get health score for a specific patient
  * @access  ADMIN, DIETITIAN

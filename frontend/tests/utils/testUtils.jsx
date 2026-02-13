@@ -9,6 +9,7 @@ import { I18nextProvider } from 'react-i18next';
 import i18n from './i18nTestConfig';
 import { AuthContext } from '../../src/contexts/AuthContext';
 import ThemeContext from '../../src/contexts/ThemeContext';
+import NotificationContext from '../../src/contexts/NotificationContext';
 
 /**
  * Default mock user for authenticated tests
@@ -86,6 +87,15 @@ const mockThemeContextValue = {
 };
 
 /**
+ * Default mock notification context value
+ */
+const mockNotificationContextValue = {
+  unreadCount: 0,
+  refreshCount: vi.fn(),
+  markAllRead: vi.fn(),
+};
+
+/**
  * All providers wrapper for tests
  */
 const AllProviders = ({ children, authValue }) => {
@@ -93,9 +103,11 @@ const AllProviders = ({ children, authValue }) => {
     <I18nextProvider i18n={i18n}>
       <AuthContext.Provider value={authValue}>
         <ThemeContext.Provider value={mockThemeContextValue}>
-          <BrowserRouter>
-            {children}
-          </BrowserRouter>
+          <NotificationContext.Provider value={mockNotificationContextValue}>
+            <BrowserRouter>
+              {children}
+            </BrowserRouter>
+          </NotificationContext.Provider>
         </ThemeContext.Provider>
       </AuthContext.Provider>
     </I18nextProvider>

@@ -47,6 +47,16 @@ async function buildBillingWhere(user, baseWhere = {}) {
 }
 
 /**
+ * Build quote scope where clause (via created_by)
+ */
+async function buildQuoteWhere(user, baseWhere = {}) {
+  const dietitianIds = await getScopedDietitianIds(user);
+  if (dietitianIds === null) return baseWhere; // ADMIN
+  if (dietitianIds.length === 0) return { ...baseWhere, id: null };
+  return { ...baseWhere, created_by: { [Op.in]: dietitianIds } };
+}
+
+/**
  * Get practice overview KPIs
  */
 const getPracticeOverview = async (user) => {
@@ -137,6 +147,36 @@ const getPracticeOverview = async (user) => {
   });
   const outstandingAmount = parseFloat(outstandingResult?.total || 0);
 
+  // Pending quotes (SENT quotes awaiting decision)
+  const pendingQuotesResult = await db.Quote.findOne({
+    attributes: [
+      [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count'],
+      [db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'total']
+    ],
+    where: await buildQuoteWhere(user, {
+      status: 'SENT', is_active: true
+    }),
+    raw: true
+  });
+  const pendingQuotesCount = parseInt(pendingQuotesResult?.count || 0, 10);
+  const pendingQuotesAmount = parseFloat(pendingQuotesResult?.total || 0);
+
+  // Accepted quotes this month
+  const acceptedQuotesResult = await db.Quote.findOne({
+    attributes: [
+      [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count'],
+      [db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'total']
+    ],
+    where: await buildQuoteWhere(user, {
+      status: 'ACCEPTED',
+      is_active: true,
+      accepted_date: { [Op.gte]: startOfMonth }
+    }),
+    raw: true
+  });
+  const acceptedQuotesThisMonth = parseInt(acceptedQuotesResult?.count || 0, 10);
+  const acceptedQuotesAmount = parseFloat(acceptedQuotesResult?.total || 0);
+
   // Patient retention rate (patients with visits in last 3 months / total patients)
   const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
   const patientsWithRecentVisits = await db.Visit.count({
@@ -163,7 +203,11 @@ const getPracticeOverview = async (user) => {
     revenueLastMonth,
     revenueChange: revenueThisMonth - revenueLastMonth,
     retentionRate,
-    outstandingAmount
+    outstandingAmount,
+    pendingQuotesCount,
+    pendingQuotesAmount,
+    acceptedQuotesThisMonth,
+    acceptedQuotesAmount
   };
 };
 
@@ -194,11 +238,26 @@ const getRevenueChart = async (user, period = 'monthly') => {
         raw: true
       });
 
+      // Quote pipeline for this period
+      const quoteResult = await db.Quote.findOne({
+        attributes: [
+          [db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'quote_value'],
+          [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'quotes_count']
+        ],
+        where: await buildQuoteWhere(user, {
+          quote_date: { [Op.gte]: startDate, [Op.lte]: endDate },
+          is_active: true
+        }),
+        raw: true
+      });
+
       data.push({
         period: startDate.toISOString().slice(0, 7), // YYYY-MM format
         month: startDate.toLocaleDateString('fr-FR', { month: 'short' }),
         revenue: parseFloat(result?.revenue || 0),
-        invoices: parseInt(result?.invoices || 0, 10)
+        invoices: parseInt(result?.invoices || 0, 10),
+        quoteValue: parseFloat(quoteResult?.quote_value || 0),
+        quotesCount: parseInt(quoteResult?.quotes_count || 0, 10)
       });
     }
   } else if (period === 'quarterly') {
@@ -221,11 +280,25 @@ const getRevenueChart = async (user, period = 'monthly') => {
         raw: true
       });
 
+      const quoteResult = await db.Quote.findOne({
+        attributes: [
+          [db.sequelize.fn('SUM', db.sequelize.col('amount_total')), 'quote_value'],
+          [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'quotes_count']
+        ],
+        where: await buildQuoteWhere(user, {
+          quote_date: { [Op.gte]: quarterStart, [Op.lte]: quarterEnd },
+          is_active: true
+        }),
+        raw: true
+      });
+
       const q = Math.floor((quarterStart.getMonth() + 3) / 3);
       data.push({
         period: `Q${q} ${quarterStart.getFullYear()}`,
         revenue: parseFloat(result?.revenue || 0),
-        invoices: parseInt(result?.invoices || 0, 10)
+        invoices: parseInt(result?.invoices || 0, 10),
+        quoteValue: parseFloat(quoteResult?.quote_value || 0),
+        quotesCount: parseInt(quoteResult?.quotes_count || 0, 10)
       });
     }
   }

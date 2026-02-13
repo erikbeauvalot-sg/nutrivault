@@ -90,6 +90,12 @@ async function reset() {
     // Campaign models
     'EmailCampaignRecipient',
     'EmailCampaign',
+    // Finance models
+    'AccountingEntry',
+    'Expense',
+    'QuoteItem',
+    'Quote',
+    'Client',
     'Patient',
     'AuditLog',
     'RefreshToken',
@@ -230,6 +236,35 @@ async function seedBaseData() {
     // Settings permissions
     { code: 'settings.manage', description: 'Manage settings', resource: 'settings', action: 'manage' },
 
+    // Client permissions
+    { code: 'clients.read', description: 'View clients', resource: 'clients', action: 'read' },
+    { code: 'clients.create', description: 'Create clients', resource: 'clients', action: 'create' },
+    { code: 'clients.update', description: 'Update clients', resource: 'clients', action: 'update' },
+    { code: 'clients.delete', description: 'Delete clients', resource: 'clients', action: 'delete' },
+
+    // Quote permissions
+    { code: 'quotes.read', description: 'View quotes', resource: 'quotes', action: 'read' },
+    { code: 'quotes.create', description: 'Create quotes', resource: 'quotes', action: 'create' },
+    { code: 'quotes.update', description: 'Update quotes', resource: 'quotes', action: 'update' },
+    { code: 'quotes.delete', description: 'Delete quotes', resource: 'quotes', action: 'delete' },
+    { code: 'quotes.send', description: 'Send quotes by email', resource: 'quotes', action: 'send' },
+    { code: 'quotes.convert', description: 'Convert quotes to invoices', resource: 'quotes', action: 'convert' },
+
+    // Expense permissions
+    { code: 'expenses.read', description: 'View expenses', resource: 'expenses', action: 'read' },
+    { code: 'expenses.create', description: 'Create expenses', resource: 'expenses', action: 'create' },
+    { code: 'expenses.update', description: 'Update expenses', resource: 'expenses', action: 'update' },
+    { code: 'expenses.delete', description: 'Delete expenses', resource: 'expenses', action: 'delete' },
+
+    // Finance permissions
+    { code: 'finance.read', description: 'View finance dashboard', resource: 'finance', action: 'read' },
+
+    // Accounting permissions
+    { code: 'accounting.read', description: 'View accounting entries', resource: 'accounting', action: 'read' },
+    { code: 'accounting.create', description: 'Create accounting entries', resource: 'accounting', action: 'create' },
+    { code: 'accounting.update', description: 'Update accounting entries', resource: 'accounting', action: 'update' },
+    { code: 'accounting.delete', description: 'Delete accounting entries', resource: 'accounting', action: 'delete' },
+
     // Portal permissions (PATIENT role)
     { code: 'portal.own_measures', description: 'View own measures', resource: 'portal', action: 'own_measures' },
     { code: 'portal.own_visits', description: 'View own visits', resource: 'portal', action: 'own_visits' },
@@ -262,7 +297,12 @@ async function seedBaseData() {
     'invoice_customization.read', 'invoice_customization.update',
     'export.patients', 'export.visits', 'export.billing',
     'documents.read', 'documents.upload', 'documents.update', 'documents.delete', 'documents.download', 'documents.share',
-    'recipes.read', 'recipes.create', 'recipes.update', 'recipes.delete', 'recipes.share'
+    'recipes.read', 'recipes.create', 'recipes.update', 'recipes.delete', 'recipes.share',
+    'clients.read', 'clients.create', 'clients.update',
+    'quotes.read', 'quotes.create', 'quotes.update', 'quotes.send', 'quotes.convert',
+    'expenses.read', 'expenses.create', 'expenses.update',
+    'finance.read',
+    'accounting.read', 'accounting.create', 'accounting.update'
   ];
   const dietitianPermissions = dietitianPermissionCodes
     .filter(code => permissionMap[code])
@@ -275,7 +315,8 @@ async function seedBaseData() {
   // Assign limited permissions to ASSISTANT role
   const assistantPermissionCodes = [
     'patients.read', 'visits.read', 'billing.read',
-    'custom_fields.read', 'measures.read', 'email_templates.read', 'billing_templates.read'
+    'custom_fields.read', 'measures.read', 'email_templates.read', 'billing_templates.read',
+    'clients.read', 'quotes.read', 'expenses.read', 'finance.read', 'accounting.read'
   ];
   const assistantPermissions = assistantPermissionCodes
     .filter(code => permissionMap[code])

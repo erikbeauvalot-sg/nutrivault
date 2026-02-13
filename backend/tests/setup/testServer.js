@@ -56,6 +56,11 @@ function createTestApp() {
   const schedulerRoutes = require('../../src/routes/scheduler');
   const googleCalendarRoutes = require('../../src/routes/googleCalendar');
   const portalRoutes = require('../../src/routes/portal');
+  const clientRoutes = require('../../src/routes/clients');
+  const quoteRoutes = require('../../src/routes/quotes');
+  const expenseRoutes = require('../../src/routes/expenses');
+  const financeRoutes = require('../../src/routes/finance');
+  const accountingEntryRoutes = require('../../src/routes/accountingEntries');
 
   // Mount routes
   app.use('/api/auth', authRoutes);
@@ -92,6 +97,11 @@ function createTestApp() {
   app.use('/api/scheduler', schedulerRoutes);
   app.use('/api/calendar', googleCalendarRoutes);
   app.use('/api/portal', portalRoutes);
+  app.use('/api/clients', clientRoutes);
+  app.use('/api/quotes', quoteRoutes);
+  app.use('/api/expenses', expenseRoutes);
+  app.use('/api/finance', financeRoutes);
+  app.use('/api/accounting-entries', accountingEntryRoutes);
 
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(__dirname, '../../../uploads')));

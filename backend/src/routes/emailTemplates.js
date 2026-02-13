@@ -112,7 +112,7 @@ router.put(
   authenticate,
   async (req, res, next) => {
     // Admin can edit anything
-    if (req.user.role === 'ADMIN') return next();
+    if (req.user.role?.name === 'ADMIN') return next();
     // Non-admin: check they own this template
     try {
       const template = await emailTemplateService.getTemplateById(req.params.id);
@@ -135,7 +135,7 @@ router.delete(
   '/:id',
   authenticate,
   async (req, res, next) => {
-    if (req.user.role === 'ADMIN') return next();
+    if (req.user.role?.name === 'ADMIN') return next();
     try {
       const template = await emailTemplateService.getTemplateById(req.params.id);
       if (template.user_id && template.user_id === req.user.id) return next();

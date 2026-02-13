@@ -212,7 +212,8 @@ describe('recipeService', () => {
 
       expect(api.post).toHaveBeenCalledWith('/recipes/rec-123/share', {
         patient_id: 'pat-456',
-        notes: 'Special notes'
+        notes: 'Special notes',
+        send_email: false
       });
       expect(result.patient_id).toBe('pat-456');
     });
@@ -227,7 +228,8 @@ describe('recipeService', () => {
 
       expect(api.post).toHaveBeenCalledWith('/recipes/rec-123/share', {
         patient_id: 'pat-456',
-        notes: ''
+        notes: '',
+        send_email: false
       });
     });
   });

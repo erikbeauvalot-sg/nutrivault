@@ -54,7 +54,7 @@ describe('LoginPage', () => {
       renderLoginPage();
 
       expect(screen.getByText('NutriVault')).toBeInTheDocument();
-      expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/username or email/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
     });
@@ -68,7 +68,7 @@ describe('LoginPage', () => {
     it('should have empty inputs initially', () => {
       renderLoginPage();
 
-      expect(screen.getByLabelText(/username/i)).toHaveValue('');
+      expect(screen.getByLabelText(/username or email/i)).toHaveValue('');
       expect(screen.getByLabelText(/password/i)).toHaveValue('');
     });
   });
@@ -89,7 +89,7 @@ describe('LoginPage', () => {
       const user = userEvent.setup();
       renderLoginPage();
 
-      await user.type(screen.getByLabelText(/username/i), 'ab');
+      await user.type(screen.getByLabelText(/username or email/i), 'ab');
       await user.type(screen.getByLabelText(/password/i), 'password123');
       await user.click(screen.getByRole('button', { name: /sign in/i }));
 
@@ -103,7 +103,7 @@ describe('LoginPage', () => {
       const user = userEvent.setup();
       renderLoginPage();
 
-      await user.type(screen.getByLabelText(/username/i), 'testuser');
+      await user.type(screen.getByLabelText(/username or email/i), 'testuser');
       await user.type(screen.getByLabelText(/password/i), 'short');
       await user.click(screen.getByRole('button', { name: /sign in/i }));
 
@@ -120,7 +120,7 @@ describe('LoginPage', () => {
       mockLogin.mockResolvedValue({});
       renderLoginPage();
 
-      await user.type(screen.getByLabelText(/username/i), 'testuser');
+      await user.type(screen.getByLabelText(/username or email/i), 'testuser');
       await user.type(screen.getByLabelText(/password/i), 'password123');
       await user.click(screen.getByRole('button', { name: /sign in/i }));
 
@@ -134,7 +134,7 @@ describe('LoginPage', () => {
       mockLogin.mockResolvedValue({});
       renderLoginPage();
 
-      await user.type(screen.getByLabelText(/username/i), 'testuser');
+      await user.type(screen.getByLabelText(/username or email/i), 'testuser');
       await user.type(screen.getByLabelText(/password/i), 'password123');
       await user.click(screen.getByLabelText(/remember me/i));
       await user.click(screen.getByRole('button', { name: /sign in/i }));
@@ -149,7 +149,7 @@ describe('LoginPage', () => {
       mockLogin.mockResolvedValue({});
       renderLoginPage();
 
-      await user.type(screen.getByLabelText(/username/i), 'testuser');
+      await user.type(screen.getByLabelText(/username or email/i), 'testuser');
       await user.type(screen.getByLabelText(/password/i), 'password123');
       await user.click(screen.getByRole('button', { name: /sign in/i }));
 
@@ -163,7 +163,7 @@ describe('LoginPage', () => {
       mockLogin.mockRejectedValue({ error: 'Invalid credentials' });
       renderLoginPage();
 
-      await user.type(screen.getByLabelText(/username/i), 'testuser');
+      await user.type(screen.getByLabelText(/username or email/i), 'testuser');
       await user.type(screen.getByLabelText(/password/i), 'wrongpassword');
       await user.click(screen.getByRole('button', { name: /sign in/i }));
 
@@ -178,12 +178,12 @@ describe('LoginPage', () => {
       mockLogin.mockImplementation(() => new Promise(() => {}));
       renderLoginPage();
 
-      await user.type(screen.getByLabelText(/username/i), 'testuser');
+      await user.type(screen.getByLabelText(/username or email/i), 'testuser');
       await user.type(screen.getByLabelText(/password/i), 'password123');
       await user.click(screen.getByRole('button', { name: /sign in/i }));
 
       await waitFor(() => {
-        expect(screen.getByLabelText(/username/i)).toBeDisabled();
+        expect(screen.getByLabelText(/username or email/i)).toBeDisabled();
         expect(screen.getByLabelText(/password/i)).toBeDisabled();
       });
     });
@@ -196,7 +196,7 @@ describe('LoginPage', () => {
       renderLoginPage();
 
       // Trigger error
-      await user.type(screen.getByLabelText(/username/i), 'testuser');
+      await user.type(screen.getByLabelText(/username or email/i), 'testuser');
       await user.type(screen.getByLabelText(/password/i), 'password123');
       await user.click(screen.getByRole('button', { name: /sign in/i }));
 

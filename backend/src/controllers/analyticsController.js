@@ -78,6 +78,29 @@ exports.getCommunicationEffectiveness = async (req, res, next) => {
 };
 
 /**
+ * GET /api/analytics/quote-metrics
+ * Get quote analytics metrics
+ */
+exports.getQuoteMetrics = async (req, res, next) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const data = await analyticsService.getQuoteMetrics({
+      startDate,
+      endDate,
+      user: req.user
+    });
+
+    res.json({
+      success: true,
+      data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * GET /api/analytics/patient-health-score/:patientId
  * Get health score for a specific patient
  */

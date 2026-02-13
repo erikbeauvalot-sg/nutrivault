@@ -54,6 +54,7 @@ const CATEGORY_META = {
   appointment_reminder:   { icon: '📅', labelKey: 'emailTemplates.catApptRemind', descKey: 'emailTemplates.catApptRemindDesc' },
   appointment_invitation: { icon: '🗓️', labelKey: 'emailTemplates.catApptInvite', descKey: 'emailTemplates.catApptInviteDesc' },
   follow_up:              { icon: '📋', labelKey: 'emailTemplates.catFollowUp',  descKey: 'emailTemplates.catFollowUpDesc' },
+  quote:                  { icon: '📝', labelKey: 'emailTemplates.catQuote',    descKey: 'emailTemplates.catQuoteDesc' },
   general:                { icon: '✉️', labelKey: 'emailTemplates.catGeneral',   descKey: 'emailTemplates.catGeneralDesc' }
 };
 

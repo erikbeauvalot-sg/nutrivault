@@ -179,6 +179,15 @@ export const getPatientHealthScore = async (patientId) => {
   return response.data;
 };
 
+/**
+ * Get quote metrics analytics
+ * @param {Object} params - Query parameters
+ */
+export const getQuoteMetrics = async (params = {}) => {
+  const response = await api.get('/analytics/quote-metrics', { params });
+  return response.data;
+};
+
 export default {
   // Page view tracking
   trackPageView,
@@ -191,5 +200,6 @@ export default {
   getHealthTrends,
   getFinancialMetrics,
   getCommunicationEffectiveness,
-  getPatientHealthScore
+  getPatientHealthScore,
+  getQuoteMetrics
 };

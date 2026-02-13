@@ -13,6 +13,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
   Area,
   AreaChart
@@ -54,6 +55,7 @@ const RevenueChartWidget = () => {
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
+      const entry = payload[0]?.payload;
       return (
         <div className="bg-white p-2 border rounded shadow-sm">
           <p className="mb-1 fw-bold">{label}</p>
@@ -61,8 +63,19 @@ const RevenueChartWidget = () => {
             {formatCurrency(payload[0].value)}
           </p>
           <small className="text-muted">
-            {payload[0].payload.invoices} {t('dashboard.invoices', 'factures')}
+            {entry?.invoices} {t('dashboard.invoices', 'factures')}
           </small>
+          {entry?.quoteValue > 0 && (
+            <>
+              <hr className="my-1" />
+              <p className="mb-0 small" style={{ color: '#198754' }}>
+                {t('dashboard.quoteValue', 'Devis')}: {formatCurrency(entry.quoteValue)}
+              </p>
+              <small className="text-muted">
+                {entry.quotesCount} {t('dashboard.quotesLabel', 'devis')}
+              </small>
+            </>
+          )}
         </div>
       );
     }
@@ -105,6 +118,10 @@ const RevenueChartWidget = () => {
                   <stop offset="5%" stopColor="#0d6efd" stopOpacity={0.3} />
                   <stop offset="95%" stopColor="#0d6efd" stopOpacity={0} />
                 </linearGradient>
+                <linearGradient id="colorQuotes" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#198754" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#198754" stopOpacity={0} />
+                </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis
@@ -120,6 +137,7 @@ const RevenueChartWidget = () => {
                 tickFormatter={(value) => `${value / 1000}k`}
               />
               <Tooltip content={<CustomTooltip />} />
+              {data.some(d => d.quoteValue > 0) && <Legend />}
               <Area
                 type="monotone"
                 dataKey="revenue"
@@ -127,7 +145,20 @@ const RevenueChartWidget = () => {
                 strokeWidth={2}
                 fillOpacity={1}
                 fill="url(#colorRevenue)"
+                name={t('dashboard.revenue', 'CA')}
               />
+              {data.some(d => d.quoteValue > 0) && (
+                <Area
+                  type="monotone"
+                  dataKey="quoteValue"
+                  stroke="#198754"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  fillOpacity={1}
+                  fill="url(#colorQuotes)"
+                  name={t('dashboard.quoteValue', 'Devis')}
+                />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         )}

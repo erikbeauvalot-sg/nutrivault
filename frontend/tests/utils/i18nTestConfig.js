@@ -34,8 +34,10 @@ const resources = {
       'auth.login': 'Login',
       'auth.logout': 'Logout',
       'auth.username': 'Username',
+      'auth.usernameOrEmail': 'Username or email',
       'auth.password': 'Password',
       'auth.rememberMe': 'Remember me',
+      'auth.forgotPassword': 'Forgot password?',
       'auth.loginButton': 'Sign In',
       'auth.loginError': 'Invalid credentials',
 

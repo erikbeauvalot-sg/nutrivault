@@ -69,6 +69,11 @@ db.PatientObjective = require('./PatientObjective')(sequelize, DataTypes);
 db.Notification = require('./Notification')(sequelize, DataTypes);
 db.UserEmailConfig = require('./UserEmailConfig')(sequelize, DataTypes);
 db.SidebarMenuConfig = require('./SidebarMenuConfig')(sequelize, DataTypes);
+db.Client = require('./Client')(sequelize, DataTypes);
+db.Quote = require('./Quote')(sequelize, DataTypes);
+db.QuoteItem = require('./QuoteItem')(sequelize, DataTypes);
+db.Expense = require('./Expense')(sequelize, DataTypes);
+db.AccountingEntry = require('./AccountingEntry')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -956,5 +961,31 @@ db.User.hasOne(db.UserEmailConfig, { foreignKey: 'user_id', as: 'emailConfig' })
 
 // EmailTemplate - User (owner) relationship for per-dietitian overrides
 db.EmailTemplate.belongsTo(db.User, { foreignKey: 'user_id', as: 'owner' });
+
+// Client associations
+db.Client.belongsTo(db.User, { foreignKey: 'created_by', as: 'creator' });
+db.User.hasMany(db.Client, { foreignKey: 'created_by', as: 'created_clients' });
+db.Client.belongsTo(db.Patient, { foreignKey: 'patient_id', as: 'patient' });
+db.Patient.hasMany(db.Client, { foreignKey: 'patient_id', as: 'client_records' });
+db.Client.hasMany(db.Quote, { foreignKey: 'client_id', as: 'quotes' });
+
+// Quote associations
+db.Quote.belongsTo(db.Client, { foreignKey: 'client_id', as: 'client' });
+db.Quote.belongsTo(db.User, { foreignKey: 'created_by', as: 'creator' });
+db.User.hasMany(db.Quote, { foreignKey: 'created_by', as: 'created_quotes' });
+db.Quote.belongsTo(db.Billing, { foreignKey: 'billing_id', as: 'invoice' });
+db.Billing.hasOne(db.Quote, { foreignKey: 'billing_id', as: 'source_quote' });
+db.Quote.hasMany(db.QuoteItem, { foreignKey: 'quote_id', as: 'items', onDelete: 'CASCADE' });
+
+// QuoteItem associations
+db.QuoteItem.belongsTo(db.Quote, { foreignKey: 'quote_id', as: 'quote' });
+
+// Expense associations
+db.Expense.belongsTo(db.User, { foreignKey: 'created_by', as: 'creator' });
+db.User.hasMany(db.Expense, { foreignKey: 'created_by', as: 'created_expenses' });
+
+// AccountingEntry associations
+db.AccountingEntry.belongsTo(db.User, { foreignKey: 'created_by', as: 'creator' });
+db.User.hasMany(db.AccountingEntry, { foreignKey: 'created_by', as: 'accounting_entries' });
 
 module.exports = db;

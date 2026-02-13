@@ -253,15 +253,17 @@ async function getVisitCustomFields(user, visitId, language = 'fr', requestMetad
  */
 async function recalculateDependentFields(visitId, changedFieldName, user) {
   try {
-    // Find all calculated fields that depend on the changed field
-    const calculatedFields = await CustomFieldDefinition.findAll({
+    // Find all calculated fields, then filter in JS to avoid Op.like issues with JSON columns in SQLite
+    const allCalculatedFields = await CustomFieldDefinition.findAll({
       where: {
         is_calculated: true,
-        is_active: true,
-        dependencies: {
-          [Op.like]: `%"${changedFieldName}"%`
-        }
+        is_active: true
       }
+    });
+
+    const calculatedFields = allCalculatedFields.filter(f => {
+      const deps = f.dependencies || [];
+      return deps.includes(changedFieldName);
     });
 
     if (calculatedFields.length === 0) {

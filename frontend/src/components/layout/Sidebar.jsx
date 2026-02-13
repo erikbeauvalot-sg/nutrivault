@@ -121,6 +121,8 @@ const Sidebar = ({ isOpen, onClose }) => {
       { path: '/campaigns', icon: '📧', label: t('navigation.campaigns', 'Campaigns') },
       { path: '/messages', icon: '💬', label: t('navigation.messages', 'Messages') },
       { path: '/billing', icon: '💰', label: t('navigation.billing') },
+      { path: '/clients', icon: '🏢', label: t('navigation.clients', 'Clients') },
+      { path: '/quotes', icon: '📝', label: t('navigation.quotes', 'Quotes') },
       { path: '/documents', icon: '📄', label: t('documents.title') },
       { path: '/analytics', icon: '📈', label: t('analytics.title', 'Analytics') },
       ...(isAdmin ? [{ path: '/users', icon: '👤', label: t('navigation.users') }] : []),

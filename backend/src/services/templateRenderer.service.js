@@ -84,6 +84,23 @@ const CATEGORY_VARIABLES = {
     'clinic_address',
     'clinic_phone'
   ],
+  quote: [
+    'client_name',
+    'client_first_name',
+    'client_last_name',
+    'client_company',
+    'quote_number',
+    'quote_date',
+    'validity_date',
+    'quote_subject',
+    'amount_total',
+    'amount_tax',
+    'amount_ht',
+    'items_count',
+    'dietitian_name',
+    'dietitian_first_name',
+    'dietitian_last_name'
+  ],
   follow_up: [
     'patient_name',
     'patient_first_name',
@@ -136,6 +153,8 @@ function buildVariableContext(data = {}) {
   const {
     patient,
     invoice,
+    quote,
+    client,
     document,
     appointment,
     visit,
@@ -187,6 +206,40 @@ function buildVariableContext(data = {}) {
       );
       context.days_overdue = daysOverdue > 0 ? daysOverdue : 0;
     }
+  }
+
+  // Quote variables
+  if (quote) {
+    context.quote_number = quote.quote_number || '';
+    context.quote_date = quote.quote_date
+      ? formatDate(quote.quote_date, 'fr')
+      : '';
+    context.validity_date = quote.validity_date
+      ? formatDate(quote.validity_date, 'fr')
+      : '';
+    context.quote_subject = quote.subject || '';
+    context.amount_total = quote.amount_total
+      ? `${parseFloat(quote.amount_total).toFixed(2)} €`
+      : '0.00 €';
+    context.amount_tax = quote.amount_tax
+      ? `${parseFloat(quote.amount_tax).toFixed(2)} €`
+      : '0.00 €';
+    context.amount_ht = quote.amount_total && quote.amount_tax
+      ? `${(parseFloat(quote.amount_total) - parseFloat(quote.amount_tax)).toFixed(2)} €`
+      : '0.00 €';
+    context.items_count = quote.items ? quote.items.length : 0;
+  }
+
+  // Client variables (for quotes)
+  if (client) {
+    const clientName = client.client_type === 'company'
+      ? client.company_name || ''
+      : `${client.first_name || ''} ${client.last_name || ''}`.trim();
+    context.client_name = clientName;
+    context.client_first_name = client.first_name || '';
+    context.client_last_name = client.last_name || '';
+    context.client_company = client.company_name || '';
+    context.client_email = client.email || '';
   }
 
   // Document variables

@@ -5,7 +5,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
-import { getHealthTrends, getFinancialMetrics, getCommunicationEffectiveness } from '../services/analyticsService';
+import { getHealthTrends, getFinancialMetrics, getCommunicationEffectiveness, getQuoteMetrics } from '../services/analyticsService';
 import Layout from '../components/layout/Layout';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
@@ -13,6 +13,13 @@ const RISK_COLORS = {
   low: '#28a745',
   medium: '#ffc107',
   high: '#dc3545'
+};
+const QUOTE_STATUS_COLORS = {
+  DRAFT: '#6c757d',
+  SENT: '#0d6efd',
+  ACCEPTED: '#198754',
+  DECLINED: '#dc3545',
+  EXPIRED: '#ffc107'
 };
 
 function AnalyticsDashboardPage() {
@@ -33,6 +40,10 @@ function AnalyticsDashboardPage() {
   const [financialLoading, setFinancialLoading] = useState(false);
   const [financialError, setFinancialError] = useState(null);
 
+  // Quote metrics state
+  const [quoteData, setQuoteData] = useState(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+
   // Communication state
   const [commData, setCommData] = useState(null);
   const [commLoading, setCommLoading] = useState(false);
@@ -52,17 +63,23 @@ function AnalyticsDashboardPage() {
     }
   };
 
-  // Fetch financial metrics
+  // Fetch financial metrics + quote metrics
   const fetchFinancialMetrics = async () => {
     setFinancialLoading(true);
     setFinancialError(null);
+    setQuoteLoading(true);
     try {
-      const result = await getFinancialMetrics(dateRange);
-      setFinancialData(result.data);
+      const [finResult, quoteResult] = await Promise.all([
+        getFinancialMetrics(dateRange),
+        getQuoteMetrics(dateRange).catch(() => null)
+      ]);
+      setFinancialData(finResult.data);
+      if (quoteResult?.data) setQuoteData(quoteResult.data);
     } catch (err) {
       setFinancialError(err.response?.data?.error || t('analytics.fetchError', 'Failed to load data'));
     } finally {
       setFinancialLoading(false);
+      setQuoteLoading(false);
     }
   };
 
@@ -403,7 +420,7 @@ function AnalyticsDashboardPage() {
         </Row>
 
         {/* Monthly Revenue Trend */}
-        <Row>
+        <Row className="mb-4">
           <Col>
             <Card>
               <Card.Header>{t('analytics.monthlyRevenue', 'Monthly Revenue Trend')}</Card.Header>
@@ -436,6 +453,160 @@ function AnalyticsDashboardPage() {
             </Card>
           </Col>
         </Row>
+
+        {/* Quote Metrics Section */}
+        {quoteData && (
+          <>
+            <h5 className="mt-4 mb-3">{t('analytics.quoteMetrics', 'Quotes / Devis')}</h5>
+
+            {/* Quote KPI Cards */}
+            <Row className="mb-4">
+              <Col md={3}>
+                <Card className="text-center h-100">
+                  <Card.Body>
+                    <h2 className="text-primary">{quoteData.summary?.totalQuotes || 0}</h2>
+                    <small className="text-muted">{t('analytics.totalQuotes', 'Total Quotes')}</small>
+                  </Card.Body>
+                </Card>
+              </Col>
+              <Col md={3}>
+                <Card className="text-center h-100">
+                  <Card.Body>
+                    <h2 className="text-info">{formatCurrency(quoteData.summary?.pendingValue)}</h2>
+                    <small className="text-muted">{t('analytics.pipeline', 'Pipeline (Sent)')}</small>
+                  </Card.Body>
+                </Card>
+              </Col>
+              <Col md={3}>
+                <Card className="text-center h-100">
+                  <Card.Body>
+                    <h2 className="text-success">{quoteData.summary?.conversionRate || 0}%</h2>
+                    <small className="text-muted">{t('analytics.conversionRate', 'Conversion Rate')}</small>
+                  </Card.Body>
+                </Card>
+              </Col>
+              <Col md={3}>
+                <Card className="text-center h-100">
+                  <Card.Body>
+                    <h2 className="text-success">{formatCurrency(quoteData.summary?.acceptedValue)}</h2>
+                    <small className="text-muted">{t('analytics.acceptedAmount', 'Accepted Amount')}</small>
+                  </Card.Body>
+                </Card>
+              </Col>
+            </Row>
+
+            <Row className="mb-4">
+              {/* Quote Status Pie Chart */}
+              <Col md={6}>
+                <Card className="h-100">
+                  <Card.Header>{t('analytics.quotesByStatus', 'Quotes by Status')}</Card.Header>
+                  <Card.Body>
+                    {quoteData.quotesByStatus?.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={quoteData.quotesByStatus.map(s => ({
+                              name: t(`quoteStatus.${s.status}`, s.status),
+                              value: s.count
+                            }))}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                            outerRadius={100}
+                            dataKey="value"
+                          >
+                            {quoteData.quotesByStatus.map((s, i) => (
+                              <Cell key={i} fill={QUOTE_STATUS_COLORS[s.status] || COLORS[i % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <p className="text-muted text-center py-5">{t('analytics.noData', 'No data available')}</p>
+                    )}
+                  </Card.Body>
+                </Card>
+              </Col>
+
+              {/* Conversion Funnel */}
+              <Col md={6}>
+                <Card className="h-100">
+                  <Card.Header>{t('analytics.conversionFunnel', 'Conversion Funnel')}</Card.Header>
+                  <Card.Body>
+                    {quoteData.conversionFunnel?.total > 0 ? (
+                      <div className="py-3">
+                        {[
+                          { label: t('analytics.funnelTotal', 'Total'), value: quoteData.conversionFunnel.total, color: '#6c757d' },
+                          { label: t('analytics.funnelSent', 'Sent'), value: quoteData.conversionFunnel.sent, color: '#0d6efd' },
+                          { label: t('analytics.funnelAccepted', 'Accepted'), value: quoteData.conversionFunnel.accepted, color: '#198754' },
+                          { label: t('analytics.funnelConverted', 'Converted'), value: quoteData.conversionFunnel.converted, color: '#0dcaf0' }
+                        ].map((step, i) => {
+                          const maxVal = quoteData.conversionFunnel.total;
+                          const pct = maxVal > 0 ? (step.value / maxVal) * 100 : 0;
+                          return (
+                            <div key={i} className="mb-3">
+                              <div className="d-flex justify-content-between mb-1">
+                                <span className="small fw-medium">{step.label}</span>
+                                <span className="small text-muted">{step.value} ({pct.toFixed(0)}%)</span>
+                              </div>
+                              <div className="progress" style={{ height: '24px' }}>
+                                <div
+                                  className="progress-bar"
+                                  style={{ width: `${pct}%`, backgroundColor: step.color }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-muted text-center py-5">{t('analytics.noData', 'No data available')}</p>
+                    )}
+                  </Card.Body>
+                </Card>
+              </Col>
+            </Row>
+
+            {/* Monthly Quotes Bar Chart */}
+            <Row>
+              <Col>
+                <Card>
+                  <Card.Header>{t('analytics.monthlyQuotes', 'Monthly Quotes')}</Card.Header>
+                  <Card.Body>
+                    {quoteData.monthlyQuotes?.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={quoteData.monthlyQuotes}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" />
+                          <YAxis />
+                          <Tooltip formatter={(value, name) =>
+                            name.includes('value') || name.includes('Value')
+                              ? formatCurrency(value) : value
+                          } />
+                          <Legend />
+                          <Bar
+                            dataKey="created"
+                            fill="#0d6efd"
+                            name={t('analytics.quotesCreated', 'Created')}
+                          />
+                          <Bar
+                            dataKey="accepted"
+                            fill="#198754"
+                            name={t('analytics.quotesAccepted', 'Accepted')}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <p className="text-muted text-center py-5">{t('analytics.noData', 'No data available')}</p>
+                    )}
+                  </Card.Body>
+                </Card>
+              </Col>
+            </Row>
+          </>
+        )}
       </>
     );
   };
