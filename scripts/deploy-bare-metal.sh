@@ -138,6 +138,12 @@ main() {
 
     log_success "Migrations complete"
 
+    # Run seeders (idempotent — each seeder checks before inserting)
+    log_info "Running seeders..."
+    cd "$PROJECT_DIR" && npx sequelize-cli db:seed:all 2>&1 | grep -E "(executed|already)" || true
+    cd "$BACKEND_DIR" && npx sequelize-cli db:seed:all 2>&1 | grep -E "(executed|already)" || true
+    log_success "Seeders complete"
+
     # ── Step 5: Build frontend ───────────────────────────────────
     log_step 5 "Building frontend..."
     cd "$FRONTEND_DIR" && npm run build 2>&1 | tail -3

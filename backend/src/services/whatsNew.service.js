@@ -34,6 +34,56 @@ const getActualVersion = () => {
 
 // Current version changelog - human-readable features
 const CHANGELOG = {
+  '8.7.0': {
+    version: '8.7.0',
+    date: '2026-02-13',
+    title: {
+      fr: 'Module Finance & Comptabilité',
+      en: 'Finance & Accounting Module'
+    },
+    features: [
+      {
+        icon: '👤',
+        title: { fr: 'Gestion des clients', en: 'Client Management' },
+        description: {
+          fr: 'Gérez vos clients (personnes et entreprises) avec un annuaire complet : coordonnées, notes, historique des devis et factures',
+          en: 'Manage your clients (individuals and companies) with a complete directory: contact info, notes, quote and invoice history'
+        }
+      },
+      {
+        icon: '📝',
+        title: { fr: 'Devis professionnels', en: 'Professional Quotes' },
+        description: {
+          fr: 'Créez des devis avec versionnement automatique, validité +30j, envoi par email avec PDF, et conversion en facture en un clic',
+          en: 'Create quotes with automatic versioning, +30 day validity, email sending with PDF, and one-click invoice conversion'
+        }
+      },
+      {
+        icon: '💸',
+        title: { fr: 'Suivi des dépenses', en: 'Expense Tracking' },
+        description: {
+          fr: 'Enregistrez vos dépenses par catégorie (loyer, logiciel, assurance…), ponctuelles ou récurrentes, pour un suivi précis de votre trésorerie',
+          en: 'Track your expenses by category (rent, software, insurance…), one-time or recurring, for precise cash flow monitoring'
+        }
+      },
+      {
+        icon: '📒',
+        title: { fr: 'Écritures comptables', en: 'Accounting Entries' },
+        description: {
+          fr: 'Ajoutez des ajustements signés (crédits/débits) pour réconcilier vos comptes — remboursements, corrections, frais bancaires',
+          en: 'Add signed adjustments (credits/debits) to reconcile your accounts — refunds, corrections, bank fees'
+        }
+      },
+      {
+        icon: '📊',
+        title: { fr: 'Dashboard Finance', en: 'Finance Dashboard' },
+        description: {
+          fr: 'Tableau de bord complet avec KPI (revenu, dépenses, profit net, taux de recouvrement), balance âgée et cash flow sur 12 mois',
+          en: 'Complete dashboard with KPIs (revenue, expenses, net profit, collection rate), aging report and 12-month cash flow'
+        }
+      }
+    ]
+  },
   '8.2.0': {
     version: '8.2.0',
     date: '2026-02-09',

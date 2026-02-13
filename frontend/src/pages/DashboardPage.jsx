@@ -445,7 +445,7 @@ const DashboardPage = () => {
 
             {/* Quick Navigation Cards */}
             <Row className="g-3">
-              <Col md={4}>
+              <Col md={3}>
                 <Card className="text-center h-100 shadow-sm border-0">
                   <Card.Body className="py-3">
                     <div className="h3 mb-2">👥</div>
@@ -456,7 +456,7 @@ const DashboardPage = () => {
                   </Card.Body>
                 </Card>
               </Col>
-              <Col md={4}>
+              <Col md={3}>
                 <Card className="text-center h-100 shadow-sm border-0">
                   <Card.Body className="py-3">
                     <div className="h3 mb-2">🗓️</div>
@@ -467,13 +467,24 @@ const DashboardPage = () => {
                   </Card.Body>
                 </Card>
               </Col>
-              <Col md={4}>
+              <Col md={3}>
                 <Card className="text-center h-100 shadow-sm border-0">
                   <Card.Body className="py-3">
                     <div className="h3 mb-2">💰</div>
                     <h6 className="mb-2">{t('navigation.billing')}</h6>
                     <Link to="/billing" className="btn btn-outline-primary btn-sm">
                       {t('dashboard.viewBilling')}
+                    </Link>
+                  </Card.Body>
+                </Card>
+              </Col>
+              <Col md={3}>
+                <Card className="text-center h-100 shadow-sm border-0">
+                  <Card.Body className="py-3">
+                    <div className="h3 mb-2">📊</div>
+                    <h6 className="mb-2">{t('navigation.finance')}</h6>
+                    <Link to="/finance" className="btn btn-outline-primary btn-sm">
+                      {t('dashboard.viewFinance', 'Voir Finance')}
                     </Link>
                   </Card.Body>
                 </Card>

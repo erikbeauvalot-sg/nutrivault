@@ -177,6 +177,39 @@ const getPracticeOverview = async (user) => {
   const acceptedQuotesThisMonth = parseInt(acceptedQuotesResult?.count || 0, 10);
   const acceptedQuotesAmount = parseFloat(acceptedQuotesResult?.total || 0);
 
+  // Expenses this month
+  let expensesThisMonth = 0;
+  let expensesLastMonth = 0;
+  if (db.Expense) {
+    const expThisResult = await db.Expense.findOne({
+      attributes: [[db.sequelize.fn('SUM', db.sequelize.col('amount')), 'total']],
+      where: { expense_date: { [Op.gte]: startOfMonth }, is_active: true },
+      raw: true
+    });
+    expensesThisMonth = parseFloat(expThisResult?.total || 0);
+
+    const expLastResult = await db.Expense.findOne({
+      attributes: [[db.sequelize.fn('SUM', db.sequelize.col('amount')), 'total']],
+      where: {
+        expense_date: { [Op.gte]: startOfLastMonth, [Op.lte]: endOfLastMonth },
+        is_active: true
+      },
+      raw: true
+    });
+    expensesLastMonth = parseFloat(expLastResult?.total || 0);
+  }
+
+  // Accounting adjustments this month
+  let adjustmentsThisMonth = 0;
+  if (db.AccountingEntry) {
+    const adjResult = await db.AccountingEntry.findOne({
+      attributes: [[db.sequelize.fn('SUM', db.sequelize.col('amount')), 'total']],
+      where: { entry_date: { [Op.gte]: startOfMonth }, is_active: true },
+      raw: true
+    });
+    adjustmentsThisMonth = parseFloat(adjResult?.total || 0);
+  }
+
   // Patient retention rate (patients with visits in last 3 months / total patients)
   const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
   const patientsWithRecentVisits = await db.Visit.count({
@@ -207,7 +240,12 @@ const getPracticeOverview = async (user) => {
     pendingQuotesCount,
     pendingQuotesAmount,
     acceptedQuotesThisMonth,
-    acceptedQuotesAmount
+    acceptedQuotesAmount,
+    expensesThisMonth,
+    expensesLastMonth,
+    expensesChange: expensesThisMonth - expensesLastMonth,
+    adjustmentsThisMonth,
+    netProfitThisMonth: revenueThisMonth - expensesThisMonth + adjustmentsThisMonth
   };
 };
 

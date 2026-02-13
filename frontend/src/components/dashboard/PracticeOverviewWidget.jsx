@@ -14,7 +14,9 @@ import {
   FaArrowUp,
   FaArrowDown,
   FaFileInvoice,
-  FaCheckCircle
+  FaCheckCircle,
+  FaReceipt,
+  FaBalanceScale
 } from 'react-icons/fa';
 import { getOverview } from '../../services/dashboardService';
 
@@ -159,6 +161,29 @@ const PracticeOverviewWidget = () => {
     }
   ] : [];
 
+  const financeKpis = (data.expensesThisMonth > 0 || data.netProfitThisMonth !== undefined) ? [
+    {
+      icon: <FaReceipt size={24} />,
+      color: 'danger',
+      title: t('dashboard.expensesThisMonth', 'Dépenses ce mois'),
+      value: formatCurrency(data.expensesThisMonth || 0),
+      subtitle: t('dashboard.vsLastMonth', 'vs mois dernier'),
+      change: data.expensesChange || 0,
+      isCurrency: true,
+      isPositiveGood: false
+    },
+    {
+      icon: <FaBalanceScale size={24} />,
+      color: data.netProfitThisMonth >= 0 ? 'success' : 'danger',
+      title: t('dashboard.netProfitMonth', 'Profit net ce mois'),
+      value: formatCurrency(data.netProfitThisMonth || 0),
+      subtitle: data.adjustmentsThisMonth
+        ? `${formatCurrency(data.adjustmentsThisMonth)} ${t('dashboard.inAdjustments', 'ajustements')}`
+        : t('dashboard.noAdjustments', 'Aucun ajustement'),
+      noChange: true
+    }
+  ] : [];
+
   const renderKpiCard = (kpi, index) => (
     <Col key={index} md={6} lg={3} className="mb-3">
       <Card className="h-100 border-0 shadow-sm">
@@ -171,8 +196,8 @@ const PracticeOverviewWidget = () => {
           </div>
           <h3 className="mb-1">
             {kpi.value}
-            {!kpi.noChange && !kpi.isCurrency && renderChange(kpi.change)}
-            {!kpi.noChange && kpi.isCurrency && renderCurrencyChange(kpi.change)}
+            {!kpi.noChange && !kpi.isCurrency && renderChange(kpi.change, kpi.isPositiveGood !== false)}
+            {!kpi.noChange && kpi.isCurrency && renderCurrencyChange(kpi.change, kpi.isPositiveGood !== false)}
           </h3>
           <small className="text-muted">{kpi.subtitle}</small>
         </Card.Body>
@@ -188,6 +213,11 @@ const PracticeOverviewWidget = () => {
       {quoteKpis.length > 0 && (
         <Row className="mb-4">
           {quoteKpis.map((kpi, i) => renderKpiCard(kpi, i + kpis.length))}
+        </Row>
+      )}
+      {financeKpis.length > 0 && (
+        <Row className="mb-4">
+          {financeKpis.map((kpi, i) => renderKpiCard(kpi, i + kpis.length + quoteKpis.length))}
         </Row>
       )}
     </>
