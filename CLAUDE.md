@@ -22,6 +22,8 @@ After completing any feature implementation (frontend or backend):
 
 ** Release Builds:**
 - Always test the production build locally before telling the user it's ready
+
+- "COMMIT BUILD" to trigger the commit of current changes, push them and then increment the build version of the IOS on Xcode to trigger the release build process for the IOS app
 - "COMMIT PATCH" to trigger the commit of current changes, push them and then create and publish a new release with incremeting only the 'patch version' (e.g. 1.0.0 -> 1.0.1) to trigger the release build process
 - "COMMIT MINOR" to trigger the commit of current changes, push them and then create and publish a new release with incremeting only the 'minor version' (e.g. 1.0.0 -> 1.1.0) to trigger the release build process
 - "COMMIT MAJOR" to trigger the commit of current changes, push them and then create and publish a new release with incremeting only the 'major version' (e.g. 1.0.0 -> 2.0.0) to trigger the release build process
