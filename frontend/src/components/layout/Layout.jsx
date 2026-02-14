@@ -6,7 +6,6 @@
 
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import DietitianBottomTabBar from './DietitianBottomTabBar';
@@ -40,15 +39,9 @@ const Layout = ({ children }) => {
           </>
         )}
         <main className={`layout-content ${useBottomTabs ? 'no-sidebar' : ''} ${isNative ? 'native-animated' : ''}`}>
-          {isNative ? (
-            <AnimatePresence mode="popLayout" initial={false}>
-              <AnimatedPage key={location.pathname}>
-                {children}
-              </AnimatedPage>
-            </AnimatePresence>
-          ) : (
-            children
-          )}
+          <AnimatedPage locationKey={location.pathname}>
+            {children}
+          </AnimatedPage>
         </main>
       </div>
       {useBottomTabs && <DietitianBottomTabBar />}

@@ -4,7 +4,7 @@
  * Implements lazy loading for performance optimization (US-9.2)
  */
 
-import { lazy, Suspense, useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Spinner } from 'react-bootstrap';
 import { ToastContainer } from 'react-toastify';
@@ -104,6 +104,15 @@ function App() {
   const { biometricName, biometricEnabled, authenticateWithBiometric } = useBiometricAuth();
   const [splashDone, setSplashDone] = useState(!isNative);
   usePageTracking();
+
+  // Safety net: hide native splash screen once React is ready.
+  // initCapacitor() is fire-and-forget and may race with React rendering.
+  useEffect(() => {
+    if (!isNative) return;
+    import('@capacitor/splash-screen').then(({ SplashScreen }) => {
+      SplashScreen.hide({ fadeOutDuration: 300 }).catch(() => {});
+    });
+  }, []);
 
   // Biometric lock screen handler
   const handleBiometricAuth = useCallback(async () => {

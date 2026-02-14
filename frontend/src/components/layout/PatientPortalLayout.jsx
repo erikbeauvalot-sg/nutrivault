@@ -7,7 +7,6 @@
 import { useState } from 'react';
 import { Navbar, Container, Nav, NavDropdown, Button } from 'react-bootstrap';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { FiLogOut } from 'react-icons/fi';
@@ -36,7 +35,6 @@ const PatientPortalLayout = ({ children }) => {
 
   const handleLogout = async () => {
     if (isNative) {
-      // Clear tokens synchronously THEN redirect — async cleanup runs in background
       tokenStorage.clearTokens();
       tokenStorage.clearUser();
       logout().catch(() => {});
@@ -55,7 +53,6 @@ const PatientPortalLayout = ({ children }) => {
     <div className={`layout-wrapper ${useBottomTabs ? 'has-bottom-tabs' : ''}`}>
       <Navbar bg="dark" variant="dark" expand="lg" className="portal-navbar">
         <Container fluid>
-          {/* Hide hamburger on native mobile (bottom tabs replace sidebar) */}
           {!useBottomTabs && (
             <Button
               variant="dark"
@@ -124,7 +121,6 @@ const PatientPortalLayout = ({ children }) => {
       </Navbar>
       <OfflineBanner />
       <div className="layout-container">
-        {/* Hide sidebar on native mobile */}
         {!useBottomTabs && (
           <>
             <PatientPortalSidebar isOpen={sidebarOpen} onClose={closeSidebar} />
@@ -132,19 +128,12 @@ const PatientPortalLayout = ({ children }) => {
           </>
         )}
         <main className={`layout-content ${useBottomTabs ? 'no-sidebar' : ''} ${isNative ? 'native-animated' : ''}`}>
-          {isNative ? (
-            <AnimatePresence mode="popLayout" initial={false}>
-              <AnimatedPage key={location.pathname}>
-                {children}
-              </AnimatedPage>
-            </AnimatePresence>
-          ) : (
-            children
-          )}
+          <AnimatedPage locationKey={location.pathname}>
+            {children}
+          </AnimatedPage>
         </main>
       </div>
 
-      {/* Bottom tab bar on native mobile */}
       {useBottomTabs && <BottomTabBar />}
     </div>
   );

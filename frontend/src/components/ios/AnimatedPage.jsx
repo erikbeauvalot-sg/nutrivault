@@ -1,52 +1,38 @@
-import { motion } from 'framer-motion';
-import { useNavigationDirection } from '../../hooks/useNavigationDirection';
+import { useRef, useEffect, useState } from 'react';
+import { useNavigationType } from 'react-router-dom';
 import { isNative } from '../../utils/platform';
 
-const spring = { type: 'spring', stiffness: 300, damping: 30 };
+/**
+ * iOS-style page transition wrapper.
+ * Pure CSS animations — no external dependencies.
+ * PUSH: slide in from right. POP: slide in from left. Web: no animation.
+ */
+const AnimatedPage = ({ children, locationKey }) => {
+  const navType = useNavigationType();
+  const [animClass, setAnimClass] = useState('');
+  const prevKeyRef = useRef(locationKey);
 
-const variants = {
-  enter: (direction) => ({
-    x: direction === 'POP' ? '-30%' : '100%',
-    opacity: direction === 'POP' ? 0.8 : 1,
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-  },
-  exit: (direction) => ({
-    x: direction === 'POP' ? '100%' : '-30%',
-    opacity: direction === 'POP' ? 1 : 0.8,
-  }),
-};
+  useEffect(() => {
+    // Skip animation on initial mount
+    if (prevKeyRef.current === locationKey) return;
+    prevKeyRef.current = locationKey;
 
-const AnimatedPage = ({ children }) => {
-  const directionRef = useNavigationDirection();
+    const cls = navType === 'POP' ? 'page-slide-from-left' : 'page-slide-from-right';
+    setAnimClass(cls);
+
+    // Remove class after animation completes to avoid replaying
+    const timer = setTimeout(() => setAnimClass(''), 400);
+    return () => clearTimeout(timer);
+  }, [locationKey, navType]);
 
   if (!isNative) {
     return children;
   }
 
   return (
-    <motion.div
-      className="animated-page"
-      custom={directionRef.current}
-      variants={variants}
-      initial="enter"
-      animate="center"
-      exit="exit"
-      transition={spring}
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        minHeight: '100%',
-        willChange: 'transform, opacity',
-        backfaceVisibility: 'hidden',
-      }}
-    >
+    <div className={`animated-page ${animClass}`}>
       {children}
-    </motion.div>
+    </div>
   );
 };
 

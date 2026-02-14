@@ -15,45 +15,59 @@ export async function initCapacitor() {
   document.body.classList.add('native-mobile');
   document.body.classList.add('has-bottom-tabs');
 
-  const { StatusBar, Style } = await import('@capacitor/status-bar');
+  // CRITICAL: Always hide native splash, even if other plugin init fails.
+  // SplashScreen has launchAutoHide: false, so it MUST be hidden explicitly.
   const { SplashScreen } = await import('@capacitor/splash-screen');
-  const { Keyboard } = await import('@capacitor/keyboard');
-  const { App } = await import('@capacitor/app');
-
-  // Dark status bar text for the navy header
-  await StatusBar.setStyle({ style: Style.Dark });
-
-  if (isIOS) {
-    // Overlay status bar so content renders behind it (safe-area CSS handles padding)
-    await StatusBar.setOverlaysWebView({ overlay: true });
+  try {
+    await SplashScreen.hide({ fadeOutDuration: 300 });
+  } catch (e) {
+    console.warn('[Capacitor] SplashScreen.hide failed:', e);
   }
 
-  // Hide native splash — our custom AppSplashScreen takes over from here
-  await SplashScreen.hide({ fadeOutDuration: 300 });
-
-  // Keyboard: add/remove body class for layout adjustments
-  Keyboard.addListener('keyboardWillShow', () => {
-    document.body.classList.add('keyboard-open');
-  });
-  Keyboard.addListener('keyboardWillHide', () => {
-    document.body.classList.remove('keyboard-open');
-  });
-
-  // Handle hardware back button (Android mainly, but good practice)
-  App.addListener('backButton', ({ canGoBack }) => {
-    if (canGoBack) {
-      window.history.back();
-    } else {
-      App.exitApp();
+  // Non-critical plugin init — failures here shouldn't block the app
+  try {
+    const { StatusBar, Style } = await import('@capacitor/status-bar');
+    await StatusBar.setStyle({ style: Style.Dark });
+    if (isIOS) {
+      await StatusBar.setOverlaysWebView({ overlay: true });
     }
-  });
+  } catch (e) {
+    console.warn('[Capacitor] StatusBar init failed:', e);
+  }
 
-  // Initialize network listener for offline/online status
-  const { Network } = await import('@capacitor/network');
-  Network.addListener('networkStatusChange', (status) => {
+  try {
+    const { Keyboard } = await import('@capacitor/keyboard');
+    Keyboard.addListener('keyboardWillShow', () => {
+      document.body.classList.add('keyboard-open');
+    });
+    Keyboard.addListener('keyboardWillHide', () => {
+      document.body.classList.remove('keyboard-open');
+    });
+  } catch (e) {
+    console.warn('[Capacitor] Keyboard init failed:', e);
+  }
+
+  try {
+    const { App } = await import('@capacitor/app');
+    App.addListener('backButton', ({ canGoBack }) => {
+      if (canGoBack) {
+        window.history.back();
+      } else {
+        App.exitApp();
+      }
+    });
+  } catch (e) {
+    console.warn('[Capacitor] App init failed:', e);
+  }
+
+  try {
+    const { Network } = await import('@capacitor/network');
+    Network.addListener('networkStatusChange', (status) => {
+      document.body.classList.toggle('is-offline', !status.connected);
+    });
+    const status = await Network.getStatus();
     document.body.classList.toggle('is-offline', !status.connected);
-  });
-  // Set initial state
-  const status = await Network.getStatus();
-  document.body.classList.toggle('is-offline', !status.connected);
+  } catch (e) {
+    console.warn('[Capacitor] Network init failed:', e);
+  }
 }
