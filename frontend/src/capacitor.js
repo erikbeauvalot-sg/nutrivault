@@ -24,8 +24,8 @@ export async function initCapacitor() {
     await StatusBar.setOverlaysWebView({ overlay: true });
   }
 
-  // Hide splash screen once the app is ready
-  await SplashScreen.hide();
+  // Hide native splash — our custom AppSplashScreen takes over from here
+  await SplashScreen.hide({ fadeOutDuration: 300 });
 
   // Keyboard: add/remove body class for layout adjustments
   Keyboard.addListener('keyboardWillShow', () => {

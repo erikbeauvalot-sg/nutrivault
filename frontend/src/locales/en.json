@@ -91,6 +91,16 @@
     "quotes": "Quotes",
     "finance": "Finance"
   },
+  "sidebar": {
+    "groups": {
+      "clinic": "Clinic",
+      "nutrition": "Nutrition",
+      "communication": "Communication",
+      "finance": "Finance",
+      "data": "Data",
+      "admin": "Administration"
+    }
+  },
   "finance": {
     "tabs": {
       "overview": "Overview",

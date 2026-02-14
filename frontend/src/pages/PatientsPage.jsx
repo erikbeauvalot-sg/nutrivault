@@ -1,6 +1,6 @@
 /**
  * Patients Page Component
- * Wrapper for patient management with table view and modal-based CRUD
+ * Wrapper for patient management with table view (desktop) and compact list (mobile)
  */
 
 import { useState, useEffect } from 'react';
@@ -59,8 +59,7 @@ const PatientsPage = () => {
   const fetchPatients = async () => {
     try {
       setLoading(true);
-      
-      // Build filters object for patient service
+
       const filters = {};
       if (searchTerm.trim()) {
         filters.search = searchTerm.trim();
@@ -69,7 +68,7 @@ const PatientsPage = () => {
         filters.is_active = statusFilter === 'active';
       }
       filters.page = currentPage;
-      filters.limit = 10; // Match PatientList itemsPerPage
+      filters.limit = 10;
 
       const { data, pagination } = await getPatients(filters);
 
@@ -83,7 +82,6 @@ const PatientsPage = () => {
       setLoading(false);
     }
   };
-
 
   const handleDeletePatient = (id) => {
     setPatientToDelete(id);
@@ -136,25 +134,20 @@ const PatientsPage = () => {
 
   const handleSearchChange = (search) => {
     setSearchTerm(search);
-    setCurrentPage(1); // Reset to first page when searching
+    setCurrentPage(1);
   };
 
   const handleStatusFilterChange = (status) => {
     setStatusFilter(status);
-    setCurrentPage(1); // Reset to first page when filtering
+    setCurrentPage(1);
   };
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
 
-  // Check if user can create patients (ADMIN, DIETITIAN)
   const canCreatePatients = user?.role === 'ADMIN' || user?.role === 'DIETITIAN';
-
-  // Check if user can edit patients (ADMIN, DIETITIAN)
   const canEditPatients = user?.role === 'ADMIN' || user?.role === 'DIETITIAN';
-
-  // Check if user can delete patients (ADMIN, DIETITIAN)
   const canDeletePatients = user?.role === 'ADMIN' || user?.role === 'DIETITIAN';
 
   return (

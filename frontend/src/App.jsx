@@ -4,7 +4,7 @@
  * Implements lazy loading for performance optimization (US-9.2)
  */
 
-import { lazy, Suspense, useCallback } from 'react';
+import { lazy, Suspense, useCallback, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Spinner } from 'react-bootstrap';
 import { ToastContainer } from 'react-toastify';
@@ -17,6 +17,7 @@ import useBiometricAuth from './hooks/useBiometricAuth';
 import BiometricLockScreen from './components/BiometricLockScreen';
 import { isNative } from './utils/platform';
 import * as biometricService from './services/biometricService';
+import AppSplashScreen from './components/AppSplashScreen';
 
 // Eager load: Login page (first page users see)
 import LoginPage from './pages/LoginPage';
@@ -100,6 +101,7 @@ const PageLoader = () => (
 function App() {
   const { loading, isAuthenticated, user, biometricUnlocked, biometricLogin, setBiometricUnlockedState } = useAuth();
   const { biometricName, biometricEnabled, authenticateWithBiometric } = useBiometricAuth();
+  const [splashDone, setSplashDone] = useState(!isNative);
   usePageTracking();
 
   // Biometric lock screen handler
@@ -117,14 +119,19 @@ function App() {
     setBiometricUnlockedState(true);
   }, [setBiometricUnlockedState]);
 
-  // Show loading spinner while checking authentication
-  if (loading) {
+  // Show animated splash on native, simple spinner on web
+  if (loading || !splashDone) {
     return (
-      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
+      <>
+        {isNative && <AppSplashScreen onFinished={() => setSplashDone(true)} />}
+        {!isNative && (
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 

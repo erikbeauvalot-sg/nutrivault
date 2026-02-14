@@ -5,22 +5,33 @@
  * Paths and labels live here to avoid storing UI concerns in the database.
  */
 
+/** Group ordering and i18n keys for main section grouping */
+export const GROUP_ORDER = ['clinic', 'nutrition', 'communication', 'finance', 'data', 'admin'];
+export const GROUP_LABELS = {
+  clinic: 'sidebar.groups.clinic',
+  nutrition: 'sidebar.groups.nutrition',
+  communication: 'sidebar.groups.communication',
+  finance: 'sidebar.groups.finance',
+  data: 'sidebar.groups.data',
+  admin: 'sidebar.groups.admin',
+};
+
 const SIDEBAR_ITEMS = {
   // Main section
-  dashboard:    { path: '/dashboard',    icon: '📊', labelKey: 'navigation.dashboard',   section: 'main' },
-  patients:     { path: '/patients',     icon: '👥', labelKey: 'navigation.patients',    section: 'main' },
-  agenda:       { path: '/agenda',       icon: '🗓️', labelKey: 'navigation.agenda',      section: 'main' },
-  visits:       { path: '/visits',       icon: '📋', labelKey: 'navigation.visits',      section: 'main' },
-  recipes:      { path: '/recipes',      icon: '🍽️', labelKey: 'navigation.recipes',     section: 'main' },
-  campaigns:    { path: '/campaigns',    icon: '📧', labelKey: 'navigation.campaigns',   section: 'main' },
-  messages:     { path: '/messages',     icon: '💬', labelKey: 'navigation.messages',    section: 'main' },
-  billing:      { path: '/billing',      icon: '💰', labelKey: 'navigation.billing',     section: 'main' },
-  clients:      { path: '/clients',      icon: '🏢', labelKey: 'navigation.clients',    section: 'main' },
-  quotes:       { path: '/quotes',       icon: '📝', labelKey: 'navigation.quotes',     section: 'main' },
-  finance:      { path: '/finance',      icon: '💹', labelKey: 'navigation.finance',    section: 'main' },
-  documents:    { path: '/documents',    icon: '📄', labelKey: 'documents.title',        section: 'main' },
-  analytics:    { path: '/analytics',    icon: '📈', labelKey: 'analytics.title',        section: 'main' },
-  users:        { path: '/users',        icon: '👤', labelKey: 'navigation.users',       section: 'main' },
+  dashboard:    { path: '/dashboard',    icon: '📊', labelKey: 'navigation.dashboard',   section: 'main', group: 'clinic' },
+  patients:     { path: '/patients',     icon: '👥', labelKey: 'navigation.patients',    section: 'main', group: 'clinic' },
+  clients:      { path: '/clients',      icon: '🏢', labelKey: 'navigation.clients',    section: 'main', group: 'clinic' },
+  agenda:       { path: '/agenda',       icon: '🗓️', labelKey: 'navigation.agenda',      section: 'main', group: 'clinic' },
+  visits:       { path: '/visits',       icon: '📋', labelKey: 'navigation.visits',      section: 'main', group: 'clinic' },
+  recipes:      { path: '/recipes',      icon: '🍽️', labelKey: 'navigation.recipes',     section: 'main', group: 'nutrition' },
+  campaigns:    { path: '/campaigns',    icon: '📧', labelKey: 'navigation.campaigns',   section: 'main', group: 'communication' },
+  messages:     { path: '/messages',     icon: '💬', labelKey: 'navigation.messages',    section: 'main', group: 'communication' },
+  billing:      { path: '/billing',      icon: '💰', labelKey: 'navigation.billing',     section: 'main', group: 'finance' },
+  quotes:       { path: '/quotes',       icon: '📝', labelKey: 'navigation.quotes',     section: 'main', group: 'finance' },
+  finance:      { path: '/finance',      icon: '💹', labelKey: 'navigation.finance',    section: 'main', group: 'finance' },
+  documents:    { path: '/documents',    icon: '📄', labelKey: 'documents.title',        section: 'main', group: 'data' },
+  analytics:    { path: '/analytics',    icon: '📈', labelKey: 'analytics.title',        section: 'main', group: 'data' },
+  users:        { path: '/users',        icon: '👤', labelKey: 'navigation.users',       section: 'main', group: 'admin' },
 
   // Settings section
   myProfile:    { dynamicPath: (user) => `/users/${user?.id}`, icon: '👤', labelKey: 'navigation.myProfile', section: 'settings' },

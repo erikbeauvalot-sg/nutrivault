@@ -104,6 +104,16 @@
     "quotes": "Devis",
     "finance": "Finance"
   },
+  "sidebar": {
+    "groups": {
+      "clinic": "Clinique",
+      "nutrition": "Nutrition",
+      "communication": "Communication",
+      "finance": "Finance",
+      "data": "Données",
+      "admin": "Administration"
+    }
+  },
   "finance": {
     "tabs": {
       "overview": "Aperçu",
