@@ -26,6 +26,36 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true,
     },
+    edited_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    original_content: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    message_type: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: 'text',
+    },
+    metadata: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      get() {
+        const raw = this.getDataValue('metadata');
+        if (!raw) return null;
+        try { return JSON.parse(raw); } catch { return null; }
+      },
+      set(val) {
+        this.setDataValue('metadata', val ? JSON.stringify(val) : null);
+      },
+    },
+    deleted_for_patient: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   }, {
     tableName: 'messages',
     timestamps: true,

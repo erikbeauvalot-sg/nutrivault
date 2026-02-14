@@ -65,6 +65,7 @@ db.DeviceToken = require('./DeviceToken')(sequelize, DataTypes);
 db.NotificationPreference = require('./NotificationPreference')(sequelize, DataTypes);
 db.Conversation = require('./Conversation')(sequelize, DataTypes);
 db.Message = require('./Message')(sequelize, DataTypes);
+db.ConversationLabel = require('./ConversationLabel')(sequelize, DataTypes);
 db.PatientObjective = require('./PatientObjective')(sequelize, DataTypes);
 db.Notification = require('./Notification')(sequelize, DataTypes);
 db.UserEmailConfig = require('./UserEmailConfig')(sequelize, DataTypes);
@@ -939,7 +940,13 @@ db.User.hasOne(db.NotificationPreference, {
 db.Conversation.belongsTo(db.Patient, { foreignKey: 'patient_id', as: 'patient' });
 db.Patient.hasMany(db.Conversation, { foreignKey: 'patient_id', as: 'conversations' });
 db.Conversation.belongsTo(db.User, { foreignKey: 'dietitian_id', as: 'dietitian' });
+db.Conversation.belongsTo(db.User, { foreignKey: 'closed_by', as: 'closedByUser' });
 db.Conversation.hasMany(db.Message, { foreignKey: 'conversation_id', as: 'messages' });
+db.Conversation.hasMany(db.ConversationLabel, { foreignKey: 'conversation_id', as: 'labels' });
+
+// ConversationLabel relationships
+db.ConversationLabel.belongsTo(db.Conversation, { foreignKey: 'conversation_id', as: 'conversation' });
+db.ConversationLabel.belongsTo(db.User, { foreignKey: 'created_by', as: 'creator' });
 
 // Message relationships
 db.Message.belongsTo(db.Conversation, { foreignKey: 'conversation_id', as: 'conversation' });

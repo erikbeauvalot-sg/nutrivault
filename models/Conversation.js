@@ -13,6 +13,23 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: false,
     },
+    title: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    status: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: 'open',
+    },
+    closed_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    closed_by: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
     last_message_at: {
       type: DataTypes.DATE,
       allowNull: true,
@@ -37,6 +54,7 @@ module.exports = (sequelize, DataTypes) => {
     underscored: true,
     indexes: [
       { unique: true, fields: ['patient_id', 'dietitian_id'] },
+      { fields: ['status'] },
     ],
   });
 

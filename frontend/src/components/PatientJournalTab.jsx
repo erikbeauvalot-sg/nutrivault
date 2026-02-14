@@ -10,8 +10,10 @@ import { useTranslation } from 'react-i18next';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
+import { FiSend } from 'react-icons/fi';
 import ConfirmModal from './ConfirmModal';
 import * as patientService from '../services/patientService';
+import SendToPatientModal from './messages/SendToPatientModal';
 
 const MAX_PHOTOS = 5;
 
@@ -68,6 +70,9 @@ const PatientJournalTab = ({ patientId }) => {
 
   // Photo upload state per entry
   const [uploadingPhotoEntryId, setUploadingPhotoEntryId] = useState(null);
+
+  // Send to message state
+  const [sendToMessageEntry, setSendToMessageEntry] = useState(null);
 
   // Lightbox
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
@@ -435,17 +440,22 @@ const PatientJournalTab = ({ patientId }) => {
                         </Badge>
                       )}
                     </div>
-                    {/* Edit/Delete buttons for own entries */}
-                    {isOwn && editingEntryId !== entry.id && (
-                      <div className="d-flex gap-1">
-                        <Button size="sm" variant="outline-secondary" onClick={() => handleEditEntry(entry)} title={t('common.edit', 'Modifier')}>
-                          {'\u270F\uFE0F'}
-                        </Button>
-                        <Button size="sm" variant="outline-danger" onClick={() => setDeleteEntryId(entry.id)} title={t('common.delete', 'Supprimer')}>
-                          &times;
-                        </Button>
-                      </div>
-                    )}
+                    {/* Action buttons */}
+                    <div className="d-flex gap-1">
+                      <Button size="sm" variant="outline-primary" onClick={() => setSendToMessageEntry(entry)} title={t('messages.sendToPatient', 'Envoyer dans un message')}>
+                        <FiSend size={14} />
+                      </Button>
+                      {isOwn && editingEntryId !== entry.id && (
+                        <>
+                          <Button size="sm" variant="outline-secondary" onClick={() => handleEditEntry(entry)} title={t('common.edit', 'Modifier')}>
+                            {'\u270F\uFE0F'}
+                          </Button>
+                          <Button size="sm" variant="outline-danger" onClick={() => setDeleteEntryId(entry.id)} title={t('common.delete', 'Supprimer')}>
+                            &times;
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
 
                   {/* Inline Edit Form */}
@@ -678,6 +688,16 @@ const PatientJournalTab = ({ patientId }) => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Send to Message Modal */}
+      <SendToPatientModal
+        show={!!sendToMessageEntry}
+        onClose={() => setSendToMessageEntry(null)}
+        patientId={patientId}
+        type="journal"
+        referenceId={sendToMessageEntry?.id}
+        referenceTitle={sendToMessageEntry?.title || sendToMessageEntry?.content?.substring(0, 100) || ''}
+      />
     </Card>
   );
 };

@@ -42,6 +42,8 @@ import * as recipeService from '../services/recipeService';
 import userService from '../services/userService';
 import PortalStatusCard from '../components/PortalStatusCard';
 import PatientJournalTab from '../components/PatientJournalTab';
+import SendToPatientModal from '../components/messages/SendToPatientModal';
+import { FiSend } from 'react-icons/fi';
 import './PatientDetailPage.css';
 
 const PatientDetailPage = () => {
@@ -74,6 +76,7 @@ const PatientDetailPage = () => {
     setSearchParams({ tab }, { replace: true });
   };
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [sendObjective, setSendObjective] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [customFieldCategories, setCustomFieldCategories] = useState([]);
@@ -864,11 +867,23 @@ const PatientDetailPage = () => {
                           const obj = patientObjectives.find(o => o.objective_number === num);
                           if (!obj) return null;
                           return (
-                            <li key={num} className="mb-1">
-                              {obj.content}
-                              {obj.visit_date && (
-                                <small className="text-muted ms-2">({new Date(obj.visit_date).toLocaleDateString()})</small>
-                              )}
+                            <li key={num} className="mb-1 d-flex align-items-start gap-2">
+                              <div className="flex-grow-1">
+                                {obj.content}
+                                {obj.visit_date && (
+                                  <small className="text-muted ms-2">({new Date(obj.visit_date).toLocaleDateString()})</small>
+                                )}
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline-primary"
+                                className="flex-shrink-0 p-0 border-0"
+                                onClick={() => setSendObjective(obj)}
+                                title={t('messages.sendToPatient', 'Envoyer dans un message')}
+                                style={{ lineHeight: 1 }}
+                              >
+                                <FiSend size={13} />
+                              </Button>
                             </li>
                           );
                         })}
@@ -1637,6 +1652,15 @@ const PatientDetailPage = () => {
             fetchPatientDetails();
           }}
           selectedPatient={patient}
+        />
+
+        <SendToPatientModal
+          show={!!sendObjective}
+          onClose={() => setSendObjective(null)}
+          patientId={id}
+          type="objective"
+          referenceId={sendObjective?.objective_number}
+          referenceTitle={sendObjective?.content || ''}
         />
 
       </Container>

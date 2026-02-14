@@ -5,16 +5,22 @@
  * Polls for new messages every 12 seconds.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Card, Form, Button, Spinner, Badge, ListGroup, InputGroup, Modal } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { FiMessageSquare, FiSend, FiUser, FiSearch, FiPlus, FiArrowLeft } from 'react-icons/fi';
+import { FiMessageSquare, FiSend, FiUser, FiSearch, FiPlus, FiArrowLeft, FiEdit2, FiX, FiCheck, FiLock, FiUnlock, FiTag } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import * as messageService from '../services/messageService';
 import * as patientService from '../services/patientService';
 import Layout from '../components/layout/Layout';
+import MessageBubble from '../components/messages/MessageBubble';
+import EditMessageModal from '../components/messages/EditMessageModal';
+import DateSeparator from '../components/messages/DateSeparator';
+import ConversationFilters from '../components/messages/ConversationFilters';
+import ConversationLabels from '../components/messages/ConversationLabels';
 
 const POLL_INTERVAL = 12000;
+const EDIT_WINDOW_HOURS = 24;
 
 const MessagesPage = () => {
   const { t } = useTranslation();
@@ -30,6 +36,17 @@ const MessagesPage = () => {
   const messagesContainerRef = useRef(null);
   const pollRef = useRef(null);
   const prevMessageCountRef = useRef(0);
+
+  // Edit message state
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  // Title editing
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+
+  // Filters
+  const [filters, setFilters] = useState({ status: '', label: '', sort: 'recent' });
 
   // New conversation modal state
   const [showNewConvo, setShowNewConvo] = useState(false);
@@ -89,6 +106,7 @@ const MessagesPage = () => {
   const openConversation = async (convo) => {
     setActiveConvo(convo);
     setLoadingMessages(true);
+    setEditingTitle(false);
     try {
       const msgs = await messageService.getMessages(convo.id);
       setMessages(msgs);
@@ -104,6 +122,7 @@ const MessagesPage = () => {
   const handleBack = () => {
     setActiveConvo(null);
     setMessages([]);
+    setEditingTitle(false);
   };
 
   const handleSend = async (e) => {
@@ -121,6 +140,64 @@ const MessagesPage = () => {
       toast.error(t('messages.sendError', 'Failed to send message'));
     } finally {
       setSending(false);
+    }
+  };
+
+  // Edit message
+  const handleEditMessage = (msg) => {
+    setEditingMessage(msg);
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async (messageId, content) => {
+    try {
+      const updated = await messageService.editMessage(messageId, content);
+      setMessages(prev => prev.map(m => m.id === messageId ? updated : m));
+      toast.success(t('messages.messageEdited', 'Message modifié'));
+    } catch (err) {
+      toast.error(err.response?.data?.error || t('messages.editError', 'Erreur lors de la modification'));
+      throw err;
+    }
+  };
+
+  // Delete message
+  const handleDeleteMessage = async (msg) => {
+    if (!window.confirm(t('messages.deleteConfirm', 'Supprimer ce message ?'))) return;
+    try {
+      await messageService.deleteMessage(msg.id);
+      setMessages(prev => prev.filter(m => m.id !== msg.id));
+      toast.success(t('messages.messageDeleted', 'Message supprimé'));
+    } catch (err) {
+      toast.error(err.response?.data?.error || t('messages.deleteError', 'Erreur lors de la suppression'));
+    }
+  };
+
+  // Title edit
+  const startEditTitle = () => {
+    setTitleDraft(activeConvo?.title || '');
+    setEditingTitle(true);
+  };
+
+  const saveTitle = async () => {
+    try {
+      const updated = await messageService.updateConversation(activeConvo.id, { title: titleDraft.trim() || null });
+      setActiveConvo(prev => ({ ...prev, ...updated }));
+      setEditingTitle(false);
+      await loadConversations();
+    } catch {
+      toast.error(t('messages.titleError', 'Erreur'));
+    }
+  };
+
+  // Close/reopen conversation
+  const toggleConversationStatus = async () => {
+    const newStatus = activeConvo?.status === 'closed' ? 'open' : 'closed';
+    try {
+      const updated = await messageService.updateConversation(activeConvo.id, { status: newStatus });
+      setActiveConvo(prev => ({ ...prev, ...updated }));
+      await loadConversations();
+    } catch {
+      toast.error(t('messages.statusError', 'Erreur'));
     }
   };
 
@@ -161,11 +238,67 @@ const MessagesPage = () => {
     }
   };
 
-  const filteredConvos = conversations.filter(c => {
-    if (!search) return true;
-    const name = `${c.patient?.first_name} ${c.patient?.last_name}`.toLowerCase();
-    return name.includes(search.toLowerCase());
-  });
+  const canEditMsg = (msg) => {
+    if (msg.sender_id !== activeConvo?.dietitian?.id && msg.sender?.id !== activeConvo?.dietitian?.id) return false;
+    const hours = (Date.now() - new Date(msg.created_at).getTime()) / (1000 * 60 * 60);
+    return hours <= EDIT_WINDOW_HOURS;
+  };
+
+  const canDeleteMsg = (msg) => {
+    return msg.sender_id === activeConvo?.dietitian?.id || msg.sender?.id === activeConvo?.dietitian?.id;
+  };
+
+  const filteredConvos = useMemo(() => {
+    let result = conversations.filter(c => {
+      // Text search
+      if (search) {
+        const name = `${c.patient?.first_name} ${c.patient?.last_name}`.toLowerCase();
+        const title = (c.title || '').toLowerCase();
+        if (!name.includes(search.toLowerCase()) && !title.includes(search.toLowerCase())) return false;
+      }
+      // Status filter
+      if (filters.status && c.status !== filters.status) return false;
+      // Label filter
+      if (filters.label && !c.labels?.some(l => l.label === filters.label)) return false;
+      return true;
+    });
+
+    // Sort
+    if (filters.sort === 'oldest') {
+      result = [...result].sort((a, b) => new Date(a.last_message_at || 0) - new Date(b.last_message_at || 0));
+    } else if (filters.sort === 'unread') {
+      result = [...result].sort((a, b) => (b.dietitian_unread_count || 0) - (a.dietitian_unread_count || 0));
+    }
+    // 'recent' is the default order from API (DESC)
+
+    return result;
+  }, [conversations, search, filters]);
+
+  // Group messages by date for separators
+  const renderMessagesWithSeparators = () => {
+    const elements = [];
+    let lastDate = null;
+    messages.forEach(msg => {
+      const msgDate = new Date(msg.created_at).toDateString();
+      if (msgDate !== lastDate) {
+        elements.push(<DateSeparator key={`sep-${msgDate}`} date={msg.created_at} />);
+        lastDate = msgDate;
+      }
+      const isMe = msg.sender_id === activeConvo.dietitian?.id || msg.sender?.id === activeConvo.dietitian?.id;
+      elements.push(
+        <MessageBubble
+          key={msg.id}
+          msg={msg}
+          isMe={isMe}
+          canEdit={canEditMsg(msg)}
+          canDelete={canDeleteMsg(msg)}
+          onEdit={handleEditMessage}
+          onDelete={handleDeleteMessage}
+        />
+      );
+    });
+    return elements;
+  };
 
   if (loading) {
     return (
@@ -186,6 +319,9 @@ const MessagesPage = () => {
           onChange={e => setSearch(e.target.value)}
         />
       </InputGroup>
+
+      <ConversationFilters filters={filters} onChange={setFilters} />
+
       <Card className="flex-grow-1" style={{ overflow: 'hidden' }}>
         <ListGroup variant="flush" style={{ overflowY: 'auto', maxHeight: '100%' }}>
           {filteredConvos.length === 0 && (
@@ -214,12 +350,33 @@ const MessagesPage = () => {
                   <strong style={{ fontSize: '0.85rem' }}>
                     {c.patient?.first_name} {c.patient?.last_name}
                   </strong>
-                  {c.dietitian_unread_count > 0 && (
-                    <Badge bg="danger" pill style={{ fontSize: '0.7rem' }}>
-                      {c.dietitian_unread_count}
-                    </Badge>
-                  )}
+                  <div className="d-flex align-items-center gap-1">
+                    {c.status === 'closed' && (
+                      <FiLock size={12} className="text-muted" />
+                    )}
+                    {c.dietitian_unread_count > 0 && (
+                      <Badge bg="danger" pill style={{ fontSize: '0.7rem' }}>
+                        {c.dietitian_unread_count}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
+                {c.title && (
+                  <small className="d-block text-truncate" style={{ fontSize: '0.75rem', fontWeight: 500 }}>
+                    {c.title}
+                  </small>
+                )}
+                {c.labels?.length > 0 && (
+                  <div className="d-flex gap-1 mt-1 flex-wrap">
+                    {c.labels.map(l => (
+                      <span key={l.id} className="badge" style={{
+                        fontSize: '0.6rem',
+                        background: l.color || '#6c757d',
+                        color: '#fff',
+                      }}>{l.label}</span>
+                    ))}
+                  </div>
+                )}
                 {c.last_message_preview && (
                   <small className="text-muted d-block text-truncate" style={{ fontSize: '0.75rem' }}>
                     {c.last_message_preview}
@@ -252,24 +409,76 @@ const MessagesPage = () => {
   const messageThread = activeConvo ? (
     <Card className="flex-grow-1 d-flex flex-column" style={{ overflow: 'hidden' }}>
       {/* Thread header */}
-      <Card.Header className="py-2 d-flex align-items-center gap-2">
-        {/* Back button: visible only on mobile */}
-        <Button
-          variant="link"
-          size="sm"
-          className="d-md-none p-0 text-decoration-none"
-          onClick={handleBack}
-          aria-label={t('common.back', 'Retour')}
-        >
-          <FiArrowLeft size={20} />
-        </Button>
-        <div className="overflow-hidden">
-          <strong className="d-block text-truncate">{activeConvo.patient?.first_name} {activeConvo.patient?.last_name}</strong>
-          {activeConvo.patient?.email && (
-            <small className="text-muted d-none d-sm-inline">{activeConvo.patient.email}</small>
-          )}
+      <Card.Header className="py-2">
+        <div className="d-flex align-items-center gap-2">
+          <Button
+            variant="link"
+            size="sm"
+            className="d-md-none p-0 text-decoration-none"
+            onClick={handleBack}
+            aria-label={t('common.back', 'Retour')}
+          >
+            <FiArrowLeft size={20} />
+          </Button>
+          <div className="flex-grow-1 overflow-hidden">
+            <strong className="d-block text-truncate">{activeConvo.patient?.first_name} {activeConvo.patient?.last_name}</strong>
+            {editingTitle ? (
+              <div className="d-flex align-items-center gap-1 mt-1">
+                <Form.Control
+                  size="sm"
+                  value={titleDraft}
+                  onChange={e => setTitleDraft(e.target.value)}
+                  placeholder={t('messages.addTitle', 'Ajouter un titre...')}
+                  autoFocus
+                  style={{ fontSize: '0.8rem' }}
+                  onKeyDown={e => { if (e.key === 'Enter') saveTitle(); if (e.key === 'Escape') setEditingTitle(false); }}
+                />
+                <Button variant="link" size="sm" className="p-0" onClick={saveTitle}><FiCheck size={16} /></Button>
+                <Button variant="link" size="sm" className="p-0 text-muted" onClick={() => setEditingTitle(false)}><FiX size={16} /></Button>
+              </div>
+            ) : (
+              <div className="d-flex align-items-center gap-1">
+                {activeConvo.title ? (
+                  <small className="text-muted" style={{ cursor: 'pointer', fontSize: '0.8rem' }} onClick={startEditTitle}>
+                    {activeConvo.title} <FiEdit2 size={11} className="ms-1" />
+                  </small>
+                ) : (
+                  <small className="text-muted" style={{ cursor: 'pointer', opacity: 0.5, fontSize: '0.75rem' }} onClick={startEditTitle}>
+                    {t('messages.addTitle', 'Ajouter un titre...')} <FiEdit2 size={11} />
+                  </small>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="d-flex align-items-center gap-1">
+            <Button
+              variant={activeConvo.status === 'closed' ? 'outline-success' : 'outline-secondary'}
+              size="sm"
+              onClick={toggleConversationStatus}
+              title={activeConvo.status === 'closed' ? t('messages.reopenConversation', 'Rouvrir') : t('messages.closeConversation', 'Fermer')}
+              style={{ fontSize: '0.75rem' }}
+            >
+              {activeConvo.status === 'closed' ? <><FiUnlock size={13} className="me-1" /><span className="d-none d-lg-inline">{t('messages.reopenConversation', 'Rouvrir')}</span></> : <><FiLock size={13} className="me-1" /><span className="d-none d-lg-inline">{t('messages.closeConversation', 'Fermer')}</span></>}
+            </Button>
+          </div>
         </div>
+
+        {/* Labels */}
+        <ConversationLabels conversation={activeConvo} onUpdate={async () => {
+          const convos = await messageService.getConversations();
+          setConversations(convos);
+          const updated = convos.find(c => c.id === activeConvo.id);
+          if (updated) setActiveConvo(updated);
+        }} />
       </Card.Header>
+
+      {/* Closed banner */}
+      {activeConvo.status === 'closed' && (
+        <div className="bg-warning bg-opacity-10 text-center py-1" style={{ fontSize: '0.78rem' }}>
+          <FiLock size={12} className="me-1" />
+          {t('messages.closedBanner', 'Cette conversation est fermée')}
+        </div>
+      )}
 
       {/* Messages */}
       <Card.Body ref={messagesContainerRef} className="flex-grow-1 p-3" style={{ overflowY: 'auto' }}>
@@ -279,27 +488,7 @@ const MessagesPage = () => {
           <div className="text-center text-muted py-4">
             {t('messages.noMessages', 'Aucun message. Envoyez le premier !')}
           </div>
-        ) : (
-          messages.map(msg => {
-            const isMe = msg.sender_id === activeConvo.dietitian?.id || msg.sender?.id === activeConvo.dietitian?.id;
-            return (
-              <div key={msg.id} className={`d-flex mb-2 ${isMe ? 'justify-content-end' : 'justify-content-start'}`}>
-                <div className="msg-bubble" style={{
-                  padding: '8px 14px',
-                  borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                  background: isMe ? 'var(--bs-primary, #4a9d6e)' : '#f0f0f0',
-                  color: isMe ? '#fff' : '#333',
-                  fontSize: '0.88rem',
-                }}>
-                  <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.content}</div>
-                  <div style={{ fontSize: '0.65rem', opacity: 0.7, textAlign: 'right', marginTop: 2 }}>
-                    {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
+        ) : renderMessagesWithSeparators()}
         <div ref={messagesEndRef} />
       </Card.Body>
 
@@ -386,12 +575,9 @@ const MessagesPage = () => {
 
       {/* Desktop: side-by-side | Mobile: list OR thread */}
       <div className="messages-container">
-        {/* Sidebar — always visible on desktop, hidden on mobile when viewing a thread */}
         <div className={`messages-sidebar ${activeConvo ? 'd-none d-md-flex' : 'd-flex'}`} style={{ flexDirection: 'column', height: '100%' }}>
           {conversationList}
         </div>
-
-        {/* Thread — always visible on desktop, hidden on mobile when no convo selected */}
         <div className={`messages-thread ${!activeConvo ? 'd-none d-md-flex' : 'd-flex'}`} style={{ flexDirection: 'column', height: '100%' }}>
           {activeConvo ? messageThread : emptyThread}
         </div>
@@ -447,6 +633,14 @@ const MessagesPage = () => {
           )}
         </Modal.Body>
       </Modal>
+
+      {/* Edit Message Modal */}
+      <EditMessageModal
+        show={showEditModal}
+        message={editingMessage}
+        onSave={handleSaveEdit}
+        onClose={() => { setShowEditModal(false); setEditingMessage(null); }}
+      />
     </Layout>
   );
 };

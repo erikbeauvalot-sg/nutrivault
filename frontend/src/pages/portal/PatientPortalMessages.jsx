@@ -8,15 +8,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, Form, Button, Spinner, Badge, ListGroup, InputGroup } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { FiMessageSquare, FiSend, FiUser, FiArrowLeft, FiPlus } from 'react-icons/fi';
+import { FiMessageSquare, FiSend, FiUser, FiArrowLeft, FiPlus, FiLock, FiUnlock } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../contexts/AuthContext';
 import * as portalMessageService from '../../services/portalMessageService';
 import * as portalService from '../../services/portalService';
 import PullToRefreshWrapper from '../../components/common/PullToRefreshWrapper';
 import { isNative } from '../../utils/platform';
+import MessageBubble from '../../components/messages/MessageBubble';
+import EditMessageModal from '../../components/messages/EditMessageModal';
+import DateSeparator from '../../components/messages/DateSeparator';
 
 const POLL_INTERVAL = 12000;
+const EDIT_WINDOW_HOURS = 24;
 
 const PatientPortalMessages = () => {
   const { t } = useTranslation();
@@ -32,6 +36,10 @@ const PatientPortalMessages = () => {
   const messagesContainerRef = useRef(null);
   const pollRef = useRef(null);
   const prevMessageCountRef = useRef(0);
+
+  // Edit
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
@@ -95,7 +103,7 @@ const PatientPortalMessages = () => {
     return () => clearInterval(pollRef.current);
   }, [activeConvo, loadConversations]);
 
-  const scrollToBottom = useCallback((behavior = 'smooth') => {
+  const scrollToBottom = useCallback(() => {
     const container = messagesContainerRef.current;
     if (container) {
       container.scrollTop = container.scrollHeight;
@@ -144,11 +152,62 @@ const PatientPortalMessages = () => {
       await loadConversations();
       setTimeout(scrollToBottom, 100);
     } catch {
-      toast.error(t('messages.sendError', 'Erreur lors de l\'envoi'));
+      toast.error(t('messages.sendError', "Erreur lors de l'envoi"));
     } finally {
       setSending(false);
     }
   };
+
+  // Edit message
+  const handleEditMessage = (msg) => {
+    setEditingMessage(msg);
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async (messageId, content) => {
+    try {
+      const updated = await portalMessageService.editMessage(messageId, content);
+      setMessages(prev => prev.map(m => m.id === messageId ? updated : m));
+      toast.success(t('messages.messageEdited', 'Message modifié'));
+    } catch (err) {
+      toast.error(err.response?.data?.error || t('messages.editError', 'Erreur lors de la modification'));
+      throw err;
+    }
+  };
+
+  // Delete message
+  const handleDeleteMessage = async (msg) => {
+    if (!window.confirm(t('messages.deleteConfirm', 'Supprimer ce message ?'))) return;
+    try {
+      await portalMessageService.deleteMessage(msg.id);
+      // If sender, remove from list; if received, also remove from view
+      setMessages(prev => prev.filter(m => m.id !== msg.id));
+      toast.success(t('messages.messageDeleted', 'Message supprimé'));
+    } catch (err) {
+      toast.error(err.response?.data?.error || t('messages.deleteError', 'Erreur lors de la suppression'));
+    }
+  };
+
+  // Close/reopen conversation
+  const toggleConversationStatus = async () => {
+    const newStatus = activeConvo?.status === 'closed' ? 'open' : 'closed';
+    try {
+      const updated = await portalMessageService.updateConversation(activeConvo.id, { status: newStatus });
+      setActiveConvo(prev => ({ ...prev, ...updated }));
+      await loadConversations();
+    } catch {
+      toast.error(t('messages.statusError', 'Erreur'));
+    }
+  };
+
+  const canEditMsg = (msg) => {
+    if (msg.sender_id !== user?.id && msg.sender?.id !== user?.id) return false;
+    const hours = (Date.now() - new Date(msg.created_at).getTime()) / (1000 * 60 * 60);
+    return hours <= EDIT_WINDOW_HOURS;
+  };
+
+  // Patient can delete their own messages (24h) or hide received messages (no limit)
+  const canDeleteMsg = () => true;
 
   const handleNewConversation = async () => {
     setShowNewConvo(true);
@@ -171,10 +230,36 @@ const PatientPortalMessages = () => {
       setShowNewConvo(false);
       openConversation(convo);
     } catch {
-      toast.error(t('messages.createError', 'Erreur lors de la cr\u00e9ation'));
+      toast.error(t('messages.createError', 'Erreur lors de la création'));
     } finally {
       setCreatingConvo(false);
     }
+  };
+
+  // Group messages by date for separators
+  const renderMessagesWithSeparators = () => {
+    const elements = [];
+    let lastDate = null;
+    messages.forEach(msg => {
+      const msgDate = new Date(msg.created_at).toDateString();
+      if (msgDate !== lastDate) {
+        elements.push(<DateSeparator key={`sep-${msgDate}`} date={msg.created_at} />);
+        lastDate = msgDate;
+      }
+      const isMe = msg.sender_id === user?.id || msg.sender?.id === user?.id;
+      elements.push(
+        <MessageBubble
+          key={msg.id}
+          msg={msg}
+          isMe={isMe}
+          canEdit={canEditMsg(msg)}
+          canDelete={canDeleteMsg(msg)}
+          onEdit={handleEditMessage}
+          onDelete={handleDeleteMessage}
+        />
+      );
+    });
+    return elements;
   };
 
   if (loading) {
@@ -190,7 +275,7 @@ const PatientPortalMessages = () => {
             <FiArrowLeft size={20} />
           </Button>
           <h2 className="mb-0" style={{ fontSize: 'clamp(1.2rem, 4vw, 1.75rem)' }}>
-            {t('messages.chooseDietitian', 'Choisir un(e) di\u00e9t\u00e9ticien(ne)')}
+            {t('messages.chooseDietitian', 'Choisir un(e) diététicien(ne)')}
           </h2>
         </div>
 
@@ -199,7 +284,7 @@ const PatientPortalMessages = () => {
         ) : dietitians.length === 0 ? (
           <Card>
             <Card.Body className="text-center text-muted py-4">
-              {t('messages.noDietitians', 'Aucun(e) di\u00e9t\u00e9ticien(ne) li\u00e9(e) \u00e0 votre compte')}
+              {t('messages.noDietitians', 'Aucun(e) diététicien(ne) lié(e) à votre compte')}
             </Card.Body>
           </Card>
         ) : (
@@ -250,10 +335,31 @@ const PatientPortalMessages = () => {
             <Button variant="link" className="p-0 text-dark" onClick={() => setActiveConvo(null)}>
               <FiArrowLeft size={20} />
             </Button>
-            <strong>
-              {activeConvo.dietitian?.first_name} {activeConvo.dietitian?.last_name}
-            </strong>
+            <div className="flex-grow-1">
+              <strong>
+                {activeConvo.dietitian?.first_name} {activeConvo.dietitian?.last_name}
+              </strong>
+              {activeConvo.title && (
+                <small className="text-muted d-block" style={{ fontSize: '0.78rem' }}>{activeConvo.title}</small>
+              )}
+            </div>
+            <Button
+              variant={activeConvo.status === 'closed' ? 'outline-success' : 'outline-secondary'}
+              size="sm"
+              onClick={toggleConversationStatus}
+              style={{ fontSize: '0.75rem' }}
+            >
+              {activeConvo.status === 'closed' ? <FiUnlock size={13} /> : <FiLock size={13} />}
+            </Button>
           </div>
+
+          {/* Closed banner */}
+          {activeConvo.status === 'closed' && (
+            <div className="bg-warning bg-opacity-10 text-center py-1 mb-1 rounded" style={{ fontSize: '0.78rem' }}>
+              <FiLock size={12} className="me-1" />
+              {t('messages.closedBanner', 'Cette conversation est fermée')}
+            </div>
+          )}
 
           {/* Messages */}
           <Card className="flex-grow-1 d-flex flex-column" style={{ overflow: 'hidden' }}>
@@ -264,30 +370,7 @@ const PatientPortalMessages = () => {
                 <div className="text-center text-muted py-4">
                   {t('messages.noMessages', 'Aucun message. Commencez la conversation !')}
                 </div>
-              ) : (
-                messages.map(msg => {
-                  const isMe = msg.sender_id === user?.id || msg.sender?.id === user?.id;
-                  return (
-                    <div key={msg.id} className={`d-flex mb-2 ${isMe ? 'justify-content-end' : 'justify-content-start'}`}>
-                      <div
-                        style={{
-                          maxWidth: '80%',
-                          padding: '8px 14px',
-                          borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                          background: isMe ? 'var(--bs-primary, #4a9d6e)' : '#f0f0f0',
-                          color: isMe ? '#fff' : '#333',
-                          fontSize: '0.88rem',
-                        }}
-                      >
-                        <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.content}</div>
-                        <div style={{ fontSize: '0.65rem', opacity: 0.7, textAlign: 'right', marginTop: 2 }}>
-                          {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+              ) : renderMessagesWithSeparators()}
               <div ref={messagesEndRef} />
             </Card.Body>
 
@@ -309,6 +392,13 @@ const PatientPortalMessages = () => {
             </Card.Footer>
           </Card>
         </div>
+
+        <EditMessageModal
+          show={showEditModal}
+          message={editingMessage}
+          onSave={handleSaveEdit}
+          onClose={() => { setShowEditModal(false); setEditingMessage(null); }}
+        />
       </PullToRefreshWrapper>
     );
   }
@@ -354,10 +444,16 @@ const PatientPortalMessages = () => {
               <div className="flex-grow-1">
                 <div className="d-flex justify-content-between align-items-center">
                   <strong>{c.dietitian?.first_name} {c.dietitian?.last_name}</strong>
-                  {c.patient_unread_count > 0 && (
-                    <Badge bg="danger" pill>{c.patient_unread_count}</Badge>
-                  )}
+                  <div className="d-flex align-items-center gap-1">
+                    {c.status === 'closed' && <FiLock size={12} className="text-muted" />}
+                    {c.patient_unread_count > 0 && (
+                      <Badge bg="danger" pill>{c.patient_unread_count}</Badge>
+                    )}
+                  </div>
                 </div>
+                {c.title && (
+                  <small className="d-block" style={{ fontSize: '0.78rem', fontWeight: 500 }}>{c.title}</small>
+                )}
                 {c.last_message_preview && (
                   <small className="text-muted d-block text-truncate">{c.last_message_preview}</small>
                 )}

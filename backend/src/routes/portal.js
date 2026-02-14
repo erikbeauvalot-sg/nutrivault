@@ -404,7 +404,7 @@ router.get('/messages/conversations/:id/messages',
         return res.status(404).json({ success: false, error: 'Conversation not found' });
       }
 
-      const where = { conversation_id: conversation.id };
+      const where = { conversation_id: conversation.id, deleted_for_patient: false };
       if (req.query.before) {
         where.created_at = { [db.Sequelize.Op.lt]: req.query.before };
       }
@@ -467,12 +467,19 @@ router.post('/messages/conversations/:id/messages',
         content: req.body.content.trim(),
       });
 
+      // Update conversation metadata + auto-reopen if closed
       const preview = req.body.content.trim().substring(0, 200);
-      await conversation.update({
+      const updateData = {
         last_message_at: new Date(),
         last_message_preview: preview,
         dietitian_unread_count: conversation.dietitian_unread_count + 1,
-      });
+      };
+      if (conversation.status === 'closed') {
+        updateData.status = 'open';
+        updateData.closed_at = null;
+        updateData.closed_by = null;
+      }
+      await conversation.update(updateData);
 
       // Send push notification to dietitian
       try {
@@ -496,6 +503,132 @@ router.post('/messages/conversations/:id/messages',
     } catch (error) {
       console.error('Error sending patient message:', error);
       res.status(500).json({ success: false, error: 'Failed to send message' });
+    }
+  }
+);
+
+/**
+ * PUT /api/portal/messages/conversations/:id — Patient can close/reopen (status only)
+ */
+router.put('/messages/conversations/:id',
+  param('id').isUUID(),
+  async (req, res) => {
+    try {
+      const conversation = await db.Conversation.findOne({
+        where: { id: req.params.id, patient_id: req.patient.id },
+      });
+      if (!conversation) {
+        return res.status(404).json({ success: false, error: 'Conversation not found' });
+      }
+
+      const updates = {};
+      if (req.body.status && ['open', 'closed'].includes(req.body.status)) {
+        updates.status = req.body.status;
+        if (req.body.status === 'closed') {
+          updates.closed_at = new Date();
+          updates.closed_by = req.user.id;
+        } else {
+          updates.closed_at = null;
+          updates.closed_by = null;
+        }
+      }
+
+      await conversation.update(updates);
+
+      const full = await db.Conversation.findByPk(conversation.id, {
+        include: [
+          { model: db.User, as: 'dietitian', attributes: ['id', 'first_name', 'last_name'] },
+        ],
+      });
+
+      res.json({ success: true, data: full });
+    } catch (error) {
+      console.error('Error updating patient conversation:', error);
+      res.status(500).json({ success: false, error: 'Failed to update conversation' });
+    }
+  }
+);
+
+/**
+ * PUT /api/portal/messages/messages/:messageId — Edit a message (sender only, 24h limit)
+ */
+router.put('/messages/messages/:messageId',
+  param('messageId').isUUID(),
+  body('content').notEmpty().isLength({ max: 5000 }),
+  async (req, res) => {
+    try {
+      const message = await db.Message.findByPk(req.params.messageId, {
+        include: [{ model: db.Conversation, as: 'conversation' }],
+      });
+      if (!message || message.conversation?.patient_id !== req.patient.id) {
+        return res.status(404).json({ success: false, error: 'Message not found' });
+      }
+
+      // Only sender can edit
+      if (message.sender_id !== req.user.id) {
+        return res.status(403).json({ success: false, error: 'Only the sender can edit this message' });
+      }
+
+      // 24h limit
+      const hoursSinceCreation = (Date.now() - new Date(message.created_at).getTime()) / (1000 * 60 * 60);
+      if (hoursSinceCreation > 24) {
+        return res.status(403).json({ success: false, error: 'Messages can only be edited within 24 hours' });
+      }
+
+      if (!message.original_content) {
+        message.original_content = message.content;
+      }
+
+      message.content = req.body.content.trim();
+      message.edited_at = new Date();
+      await message.save();
+
+      const updated = await db.Message.findByPk(message.id, {
+        include: [{ model: db.User, as: 'sender', attributes: ['id', 'first_name', 'last_name'] }],
+      });
+
+      res.json({ success: true, data: updated });
+    } catch (error) {
+      console.error('Error editing patient message:', error);
+      res.status(500).json({ success: false, error: 'Failed to edit message' });
+    }
+  }
+);
+
+/**
+ * DELETE /api/portal/messages/messages/:messageId — Delete/hide a message
+ * - Own message: soft delete (paranoid), 24h limit
+ * - Received message: set deleted_for_patient = true (no time limit)
+ */
+router.delete('/messages/messages/:messageId',
+  param('messageId').isUUID(),
+  async (req, res) => {
+    try {
+      const message = await db.Message.findByPk(req.params.messageId, {
+        include: [{ model: db.Conversation, as: 'conversation' }],
+      });
+      if (!message || message.conversation?.patient_id !== req.patient.id) {
+        return res.status(404).json({ success: false, error: 'Message not found' });
+      }
+
+      const isSender = message.sender_id === req.user.id;
+
+      if (isSender) {
+        // Own message: soft delete with 24h limit
+        const hoursSinceCreation = (Date.now() - new Date(message.created_at).getTime()) / (1000 * 60 * 60);
+        if (hoursSinceCreation > 24) {
+          return res.status(403).json({ success: false, error: 'Messages can only be deleted within 24 hours' });
+        }
+        await message.destroy();
+      } else {
+        // Received message: hide for patient (no time limit)
+        await message.update({ deleted_for_patient: true });
+      }
+
+      res.json({ success: true, message: 'Message deleted' });
+    } catch (error) {
+      console.error('Error deleting patient message:', error);
+      res.status(500).json({ success: false, error: 'Failed to delete message' });
     }
   }
 );
