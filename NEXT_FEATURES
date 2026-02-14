@@ -8,5 +8,26 @@
 - Pour les dieteticiens, ajouter la capacité de generer rapidement des devis a destination de leurs patients, pour faciliter la gestion administrative et financière de leur pratique.
 - Pour les dieteticiens et le cabinet, une gestion améliorée de la finance avec des outils de comptabilité intégrés pour suivre les revenus, les dépenses et les paiements des patients.
 - Pour les dieteticiens, pour faciliter les consultations, rajouter la possibilité de créer des modèles de consultation personnalisés, pour permettre aux diététiciens de gagner du temps lors de la préparation de leurs consultations et d'assurer une expérience cohérente pour leurs patients, en utilisant des modèles pré-définis pour les différentes étapes de la consultation, tels que l'anamnèse, l'évaluation nutritionnelle, la planification des repas et le suivi des progrès et en utilisant des champs personnalisables pour adapter les modèles aux besoins spécifiques de chaque patient.
-- Faire une application mobile pour les patients, pour leur permettre d'accéder à leur journal, à leurs objectifs et à leurs encouragements directement depuis leur smartphone, et pour faciliter la communication avec leur diététicien en temps réel.
+
+
 - en tant que patient, pouvoir prendre des rendez-vous directement depuis mon portal patient ou depuis l'application mobile, pour faciliter la gestion de leur emploi du temps et pour permettre une communication plus fluide avec leur diététicien.
+
+[ ] Revoir le fonctionnement des messages : on doit pouvoir les consulter depuis le portal patient, mais aussi depuis l'application mobile, 
+    et les diététiciens doivent pouvoir envoyer des messages directement depuis le journal du patient ou depuis la section "Mes objectifs", 
+    pour faciliter la communication entre les patients et les diététiciens et pour permettre une réponse plus rapide aux questions et aux préoccupations des patients.
+    On doit pouvoir modifier un message déjà envoyé, pour corriger une erreur ou pour ajouter des informations supplémentaires,
+    et les patients doivent pouvoir répondre aux messages reçus pour faciliter la communication bidirectionnelle entre les patients et les diététiciens.
+    On doit pouvoir supprimer un message déjà envoyé, pour permettre aux diététiciens de corriger une erreur ou de retirer un message qui n'est plus pertinent,
+    et les patients doivent pouvoir supprimer les messages reçus pour leur permettre de gérer leur boîte de réception 
+    et de supprimer les messages qui ne sont plus pertinents ou qui contiennent des informations sensibles.
+    On doit pouvoir aussi fermer une conversation pour indiquer que le sujet a été traité ou que la communication est terminée, 
+    pour permettre aux diététiciens et aux patients de mieux organiser leurs conversations et de se concentrer sur les sujets en cours.
+    On doit pouvoir mettre un titre à une conversation pour faciliter l'identification et la gestion des conversations,
+    et les diététiciens doivent pouvoir ajouter des étiquettes ou des catégories aux conversations pour les organiser et les retrouver plus facilement.
+    L'UI doit etre améliorée pour faciliter la navigation et la gestion des messages, avec des fonctionnalités telles que la recherche, 
+    le tri et les filtres pour aider les diététiciens et les patients à trouver rapidement les messages pertinents et à gérer efficacement leur boîte de réception.
+    Les messages doivent être synchronisés en temps réel entre le portal patient et l'application mobile, pour permettre une communication fluide et instantanée 
+    entre les patients et les diététiciens, quel que soit l'appareil qu'ils utilisent.
+
+
+[x] Faire une application mobile pour les patients, pour leur permettre d'accéder à leur journal, à leurs objectifs et à leurs encouragements directement depuis leur smartphone, et pour faciliter la communication avec leur diététicien en temps réel.

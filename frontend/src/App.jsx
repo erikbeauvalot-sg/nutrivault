@@ -85,6 +85,7 @@ const PatientPortalRadar = lazy(() => import('./pages/portal/PatientPortalRadar'
 const SetPasswordPage = lazy(() => import('./pages/portal/SetPasswordPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const ServerConfigScreen = lazy(() => import('./pages/ServerConfigScreen'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -158,6 +159,9 @@ function App() {
               : <LoginPage />
           }
         />
+
+        {/* Server Configuration (Public - native only) */}
+        <Route path="/server-config" element={<ServerConfigScreen />} />
 
         {/* Forgot / Reset Password (Public) */}
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />

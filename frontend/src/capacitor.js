@@ -1,10 +1,14 @@
 import { isNative, isIOS } from './utils/platform';
+import { initApiBaseUrl } from './services/api';
 
 /**
  * Initialize Capacitor plugins for native platforms.
  * Safe to call on web — all calls are no-ops when not native.
  */
 export async function initCapacitor() {
+  // Initialize API base URL from saved preferences (native) or env var (web)
+  await initApiBaseUrl();
+
   if (!isNative) return;
 
   // Add native-mobile and has-bottom-tabs body classes for CSS adjustments

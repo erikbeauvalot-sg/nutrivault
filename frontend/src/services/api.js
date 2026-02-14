@@ -2,11 +2,13 @@
  * Axios Instance with Interceptors
  * Handles automatic token injection, token refresh on 401 errors,
  * and offline caching for GET requests.
+ * Supports dynamic server URL configuration on native apps.
  */
 
 import axios from 'axios';
 import * as tokenStorage from '../utils/tokenStorage';
 import * as offlineCache from './offlineCache';
+import { getServerUrl } from './serverConfigService';
 
 // Create axios instance with base configuration
 // Nginx proxies /api/* requests to backend:3001
@@ -16,6 +18,35 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+/**
+ * Initialize the API base URL from saved preferences (native only).
+ * Call this once at app startup before any API calls.
+ */
+export async function initApiBaseUrl() {
+  try {
+    const url = await getServerUrl();
+    api.defaults.baseURL = url;
+  } catch {
+    // Keep the default baseURL
+  }
+}
+
+/**
+ * Update the API base URL at runtime (e.g. after user changes server config).
+ * @param {string} url
+ */
+export function setApiBaseUrl(url) {
+  api.defaults.baseURL = url;
+}
+
+/**
+ * Get the current API base URL.
+ * @returns {string}
+ */
+export function getApiBaseUrl() {
+  return api.defaults.baseURL;
+}
 
 // Flag to prevent multiple simultaneous refresh attempts
 let isRefreshing = false;
@@ -170,8 +201,8 @@ api.interceptors.response.use(
     }
 
     try {
-      // Attempt to refresh token
-      const baseURL = import.meta.env.VITE_API_URL || '/api';
+      // Attempt to refresh token — use current dynamic baseURL
+      const baseURL = api.defaults.baseURL;
       const { data } = await axios.post(
         `${baseURL}/auth/refresh`,
         { refreshToken }

@@ -285,6 +285,18 @@ const LoginPage = () => {
                 </Button>
               )}
             </Form>
+
+            {/* Server configuration link (native only) */}
+            {isNative && (
+              <div className="text-center mt-3">
+                <Link
+                  to="/server-config"
+                  style={{ color: 'rgba(196, 164, 52, 0.4)', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.7rem', letterSpacing: '0.05em', textDecoration: 'none' }}
+                >
+                  {t('serverConfig.configure', 'Configure server')}
+                </Link>
+              </div>
+            )}
           </Card.Body>
         </Card>
       </div>

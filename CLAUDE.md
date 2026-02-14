@@ -11,6 +11,20 @@ After completing any feature implementation (frontend or backend):
 3. **Check backend logs** - Monitor `/tmp/nutrivault-backend.log` for errors after server restart
 4. **Test the API endpoint** - If backend changes, verify the endpoint works (check logs for errors)
 5. **Verify frontend loads** - Check browser console (F12) for React errors, network failures, runtime exceptions
+6. **Check for 500 errors** - Use browser dev tools to ensure no API calls return 500 status codes
+7. **Check i18n** - Ensure all UI strings
+8. **Check UI** - Verify the feature works as expected in the UI, no visual bugs or broken interactions
+9. **Update Unit tests** - If applicable, add or update unit tests for the new feature
+10. **Update UI tests** - If applicable, add or update UI tests for the new feature
+11. **Update fonctional tests** - If applicable, add or update functional tests for the new feature
+12. **Only then, tell the user the feature is ready** - If any errors are found in steps 1-5, fix them before confirming completion to the user
+
+
+** Release Builds:**
+- Always test the production build locally before telling the user it's ready
+- "COMMIT PATCH" to trigger the commit of current changes, push them and then create a new release with incremeting only the 'patch version' (e.g. 1.0.0 -> 1.0.1) to trigger the release build process
+- "COMMIT MINOR" to trigger the commit of current changes, push them and then create a new release with incremeting only the 'minor version' (e.g. 1.0.0 -> 1.1.0) to trigger the release build process
+- "COMMIT MAJOR" to trigger the commit of current changes, push them and then create a new release with incremeting only the 'major version' (e.g. 1.0.0 -> 2.0.0) to trigger the release build process
 
 **CRITICAL**: Do NOT tell the user a feature is ready until you have:
 - Restarted the backend server (if backend changes were made)
