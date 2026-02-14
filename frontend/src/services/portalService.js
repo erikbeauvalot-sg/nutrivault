@@ -167,6 +167,16 @@ export const getRadarData = async () => {
   return extractData(response);
 };
 
+export const updateRadarValues = async (fields) => {
+  const response = await api.put('/portal/radar/values', { fields });
+  return extractData(response);
+};
+
+export const getRadarFieldHistory = async (definitionId) => {
+  const response = await api.get(`/portal/radar/history/${definitionId}`);
+  return extractData(response);
+};
+
 // =============================================
 // Invoices
 // =============================================

@@ -11,6 +11,7 @@ import { useForm } from 'react-hook-form';
 import { Card, Form, Button, Alert } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { Keyboard } from '@capacitor/keyboard';
 import usePrefetchRoutes from '../hooks/usePrefetchRoutes';
 import useBiometricAuth from '../hooks/useBiometricAuth';
 import BiometricSetupPrompt from '../components/BiometricSetupPrompt';
@@ -36,6 +37,22 @@ const LoginPage = () => {
 
   // Prefetch critical routes while user is on login page (US-9.2)
   usePrefetchRoutes(true);
+
+  // Track keyboard height on native to push content above keyboard
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    if (!isNative) return;
+    const showListener = Keyboard.addListener('keyboardWillShow', (info) => {
+      setKeyboardHeight(info.keyboardHeight);
+    });
+    const hideListener = Keyboard.addListener('keyboardWillHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showListener.then(h => h.remove());
+      hideListener.then(h => h.remove());
+    };
+  }, []);
 
 
 
@@ -157,7 +174,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="login-page">
+    <div className="login-page" style={keyboardHeight ? { paddingBottom: keyboardHeight + 20 } : undefined}>
       <div className="login-wrapper">
         <Card className="login-card">
           <Card.Body className="p-5">

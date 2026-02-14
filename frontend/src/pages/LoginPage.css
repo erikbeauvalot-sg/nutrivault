@@ -7,17 +7,21 @@
 /* -- Animated background with organic gradient mesh -- */
 .login-page {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
-  align-items: center;
+  align-items: safe center;
   justify-content: center;
   padding: 1rem;
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
   background:
     radial-gradient(ellipse at 20% 80%, rgba(74, 101, 114, 0.4) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 20%, rgba(196, 164, 52, 0.35) 0%, transparent 50%),
     radial-gradient(ellipse at 50% 50%, rgba(74, 101, 114, 0.15) 0%, transparent 70%),
     linear-gradient(160deg, #1e2c32 0%, #2e3e46 30%, #253840 60%, #1a2830 100%);
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   font-family: 'Bricolage Grotesque', sans-serif;
 }
 

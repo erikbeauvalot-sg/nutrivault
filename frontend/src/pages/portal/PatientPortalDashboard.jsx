@@ -285,18 +285,46 @@ const PatientPortalDashboard = () => {
                 {t('common.viewAll', 'Voir tout')}
               </Link>
             </Card.Header>
-            <Card.Body className="py-2 px-3 d-flex align-items-center justify-content-center">
+            <Card.Body className="py-2 px-0 d-flex align-items-center justify-content-center">
               {!miniRadar ? (
                 <p className="text-muted mb-0">{t('portal.noAssessment', 'Pas encore de bilan')}</p>
               ) : (
-                <div style={{ width: '100%', maxWidth: '280px' }}>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <RadarChart cx="50%" cy="50%" outerRadius="65%" data={miniRadar.data}>
+                <div style={{ width: '100%' }} ref={(node) => { if (node) { const svg = node.querySelector('svg'); if (svg) svg.style.overflow = 'visible'; } }}>
+                  <ResponsiveContainer width="100%" height={400}>
+                    <RadarChart cx="50%" cy="50%" outerRadius="55%" data={miniRadar.data}>
                       <PolarGrid gridType="polygon" />
                       <PolarAngleAxis
                         dataKey="field"
-                        tick={{ fontSize: 9 }}
                         tickLine={false}
+                        tick={({ payload, x, y, cx, cy }) => {
+                          const raw = payload.value || '';
+                          const label = raw.split(/[,(.]/)[0].trim();
+                          const words = label.split(' ');
+                          const lines = [];
+                          let cur = '';
+                          words.forEach(w => {
+                            if ((cur + ' ' + w).trim().length <= 16) { cur = (cur + ' ' + w).trim(); }
+                            else { if (cur) lines.push(cur); cur = w; }
+                          });
+                          if (cur) lines.push(cur);
+                          const angle = Math.atan2(y - cy, x - cx);
+                          const angleDeg = (angle * 180) / Math.PI;
+                          const off = 8;
+                          let textAnchor = 'middle';
+                          if (angleDeg > -60 && angleDeg < 60) textAnchor = 'start';
+                          else if (angleDeg > 120 || angleDeg < -120) textAnchor = 'end';
+                          const lh = 11;
+                          const startDy = -(lines.length - 1) * lh / 2;
+                          return (
+                            <g transform={`translate(${x + Math.cos(angle) * off},${y + Math.sin(angle) * off})`}>
+                              <text textAnchor={textAnchor} fill="#999" fontSize={9} dominantBaseline="middle">
+                                {lines.map((line, i) => (
+                                  <tspan key={i} x={0} dy={i === 0 ? startDy : lh}>{line}</tspan>
+                                ))}
+                              </text>
+                            </g>
+                          );
+                        }}
                       />
                       <PolarRadiusAxis angle={90} domain={[0, 10]} tick={false} axisLine={false} />
                       <Radar

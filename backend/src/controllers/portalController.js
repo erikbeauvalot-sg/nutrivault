@@ -1158,8 +1158,25 @@ exports.getRadarData = async (req, res, next) => {
       }
     }
 
+    // Determine which categories are patient-level vs visit-level
+    const patientLevelCategoryIds = new Set();
+    const visitLevelCategoryIds = new Set();
+    radarCategories.forEach(c => {
+      const et = c.entity_types || ['patient'];
+      if (et.includes('patient')) patientLevelCategoryIds.add(c.id);
+      else visitLevelCategoryIds.add(c.id);
+    });
+
+    // Editable field types for patient portal
+    const editableFieldTypes = new Set([
+      'number', 'decimal', 'integer', 'slider', 'rating',
+      'select', 'radio', 'boolean', 'checkbox', 'text', 'textarea'
+    ]);
+
     // Build response
     const result = radarCategories.map(category => {
+      const isPatientLevel = patientLevelCategoryIds.has(category.id);
+
       const fields = (category.field_definitions || [])
         .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
         .map(def => {
@@ -1205,16 +1222,37 @@ exports.getRadarData = async (req, res, next) => {
             max_value: measureDef.max_value
           } : null;
 
+          // Determine if this field is editable by the patient
+          // Embedded fields (linked to measures) are also editable — we write to PatientMeasure
+          const is_editable = isPatientLevel
+            && !def.is_calculated
+            && (editableFieldTypes.has(def.field_type) || (def.field_type === 'embedded' && !!measureDef));
+
+          // For embedded fields, expose the measure_definition_id for updates
+          const measure_definition_id = measureDef ? measureDef.id : undefined;
+
+          // For embedded numeric fields, inject validation_rules from measure range for the edit UI
+          let effectiveValidationRules = validationRules;
+          if (def.field_type === 'embedded' && measureDef) {
+            effectiveValidationRules = {
+              ...(validationRules || {}),
+              min: measureDef.min_value ?? 0,
+              max: measureDef.max_value ?? 10
+            };
+          }
+
           return {
             definition_id: def.id,
             field_name: def.field_name,
             field_label: translationMap[def.id] || def.field_label || def.field_name,
             field_type: def.field_type,
-            validation_rules: validationRules,
+            validation_rules: effectiveValidationRules,
             select_options: selectOptions,
             display_order: def.display_order,
+            is_editable,
             value,
-            ...(measureRange && { measure_range: measureRange })
+            ...(measureRange && { measure_range: measureRange }),
+            ...(measure_definition_id && { measure_definition_id })
           };
         });
 
@@ -1229,6 +1267,278 @@ exports.getRadarData = async (req, res, next) => {
     });
 
     res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/portal/radar/values — Update radar field values (patient self-edit)
+ * Body: { fields: [{ definition_id, value, measure_definition_id? }] }
+ * For embedded fields, measure_definition_id is required to write to PatientMeasure.
+ */
+exports.updateRadarValues = async (req, res, next) => {
+  try {
+    const patientId = req.patient.id;
+    const { fields } = req.body;
+
+    if (!Array.isArray(fields) || fields.length === 0) {
+      return res.status(400).json({ success: false, error: 'Fields array is required' });
+    }
+
+    const auditService = require('../services/audit.service');
+    const { recalculateDependentFields } = require('../services/patientCustomField.service');
+
+    const results = [];
+    const changedFieldNames = [];
+
+    for (const { definition_id, value, measure_definition_id } of fields) {
+      // Load definition
+      const definition = await db.CustomFieldDefinition.findByPk(definition_id);
+      if (!definition || !definition.is_active) {
+        return res.status(400).json({ success: false, error: `Field ${definition_id} not found or inactive` });
+      }
+
+      // Verify this is not a calculated field
+      if (definition.is_calculated) {
+        return res.status(403).json({ success: false, error: `Field "${definition.field_label}" is calculated and not editable` });
+      }
+
+      // Handle embedded fields → write to PatientMeasure
+      if (definition.field_type === 'embedded') {
+        // Resolve measure_definition_id from the field's select_options if not provided
+        let measureDefId = measure_definition_id;
+        if (!measureDefId) {
+          let opts = null;
+          try { opts = definition.select_options ? JSON.parse(definition.select_options) : null; } catch (e) { opts = definition.select_options; }
+          if (opts?.measure_name) {
+            const measureDef = await db.MeasureDefinition.findOne({
+              where: { name: opts.measure_name, is_active: true }
+            });
+            if (measureDef) measureDefId = measureDef.id;
+          }
+        }
+
+        if (!measureDefId) {
+          return res.status(400).json({ success: false, error: `Cannot resolve measure for embedded field "${definition.field_label}"` });
+        }
+
+        const numValue = parseFloat(value);
+        if (isNaN(numValue)) {
+          return res.status(400).json({ success: false, error: `Invalid numeric value for "${definition.field_label}"` });
+        }
+
+        // Get the latest measure to determine before value
+        const latestMeasure = await db.PatientMeasure.findOne({
+          where: { patient_id: patientId, measure_definition_id: measureDefId },
+          order: [['measured_at', 'DESC']]
+        });
+
+        const beforeValue = latestMeasure?.numeric_value ?? null;
+
+        // Create a new PatientMeasure record (measures are append-only, like a log)
+        const newMeasure = await db.PatientMeasure.create({
+          patient_id: patientId,
+          measure_definition_id: measureDefId,
+          numeric_value: numValue,
+          measured_at: new Date(),
+          recorded_by: req.user.id,
+          notes: 'Portal self-edit'
+        });
+
+        // Audit log
+        await auditService.log({
+          user_id: req.user.id,
+          username: req.user.username,
+          action: 'CREATE',
+          resource_type: 'patient_custom_field_value',
+          resource_id: newMeasure.id,
+          changes: {
+            before: { value_number: beforeValue },
+            after: { value_number: numValue }
+          },
+          details: `Portal edit (measure): ${definition.field_label} = ${numValue}`
+        });
+
+        results.push({ definition_id, value: numValue, status: 'updated' });
+        continue;
+      }
+
+      // Regular (non-embedded) fields
+      // Verify the category is patient-level
+      const category = await db.CustomFieldCategory.findByPk(definition.category_id);
+      const entityTypes = category?.entity_types || ['patient'];
+      if (!entityTypes.includes('patient')) {
+        return res.status(403).json({ success: false, error: `Field "${definition.field_label}" is not editable (visit-level)` });
+      }
+
+      // Validate value
+      const validation = definition.validateValue(value);
+      if (!validation.isValid) {
+        return res.status(400).json({ success: false, error: `${definition.field_label}: ${validation.error}` });
+      }
+
+      // Find or create value record
+      let fieldValue = await db.PatientCustomFieldValue.findOne({
+        where: { patient_id: patientId, field_definition_id: definition_id }
+      });
+
+      const isNew = !fieldValue;
+      const beforeData = fieldValue ? fieldValue.toJSON() : null;
+
+      if (isNew) {
+        fieldValue = await db.PatientCustomFieldValue.create({
+          patient_id: patientId,
+          field_definition_id: definition_id,
+          updated_by: req.user.id
+        });
+      }
+
+      // Set value
+      fieldValue.setValue(value, definition.field_type, definition.allow_multiple);
+      fieldValue.updated_by = req.user.id;
+      await fieldValue.save();
+
+      // Audit log with before/after
+      await auditService.log({
+        user_id: req.user.id,
+        username: req.user.username,
+        action: isNew ? 'CREATE' : 'UPDATE',
+        resource_type: 'patient_custom_field_value',
+        resource_id: fieldValue.id,
+        changes: {
+          before: beforeData,
+          after: fieldValue.toJSON()
+        },
+        details: `Portal edit: ${definition.field_label} = ${value}`
+      });
+
+      changedFieldNames.push(definition.field_name);
+      results.push({ definition_id, value, status: isNew ? 'created' : 'updated' });
+    }
+
+    // Recalculate dependent calculated fields
+    for (const fieldName of changedFieldNames) {
+      await recalculateDependentFields(patientId, fieldName, req.user);
+    }
+
+    res.json({ success: true, data: results });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/portal/radar/history/:definitionId — Field change history
+ * For embedded fields: returns PatientMeasure history directly
+ * For regular fields: returns AuditLog history
+ */
+exports.getRadarFieldHistory = async (req, res, next) => {
+  try {
+    const patientId = req.patient.id;
+    const { definitionId } = req.params;
+
+    const definition = await db.CustomFieldDefinition.findByPk(definitionId);
+    if (!definition) {
+      return res.status(404).json({ success: false, error: 'Field not found' });
+    }
+
+    // For embedded fields, show PatientMeasure history
+    if (definition.field_type === 'embedded') {
+      let opts = null;
+      try { opts = definition.select_options ? JSON.parse(definition.select_options) : null; } catch (e) { opts = definition.select_options; }
+
+      if (opts?.measure_name) {
+        const measureDef = await db.MeasureDefinition.findOne({
+          where: { name: opts.measure_name, is_active: true }
+        });
+
+        if (measureDef) {
+          const measures = await db.PatientMeasure.findAll({
+            where: { patient_id: patientId, measure_definition_id: measureDef.id },
+            order: [['measured_at', 'DESC']],
+            limit: 50,
+            include: [{
+              model: db.User,
+              as: 'recorder',
+              attributes: ['id', 'username', 'first_name', 'last_name'],
+              required: false
+            }]
+          });
+
+          const history = measures.map((m, i) => {
+            const next = measures[i + 1]; // older record
+            return {
+              id: m.id,
+              action: m.notes === 'Portal self-edit' ? 'UPDATE' : 'CREATE',
+              before_value: next ? next.numeric_value : null,
+              after_value: m.numeric_value,
+              details: m.notes,
+              username: m.recorder?.username || m.recorder?.first_name || null,
+              created_at: m.measured_at
+            };
+          });
+
+          return res.json({
+            success: true,
+            data: { field_label: definition.field_label, field_name: definition.field_name, history }
+          });
+        }
+      }
+
+      return res.json({ success: true, data: { field_label: definition.field_label, history: [] } });
+    }
+
+    // Regular fields: use AuditLog
+    const fieldValue = await db.PatientCustomFieldValue.findOne({
+      where: { patient_id: patientId, field_definition_id: definitionId }
+    });
+
+    if (!fieldValue) {
+      return res.json({ success: true, data: { field_label: definition.field_label, history: [] } });
+    }
+
+    const auditLogs = await db.AuditLog.findAll({
+      where: {
+        resource_type: 'patient_custom_field_value',
+        resource_id: fieldValue.id,
+        action: { [Op.in]: ['CREATE', 'UPDATE', 'AUTO_CREATE', 'AUTO_UPDATE'] }
+      },
+      order: [['created_at', 'DESC']],
+      limit: 50,
+      attributes: ['id', 'action', 'changes', 'details', 'username', 'created_at']
+    });
+
+    const history = auditLogs.map(log => {
+      let changes = log.changes;
+      if (typeof changes === 'string') {
+        try { changes = JSON.parse(changes); } catch (e) { changes = null; }
+      }
+
+      let beforeValue = null;
+      let afterValue = null;
+      if (changes) {
+        const before = changes.before;
+        const after = changes.after;
+        if (before) beforeValue = before.value_number ?? before.value_text ?? before.value_boolean ?? null;
+        if (after) afterValue = after.value_number ?? after.value_text ?? after.value_boolean ?? null;
+      }
+
+      return {
+        id: log.id,
+        action: log.action,
+        before_value: beforeValue,
+        after_value: afterValue,
+        details: log.details,
+        username: log.username,
+        created_at: log.created_at
+      };
+    });
+
+    res.json({
+      success: true,
+      data: { field_label: definition.field_label, field_name: definition.field_name, history }
+    });
   } catch (error) {
     next(error);
   }

@@ -1203,6 +1203,7 @@ module.exports = {
   bulkUpdatePatientFields,
   deletePatientCustomField,
   recalculateAllValuesForField,
+  recalculateDependentFields,
   clearCalculatedFieldsCache,
   getVisitFieldHistory
 };

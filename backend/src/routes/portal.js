@@ -203,6 +203,25 @@ router.get('/objectives', portalController.getObjectives);
  */
 router.get('/radar', portalController.getRadarData);
 
+/**
+ * PUT /api/portal/radar/values — Update radar field values (patient self-edit)
+ */
+router.put('/radar/values',
+  body('fields').isArray({ min: 1 }).withMessage('Fields array is required'),
+  body('fields.*.definition_id').isUUID().withMessage('Valid definition_id is required'),
+  body('fields.*.value').exists().withMessage('Value is required'),
+  body('fields.*.measure_definition_id').optional().isUUID(),
+  portalController.updateRadarValues
+);
+
+/**
+ * GET /api/portal/radar/history/:definitionId — Get field change history
+ */
+router.get('/radar/history/:definitionId',
+  param('definitionId').isUUID(),
+  portalController.getRadarFieldHistory
+);
+
 // ==========================================
 // INVOICE ROUTES
 // ==========================================
