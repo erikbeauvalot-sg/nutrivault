@@ -39,6 +39,7 @@ BACKUP_DIR="${PROJECT_DIR}/backups"
 SERVICE_NAME="nutrivault"
 SERVICE_USER="www-data"
 MAX_BACKUPS=10
+MAINTENANCE_FLAG="${PROJECT_DIR}/maintenance.flag"
 
 # SSL configuration
 CERT_DOMAINS="mariondiet.beauvalot.com,mariondiet.beauvalot.fr,nutrivault.beauvalot.com,nutrivault.beauvalot.fr"
@@ -87,6 +88,11 @@ main() {
     fi
 
     local START_TIME=$(date +%s)
+
+    # ── Enable maintenance mode ──────────────────────────────────
+    log_info "Enabling maintenance mode..."
+    touch "$MAINTENANCE_FLAG"
+    trap 'rm -f "$MAINTENANCE_FLAG"' EXIT
 
     # ── Step 1: Backup database ──────────────────────────────────
     log_step 1 "Backing up database..."
@@ -224,6 +230,10 @@ main() {
         # Don't rollback if the server is just slow to start — the DB migration already ran
         exit 1
     fi
+
+    # ── Disable maintenance mode ─────────────────────────────────
+    rm -f "$MAINTENANCE_FLAG"
+    log_success "Maintenance mode disabled"
 
     # ── Done ─────────────────────────────────────────────────────
     local END_TIME=$(date +%s)

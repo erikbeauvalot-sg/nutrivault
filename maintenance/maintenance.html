@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NutriVault - Maintenance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@200;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Bricolage Grotesque', sans-serif;
+      background: linear-gradient(145deg, #1a2f23 0%, #2d4a3e 30%, #3d5c4a 50%, #4a6b52 70%, #2d4a3e 100%);
+      color: #e8dcc8;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Subtle animated background circles */
+    body::before, body::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0.07;
+      animation: float 20s ease-in-out infinite;
+    }
+    body::before {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, #c4a35a, transparent 70%);
+      top: -200px; right: -150px;
+    }
+    body::after {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, #7ab87a, transparent 70%);
+      bottom: -150px; left: -100px;
+      animation-delay: -10s;
+      animation-direction: reverse;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      25% { transform: translate(30px, -20px) scale(1.05); }
+      50% { transform: translate(-20px, 15px) scale(0.95); }
+      75% { transform: translate(15px, 25px) scale(1.02); }
+    }
+
+    .container {
+      text-align: center;
+      z-index: 1;
+      padding: 2rem;
+      max-width: 540px;
+    }
+
+    /* Organic spinner */
+    .spinner {
+      width: 64px; height: 64px;
+      margin: 0 auto 2.5rem;
+      position: relative;
+    }
+    .spinner::before, .spinner::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid transparent;
+    }
+    .spinner::before {
+      border-top-color: #c4a35a;
+      border-right-color: #c4a35a;
+      animation: spin 1.8s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    }
+    .spinner::after {
+      inset: 8px;
+      border-bottom-color: #7ab87a;
+      border-left-color: #7ab87a;
+      animation: spin 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite reverse;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .logo {
+      font-weight: 800;
+      font-size: 2.4rem;
+      letter-spacing: -0.02em;
+      margin-bottom: 2rem;
+      background: linear-gradient(135deg, #c4a35a 0%, #e8dcc8 50%, #7ab87a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .message {
+      font-weight: 200;
+      font-size: 1.3rem;
+      line-height: 1.7;
+      margin-bottom: 0.5rem;
+    }
+
+    .divider {
+      width: 40px;
+      height: 1px;
+      background: #c4a35a;
+      margin: 1.5rem auto;
+      opacity: 0.5;
+    }
+
+    .message-en {
+      font-weight: 200;
+      font-size: 1.1rem;
+      line-height: 1.6;
+      opacity: 0.6;
+    }
+
+    .leaf {
+      display: inline-block;
+      opacity: 0.4;
+      animation: pulse 3s ease-in-out infinite;
+    }
+    .leaf:nth-child(2) { animation-delay: 1s; }
+    .leaf:nth-child(3) { animation-delay: 2s; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.1); }
+    }
+
+    .dots {
+      margin-top: 2.5rem;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+    .dots span {
+      display: inline-block;
+      width: 6px; height: 6px;
+      background: #c4a35a;
+      border-radius: 50%;
+      opacity: 0.3;
+      animation: dot-pulse 1.5s ease-in-out infinite;
+    }
+    .dots span:nth-child(2) { animation-delay: 0.3s; }
+    .dots span:nth-child(3) { animation-delay: 0.6s; }
+
+    @keyframes dot-pulse {
+      0%, 80%, 100% { opacity: 0.3; transform: scale(1); }
+      40% { opacity: 1; transform: scale(1.4); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="spinner"></div>
+    <div class="logo">NutriVault</div>
+    <p class="message">Mise à jour en cours<br><span class="leaf">&#127793;</span> Nous revenons dans un instant</p>
+    <div class="divider"></div>
+    <p class="message-en">Update in progress — back in a moment</p>
+    <div class="dots">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </div>
+</body>
+</html>

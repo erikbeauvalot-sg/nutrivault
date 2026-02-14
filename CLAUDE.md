@@ -22,9 +22,9 @@ After completing any feature implementation (frontend or backend):
 
 ** Release Builds:**
 - Always test the production build locally before telling the user it's ready
-- "COMMIT PATCH" to trigger the commit of current changes, push them and then create a new release with incremeting only the 'patch version' (e.g. 1.0.0 -> 1.0.1) to trigger the release build process
-- "COMMIT MINOR" to trigger the commit of current changes, push them and then create a new release with incremeting only the 'minor version' (e.g. 1.0.0 -> 1.1.0) to trigger the release build process
-- "COMMIT MAJOR" to trigger the commit of current changes, push them and then create a new release with incremeting only the 'major version' (e.g. 1.0.0 -> 2.0.0) to trigger the release build process
+- "COMMIT PATCH" to trigger the commit of current changes, push them and then create and publish a new release with incremeting only the 'patch version' (e.g. 1.0.0 -> 1.0.1) to trigger the release build process
+- "COMMIT MINOR" to trigger the commit of current changes, push them and then create and publish a new release with incremeting only the 'minor version' (e.g. 1.0.0 -> 1.1.0) to trigger the release build process
+- "COMMIT MAJOR" to trigger the commit of current changes, push them and then create and publish a new release with incremeting only the 'major version' (e.g. 1.0.0 -> 2.0.0) to trigger the release build process
 
 **CRITICAL**: Do NOT tell the user a feature is ready until you have:
 - Restarted the backend server (if backend changes were made)

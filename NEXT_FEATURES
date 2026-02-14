@@ -30,4 +30,6 @@
     entre les patients et les diététiciens, quel que soit l'appareil qu'ils utilisent.
 
 
+[ ] Dans la partie Communication du dieteticien, ajouter la possibilité de crééer un simple mail a destination de tous les patients ou d'un groupe de patients ou d'un simple patient, pour permettre aux diététiciens de communiquer rapidement et efficacement avec leurs patients, en envoyant des informations importantes, des rappels ou des encouragements à un large public ou à des groupes spécifiques de patients en fonction de leurs besoins et de leurs objectifs de santé.
+
 [x] Faire une application mobile pour les patients, pour leur permettre d'accéder à leur journal, à leurs objectifs et à leurs encouragements directement depuis leur smartphone, et pour faciliter la communication avec leur diététicien en temps réel.
