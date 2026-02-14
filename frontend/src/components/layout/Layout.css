@@ -25,6 +25,12 @@
   min-height: 0; /* allow flex child to shrink */
 }
 
+/* Native iOS page transitions: main becomes the animation container */
+.layout-content.native-animated {
+  position: relative;
+  overflow: hidden;
+}
+
 /* When bottom tabs are present, pad content so it isn't hidden behind the bar */
 .has-bottom-tabs .layout-content {
   padding-bottom: calc(56px + env(safe-area-inset-bottom) + 1rem);

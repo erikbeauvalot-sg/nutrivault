@@ -6,7 +6,8 @@
 
 import { useState } from 'react';
 import { Navbar, Container, Nav, NavDropdown, Button } from 'react-bootstrap';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { FiLogOut } from 'react-icons/fi';
@@ -16,6 +17,7 @@ import NotificationBell from '../common/NotificationBell';
 import PatientPortalSidebar from './PatientPortalSidebar';
 import BottomTabBar from '../portal/BottomTabBar';
 import OfflineBanner from '../common/OfflineBanner';
+import AnimatedPage from '../ios/AnimatedPage';
 import { isNative } from '../../utils/platform';
 import * as tokenStorage from '../../utils/tokenStorage';
 import './Layout.css';
@@ -26,6 +28,7 @@ const PatientPortalLayout = ({ children }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
+  const location = useLocation();
   const useBottomTabs = isNative;
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
@@ -128,8 +131,16 @@ const PatientPortalLayout = ({ children }) => {
             {sidebarOpen && <div className="sidebar-overlay" onClick={closeSidebar} />}
           </>
         )}
-        <main className={`layout-content ${useBottomTabs ? 'no-sidebar' : ''}`}>
-          {children}
+        <main className={`layout-content ${useBottomTabs ? 'no-sidebar' : ''} ${isNative ? 'native-animated' : ''}`}>
+          {isNative ? (
+            <AnimatePresence mode="popLayout" initial={false}>
+              <AnimatedPage key={location.pathname}>
+                {children}
+              </AnimatedPage>
+            </AnimatePresence>
+          ) : (
+            children
+          )}
         </main>
       </div>
 
