@@ -156,7 +156,7 @@ const FrenchContent = () => (
         <li><strong>Limitation :</strong> demander la limitation du traitement</li>
       </ul>
       <p>
-        Pour exercer vos droits, contactez-nous à <strong>contact@mariondiet.fr</strong>.
+        Pour exercer vos droits, contactez-nous à <strong>mariondiet@beauvalot.com</strong>.
         Nous répondrons dans un délai de 30 jours.
       </p>
     </section>
@@ -196,8 +196,8 @@ const FrenchContent = () => (
         Pour toute question relative à cette politique ou à vos données personnelles :
       </p>
       <ul>
-        <li><strong>E-mail :</strong> contact@mariondiet.fr</li>
-        <li><strong>Site web :</strong> mariondiet.fr</li>
+        <li><strong>E-mail :</strong> mariondiet@beauvalot.com</li>
+        <li><strong>Site web :</strong> beauvalot.com</li>
       </ul>
       <p>
         Vous pouvez également introduire une réclamation auprès de la CNIL (cnil.fr).
@@ -317,7 +317,7 @@ const EnglishContent = () => (
         <li><strong>Restriction:</strong> request limitation of processing</li>
       </ul>
       <p>
-        To exercise your rights, contact us at <strong>contact@mariondiet.fr</strong>.
+        To exercise your rights, contact us at <strong>mariondiet@beauvalot.com</strong>.
         We will respond within 30 days.
       </p>
     </section>
@@ -357,8 +357,8 @@ const EnglishContent = () => (
         For any questions regarding this policy or your personal data:
       </p>
       <ul>
-        <li><strong>Email:</strong> contact@mariondiet.fr</li>
-        <li><strong>Website:</strong> mariondiet.fr</li>
+        <li><strong>Email:</strong> mariondiet@beauvalot.com</li>
+        <li><strong>Website:</strong> beauvalot.com</li>
       </ul>
       <p>
         You may also file a complaint with the CNIL (cnil.fr) or your local data protection authority.
