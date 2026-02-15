@@ -2,12 +2,12 @@
 # bump-version.sh — Increment version across package.json (root + frontend) and Xcode project
 #
 # Usage:
-#   ./scripts/bump-version.sh patch   # 8.7.2 → 8.7.3, build = 8.7.3-YYYYMMDD
-#   ./scripts/bump-version.sh minor   # 8.7.2 → 8.8.0, build = 8.8.0-YYYYMMDD
-#   ./scripts/bump-version.sh major   # 8.7.2 → 9.0.0, build = 9.0.0-YYYYMMDD
-#   ./scripts/bump-version.sh build   # version unchanged, build = version-YYYYMMDD
+#   ./scripts/bump-version.sh patch   # 8.7.2 → 8.7.3, build = 8.7.3-YYYYMMDDHHMM
+#   ./scripts/bump-version.sh minor   # 8.7.2 → 8.8.0, build = 8.8.0-YYYYMMDDHHMM
+#   ./scripts/bump-version.sh major   # 8.7.2 → 9.0.0, build = 9.0.0-YYYYMMDDHHMM
+#   ./scripts/bump-version.sh build   # version unchanged, build = version-YYYYMMDDHHMM
 #
-# Build number format: VERSION-YYYYMMDD (e.g. 8.7.10-20260215)
+# Build number format: VERSION-YYYYMMDDHHMM (e.g. 8.7.10-202602151430)
 # Syncs: root package.json, frontend/package.json, Xcode MARKETING_VERSION + CURRENT_PROJECT_VERSION
 
 set -e
@@ -25,7 +25,7 @@ CURRENT_VERSION=$(node -p "require('$ROOT_PKG').version")
 IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
 
 # Today's date
-DATE_STAMP=$(date +%Y%m%d)
+DATE_STAMP=$(date +%Y%m%d%H%M)
 
 case "$BUMP_TYPE" in
   major)
