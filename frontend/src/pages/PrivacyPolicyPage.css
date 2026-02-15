@@ -1,0 +1,257 @@
+/* ============================================
+   PRIVACY POLICY PAGE — Solarpunk Aesthetic
+   Bricolage Grotesque (display) + JetBrains Mono (technical)
+   Matches login page visual identity
+   ============================================ */
+
+.privacy-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1rem;
+  padding-bottom: calc(env(safe-area-inset-bottom, 1rem) + 2rem);
+  background:
+    radial-gradient(ellipse at 20% 80%, rgba(74, 101, 114, 0.4) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(196, 164, 52, 0.35) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(74, 101, 114, 0.15) 0%, transparent 70%),
+    linear-gradient(160deg, #1e2c32 0%, #2e3e46 30%, #253840 60%, #1a2830 100%);
+  background-attachment: fixed;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  color: #d4cdb8;
+}
+
+/* Organic noise texture overlay */
+.privacy-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.privacy-wrapper {
+  max-width: 720px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+  animation: privacyFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes privacyFadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Header / Brand ─── */
+
+.privacy-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.privacy-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.privacy-brand:hover {
+  opacity: 0.8;
+}
+
+.privacy-brand-icon {
+  font-size: 2.5rem;
+  filter: drop-shadow(0 2px 8px rgba(74, 101, 114, 0.3));
+}
+
+.privacy-brand-title {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-weight: 800;
+  font-size: 2rem;
+  letter-spacing: -0.03em;
+  color: #e8dfc4;
+}
+
+/* ─── Card ─── */
+
+.privacy-card {
+  border: 1px solid rgba(196, 164, 52, 0.15);
+  border-radius: 1.25rem;
+  background: rgba(30, 44, 50, 0.88);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.3),
+    0 1px 0 rgba(196, 164, 52, 0.1) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.2) inset;
+  padding: 3rem;
+}
+
+/* ─── Title ─── */
+
+.privacy-title {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-weight: 800;
+  font-size: 2.2rem;
+  letter-spacing: -0.02em;
+  color: #e8dfc4;
+  margin: 0 0 0.5rem;
+  line-height: 1.2;
+}
+
+.privacy-updated {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 200;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(196, 164, 52, 0.6);
+  margin: 0;
+}
+
+.privacy-separator {
+  width: 48px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(196, 164, 52, 0.5), transparent);
+  margin: 1.5rem 0 2rem;
+  border: none;
+}
+
+/* ─── Sections ─── */
+
+.privacy-section {
+  margin-bottom: 2rem;
+}
+
+.privacy-section:last-child {
+  margin-bottom: 0;
+}
+
+.privacy-section h2 {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #e8dfc4;
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(196, 164, 52, 0.1);
+}
+
+.privacy-section h3 {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 400;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(196, 164, 52, 0.7);
+  margin: 1.25rem 0 0.5rem;
+}
+
+.privacy-section p {
+  font-weight: 300;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #c8c0ab;
+  margin: 0 0 0.75rem;
+}
+
+.privacy-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+}
+
+.privacy-section li {
+  font-weight: 300;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #c8c0ab;
+  padding-left: 1.25rem;
+  position: relative;
+}
+
+.privacy-section li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.7em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(196, 164, 52, 0.4);
+}
+
+.privacy-section li strong {
+  color: #e8dfc4;
+  font-weight: 600;
+}
+
+/* ─── Footer ─── */
+
+.privacy-footer {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.privacy-back-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 400;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  color: rgba(196, 164, 52, 0.7);
+  background: none;
+  border: 1px solid rgba(196, 164, 52, 0.2);
+  border-radius: 0.75rem;
+  padding: 0.6rem 1.5rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.privacy-back-btn:hover {
+  color: #e8dfc4;
+  border-color: rgba(196, 164, 52, 0.5);
+  background: rgba(196, 164, 52, 0.08);
+}
+
+/* ─── Responsive ─── */
+
+@media (max-width: 768px) {
+  .privacy-card {
+    padding: 2rem 1.5rem;
+    border-radius: 1rem;
+  }
+
+  .privacy-title {
+    font-size: 1.6rem;
+  }
+
+  .privacy-section h2 {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .privacy-page {
+    padding: 1rem 0.5rem;
+  }
+
+  .privacy-card {
+    padding: 1.5rem 1rem;
+    border-radius: 0.75rem;
+  }
+
+  .privacy-title {
+    font-size: 1.35rem;
+  }
+
+  .privacy-brand-title {
+    font-size: 1.5rem;
+  }
+}

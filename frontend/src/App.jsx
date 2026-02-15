@@ -55,6 +55,7 @@ const AIConfigPage = lazy(() => import('./pages/AIConfigPage'));
 const AnalyticsDashboardPage = lazy(() => import('./pages/AnalyticsDashboardPage'));
 const SharedDocumentPage = lazy(() => import('./pages/SharedDocumentPage'));
 const MarionDietPage = lazy(() => import('./pages/MarionDietPage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const RecipesPage = lazy(() => import('./pages/RecipesPage'));
 const RecipeDetailPage = lazy(() => import('./pages/RecipeDetailPage'));
 const CampaignsPage = lazy(() => import('./pages/CampaignsPage'));
@@ -187,6 +188,9 @@ function App() {
           path="/mariondiet"
           element={<MarionDietPage />}
         />
+
+        {/* Privacy Policy (Public - Required by Apple App Store) */}
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
 
         {/* Protected Routes */}
         <Route
