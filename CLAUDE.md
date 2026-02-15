@@ -24,9 +24,9 @@ After completing any feature implementation (frontend or backend):
 - Always test the production build locally before telling the user it's ready
 
 - "COMMIT BUILD" to trigger the commit of current changes, push them and then increment the build version of the IOS on Xcode to trigger the release build process for the IOS app
-- "COMMIT PATCH" to trigger the commit of current changes, push them and then create and publish a new release with incremeting only the 'patch version' (e.g. 1.0.0 -> 1.0.1) to trigger the release build process. Remember to restart the IOS Build number to 1.
-- "COMMIT MINOR" to trigger the commit of current changes, push them and then create and publish a new release with incremeting only the 'minor version' (e.g. 1.0.0 -> 1.1.0) to trigger the release build process. Remember to restart the IOS Build number to 1.
-- "COMMIT MAJOR" to trigger the commit of current changes, push them and then create and publish a new release with incremeting only the 'major version' (e.g. 1.0.0 -> 2.0.0) to trigger the release build process for the IOS app. Remember to restart the IOS Build number to 1.
+- "COMMIT PATCH" to trigger the commit of current changes, push them and then create and publish a new release with incremeting only the 'patch version' (e.g. 1.0.0 -> 1.0.1) to trigger the release build process. Remember to update the IOS Build number with curent version and the date (YYYYMMDDHHMM) so it should be something like 1.0.1-202406171230 to trigger the release build process for the IOS app.
+- "COMMIT MINOR" to trigger the commit of current changes, push them and then create and publish a new release with incremeting only the 'minor version' (e.g. 1.0.0 -> 1.1.0) to trigger the release build process. Remember to update the IOS Build number with curent version and the date (YYYYMMDDHHMM) so it should be something like 1.0.1-202406171230 to trigger the release build process for the IOS app.
+- "COMMIT MAJOR" to trigger the commit of current changes, push them and then create and publish a new release with incremeting only the 'major version' (e.g. 1.0.0 -> 2.0.0) to trigger the release build process for the IOS app. Remember to update the IOS Build number with curent version and the date (YYYYMMDDHHMM) so it should be something like 1.0.1-202406171230 to trigger the release build process for the IOS app.
 
 **CRITICAL**: Do NOT tell the user a feature is ready until you have:
 - Restarted the backend server (if backend changes were made)
