@@ -299,6 +299,14 @@ const LoginPage = () => {
             )}
           </Card.Body>
         </Card>
+        <div className="text-center mt-3">
+          <Link
+            to="/privacy"
+            style={{ color: 'rgba(196, 164, 52, 0.35)', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.65rem', letterSpacing: '0.05em', textDecoration: 'none' }}
+          >
+            {t('legal.privacyPolicy', 'Politique de confidentialité')}
+          </Link>
+        </div>
       </div>
 
       <BiometricSetupPrompt
