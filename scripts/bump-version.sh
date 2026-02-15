@@ -2,12 +2,13 @@
 # bump-version.sh — Increment version across package.json (root + frontend) and Xcode project
 #
 # Usage:
-#   ./scripts/bump-version.sh patch   # 8.7.2 → 8.7.3, build = 8.7.3-YYYYMMDDHHMM
-#   ./scripts/bump-version.sh minor   # 8.7.2 → 8.8.0, build = 8.8.0-YYYYMMDDHHMM
-#   ./scripts/bump-version.sh major   # 8.7.2 → 9.0.0, build = 9.0.0-YYYYMMDDHHMM
-#   ./scripts/bump-version.sh build   # version unchanged, build = version-YYYYMMDDHHMM
+#   ./scripts/bump-version.sh patch   # 8.7.2 → 8.7.3, build = YYYYMMDDHHMM
+#   ./scripts/bump-version.sh minor   # 8.7.2 → 8.8.0, build = YYYYMMDDHHMM
+#   ./scripts/bump-version.sh major   # 8.7.2 → 9.0.0, build = YYYYMMDDHHMM
+#   ./scripts/bump-version.sh build   # version unchanged, build = YYYYMMDDHHMM
 #
-# Build number format: VERSION-YYYYMMDDHHMM (e.g. 8.7.10-202602151430)
+# Build number (CFBundleVersion): YYYYMMDDHHMM timestamp (e.g. 202602151430)
+# Apple requires 1-3 period-separated integers — a single timestamp integer works.
 # Syncs: root package.json, frontend/package.json, Xcode MARKETING_VERSION + CURRENT_PROJECT_VERSION
 
 set -e
@@ -24,8 +25,8 @@ FRONTEND_PKG="$ROOT_DIR/frontend/package.json"
 CURRENT_VERSION=$(node -p "require('$ROOT_PKG').version")
 IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
 
-# Today's date
-DATE_STAMP=$(date +%Y%m%d%H%M)
+# Build number = timestamp (always unique, always increasing)
+NEW_BUILD=$(date +%Y%m%d%H%M)
 
 case "$BUMP_TYPE" in
   major)
@@ -41,7 +42,7 @@ case "$BUMP_TYPE" in
     PATCH=$((PATCH + 1))
     ;;
   build)
-    # Version stays the same, only build date updates
+    # Version stays the same, only build timestamp updates
     ;;
   *)
     echo "Usage: $0 {major|minor|patch|build}"
@@ -50,7 +51,6 @@ case "$BUMP_TYPE" in
 esac
 
 NEW_VERSION="$MAJOR.$MINOR.$PATCH"
-NEW_BUILD="$NEW_VERSION-$DATE_STAMP"
 
 # Update root package.json
 node -e "
