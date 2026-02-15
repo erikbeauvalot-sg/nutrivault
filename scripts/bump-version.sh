@@ -25,23 +25,26 @@ IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
 
 # Read current build number from Xcode project
 CURRENT_BUILD=$(grep -m1 'CURRENT_PROJECT_VERSION' "$PBXPROJ" | sed 's/[^0-9]//g')
-NEW_BUILD=$((CURRENT_BUILD + 1))
 
 case "$BUMP_TYPE" in
   major)
     MAJOR=$((MAJOR + 1))
     MINOR=0
     PATCH=0
+    NEW_BUILD=1
     ;;
   minor)
     MINOR=$((MINOR + 1))
     PATCH=0
+    NEW_BUILD=1
     ;;
   patch)
     PATCH=$((PATCH + 1))
+    NEW_BUILD=1
     ;;
   build)
     # Version stays the same, only build number increments
+    NEW_BUILD=$((CURRENT_BUILD + 1))
     ;;
   *)
     echo "Usage: $0 {major|minor|patch|build}"
