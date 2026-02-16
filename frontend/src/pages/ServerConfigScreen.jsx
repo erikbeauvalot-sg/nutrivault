@@ -32,7 +32,6 @@ const ServerConfigScreen = () => {
   const [formName, setFormName] = useState('');
   const [formUrl, setFormUrl] = useState('');
   const [formError, setFormError] = useState('');
-  const [saving, setSaving] = useState(false);
   const [testingId, setTestingId] = useState(null); // server id being tested, or 'form'
   const [testResults, setTestResults] = useState({}); // { serverId: { ok, message, version } }
   const [confirmDelete, setConfirmDelete] = useState(null); // server id pending delete
@@ -81,7 +80,7 @@ const ServerConfigScreen = () => {
     setFormError('');
   }
 
-  async function handleSave() {
+  function handleSave() {
     const { valid, reason } = validateUrl(formUrl);
     if (!valid) {
       setFormError(reason);
@@ -92,21 +91,19 @@ const ServerConfigScreen = () => {
       return;
     }
 
-    setSaving(true);
     setFormError('');
 
     try {
       if (editing) {
-        await updateServer(editing.id, { name: formName, url: formUrl });
+        updateServer(editing.id, { name: formName, url: formUrl });
       } else {
-        await addServer(formName, formUrl);
+        addServer(formName, formUrl);
       }
-      await loadServers();
+      // Refresh state from cache (sync — getServers returns a Promise but resolves instantly)
+      getServers().then((list) => setServers(list)).catch(() => {});
       closeForm();
     } catch (err) {
       setFormError(err.message || t('serverConfig.saveError', 'Failed to save'));
-    } finally {
-      setSaving(false);
     }
   }
 
@@ -117,30 +114,30 @@ const ServerConfigScreen = () => {
     setTestingId(null);
   }
 
-  async function handleSetActive(server) {
+  function handleSetActive(server) {
     try {
-      await setActiveServer(server.id);
+      setActiveServer(server.id);
       setApiBaseUrl(server.url);
-      await loadServers();
+      getServers().then((list) => setServers(list)).catch(() => {});
     } catch {
       // Ignore
     }
   }
 
-  async function handleDelete(id) {
+  function handleDelete(id) {
     try {
-      await deleteServer(id);
+      deleteServer(id);
       setConfirmDelete(null);
-      await loadServers();
+      getServers().then((list) => setServers(list)).catch(() => {});
     } catch {
       // Ignore
     }
   }
 
   function handleSelectAndGo(server) {
-    handleSetActive(server).then(() => {
-      navigate('/login');
-    });
+    handleSetActive(server);
+    setApiBaseUrl(server.url);
+    navigate('/login');
   }
 
   const activeServer = servers.find((s) => s.isActive);
@@ -384,7 +381,7 @@ const ServerConfigScreen = () => {
                   <Button
                     className="login-btn"
                     onClick={handleSave}
-                    disabled={saving || !formUrl.trim() || !formName.trim()}
+                    disabled={!formUrl.trim() || !formName.trim()}
                     style={{
                       flex: 2,
                       fontSize: '0.8rem',
@@ -392,16 +389,10 @@ const ServerConfigScreen = () => {
                       minHeight: 44,
                     }}
                   >
-                    {saving ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" style={{ width: '0.75rem', height: '0.75rem' }} />
-                        {t('common.saving', 'Saving...')}
-                      </>
-                    ) : (
-                      editing
-                        ? t('serverConfig.saveChanges', 'Save Changes')
-                        : t('serverConfig.addServer', 'Add Server')
-                    )}
+                    {editing
+                      ? t('serverConfig.saveChanges', 'Save Changes')
+                      : t('serverConfig.addServer', 'Add Server')
+                    }
                   </Button>
                 </div>
               </div>
