@@ -104,6 +104,7 @@ function App() {
   const { loading, isAuthenticated, user, biometricUnlocked, biometricLogin, setBiometricUnlockedState } = useAuth();
   const { biometricName, biometricEnabled, authenticateWithBiometric } = useBiometricAuth();
   const [splashDone, setSplashDone] = useState(!isNative);
+  const handleSplashFinished = useCallback(() => setSplashDone(true), []);
   usePageTracking();
 
   // Safety net: hide native splash screen once React is ready.
@@ -134,7 +135,7 @@ function App() {
   if (loading || !splashDone) {
     return (
       <>
-        {isNative && <AppSplashScreen onFinished={() => setSplashDone(true)} />}
+        {isNative && <AppSplashScreen onFinished={handleSplashFinished} />}
         {!isNative && (
           <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
             <div className="spinner-border text-primary" role="status">

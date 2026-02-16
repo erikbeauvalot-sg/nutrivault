@@ -746,9 +746,20 @@
     "save": "Save & Return",
     "saved": "Server URL saved successfully",
     "saveError": "Failed to save",
+    "saveChanges": "Save Changes",
     "reset": "Reset to default",
     "backToLogin": "Back to login",
-    "configure": "Configure server"
+    "configure": "Configure server",
+    "addServer": "Add Server",
+    "editServer": "Edit Server",
+    "serverName": "Server Name",
+    "namePlaceholder": "e.g. Production, Local Dev",
+    "nameRequired": "Server name is required",
+    "active": "Active",
+    "noServers": "No servers configured",
+    "addFirst": "Add a server to get started",
+    "addDefault": "Add default production server",
+    "confirmDelete": "Tap again to delete"
   },
   "patients": {
     "title": "Patients",

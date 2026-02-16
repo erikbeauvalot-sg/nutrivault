@@ -760,9 +760,20 @@
     "save": "Enregistrer et revenir",
     "saved": "URL du serveur enregistrée",
     "saveError": "Erreur lors de l'enregistrement",
+    "saveChanges": "Enregistrer",
     "reset": "Réinitialiser par défaut",
     "backToLogin": "Retour à la connexion",
-    "configure": "Configurer le serveur"
+    "configure": "Configurer le serveur",
+    "addServer": "Ajouter un serveur",
+    "editServer": "Modifier le serveur",
+    "serverName": "Nom du serveur",
+    "namePlaceholder": "ex. Production, Dev local",
+    "nameRequired": "Le nom du serveur est requis",
+    "active": "Actif",
+    "noServers": "Aucun serveur configuré",
+    "addFirst": "Ajoutez un serveur pour commencer",
+    "addDefault": "Ajouter le serveur de production par défaut",
+    "confirmDelete": "Appuyez à nouveau pour supprimer"
   },
   "patients": {
     "title": "Patients",
