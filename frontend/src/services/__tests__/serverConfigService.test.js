@@ -1,5 +1,9 @@
 /**
  * ServerConfigService Tests
+ *
+ * Note: persistToPrefs is fire-and-forget, so we verify state through
+ * the in-memory API (getServers, getActiveServer, etc.) rather than
+ * inspecting mockPrefsStore directly for write operations.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -30,7 +34,7 @@ beforeEach(async () => {
   Object.keys(mockPrefsStore).forEach(k => delete mockPrefsStore[k]);
   mockIsNative = false;
 
-  // Re-import to get fresh module
+  // Re-import to get fresh module (resets in-memory cache)
   vi.resetModules();
 
   // Re-mock after resetModules
@@ -122,13 +126,11 @@ describe('ServerConfigService', () => {
       mockPrefsStore['nv_server_url'] = 'http://legacy-server:3001';
       const url = await getServerUrl();
       expect(url).toBe('http://legacy-server:3001');
-      // Old key should be removed after migration
-      expect(mockPrefsStore['nv_server_url']).toBeUndefined();
-      // New key should exist
-      expect(mockPrefsStore['nv_servers']).toBeDefined();
-      const servers = JSON.parse(mockPrefsStore['nv_servers']);
+      // Verify through in-memory API
+      const servers = await getServers();
       expect(servers).toHaveLength(1);
       expect(servers[0].isActive).toBe(true);
+      expect(servers[0].url).toBe('http://legacy-server:3001');
     });
   });
 
@@ -165,6 +167,9 @@ describe('ServerConfigService', () => {
       expect(server.url).toBe('https://prod.com/api');
       expect(server.isActive).toBe(true);
       expect(server.id).toBeTruthy();
+
+      const servers = await getServers();
+      expect(servers).toHaveLength(1);
     });
 
     it('should not auto-activate subsequent servers', async () => {

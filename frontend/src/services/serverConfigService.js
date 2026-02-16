@@ -3,6 +3,10 @@
  * Manages a list of servers on native apps with one active at a time.
  * Uses @capacitor/preferences for persistence across app restarts.
  * On web, always uses VITE_API_URL (no user-configurable URL).
+ *
+ * IMPORTANT: All mutations use an in-memory cache and persist to Preferences
+ * fire-and-forget. This avoids the iOS Capacitor bridge hang where
+ * Preferences.set() never resolves ("TO JS undefined" in logs).
  */
 
 import { isNative } from '../utils/platform';
@@ -10,10 +14,13 @@ import { isNative } from '../utils/platform';
 const SERVERS_KEY = 'nv_servers';
 const OLD_PREF_KEY = 'nv_server_url';
 const DEFAULT_URL = 'https://nutrivault.beauvalot.com/api';
-const PREF_TIMEOUT = 3000;
+const READ_TIMEOUT = 3000;
 
 let Preferences = null;
 let migrationDone = false;
+
+/** In-memory cache — source of truth after initial load */
+let cachedServers = null; // null = not loaded yet, [] = loaded empty
 
 async function getPreferences() {
   if (!Preferences) {
@@ -23,12 +30,28 @@ async function getPreferences() {
   return Preferences;
 }
 
-/** Wrap a promise with a timeout */
-function withTimeout(promise, ms = PREF_TIMEOUT) {
+/** Wrap a promise with a timeout that resolves to fallback on expiry */
+function readWithTimeout(promise, fallback = null, ms = READ_TIMEOUT) {
   return Promise.race([
     promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error('Preferences timeout')), ms)),
+    new Promise((resolve) => setTimeout(() => resolve(fallback), ms)),
   ]);
+}
+
+/**
+ * Fire-and-forget persist to Preferences.
+ * Never awaited — prevents the iOS bridge hang from blocking the UI.
+ */
+function persistToPrefs(servers) {
+  if (!isNative) return;
+  (async () => {
+    try {
+      const prefs = await getPreferences();
+      prefs.set({ key: SERVERS_KEY, value: JSON.stringify(servers) });
+    } catch {
+      // Persistence failed silently — in-memory cache is still correct
+    }
+  })();
 }
 
 /** Generate a simple unique id */
@@ -67,20 +90,27 @@ async function migrateIfNeeded() {
     const prefs = await getPreferences();
 
     // Check if new key already exists
-    const existing = await withTimeout(prefs.get({ key: SERVERS_KEY }));
-    if (existing.value) return; // Already migrated
+    const existing = await readWithTimeout(prefs.get({ key: SERVERS_KEY }));
+    if (existing && existing.value) return;
 
     // Check for old single-URL key
-    const old = await withTimeout(prefs.get({ key: OLD_PREF_KEY }));
-    if (old.value) {
+    const old = await readWithTimeout(prefs.get({ key: OLD_PREF_KEY }));
+    if (old && old.value) {
       const servers = [{
         id: generateId(),
         name: 'Server',
         url: old.value,
         isActive: true,
       }];
-      await withTimeout(prefs.set({ key: SERVERS_KEY, value: JSON.stringify(servers) }));
-      await withTimeout(prefs.remove({ key: OLD_PREF_KEY })).catch(() => {});
+      cachedServers = servers;
+      // Fire-and-forget: write new key and remove old key
+      persistToPrefs(servers);
+      (async () => {
+        try {
+          const p = await getPreferences();
+          p.remove({ key: OLD_PREF_KEY });
+        } catch { /* ignore */ }
+      })();
     }
   } catch {
     // Migration failed silently — will use defaults
@@ -88,35 +118,44 @@ async function migrateIfNeeded() {
 }
 
 /**
- * Read the server list from Preferences.
- * @returns {Promise<Array>}
+ * Load servers from Preferences into memory cache (once).
  */
-export async function getServers() {
-  if (!isNative) return [];
+async function ensureLoaded() {
+  if (cachedServers !== null) return;
+
+  if (!isNative) {
+    cachedServers = [];
+    return;
+  }
 
   await migrateIfNeeded();
 
+  // If migration already set the cache, we're done
+  if (cachedServers !== null) return;
+
   try {
     const prefs = await getPreferences();
-    const { value } = await withTimeout(prefs.get({ key: SERVERS_KEY }));
-    if (value) {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) return parsed;
+    const result = await readWithTimeout(prefs.get({ key: SERVERS_KEY }));
+    if (result && result.value) {
+      const parsed = JSON.parse(result.value);
+      if (Array.isArray(parsed)) {
+        cachedServers = parsed;
+        return;
+      }
     }
   } catch {
     // Fall through
   }
-  return [];
+  cachedServers = [];
 }
 
 /**
- * Persist the server list to Preferences.
- * @param {Array} servers
+ * Read the server list.
+ * @returns {Promise<Array>}
  */
-async function saveServers(servers) {
-  if (!isNative) return;
-  const prefs = await getPreferences();
-  await withTimeout(prefs.set({ key: SERVERS_KEY, value: JSON.stringify(servers) }));
+export async function getServers() {
+  await ensureLoaded();
+  return [...cachedServers];
 }
 
 /**
@@ -130,18 +169,18 @@ export async function addServer(name, url) {
   const { valid, reason } = validateUrl(url);
   if (!valid) throw new Error(reason);
 
-  const trimmedUrl = url.trim().replace(/\/+$/, '');
-  const servers = await getServers();
+  await ensureLoaded();
 
+  const trimmedUrl = url.trim().replace(/\/+$/, '');
   const server = {
     id: generateId(),
     name: name.trim() || 'Server',
     url: trimmedUrl,
-    isActive: servers.length === 0, // First server is auto-active
+    isActive: cachedServers.length === 0,
   };
 
-  servers.push(server);
-  await saveServers(servers);
+  cachedServers.push(server);
+  persistToPrefs(cachedServers);
   return server;
 }
 
@@ -152,21 +191,22 @@ export async function addServer(name, url) {
  * @returns {Promise<object>} The updated server
  */
 export async function updateServer(id, updates) {
-  const servers = await getServers();
-  const idx = servers.findIndex((s) => s.id === id);
-  if (idx === -1) throw new Error('Server not found');
+  await ensureLoaded();
+
+  const server = cachedServers.find((s) => s.id === id);
+  if (!server) throw new Error('Server not found');
 
   if (updates.url) {
     const { valid, reason } = validateUrl(updates.url);
     if (!valid) throw new Error(reason);
-    servers[idx].url = updates.url.trim().replace(/\/+$/, '');
+    server.url = updates.url.trim().replace(/\/+$/, '');
   }
   if (updates.name !== undefined) {
-    servers[idx].name = updates.name.trim() || 'Server';
+    server.name = updates.name.trim() || 'Server';
   }
 
-  await saveServers(servers);
-  return servers[idx];
+  persistToPrefs(cachedServers);
+  return server;
 }
 
 /**
@@ -175,18 +215,18 @@ export async function updateServer(id, updates) {
  * @param {string} id
  */
 export async function deleteServer(id) {
-  let servers = await getServers();
-  const toDelete = servers.find((s) => s.id === id);
+  await ensureLoaded();
+
+  const toDelete = cachedServers.find((s) => s.id === id);
   if (!toDelete) return;
 
-  servers = servers.filter((s) => s.id !== id);
+  cachedServers = cachedServers.filter((s) => s.id !== id);
 
-  // If deleted server was active, activate the first remaining
-  if (toDelete.isActive && servers.length > 0) {
-    servers[0].isActive = true;
+  if (toDelete.isActive && cachedServers.length > 0) {
+    cachedServers[0].isActive = true;
   }
 
-  await saveServers(servers);
+  persistToPrefs(cachedServers);
 }
 
 /**
@@ -195,16 +235,16 @@ export async function deleteServer(id) {
  * @returns {Promise<object>} The now-active server
  */
 export async function setActiveServer(id) {
-  const servers = await getServers();
-  let activated = null;
+  await ensureLoaded();
 
-  for (const s of servers) {
+  let activated = null;
+  for (const s of cachedServers) {
     s.isActive = s.id === id;
     if (s.isActive) activated = s;
   }
 
   if (!activated) throw new Error('Server not found');
-  await saveServers(servers);
+  persistToPrefs(cachedServers);
   return activated;
 }
 
@@ -213,8 +253,8 @@ export async function setActiveServer(id) {
  * @returns {Promise<object|null>}
  */
 export async function getActiveServer() {
-  const servers = await getServers();
-  return servers.find((s) => s.isActive) || servers[0] || null;
+  await ensureLoaded();
+  return cachedServers.find((s) => s.isActive) || cachedServers[0] || null;
 }
 
 /**
@@ -251,12 +291,12 @@ export async function setServerUrl(url) {
 
   if (!isNative) return;
 
-  const servers = await getServers();
-  const active = servers.find((s) => s.isActive);
+  await ensureLoaded();
 
+  const active = cachedServers.find((s) => s.isActive);
   if (active) {
     active.url = trimmed;
-    await saveServers(servers);
+    persistToPrefs(cachedServers);
   } else {
     await addServer('Server', trimmed);
   }
@@ -268,11 +308,8 @@ export async function setServerUrl(url) {
  */
 export async function resetServerUrl() {
   if (isNative) {
-    try {
-      await saveServers([]);
-    } catch {
-      // Ignore
-    }
+    cachedServers = [];
+    persistToPrefs(cachedServers);
   }
   return import.meta.env.VITE_API_URL || DEFAULT_URL;
 }
