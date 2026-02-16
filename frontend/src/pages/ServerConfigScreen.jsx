@@ -47,10 +47,9 @@ const ServerConfigScreen = () => {
     }
   }, [showForm]);
 
-  async function loadServers() {
+  function loadServers() {
     try {
-      const list = await getServers();
-      setServers(list);
+      setServers(getServers());
     } catch {
       setServers([]);
     } finally {
@@ -94,13 +93,17 @@ const ServerConfigScreen = () => {
     setFormError('');
 
     try {
+      let server;
       if (editing) {
-        updateServer(editing.id, { name: formName, url: formUrl });
+        server = updateServer(editing.id, { name: formName, url: formUrl });
       } else {
-        addServer(formName, formUrl);
+        server = addServer(formName, formUrl);
       }
-      // Refresh state from cache (sync — getServers returns a Promise but resolves instantly)
-      getServers().then((list) => setServers(list)).catch(() => {});
+      // If this server is active (e.g. first server auto-activated), update API base URL
+      if (server.isActive) {
+        setApiBaseUrl(server.url);
+      }
+      setServers(getServers());
       closeForm();
     } catch (err) {
       setFormError(err.message || t('serverConfig.saveError', 'Failed to save'));
@@ -118,7 +121,7 @@ const ServerConfigScreen = () => {
     try {
       setActiveServer(server.id);
       setApiBaseUrl(server.url);
-      getServers().then((list) => setServers(list)).catch(() => {});
+      setServers(getServers());
     } catch {
       // Ignore
     }
@@ -128,7 +131,7 @@ const ServerConfigScreen = () => {
     try {
       deleteServer(id);
       setConfirmDelete(null);
-      getServers().then((list) => setServers(list)).catch(() => {});
+      setServers(getServers());
     } catch {
       // Ignore
     }

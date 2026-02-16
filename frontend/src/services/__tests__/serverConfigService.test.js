@@ -1,68 +1,63 @@
 /**
  * ServerConfigService Tests
+ * Uses localStorage (mocked via jsdom) for persistence.
  *
- * Note: persistToPrefs is fire-and-forget, so we verify state through
- * the in-memory API (getServers, getActiveServer, etc.) rather than
- * inspecting mockPrefsStore directly for write operations.
+ * The global test setup replaces localStorage with vi.fn() no-ops.
+ * We configure the mocks to use a backing Map for real storage behavior.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock platform — default to web
-let mockIsNative = false;
-vi.mock('../../utils/platform', () => ({
-  get isNative() { return mockIsNative; }
+// Hoisted mutable mock — shared reference survives across tests
+const { mockPlatform } = vi.hoisted(() => ({
+  mockPlatform: { isNative: false, isIOS: false, isAndroid: false, isWeb: true },
 }));
 
-// Mock @capacitor/preferences
-const mockPrefsStore = {};
+vi.mock('../../utils/platform', () => mockPlatform);
+
 vi.mock('@capacitor/preferences', () => ({
   Preferences: {
-    get: vi.fn(async ({ key }) => ({ value: mockPrefsStore[key] || null })),
-    set: vi.fn(async ({ key, value }) => { mockPrefsStore[key] = value; }),
-    remove: vi.fn(async ({ key }) => { delete mockPrefsStore[key]; }),
+    get: vi.fn(async () => ({ value: null })),
+    set: vi.fn(async () => {}),
+    remove: vi.fn(async () => {}),
   }
 }));
 
-// Must import AFTER mocks are set up
-let validateUrl, getServerUrl, setServerUrl, resetServerUrl, testConnection, getDefaultUrl;
-let getServers, addServer, updateServer, deleteServer, setActiveServer, getActiveServer;
+// Import once — the namespace import reads through mockPlatform
+import {
+  validateUrl,
+  getServerUrl,
+  setServerUrl,
+  resetServerUrl,
+  testConnection,
+  getDefaultUrl,
+  getServers,
+  addServer,
+  updateServer,
+  deleteServer,
+  setActiveServer,
+  getActiveServer,
+} from '../serverConfigService';
 
-beforeEach(async () => {
+/**
+ * Wire up the global localStorage mock (from tests/setup.js) to use
+ * a real backing Map so setItem/getItem/removeItem/clear actually work.
+ */
+let store;
+
+beforeEach(() => {
   vi.clearAllMocks();
-  // Clear the mock store
-  Object.keys(mockPrefsStore).forEach(k => delete mockPrefsStore[k]);
-  mockIsNative = false;
 
-  // Re-import to get fresh module (resets in-memory cache)
-  vi.resetModules();
+  // Default to web mode
+  mockPlatform.isNative = false;
+  mockPlatform.isWeb = true;
 
-  // Re-mock after resetModules
-  vi.doMock('../../utils/platform', () => ({
-    get isNative() { return mockIsNative; }
-  }));
-
-  vi.doMock('@capacitor/preferences', () => ({
-    Preferences: {
-      get: vi.fn(async ({ key }) => ({ value: mockPrefsStore[key] || null })),
-      set: vi.fn(async ({ key, value }) => { mockPrefsStore[key] = value; }),
-      remove: vi.fn(async ({ key }) => { delete mockPrefsStore[key]; }),
-    }
-  }));
-
-  const mod = await import('../serverConfigService');
-  validateUrl = mod.validateUrl;
-  getServerUrl = mod.getServerUrl;
-  setServerUrl = mod.setServerUrl;
-  resetServerUrl = mod.resetServerUrl;
-  testConnection = mod.testConnection;
-  getDefaultUrl = mod.getDefaultUrl;
-  getServers = mod.getServers;
-  addServer = mod.addServer;
-  updateServer = mod.updateServer;
-  deleteServer = mod.deleteServer;
-  setActiveServer = mod.setActiveServer;
-  getActiveServer = mod.getActiveServer;
+  // Set up functional localStorage backed by a Map
+  store = new Map();
+  localStorage.getItem.mockImplementation((key) => store.get(key) ?? null);
+  localStorage.setItem.mockImplementation((key, value) => store.set(key, String(value)));
+  localStorage.removeItem.mockImplementation((key) => store.delete(key));
+  localStorage.clear.mockImplementation(() => store.clear());
 });
 
 describe('ServerConfigService', () => {
@@ -99,7 +94,6 @@ describe('ServerConfigService', () => {
 
   describe('getServerUrl (web)', () => {
     it('should return /api fallback on web when no env var', async () => {
-      mockIsNative = false;
       const url = await getServerUrl();
       expect(typeof url).toBe('string');
     });
@@ -107,121 +101,105 @@ describe('ServerConfigService', () => {
 
   describe('getServerUrl (native)', () => {
     it('should return default URL when no servers saved', async () => {
-      mockIsNative = true;
+      mockPlatform.isNative = true;
       const url = await getServerUrl();
       expect(typeof url).toBe('string');
     });
 
     it('should return active server URL when servers exist', async () => {
-      mockIsNative = true;
-      mockPrefsStore['nv_servers'] = JSON.stringify([
+      mockPlatform.isNative = true;
+      store.set('nv_servers', JSON.stringify([
         { id: 'a', name: 'Test', url: 'http://my-server:3001', isActive: true },
-      ]);
+      ]));
       const url = await getServerUrl();
       expect(url).toBe('http://my-server:3001');
-    });
-
-    it('should migrate old nv_server_url to new format', async () => {
-      mockIsNative = true;
-      mockPrefsStore['nv_server_url'] = 'http://legacy-server:3001';
-      const url = await getServerUrl();
-      expect(url).toBe('http://legacy-server:3001');
-      // Verify through in-memory API
-      const servers = await getServers();
-      expect(servers).toHaveLength(1);
-      expect(servers[0].isActive).toBe(true);
-      expect(servers[0].url).toBe('http://legacy-server:3001');
     });
   });
 
   describe('getServers', () => {
-    it('should return empty array on web', async () => {
-      mockIsNative = false;
-      const servers = await getServers();
-      expect(servers).toEqual([]);
+    it('should return empty array on web', () => {
+      expect(getServers()).toEqual([]);
     });
 
-    it('should return empty array when no servers saved', async () => {
-      mockIsNative = true;
-      const servers = await getServers();
-      expect(servers).toEqual([]);
+    it('should return empty array when no servers saved', () => {
+      mockPlatform.isNative = true;
+      expect(getServers()).toEqual([]);
     });
 
-    it('should return saved servers', async () => {
-      mockIsNative = true;
-      mockPrefsStore['nv_servers'] = JSON.stringify([
+    it('should return saved servers', () => {
+      mockPlatform.isNative = true;
+      store.set('nv_servers', JSON.stringify([
         { id: 'a', name: 'Prod', url: 'https://prod.com/api', isActive: true },
         { id: 'b', name: 'Dev', url: 'http://localhost:3001', isActive: false },
-      ]);
-      const servers = await getServers();
+      ]));
+      const servers = getServers();
       expect(servers).toHaveLength(2);
       expect(servers[0].name).toBe('Prod');
     });
   });
 
   describe('addServer', () => {
-    it('should add a server and auto-activate if first', async () => {
-      mockIsNative = true;
-      const server = await addServer('Production', 'https://prod.com/api');
+    it('should add a server and auto-activate if first', () => {
+      mockPlatform.isNative = true;
+      const server = addServer('Production', 'https://prod.com/api');
       expect(server.name).toBe('Production');
       expect(server.url).toBe('https://prod.com/api');
       expect(server.isActive).toBe(true);
       expect(server.id).toBeTruthy();
 
-      const servers = await getServers();
-      expect(servers).toHaveLength(1);
+      // Verify persisted to localStorage
+      const stored = JSON.parse(store.get('nv_servers'));
+      expect(stored).toHaveLength(1);
     });
 
-    it('should not auto-activate subsequent servers', async () => {
-      mockIsNative = true;
-      await addServer('First', 'https://first.com/api');
-      const second = await addServer('Second', 'https://second.com/api');
+    it('should not auto-activate subsequent servers', () => {
+      mockPlatform.isNative = true;
+      addServer('First', 'https://first.com/api');
+      const second = addServer('Second', 'https://second.com/api');
       expect(second.isActive).toBe(false);
     });
 
-    it('should reject invalid URLs', async () => {
-      mockIsNative = true;
-      await expect(addServer('Bad', 'not-a-url')).rejects.toThrow();
+    it('should reject invalid URLs', () => {
+      mockPlatform.isNative = true;
+      expect(() => addServer('Bad', 'not-a-url')).toThrow();
     });
 
-    it('should strip trailing slashes from URL', async () => {
-      mockIsNative = true;
-      const server = await addServer('Test', 'https://test.com/api///');
+    it('should strip trailing slashes from URL', () => {
+      mockPlatform.isNative = true;
+      const server = addServer('Test', 'https://test.com/api///');
       expect(server.url).toBe('https://test.com/api');
     });
   });
 
   describe('updateServer', () => {
-    it('should update server name and URL', async () => {
-      mockIsNative = true;
-      const server = await addServer('Old', 'https://old.com/api');
-      const updated = await updateServer(server.id, { name: 'New', url: 'https://new.com/api' });
+    it('should update server name and URL', () => {
+      mockPlatform.isNative = true;
+      const server = addServer('Old', 'https://old.com/api');
+      const updated = updateServer(server.id, { name: 'New', url: 'https://new.com/api' });
       expect(updated.name).toBe('New');
       expect(updated.url).toBe('https://new.com/api');
     });
 
-    it('should throw for non-existent server', async () => {
-      mockIsNative = true;
-      await expect(updateServer('fake-id', { name: 'Nope' })).rejects.toThrow('Server not found');
+    it('should throw for non-existent server', () => {
+      mockPlatform.isNative = true;
+      expect(() => updateServer('fake-id', { name: 'Nope' })).toThrow('Server not found');
     });
   });
 
   describe('deleteServer', () => {
-    it('should remove a server', async () => {
-      mockIsNative = true;
-      const server = await addServer('ToDelete', 'https://delete.com/api');
-      await deleteServer(server.id);
-      const servers = await getServers();
-      expect(servers).toHaveLength(0);
+    it('should remove a server', () => {
+      mockPlatform.isNative = true;
+      const server = addServer('ToDelete', 'https://delete.com/api');
+      deleteServer(server.id);
+      expect(getServers()).toHaveLength(0);
     });
 
-    it('should activate first remaining if active server deleted', async () => {
-      mockIsNative = true;
-      const first = await addServer('First', 'https://first.com/api');
-      const second = await addServer('Second', 'https://second.com/api');
-      // first is active
-      await deleteServer(first.id);
-      const servers = await getServers();
+    it('should activate first remaining if active server deleted', () => {
+      mockPlatform.isNative = true;
+      const first = addServer('First', 'https://first.com/api');
+      const second = addServer('Second', 'https://second.com/api');
+      deleteServer(first.id);
+      const servers = getServers();
       expect(servers).toHaveLength(1);
       expect(servers[0].isActive).toBe(true);
       expect(servers[0].id).toBe(second.id);
@@ -229,71 +207,67 @@ describe('ServerConfigService', () => {
   });
 
   describe('setActiveServer', () => {
-    it('should set the specified server as active', async () => {
-      mockIsNative = true;
-      await addServer('First', 'https://first.com/api');
-      const second = await addServer('Second', 'https://second.com/api');
-      await setActiveServer(second.id);
-      const servers = await getServers();
+    it('should set the specified server as active', () => {
+      mockPlatform.isNative = true;
+      addServer('First', 'https://first.com/api');
+      const second = addServer('Second', 'https://second.com/api');
+      setActiveServer(second.id);
+      const servers = getServers();
       expect(servers.find(s => s.id === second.id).isActive).toBe(true);
       expect(servers.filter(s => s.isActive)).toHaveLength(1);
     });
 
-    it('should throw for non-existent server', async () => {
-      mockIsNative = true;
-      await expect(setActiveServer('fake-id')).rejects.toThrow('Server not found');
+    it('should throw for non-existent server', () => {
+      mockPlatform.isNative = true;
+      expect(() => setActiveServer('fake-id')).toThrow('Server not found');
     });
   });
 
   describe('getActiveServer', () => {
-    it('should return null when no servers', async () => {
-      mockIsNative = true;
-      const active = await getActiveServer();
-      expect(active).toBeNull();
+    it('should return null when no servers', () => {
+      mockPlatform.isNative = true;
+      expect(getActiveServer()).toBeNull();
     });
 
-    it('should return active server', async () => {
-      mockIsNative = true;
-      await addServer('Prod', 'https://prod.com/api');
-      const active = await getActiveServer();
+    it('should return active server', () => {
+      mockPlatform.isNative = true;
+      addServer('Prod', 'https://prod.com/api');
+      const active = getActiveServer();
       expect(active.name).toBe('Prod');
       expect(active.isActive).toBe(true);
     });
   });
 
   describe('setServerUrl (backward compat)', () => {
-    it('should reject invalid URLs', async () => {
-      await expect(setServerUrl('not-a-url')).rejects.toThrow();
+    it('should reject invalid URLs', () => {
+      expect(() => setServerUrl('not-a-url')).toThrow();
     });
 
-    it('should update active server URL on native', async () => {
-      mockIsNative = true;
-      await addServer('Existing', 'https://old.com/api');
-      await setServerUrl('https://new.com/api');
-      const active = await getActiveServer();
-      expect(active.url).toBe('https://new.com/api');
+    it('should update active server URL on native', () => {
+      mockPlatform.isNative = true;
+      addServer('Existing', 'https://old.com/api');
+      setServerUrl('https://new.com/api');
+      expect(getActiveServer().url).toBe('https://new.com/api');
     });
 
-    it('should create a server if none exist', async () => {
-      mockIsNative = true;
-      await setServerUrl('https://brand-new.com/api');
-      const servers = await getServers();
-      expect(servers).toHaveLength(1);
-      expect(servers[0].url).toBe('https://brand-new.com/api');
+    it('should create a server if none exist', () => {
+      mockPlatform.isNative = true;
+      setServerUrl('https://brand-new.com/api');
+      expect(getServers()).toHaveLength(1);
+      expect(getServers()[0].url).toBe('https://brand-new.com/api');
     });
   });
 
   describe('resetServerUrl', () => {
-    it('should clear all servers on native', async () => {
-      mockIsNative = true;
-      await addServer('Prod', 'https://prod.com/api');
-      await resetServerUrl();
-      const servers = await getServers();
-      expect(servers).toHaveLength(0);
+    it('should clear all servers on native', () => {
+      mockPlatform.isNative = true;
+      addServer('Prod', 'https://prod.com/api');
+      resetServerUrl();
+      expect(getServers()).toHaveLength(0);
     });
 
-    it('should return default URL', async () => {
-      const url = await resetServerUrl();
+    it('should return default URL', () => {
+      const url = resetServerUrl();
       expect(typeof url).toBe('string');
     });
   });
