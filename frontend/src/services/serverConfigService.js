@@ -281,10 +281,16 @@ export async function testConnection(baseUrl) {
 
   const trimmed = baseUrl.trim().replace(/\/+$/, '');
 
+  // Try multiple health endpoint patterns:
+  // - /health on the given URL
+  // - if URL ends with /api, also try the root /health (without /api)
+  // - if URL doesn't end with /api, also try /api/health
   const endpoints = [
     `${trimmed}/health`,
-    trimmed.endsWith('/api') ? null : `${trimmed}/api/health`,
-  ].filter(Boolean);
+    trimmed.endsWith('/api')
+      ? `${trimmed.slice(0, -4)}/health`
+      : `${trimmed}/api/health`,
+  ];
 
   for (const endpoint of endpoints) {
     try {
