@@ -8,7 +8,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Card, Form, Button, Spinner, Badge, ListGroup, InputGroup, Modal } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
-import { FiMessageSquare, FiSend, FiUser, FiSearch, FiPlus, FiArrowLeft, FiEdit2, FiX, FiCheck, FiLock, FiUnlock, FiTag } from 'react-icons/fi';
+import { FiMessageSquare, FiSend, FiUser, FiSearch, FiPlus, FiArrowLeft, FiEdit2, FiX, FiCheck, FiLock, FiUnlock, FiTag, FiTrash2 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import * as messageService from '../services/messageService';
 import * as patientService from '../services/patientService';
@@ -198,6 +198,21 @@ const MessagesPage = () => {
       await loadConversations();
     } catch {
       toast.error(t('messages.statusError', 'Erreur'));
+    }
+  };
+
+  // Delete closed conversation
+  const handleDeleteConversation = async () => {
+    if (!activeConvo || activeConvo.status !== 'closed') return;
+    if (!window.confirm(t('messages.deleteConversationConfirm', 'Supprimer cette conversation et tous ses messages ? Cette action est irréversible.'))) return;
+    try {
+      await messageService.deleteConversation(activeConvo.id);
+      setActiveConvo(null);
+      setMessages([]);
+      await loadConversations();
+      toast.success(t('messages.conversationDeleted', 'Conversation supprimée'));
+    } catch {
+      toast.error(t('messages.deleteConversationError', 'Erreur lors de la suppression de la conversation'));
     }
   };
 
@@ -460,6 +475,17 @@ const MessagesPage = () => {
             >
               {activeConvo.status === 'closed' ? <><FiUnlock size={13} className="me-1" /><span className="d-none d-lg-inline">{t('messages.reopenConversation', 'Rouvrir')}</span></> : <><FiLock size={13} className="me-1" /><span className="d-none d-lg-inline">{t('messages.closeConversation', 'Fermer')}</span></>}
             </Button>
+            {activeConvo.status === 'closed' && (
+              <Button
+                variant="outline-danger"
+                size="sm"
+                onClick={handleDeleteConversation}
+                title={t('messages.deleteConversation', 'Supprimer')}
+                style={{ fontSize: '0.75rem' }}
+              >
+                <FiTrash2 size={13} className="me-1" /><span className="d-none d-lg-inline">{t('messages.deleteConversation', 'Supprimer')}</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -602,28 +628,20 @@ const MessagesPage = () => {
           )}
           {!searchingPatients && patientResults.length > 0 && (
             <ListGroup className="mt-2" style={{ maxHeight: '50vh', overflowY: 'auto' }}>
-              {patientResults.map(p => {
-                const hasConvo = conversations.some(c => c.patient?.id === p.id);
-                return (
-                  <ListGroup.Item
-                    key={p.id}
-                    action
-                    disabled={creatingConvo}
-                    onClick={() => !creatingConvo && handleStartConversation(p)}
-                    className="d-flex justify-content-between align-items-center"
-                  >
-                    <div className="overflow-hidden">
-                      <strong>{p.first_name} {p.last_name}</strong>
-                      {p.email && <small className="text-muted ms-2 d-none d-sm-inline">{p.email}</small>}
-                    </div>
-                    {hasConvo && (
-                      <Badge bg="secondary" className="flex-shrink-0 ms-2" style={{ fontSize: '0.7rem' }}>
-                        {t('messages.existingConvo', 'Déjà existante')}
-                      </Badge>
-                    )}
-                  </ListGroup.Item>
-                );
-              })}
+              {patientResults.map(p => (
+                <ListGroup.Item
+                  key={p.id}
+                  action
+                  disabled={creatingConvo}
+                  onClick={() => !creatingConvo && handleStartConversation(p)}
+                  className="d-flex justify-content-between align-items-center"
+                >
+                  <div className="overflow-hidden">
+                    <strong>{p.first_name} {p.last_name}</strong>
+                    {p.email && <small className="text-muted ms-2 d-none d-sm-inline">{p.email}</small>}
+                  </div>
+                </ListGroup.Item>
+              ))}
             </ListGroup>
           )}
           {!searchingPatients && patientSearch.trim() && patientResults.length === 0 && (

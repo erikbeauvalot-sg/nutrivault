@@ -39,6 +39,11 @@ export async function deleteMessage(messageId) {
   return response.data;
 }
 
+export async function deleteConversation(conversationId) {
+  const response = await api.delete(`/messages/conversations/${conversationId}`);
+  return response.data;
+}
+
 export async function updateConversation(conversationId, data) {
   const response = await api.put(`/messages/conversations/${conversationId}`, data);
   return response.data.data;

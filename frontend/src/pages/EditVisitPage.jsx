@@ -792,7 +792,7 @@ const EditVisitPage = () => {
     <Layout>
       <Container fluid>
         {/* Header */}
-        <Row className="mb-4">
+        <Row className="mb-4 align-items-center" style={{ position: 'sticky', top: 0, zIndex: 100, backgroundColor: 'var(--nv-parchment-light)', paddingTop: '0.5rem', paddingBottom: '0.75rem' }}>
           <Col>
             <Button variant="outline-secondary" onClick={handleBack} className="mb-3">
               ← {t('visits.backToVisits')}
@@ -801,9 +801,42 @@ const EditVisitPage = () => {
               {t('visits.editVisit')}
               {visit?.patient && ` - ${visit.patient.first_name} ${visit.patient.last_name}`}
             </h1>
-            <p className="text-muted">
+            <p className="text-muted mb-0">
               {visit?.visit_date && formatDateTime(visit.visit_date, i18n.language)}
             </p>
+          </Col>
+          <Col xs={12} md="auto" className="d-flex gap-2 flex-wrap mt-3 mt-md-0">
+            <Button variant="outline-secondary" onClick={handleBack} disabled={saving || finishing}>
+              {t('common.cancel', 'Cancel')}
+            </Button>
+            <Button variant="primary" onClick={handleSubmit} disabled={saving || finishing}>
+              {saving ? (
+                <>
+                  <Spinner animation="border" size="sm" className="me-1" />
+                  {t('patients.updating')}
+                </>
+              ) : (
+                t('visits.saveChanges')
+              )}
+            </Button>
+            {formData.status === 'SCHEDULED' && (
+              <Button
+                variant="success"
+                onClick={handleFinishVisit}
+                disabled={saving || finishing}
+              >
+                {finishing ? (
+                  <>
+                    <Spinner animation="border" size="sm" className="me-1" />
+                    {t('visits.finishing', 'Finishing...')}
+                  </>
+                ) : (
+                  <>
+                    ✅ {t('visits.finishVisit', 'Finish Visit')}
+                  </>
+                )}
+              </Button>
+            )}
           </Col>
         </Row>
 
@@ -1185,35 +1218,6 @@ const EditVisitPage = () => {
                 )}
               </ResponsiveTabs>
 
-              {/* Action Buttons */}
-              <div className="d-flex justify-content-between align-items-center mt-4 pt-3 border-top flex-wrap gap-2">
-                <Button variant="outline-secondary" onClick={handleBack} disabled={saving || finishing}>
-                  {t('common.cancel', 'Cancel')}
-                </Button>
-                <div className="d-flex gap-2 flex-wrap">
-                  <Button variant="primary" type="submit" disabled={saving || finishing}>
-                    {saving ? t('patients.updating') : t('visits.saveChanges')}
-                  </Button>
-                  {formData.status === 'SCHEDULED' && (
-                    <Button
-                      variant="success"
-                      onClick={handleFinishVisit}
-                      disabled={saving || finishing}
-                    >
-                      {finishing ? (
-                        <>
-                          <Spinner animation="border" size="sm" className="me-2" />
-                          {t('visits.finishing', 'Finishing...')}
-                        </>
-                      ) : (
-                        <>
-                          ✅ {t('visits.finishVisit', 'Finish Visit')}
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              </div>
             </Card.Body>
           </Card>
         </Form>

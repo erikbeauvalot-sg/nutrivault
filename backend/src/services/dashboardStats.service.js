@@ -480,8 +480,215 @@ const getPracticeHealthScore = async (user) => {
   };
 };
 
+/**
+ * Get "Ma Journée" day stats — all 11 stat counts in one call
+ */
+const getDayStats = async (user) => {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+  const patientIds = await getScopedPatientIds(user);
+  const dietitianIds = await getScopedDietitianIds(user);
+
+  // --- Visits ---
+  const visitBaseWhere = await buildVisitWhere(user, {});
+  const todaysAppointments = await db.Visit.count({
+    where: {
+      ...visitBaseWhere,
+      visit_date: { [Op.between]: [todayStart, todayEnd] },
+      status: { [Op.in]: ['SCHEDULED', 'COMPLETED', 'IN_PROGRESS'] }
+    }
+  });
+
+  const completedToday = await db.Visit.count({
+    where: {
+      ...visitBaseWhere,
+      visit_date: { [Op.between]: [todayStart, todayEnd] },
+      status: 'COMPLETED'
+    }
+  });
+
+  const upcomingVisits = await db.Visit.count({
+    where: {
+      ...visitBaseWhere,
+      visit_date: { [Op.gt]: now },
+      status: 'SCHEDULED'
+    }
+  });
+
+  // --- Messages ---
+  let messageWhere = {};
+  if (dietitianIds !== null) {
+    messageWhere.dietitian_id = { [Op.in]: dietitianIds };
+  }
+  const unreadResult = await db.Conversation.findOne({
+    attributes: [[db.sequelize.fn('SUM', db.sequelize.col('dietitian_unread_count')), 'total']],
+    where: messageWhere,
+    raw: true
+  });
+  const newMessages = parseInt(unreadResult?.total || 0, 10);
+
+  // --- Unpaid invoices ---
+  const unpaidInvoices = await db.Billing.count({
+    where: await buildBillingWhere(user, {
+      status: { [Op.in]: ['SENT', 'OVERDUE'] }
+    })
+  });
+
+  // --- Pending quotes ---
+  const pendingQuotes = await db.Quote.count({
+    where: await buildQuoteWhere(user, {
+      status: 'SENT',
+      is_active: true
+    })
+  });
+
+  // --- Journal entries today ---
+  let journalWhere = {
+    entry_date: { [Op.between]: [todayStart.toISOString().slice(0, 10), todayEnd.toISOString().slice(0, 10)] },
+    is_private: false
+  };
+  if (patientIds !== null) {
+    if (patientIds.length === 0) {
+      journalWhere.id = null; // impossible match
+    } else {
+      journalWhere.patient_id = { [Op.in]: patientIds };
+    }
+  }
+  const todaysJournalEntries = await db.JournalEntry.count({ where: journalWhere });
+
+  // --- Patients without follow-up (no visit in 30+ days) ---
+  const thirtyDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
+  // Find patient IDs with recent visits
+  const recentVisitPatients = await db.Visit.findAll({
+    attributes: [[db.sequelize.fn('DISTINCT', db.sequelize.col('patient_id')), 'patient_id']],
+    where: await buildVisitWhere(user, {
+      visit_date: { [Op.gte]: thirtyDaysAgo },
+      status: { [Op.in]: ['SCHEDULED', 'COMPLETED'] }
+    }),
+    raw: true
+  });
+  const recentPatientIds = recentVisitPatients.map(r => r.patient_id);
+
+  let noFollowupWhere = await buildPatientWhere(user, { is_active: true });
+  if (recentPatientIds.length > 0) {
+    noFollowupWhere.id = {
+      ...(noFollowupWhere.id || {}),
+      [Op.notIn]: recentPatientIds
+    };
+  }
+  const patientsWithoutFollowup = await db.Patient.count({ where: noFollowupWhere });
+
+  // --- Upcoming birthdays (next 7 days) ---
+  let upcomingBirthdays = 0;
+  let birthdayList = [];
+  try {
+    // Find the date_of_birth custom field definition
+    const dobField = await db.CustomFieldDefinition.findOne({
+      where: { field_name: 'date_of_birth', is_active: true },
+      raw: true
+    });
+
+    if (dobField) {
+      // Get all patients' date_of_birth values
+      let cfvWhere = { field_definition_id: dobField.id };
+      if (patientIds !== null) {
+        if (patientIds.length === 0) {
+          cfvWhere.patient_id = null;
+        } else {
+          cfvWhere.patient_id = { [Op.in]: patientIds };
+        }
+      }
+
+      const dobValues = await db.PatientCustomFieldValue.findAll({
+        where: cfvWhere,
+        include: [{
+          model: db.Patient,
+          as: 'patient',
+          attributes: ['id', 'first_name', 'last_name']
+        }],
+        raw: false
+      });
+
+      // Filter for next 7 days by month+day
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      for (const val of dobValues) {
+        try {
+          const dob = new Date(val.field_value);
+          if (isNaN(dob.getTime())) continue;
+          // Calculate this year's birthday
+          let bday = new Date(now.getFullYear(), dob.getMonth(), dob.getDate());
+          // If already passed this year, check next year
+          if (bday < today) {
+            bday = new Date(now.getFullYear() + 1, dob.getMonth(), dob.getDate());
+          }
+          const diffDays = Math.floor((bday - today) / (1000 * 60 * 60 * 24));
+          if (diffDays >= 0 && diffDays <= 7) {
+            const age = bday.getFullYear() - dob.getFullYear();
+            birthdayList.push({
+              patient_id: val.patient_id,
+              patient_name: val.patient ? `${val.patient.first_name} ${val.patient.last_name}` : '—',
+              date_of_birth: val.field_value,
+              birthday_date: bday.toISOString().slice(0, 10),
+              age,
+              days_until: diffDays
+            });
+          }
+        } catch { /* skip invalid dates */ }
+      }
+      birthdayList.sort((a, b) => a.days_until - b.days_until);
+      upcomingBirthdays = birthdayList.length;
+    }
+  } catch { /* no birthday field — count stays 0 */ }
+
+  // --- Tasks due today ---
+  const roleName = user.role?.name || user.role;
+  let taskWhere = {
+    due_date: todayStart.toISOString().slice(0, 10),
+    status: { [Op.ne]: 'completed' },
+    is_active: true
+  };
+  if (roleName !== 'ADMIN') {
+    taskWhere[Op.or] = [
+      { assigned_to: user.id },
+      { created_by: user.id }
+    ];
+  }
+  const tasksDueToday = await db.Task.count({ where: taskWhere });
+
+  // --- New patient measures today ---
+  let measureWhere = {
+    measured_at: { [Op.between]: [todayStart, todayEnd] }
+  };
+  if (patientIds !== null) {
+    if (patientIds.length === 0) {
+      measureWhere.id = null;
+    } else {
+      measureWhere.patient_id = { [Op.in]: patientIds };
+    }
+  }
+  const newPatientMeasures = await db.PatientMeasure.count({ where: measureWhere });
+
+  return {
+    todaysAppointments,
+    completedToday,
+    upcomingVisits,
+    newMessages,
+    unpaidInvoices,
+    pendingQuotes,
+    todaysJournalEntries,
+    patientsWithoutFollowup,
+    upcomingBirthdays,
+    birthdayList,
+    tasksDueToday,
+    newPatientMeasures
+  };
+};
+
 module.exports = {
   getPracticeOverview,
   getRevenueChart,
-  getPracticeHealthScore
+  getPracticeHealthScore,
+  getDayStats
 };

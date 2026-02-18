@@ -289,31 +289,23 @@ const PatientPortalMessages = () => {
           </Card>
         ) : (
           <ListGroup>
-            {dietitians.map(d => {
-              const hasConvo = conversations.some(c => c.dietitian?.id === d.id);
-              return (
-                <ListGroup.Item
-                  key={d.id}
-                  action
-                  disabled={creatingConvo}
-                  onClick={() => !creatingConvo && handleStartConversation(d.id)}
-                  className="d-flex align-items-center gap-3 py-3"
-                >
-                  <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0"
-                    style={{ width: 44, height: 44 }}>
-                    <FiUser size={20} className="text-primary" />
-                  </div>
-                  <div className="flex-grow-1">
-                    <strong>{d.first_name} {d.last_name}</strong>
-                  </div>
-                  {hasConvo && (
-                    <Badge bg="secondary" style={{ fontSize: '0.7rem' }}>
-                      {t('messages.existingConvo', 'Conversation existante')}
-                    </Badge>
-                  )}
-                </ListGroup.Item>
-              );
-            })}
+            {dietitians.map(d => (
+              <ListGroup.Item
+                key={d.id}
+                action
+                disabled={creatingConvo}
+                onClick={() => !creatingConvo && handleStartConversation(d.id)}
+                className="d-flex align-items-center gap-3 py-3"
+              >
+                <div className="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0"
+                  style={{ width: 44, height: 44 }}>
+                  <FiUser size={20} className="text-primary" />
+                </div>
+                <div className="flex-grow-1">
+                  <strong>{d.first_name} {d.last_name}</strong>
+                </div>
+              </ListGroup.Item>
+            ))}
           </ListGroup>
         )}
       </PullToRefreshWrapper>

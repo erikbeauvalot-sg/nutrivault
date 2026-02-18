@@ -609,8 +609,11 @@ Return a JSON object with exactly these fields:
   "signature": "{{DIETITIAN_NAME}}"
 }
 
-IMPORTANT:
-- Return ONLY valid JSON, no markdown formatting, no code blocks.
+CRITICAL OUTPUT RULES:
+- Return ONLY the raw JSON object. Start your response with { and end with }.
+- Do NOT wrap in \`\`\`json code blocks. Do NOT add any text before or after the JSON.
+- Do NOT write "Bonjour" or any greeting before the JSON. The greeting goes INSIDE the JSON "greeting" field.
+- All string values must be valid JSON (escape newlines as \\n, escape quotes as \\").
 - Use the placeholders for all personal data (names, dates).`;
 
     // Build user prompt with anonymized patient data (GDPR compliance)
@@ -648,29 +651,108 @@ ${!visitCustomFieldsText && !visitMeasurementsText && !patientCustomFieldsText &
       maxTokens: 2000
     });
 
-    // Parse JSON response
+    // Parse JSON response — robust multi-strategy extraction
     let aiContent;
     try {
-      // Remove potential markdown code blocks
       let jsonText = responseText.trim();
+      console.log('[AI Followup] Raw response length:', jsonText.length, 'starts with:', jsonText.substring(0, 80));
 
-      // Handle ```json ... ``` format
-      if (jsonText.startsWith('```json')) {
-        jsonText = jsonText.replace(/^```json\n?/, '').replace(/\n?```$/, '');
-      } else if (jsonText.startsWith('```')) {
-        jsonText = jsonText.replace(/^```\n?/, '').replace(/\n?```$/, '');
+      // Strategy 1: Strip code block wrappers
+      const codeBlockMatch = jsonText.match(/```(?:json)?[\s\n]*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        jsonText = codeBlockMatch[1].trim();
+      } else {
+        // Strip unclosed code block markers
+        jsonText = jsonText.replace(/```(?:json)?[\s\n]*/gi, '').trim();
       }
 
-      // Try to find JSON object in the response if direct parse fails
+      // Strategy 2: Find outermost JSON object with string-aware balanced braces
+      const startIdx = jsonText.indexOf('{');
+      if (startIdx === -1) {
+        throw new Error('No JSON object found in AI response');
+      }
+
+      let depth = 0;
+      let inString = false;
+      let escaped = false;
+      let endIdx = -1;
+
+      for (let i = startIdx; i < jsonText.length; i++) {
+        const ch = jsonText[i];
+        if (escaped) { escaped = false; continue; }
+        if (ch === '\\' && inString) { escaped = true; continue; }
+        if (ch === '"') { inString = !inString; continue; }
+        if (!inString) {
+          if (ch === '{') depth++;
+          else if (ch === '}') { depth--; if (depth === 0) { endIdx = i; break; } }
+        }
+      }
+
+      if (endIdx === -1) {
+        throw new Error('Could not find balanced JSON object');
+      }
+
+      let jsonCandidate = jsonText.substring(startIdx, endIdx + 1);
+
+      // Strategy 3: Try direct parse
       try {
-        aiContent = JSON.parse(jsonText);
-      } catch (e) {
-        // Try to extract JSON from the response
-        const jsonMatch = jsonText.match(/\{[\s\S]*"subject"[\s\S]*"greeting"[\s\S]*\}/);
-        if (jsonMatch) {
-          aiContent = JSON.parse(jsonMatch[0]);
-        } else {
-          throw e;
+        aiContent = JSON.parse(jsonCandidate);
+      } catch (directErr) {
+        // Strategy 4: Fix common AI JSON issues and retry
+        // Fix unescaped newlines/tabs inside string values
+        let fixed = '';
+        let inStr = false;
+        let esc = false;
+        for (let i = 0; i < jsonCandidate.length; i++) {
+          const c = jsonCandidate[i];
+          if (esc) { fixed += c; esc = false; continue; }
+          if (c === '\\' && inStr) { fixed += c; esc = true; continue; }
+          if (c === '"') { inStr = !inStr; fixed += c; continue; }
+          if (inStr && c === '\n') { fixed += '\\n'; continue; }
+          if (inStr && c === '\r') { fixed += '\\r'; continue; }
+          if (inStr && c === '\t') { fixed += '\\t'; continue; }
+          fixed += c;
+        }
+        // Remove trailing commas before ] or }
+        fixed = fixed.replace(/,(\s*[}\]])/g, '$1');
+
+        try {
+          aiContent = JSON.parse(fixed);
+        } catch (fixedErr) {
+          // Strategy 5: Regex-based field extraction as last resort
+          console.log('[AI Followup] JSON parse failed after fixes, using regex extraction');
+          const extractField = (name) => {
+            const re = new RegExp('"' + name + '"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"');
+            const m = jsonCandidate.match(re);
+            return m ? m[1].replace(/\\n/g, '\n').replace(/\\"/g, '"') : '';
+          };
+          const extractArray = (name) => {
+            const re = new RegExp('"' + name + '"\\s*:\\s*\\[([^\\]]*?)\\]');
+            const m = jsonCandidate.match(re);
+            if (!m) return [];
+            const items = [];
+            const itemRe = /"((?:[^"\\]|\\.)*)"/g;
+            let im;
+            while ((im = itemRe.exec(m[1])) !== null) {
+              items.push(im[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'));
+            }
+            return items;
+          };
+
+          aiContent = {
+            subject: extractField('subject'),
+            greeting: extractField('greeting'),
+            summary: extractField('summary'),
+            keyPoints: extractArray('keyPoints'),
+            recommendations: extractField('recommendations'),
+            nextSteps: extractArray('nextSteps'),
+            closing: extractField('closing'),
+            signature: extractField('signature')
+          };
+
+          if (!aiContent.subject && !aiContent.greeting) {
+            throw new Error('Could not extract fields from AI response');
+          }
         }
       }
 
@@ -679,10 +761,8 @@ ${!visitCustomFieldsText && !visitMeasurementsText && !patientCustomFieldsText &
         throw new Error('Missing required fields in AI response');
       }
     } catch (parseError) {
-      console.error('Failed to parse AI response as JSON:', responseText.substring(0, 500));
-
-      // If AI didn't return JSON, create a fallback response from the raw text
-      console.log('Creating fallback response from raw AI output');
+      console.error('[AI Followup] All parse strategies failed:', parseError.message);
+      console.error('[AI Followup] Raw response (first 800 chars):', responseText.substring(0, 800));
       aiContent = createFallbackResponse(responseText, validLanguage);
     }
 

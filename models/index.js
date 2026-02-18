@@ -75,6 +75,11 @@ db.Quote = require('./Quote')(sequelize, DataTypes);
 db.QuoteItem = require('./QuoteItem')(sequelize, DataTypes);
 db.Expense = require('./Expense')(sequelize, DataTypes);
 db.AccountingEntry = require('./AccountingEntry')(sequelize, DataTypes);
+db.DashboardPreference = require('./DashboardPreference')(sequelize, DataTypes);
+db.ConsultationTemplate = require('./ConsultationTemplate')(sequelize, DataTypes);
+db.ConsultationTemplateItem = require('./ConsultationTemplateItem')(sequelize, DataTypes);
+db.ConsultationNote = require('./ConsultationNote')(sequelize, DataTypes);
+db.ConsultationNoteEntry = require('./ConsultationNoteEntry')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -994,5 +999,30 @@ db.User.hasMany(db.Expense, { foreignKey: 'created_by', as: 'created_expenses' }
 // AccountingEntry associations
 db.AccountingEntry.belongsTo(db.User, { foreignKey: 'created_by', as: 'creator' });
 db.User.hasMany(db.AccountingEntry, { foreignKey: 'created_by', as: 'accounting_entries' });
+
+// DashboardPreference - User relationship
+db.DashboardPreference.belongsTo(db.User, { foreignKey: 'user_id', as: 'user' });
+db.User.hasOne(db.DashboardPreference, { foreignKey: 'user_id', as: 'dashboard_preference' });
+
+// ConsultationTemplate associations
+db.ConsultationTemplate.belongsTo(db.User, { foreignKey: 'created_by', as: 'creator' });
+db.User.hasMany(db.ConsultationTemplate, { foreignKey: 'created_by', as: 'consultation_templates' });
+db.ConsultationTemplate.hasMany(db.ConsultationTemplateItem, { foreignKey: 'template_id', as: 'items', onDelete: 'CASCADE' });
+db.ConsultationTemplateItem.belongsTo(db.ConsultationTemplate, { foreignKey: 'template_id', as: 'template' });
+
+// ConsultationNote associations
+db.ConsultationNote.belongsTo(db.Visit, { foreignKey: 'visit_id', as: 'visit' });
+db.Visit.hasMany(db.ConsultationNote, { foreignKey: 'visit_id', as: 'consultation_notes' });
+db.ConsultationNote.belongsTo(db.Patient, { foreignKey: 'patient_id', as: 'patient' });
+db.Patient.hasMany(db.ConsultationNote, { foreignKey: 'patient_id', as: 'consultation_notes' });
+db.ConsultationNote.belongsTo(db.ConsultationTemplate, { foreignKey: 'template_id', as: 'template' });
+db.ConsultationTemplate.hasMany(db.ConsultationNote, { foreignKey: 'template_id', as: 'notes' });
+db.ConsultationNote.belongsTo(db.User, { foreignKey: 'dietitian_id', as: 'dietitian' });
+db.User.hasMany(db.ConsultationNote, { foreignKey: 'dietitian_id', as: 'consultation_notes' });
+
+// ConsultationNoteEntry associations
+db.ConsultationNote.hasMany(db.ConsultationNoteEntry, { foreignKey: 'note_id', as: 'entries', onDelete: 'CASCADE' });
+db.ConsultationNoteEntry.belongsTo(db.ConsultationNote, { foreignKey: 'note_id', as: 'note' });
+db.ConsultationNoteEntry.belongsTo(db.ConsultationTemplateItem, { foreignKey: 'template_item_id', as: 'templateItem' });
 
 module.exports = db;

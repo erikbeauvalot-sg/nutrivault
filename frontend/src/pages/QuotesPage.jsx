@@ -210,6 +210,7 @@ const QuotesPage = () => {
       }
       setShowForm(false);
       fetchQuotes();
+      if (editingId && detailQuote?.id === editingId) loadQuoteDetail(editingId);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(err.response?.data?.error || err.message || t('quotes.saveError', 'Failed to save quote'));
@@ -317,11 +318,12 @@ const QuotesPage = () => {
     return labels[status] || status;
   };
 
-  // Detail view
-  if (id && detailQuote) {
-    const q = detailQuote;
-    return (
-      <Layout>
+  // Determine which content to show
+  const renderContent = () => {
+    // Detail view
+    if (id && detailQuote) {
+      const q = detailQuote;
+      return (
         <Container fluid className="py-4">
           <Button variant="outline-secondary" className="mb-3" onClick={() => { setDetailQuote(null); navigate('/quotes'); }}>
             ← {t('common.back', 'Back')}
@@ -443,18 +445,16 @@ const QuotesPage = () => {
             </tfoot>
           </Table>
         </Container>
-      </Layout>
-    );
-  }
+      );
+    }
 
-  // Detail loading
-  if (id && detailLoading) {
-    return <Layout><Container className="text-center py-5"><Spinner animation="border" /></Container></Layout>;
-  }
+    // Detail loading
+    if (id && detailLoading) {
+      return <Container className="text-center py-5"><Spinner animation="border" /></Container>;
+    }
 
-  // List view
-  return (
-    <Layout>
+    // List view
+    return (
       <Container fluid className="py-4">
         <Row className="mb-4 align-items-center">
           <Col>
@@ -560,202 +560,208 @@ const QuotesPage = () => {
             )}
           </>
         )}
+      </Container>
+    );
+  };
 
-        {/* Create/Edit Quote Modal */}
-        <Modal show={showForm} onHide={() => setShowForm(false)} size="xl">
-          <Form onSubmit={handleSubmit}>
-            <Modal.Header closeButton>
-              <Modal.Title style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                {editingId ? t('quotes.editQuote', 'Edit Quote') : t('quotes.createQuote', 'New Quote')}
-              </Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              {/* Client selection */}
-              <Row className="mb-3">
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>{t('quotes.client', 'Client')} *</Form.Label>
-                    {selectedClient ? (
-                      <div className="d-flex align-items-center border rounded p-2">
-                        <div className="flex-grow-1">
-                          <strong>{getClientName(selectedClient)}</strong>
-                          {selectedClient.email && <span className="text-muted ms-2">{selectedClient.email}</span>}
-                        </div>
-                        <Button size="sm" variant="outline-secondary" onClick={() => { setSelectedClient(null); setFormData(prev => ({ ...prev, client_id: '' })); }}>
-                          ×
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="position-relative">
-                        <Form.Control
-                          placeholder={t('quotes.searchClient', 'Search client...')}
-                          value={clientSearch}
-                          onChange={(e) => setClientSearch(e.target.value)}
-                          required={!formData.client_id}
-                        />
-                        {searchingClients && <Spinner size="sm" className="position-absolute" style={{ right: 10, top: 10 }} />}
-                        {clientResults.length > 0 && (
-                          <div className="position-absolute w-100 bg-white border rounded shadow-sm" style={{ zIndex: 1000, maxHeight: 200, overflowY: 'auto' }}>
-                            {clientResults.map(c => (
-                              <div
-                                key={c.id}
-                                className="p-2 border-bottom cursor-pointer"
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => { setSelectedClient(c); setFormData(prev => ({ ...prev, client_id: c.id })); setClientSearch(''); setClientResults([]); }}
-                              >
-                                <strong>{getClientName(c)}</strong>
-                                {c.email && <span className="text-muted ms-2">{c.email}</span>}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>{t('quotes.subject', 'Subject')}</Form.Label>
-                    <Form.Control
-                      value={formData.subject}
-                      onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
-                      placeholder={t('quotes.subjectPlaceholder', 'e.g. Nutritional program - 3 months')}
-                    />
-                  </Form.Group>
-                </Col>
-              </Row>
+  return (
+    <Layout>
+      {renderContent()}
 
-              <Row className="mb-3">
-                <Col md={4}>
-                  <Form.Group>
-                    <Form.Label>{t('quotes.validityDate', 'Valid Until')}</Form.Label>
-                    <Form.Control
-                      type="date"
-                      value={formData.validity_date}
-                      onChange={(e) => setFormData(prev => ({ ...prev, validity_date: e.target.value }))}
-                    />
-                    <Form.Text className="text-muted">{t('quotes.validityHint', 'Default: 30 days')}</Form.Text>
-                  </Form.Group>
-                </Col>
-                <Col md={4}>
-                  <Form.Group>
-                    <Form.Label>{t('quotes.taxRate', 'Tax Rate (%)')}</Form.Label>
-                    <Form.Control
-                      type="number" step="0.1" min="0" max="100"
-                      value={formData.tax_rate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, tax_rate: e.target.value }))}
-                    />
-                  </Form.Group>
-                </Col>
-              </Row>
-
-              {/* Line items */}
-              <h6 className="mt-4 mb-3" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                {t('quotes.items', 'Items')}
-              </h6>
-              <Table bordered size="sm">
-                <thead className="table-light">
-                  <tr>
-                    <th style={{ width: '30%' }}>{t('quotes.itemName', 'Item')} *</th>
-                    <th style={{ width: '25%' }}>{t('quotes.itemDescription', 'Description')}</th>
-                    <th style={{ width: '12%' }} className="text-end">{t('quotes.qty', 'Qty')}</th>
-                    <th style={{ width: '15%' }} className="text-end">{t('quotes.unitPrice', 'Unit Price')} *</th>
-                    <th style={{ width: '12%' }} className="text-end">{t('quotes.lineTotal', 'Total')}</th>
-                    <th style={{ width: '6%' }}></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {formData.items.map((item, index) => {
-                    const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
-                    return (
-                      <tr key={index}>
-                        <td>
-                          <Form.Control size="sm" required value={item.item_name} onChange={(e) => updateItem(index, 'item_name', e.target.value)} />
-                        </td>
-                        <td>
-                          <Form.Control size="sm" value={item.description} onChange={(e) => updateItem(index, 'description', e.target.value)} />
-                        </td>
-                        <td>
-                          <Form.Control size="sm" type="number" step="0.01" min="0.01" required className="text-end"
-                            value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} />
-                        </td>
-                        <td>
-                          <Form.Control size="sm" type="number" step="0.01" min="0" required className="text-end"
-                            value={item.unit_price} onChange={(e) => updateItem(index, 'unit_price', e.target.value)} />
-                        </td>
-                        <td className="text-end align-middle fw-semibold">€{lineTotal.toFixed(2)}</td>
-                        <td className="text-center align-middle">
-                          {formData.items.length > 1 && (
-                            <Button size="sm" variant="outline-danger" onClick={() => removeItem(index)}>×</Button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </Table>
-              <Button size="sm" variant="outline-primary" onClick={addItem} className="mb-3">
-                + {t('quotes.addItem', 'Add Item')}
-              </Button>
-
-              {/* Totals */}
-              <div className="text-end mt-2">
-                <div className="text-muted">{t('quotes.subtotalHT', 'Subtotal HT')}: <strong>€{calculateSubtotal().toFixed(2)}</strong></div>
-                {parseFloat(formData.tax_rate) > 0 && (
-                  <div className="text-muted">TVA ({formData.tax_rate}%): <strong>€{(calculateSubtotal() * parseFloat(formData.tax_rate) / 100).toFixed(2)}</strong></div>
-                )}
-                <div style={{ fontSize: '1.2em' }}>{t('quotes.totalTTC', 'Total TTC')}: <strong>€{calculateTotal().toFixed(2)}</strong></div>
-              </div>
-
-              <Form.Group className="mt-3">
-                <Form.Label>{t('quotes.notes', 'Notes / Conditions')}</Form.Label>
-                <Form.Control as="textarea" rows={2} value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} />
-              </Form.Group>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={() => setShowForm(false)}>{t('common.cancel', 'Cancel')}</Button>
-              <Button type="submit" variant="primary" disabled={submitting || !formData.client_id}>
-                {submitting && <Spinner size="sm" className="me-1" />}
-                {editingId ? t('common.save', 'Save') : t('quotes.saveDraft', 'Save Draft')}
-              </Button>
-            </Modal.Footer>
-          </Form>
-        </Modal>
-
-        {/* Status Change Modal */}
-        <Modal show={showStatusModal} onHide={() => setShowStatusModal(false)}>
+      {/* Create/Edit Quote Modal */}
+      <Modal show={showForm} onHide={() => setShowForm(false)} size="xl">
+        <Form onSubmit={handleSubmit}>
           <Modal.Header closeButton>
-            <Modal.Title>{t('quotes.changeStatus', 'Change Status')}</Modal.Title>
+            <Modal.Title style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              {editingId ? t('quotes.editQuote', 'Edit Quote') : t('quotes.createQuote', 'New Quote')}
+            </Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <p>{t('quotes.confirmStatus', 'Change status to {{status}}?', { status: getStatusLabel(statusAction.status) })}</p>
-            {statusAction.status === 'DECLINED' && (
-              <Form.Group>
-                <Form.Label>{t('quotes.declineReason', 'Reason (optional)')}</Form.Label>
-                <Form.Control as="textarea" rows={2} value={statusAction.reason} onChange={(e) => setStatusAction(prev => ({ ...prev, reason: e.target.value }))} />
-              </Form.Group>
-            )}
+            {/* Client selection */}
+            <Row className="mb-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>{t('quotes.client', 'Client')} *</Form.Label>
+                  {selectedClient ? (
+                    <div className="d-flex align-items-center border rounded p-2">
+                      <div className="flex-grow-1">
+                        <strong>{getClientName(selectedClient)}</strong>
+                        {selectedClient.email && <span className="text-muted ms-2">{selectedClient.email}</span>}
+                      </div>
+                      <Button size="sm" variant="outline-secondary" onClick={() => { setSelectedClient(null); setFormData(prev => ({ ...prev, client_id: '' })); }}>
+                        ×
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="position-relative">
+                      <Form.Control
+                        placeholder={t('quotes.searchClient', 'Search client...')}
+                        value={clientSearch}
+                        onChange={(e) => setClientSearch(e.target.value)}
+                        required={!formData.client_id}
+                      />
+                      {searchingClients && <Spinner size="sm" className="position-absolute" style={{ right: 10, top: 10 }} />}
+                      {clientResults.length > 0 && (
+                        <div className="position-absolute w-100 bg-white border rounded shadow-sm" style={{ zIndex: 1000, maxHeight: 200, overflowY: 'auto' }}>
+                          {clientResults.map(c => (
+                            <div
+                              key={c.id}
+                              className="p-2 border-bottom cursor-pointer"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => { setSelectedClient(c); setFormData(prev => ({ ...prev, client_id: c.id })); setClientSearch(''); setClientResults([]); }}
+                            >
+                              <strong>{getClientName(c)}</strong>
+                              {c.email && <span className="text-muted ms-2">{c.email}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>{t('quotes.subject', 'Subject')}</Form.Label>
+                  <Form.Control
+                    value={formData.subject}
+                    onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
+                    placeholder={t('quotes.subjectPlaceholder', 'e.g. Nutritional program - 3 months')}
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Row className="mb-3">
+              <Col md={4}>
+                <Form.Group>
+                  <Form.Label>{t('quotes.validityDate', 'Valid Until')}</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={formData.validity_date}
+                    onChange={(e) => setFormData(prev => ({ ...prev, validity_date: e.target.value }))}
+                  />
+                  <Form.Text className="text-muted">{t('quotes.validityHint', 'Default: 30 days')}</Form.Text>
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group>
+                  <Form.Label>{t('quotes.taxRate', 'Tax Rate (%)')}</Form.Label>
+                  <Form.Control
+                    type="number" step="0.1" min="0" max="100"
+                    value={formData.tax_rate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, tax_rate: e.target.value }))}
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+
+            {/* Line items */}
+            <h6 className="mt-4 mb-3" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              {t('quotes.items', 'Items')}
+            </h6>
+            <Table bordered size="sm">
+              <thead className="table-light">
+                <tr>
+                  <th style={{ width: '30%' }}>{t('quotes.itemName', 'Item')} *</th>
+                  <th style={{ width: '25%' }}>{t('quotes.itemDescription', 'Description')}</th>
+                  <th style={{ width: '12%' }} className="text-end">{t('quotes.qty', 'Qty')}</th>
+                  <th style={{ width: '15%' }} className="text-end">{t('quotes.unitPrice', 'Unit Price')} *</th>
+                  <th style={{ width: '12%' }} className="text-end">{t('quotes.lineTotal', 'Total')}</th>
+                  <th style={{ width: '6%' }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {formData.items.map((item, index) => {
+                  const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+                  return (
+                    <tr key={index}>
+                      <td>
+                        <Form.Control size="sm" required value={item.item_name} onChange={(e) => updateItem(index, 'item_name', e.target.value)} />
+                      </td>
+                      <td>
+                        <Form.Control size="sm" value={item.description} onChange={(e) => updateItem(index, 'description', e.target.value)} />
+                      </td>
+                      <td>
+                        <Form.Control size="sm" type="number" step="0.01" min="0.01" required className="text-end"
+                          value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} />
+                      </td>
+                      <td>
+                        <Form.Control size="sm" type="number" step="0.01" min="0" required className="text-end"
+                          value={item.unit_price} onChange={(e) => updateItem(index, 'unit_price', e.target.value)} />
+                      </td>
+                      <td className="text-end align-middle fw-semibold">€{lineTotal.toFixed(2)}</td>
+                      <td className="text-center align-middle">
+                        {formData.items.length > 1 && (
+                          <Button size="sm" variant="outline-danger" onClick={() => removeItem(index)}>×</Button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+            <Button size="sm" variant="outline-primary" onClick={addItem} className="mb-3">
+              + {t('quotes.addItem', 'Add Item')}
+            </Button>
+
+            {/* Totals */}
+            <div className="text-end mt-2">
+              <div className="text-muted">{t('quotes.subtotalHT', 'Subtotal HT')}: <strong>€{calculateSubtotal().toFixed(2)}</strong></div>
+              {parseFloat(formData.tax_rate) > 0 && (
+                <div className="text-muted">TVA ({formData.tax_rate}%): <strong>€{(calculateSubtotal() * parseFloat(formData.tax_rate) / 100).toFixed(2)}</strong></div>
+              )}
+              <div style={{ fontSize: '1.2em' }}>{t('quotes.totalTTC', 'Total TTC')}: <strong>€{calculateTotal().toFixed(2)}</strong></div>
+            </div>
+
+            <Form.Group className="mt-3">
+              <Form.Label>{t('quotes.notes', 'Notes / Conditions')}</Form.Label>
+              <Form.Control as="textarea" rows={2} value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} />
+            </Form.Group>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowStatusModal(false)}>{t('common.cancel', 'Cancel')}</Button>
-            <Button variant={statusAction.status === 'ACCEPTED' ? 'success' : 'danger'} onClick={handleStatusChange} disabled={actionLoading}>
-              {actionLoading && <Spinner size="sm" className="me-1" />}
-              {t('common.confirm', 'Confirm')}
+            <Button variant="secondary" onClick={() => setShowForm(false)}>{t('common.cancel', 'Cancel')}</Button>
+            <Button type="submit" variant="primary" disabled={submitting || !formData.client_id}>
+              {submitting && <Spinner size="sm" className="me-1" />}
+              {editingId ? t('common.save', 'Save') : t('quotes.saveDraft', 'Save Draft')}
             </Button>
           </Modal.Footer>
-        </Modal>
+        </Form>
+      </Modal>
 
-        {/* Delete Confirmation */}
-        <ConfirmModal
-          show={showDeleteConfirm}
-          onHide={() => setShowDeleteConfirm(false)}
-          onConfirm={handleDelete}
-          title={t('quotes.deleteTitle', 'Delete Quote')}
-          message={t('quotes.deleteConfirm', 'Are you sure you want to delete this quote?')}
-          confirmVariant="danger"
-          confirmText={t('common.delete', 'Delete')}
-        />
-      </Container>
+      {/* Status Change Modal */}
+      <Modal show={showStatusModal} onHide={() => setShowStatusModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>{t('quotes.changeStatus', 'Change Status')}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>{t('quotes.confirmStatus', 'Change status to {{status}}?', { status: getStatusLabel(statusAction.status) })}</p>
+          {statusAction.status === 'DECLINED' && (
+            <Form.Group>
+              <Form.Label>{t('quotes.declineReason', 'Reason (optional)')}</Form.Label>
+              <Form.Control as="textarea" rows={2} value={statusAction.reason} onChange={(e) => setStatusAction(prev => ({ ...prev, reason: e.target.value }))} />
+            </Form.Group>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowStatusModal(false)}>{t('common.cancel', 'Cancel')}</Button>
+          <Button variant={statusAction.status === 'ACCEPTED' ? 'success' : 'danger'} onClick={handleStatusChange} disabled={actionLoading}>
+            {actionLoading && <Spinner size="sm" className="me-1" />}
+            {t('common.confirm', 'Confirm')}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Delete Confirmation */}
+      <ConfirmModal
+        show={showDeleteConfirm}
+        onHide={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title={t('quotes.deleteTitle', 'Delete Quote')}
+        message={t('quotes.deleteConfirm', 'Are you sure you want to delete this quote?')}
+        confirmVariant="danger"
+        confirmText={t('common.delete', 'Delete')}
+      />
     </Layout>
   );
 };

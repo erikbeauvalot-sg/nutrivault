@@ -41,6 +41,14 @@ export const generateFollowup = async (visitId, options = {}) => {
  * @param {boolean} emailData.ai_generated - Whether content was AI-generated
  * @returns {Promise<Object>} Send result
  */
+/**
+ * Save follow-up report as draft (without sending)
+ */
+export const saveFollowup = async (visitId, emailData) => {
+  const response = await api.post(`/followups/save/${visitId}`, emailData);
+  return response.data;
+};
+
 export const sendFollowup = async (visitId, emailData) => {
   const response = await api.post(`/followups/send/${visitId}`, emailData);
   return response.data;
@@ -59,6 +67,7 @@ export const getFollowupHistory = async (visitId) => {
 export default {
   getAIStatus,
   generateFollowup,
+  saveFollowup,
   sendFollowup,
   getFollowupHistory
 };

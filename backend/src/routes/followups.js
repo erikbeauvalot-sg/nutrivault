@@ -34,6 +34,18 @@ router.post(
 );
 
 /**
+ * @route   POST /api/followups/save/:visitId
+ * @desc    Save follow-up report as draft (without sending)
+ * @access  Private (requires visits.update permission)
+ * @body    {subject, body_html, body_text, ai_generated}
+ */
+router.post(
+  '/save/:visitId',
+  requirePermission('visits.update'),
+  followupController.saveFollowup
+);
+
+/**
  * @route   POST /api/followups/send/:visitId
  * @desc    Send follow-up email to patient
  * @access  Private (requires visits.update permission)

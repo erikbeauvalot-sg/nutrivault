@@ -53,7 +53,7 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,
     underscored: true,
     indexes: [
-      { unique: true, fields: ['patient_id', 'dietitian_id'] },
+      { fields: ['patient_id', 'dietitian_id'] },
       { fields: ['status'] },
     ],
   });

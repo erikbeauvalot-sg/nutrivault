@@ -177,6 +177,14 @@ app.use('/api/appointment-reminders', appointmentRemindersRoutes);
 const billingTemplatesRoutes = require('./routes/billingTemplates');
 app.use('/api/billing-templates', billingTemplatesRoutes);
 
+// Consultation Templates routes (protected - RBAC enforced in routes file)
+const consultationTemplateRoutes = require('./routes/consultationTemplates');
+app.use('/api/consultation-templates', consultationTemplateRoutes);
+
+// Consultation Notes routes (protected - RBAC enforced in routes file)
+const consultationNoteRoutes = require('./routes/consultationNotes');
+app.use('/api/consultation-notes', consultationNoteRoutes);
+
 // Invoice Customizations routes (protected - RBAC enforced in routes file)
 const invoiceCustomizationsRoutes = require('./routes/invoiceCustomizations');
 app.use('/api/invoice-customizations', invoiceCustomizationsRoutes);

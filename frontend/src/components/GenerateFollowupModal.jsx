@@ -20,7 +20,7 @@ import {
 } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import followupService from '../services/followupService';
-import { FaRobot, FaPaperPlane, FaEdit, FaRedo, FaEye } from 'react-icons/fa';
+import { FaRobot, FaPaperPlane, FaSave, FaEdit, FaRedo, FaEye } from 'react-icons/fa';
 
 const GenerateFollowupModal = ({ show, onHide, visit, onSent }) => {
   const { t, i18n } = useTranslation();
@@ -128,6 +128,36 @@ const GenerateFollowupModal = ({ show, onHide, visit, onSent }) => {
     } catch (err) {
       console.error('Error sending follow-up:', err);
       setError(err.response?.data?.error || err.message || t('followup.sendError'));
+      setStep('editing');
+    }
+  };
+
+  const handleSave = async () => {
+    if (!content.subject || !content.body_html) {
+      setError(t('followup.subjectAndBodyRequired'));
+      return;
+    }
+
+    try {
+      setStep('sending');
+      setError(null);
+
+      const response = await followupService.saveFollowup(visit.id, {
+        ...content,
+        ai_generated: true
+      });
+
+      if (response.success) {
+        setStep('success');
+        if (onSent) {
+          onSent(response.data);
+        }
+      } else {
+        throw new Error(response.error || 'Failed to save report');
+      }
+    } catch (err) {
+      console.error('Error saving follow-up:', err);
+      setError(err.response?.data?.error || err.message || t('followup.saveError', 'Failed to save'));
       setStep('editing');
     }
   };
@@ -354,6 +384,14 @@ const GenerateFollowupModal = ({ show, onHide, visit, onSent }) => {
         </Button>
         <Button variant="secondary" onClick={onHide}>
           {t('common.cancel')}
+        </Button>
+        <Button
+          variant="primary"
+          onClick={handleSave}
+          disabled={!content.subject || !content.body_html}
+        >
+          <FaSave className="me-2" />
+          {t('followup.saveReport', 'Save')}
         </Button>
         <Button
           variant="success"

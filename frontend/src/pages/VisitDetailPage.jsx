@@ -22,6 +22,10 @@ import GenerateFollowupModal from '../components/GenerateFollowupModal';
 import { getMeasuresByVisit, formatMeasureValue, getAllMeasureTranslations } from '../services/measureService';
 import { getInvoicesByVisit, downloadInvoicePDF } from '../services/billingService';
 import VisitEmailHistory from '../components/VisitEmailHistory';
+import consultationNoteService from '../services/consultationNoteService';
+import consultationTemplateService from '../services/consultationTemplateService';
+import followupService from '../services/followupService';
+import { FaClipboardList, FaEdit, FaEye } from 'react-icons/fa';
 
 const VisitDetailPage = () => {
   const { t, i18n } = useTranslation();
@@ -60,6 +64,9 @@ const VisitDetailPage = () => {
 
   // Follow-up modal state
   const [showFollowupModal, setShowFollowupModal] = useState(false);
+  const [followupReports, setFollowupReports] = useState([]);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
 
   // Invoices state
   const [invoices, setInvoices] = useState([]);
@@ -69,6 +76,13 @@ const VisitDetailPage = () => {
   // Email history refresh key - increment to force refresh
   const [emailRefreshKey, setEmailRefreshKey] = useState(0);
   const refreshEmailHistory = () => setEmailRefreshKey(prev => prev + 1);
+
+  // Consultation notes state
+  const [consultationNotes, setConsultationNotes] = useState([]);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [creatingNote, setCreatingNote] = useState(false);
 
   const handleTabSelect = (tab) => {
     setActiveTab(tab);
@@ -82,6 +96,8 @@ const VisitDetailPage = () => {
       fetchVisitTypes();
       fetchVisitMeasures();
       fetchVisitInvoices();
+      fetchConsultationNotes();
+      fetchFollowupReports();
     }
   }, [id, i18n.resolvedLanguage]);
 
@@ -108,6 +124,24 @@ const VisitDetailPage = () => {
       setError(t('errors.failedToLoadVisit', { error: err.response?.data?.error || err.message }));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchFollowupReports = async () => {
+    try {
+      const response = await followupService.getFollowupHistory(id);
+      setFollowupReports(Array.isArray(response.data) ? response.data : []);
+    } catch (err) {
+      console.error('Error fetching followup reports:', err);
+    }
+  };
+
+  const fetchConsultationNotes = async () => {
+    try {
+      const response = await consultationNoteService.getNotes({ visit_id: id });
+      setConsultationNotes(Array.isArray(response.data) ? response.data : response.data?.data || []);
+    } catch (err) {
+      console.error('Error fetching consultation notes:', err);
     }
   };
 
@@ -384,6 +418,41 @@ const VisitDetailPage = () => {
     return Math.floor(12 / columns);
   };
 
+  // Consultation note handlers
+  const openTemplatePicker = async () => {
+    setShowTemplatePicker(true);
+    setTemplatesLoading(true);
+    try {
+      const result = await consultationTemplateService.getTemplates();
+      const tmplList = Array.isArray(result) ? result : result?.data || [];
+      setTemplates(tmplList);
+    } catch (err) {
+      console.error('Failed to load templates:', err);
+    } finally {
+      setTemplatesLoading(false);
+    }
+  };
+
+  const handleStartConsultation = async (templateId) => {
+    setCreatingNote(true);
+    try {
+      const response = await consultationNoteService.createNote({
+        patient_id: visit.patient?.id || visit.patient_id,
+        visit_id: visit.id,
+        template_id: templateId
+      });
+      const noteData = response.data || response;
+      setShowTemplatePicker(false);
+      navigate(`/consultation-notes/${noteData.id}`);
+    } catch (err) {
+      console.error('Failed to create consultation note:', err);
+      setError(err.response?.data?.error || t('consultationNotes.createError', 'Failed to create note'));
+      setShowTemplatePicker(false);
+    } finally {
+      setCreatingNote(false);
+    }
+  };
+
   // Check permissions
   const canEditVisit = user?.role === 'ADMIN' || user?.role === 'DIETITIAN';
   const canFinishVisit = canEditVisit && visit?.status === 'SCHEDULED';
@@ -437,7 +506,7 @@ const VisitDetailPage = () => {
     <Layout>
       <Container fluid>
         {/* Header */}
-        <Row className="mb-4">
+        <Row className="mb-4" style={{ position: 'sticky', top: 0, zIndex: 100, backgroundColor: 'var(--nv-parchment-light)', paddingTop: '0.5rem', paddingBottom: '0.75rem' }}>
           <Col>
             <Button variant="outline-secondary" onClick={handleBack} className="mb-3">
               ← {t('visits.backToVisits')}
@@ -453,19 +522,40 @@ const VisitDetailPage = () => {
             </div>
           </Col>
           <Col xs={12} md="auto" className="d-flex gap-2 align-items-start flex-wrap mt-3 mt-md-0" style={{ marginTop: '0' }}>
-            {/* 1) Envoyer un mail */}
-            <SendReminderButton
-              visit={visit}
-              onReminderSent={() => { fetchVisitDetails(); refreshEmailHistory(); }}
-            />
-            {/* AI Follow-up button - only for completed visits with clinical notes */}
+            {/* Start Consultation Note */}
+            {canEditVisit && visit.status !== 'CANCELLED' && visit.status !== 'COMPLETED' && (
+              <Button
+                variant="outline-info"
+                onClick={openTemplatePicker}
+                className="d-flex align-items-center gap-1"
+              >
+                <FaClipboardList /> {t('consultationNotes.startConsultation', 'Start Consultation')}
+              </Button>
+            )}
+            {/* 1) Envoyer un mail — hide when completed */}
+            {visit.status !== 'COMPLETED' && (
+              <SendReminderButton
+                visit={visit}
+                onReminderSent={() => { fetchVisitDetails(); refreshEmailHistory(); }}
+              />
+            )}
+            {/* AI Follow-up buttons */}
+            {visit.status === 'COMPLETED' && followupReports.length > 0 && (
+              <Button
+                variant="outline-info"
+                onClick={() => { setSelectedReport(followupReports[0]); setShowReportModal(true); }}
+                title={t('followup.viewReportTooltip', 'View AI report')}
+              >
+                🤖 {t('followup.viewReport', 'View Report')}
+              </Button>
+            )}
             {visit.status === 'COMPLETED' && visit.patient?.email && (
               <Button
                 variant="info"
                 onClick={() => setShowFollowupModal(true)}
                 title={t('followup.generateFollowupTooltip')}
               >
-                🤖 {t('followup.generateFollowup')}
+                🤖 {followupReports.length > 0 ? t('followup.regenerateFollowup', 'Regenerate') : t('followup.generateFollowup')}
               </Button>
             )}
             {/* 2) Modifier */}
@@ -624,6 +714,41 @@ const VisitDetailPage = () => {
                     </Card>
                   </Col>
                 </Row>
+
+                {/* Consultation Notes for this visit */}
+                {consultationNotes.length > 0 && (
+                  <Card className="mt-3">
+                    <Card.Header className="bg-white">
+                      <h6 className="mb-0"><FaClipboardList className="me-2 text-info" />{t('consultationNotes.title', 'Consultation Notes')}</h6>
+                    </Card.Header>
+                    <Card.Body className="p-0">
+                      {consultationNotes.map(cn => (
+                        <div
+                          key={cn.id}
+                          className="d-flex align-items-center justify-content-between px-3 py-2 border-bottom"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => navigate(`/consultation-notes/${cn.id}`)}
+                        >
+                          <div>
+                            <span className="fw-medium">{cn.template?.name || t('consultationNotes.untitled', 'Consultation Note')}</span>
+                            <Badge
+                              bg={cn.status === 'completed' ? 'success' : 'warning'}
+                              text={cn.status === 'completed' ? undefined : 'dark'}
+                              className="ms-2"
+                              style={{ fontSize: '0.7rem' }}
+                            >
+                              {cn.status === 'completed' ? t('consultationNotes.statusCompleted', 'Completed') : t('consultationNotes.statusDraft', 'Draft')}
+                            </Badge>
+                          </div>
+                          <div className="d-flex align-items-center gap-2">
+                            <small className="text-muted">{new Date(cn.updated_at).toLocaleDateString()}</small>
+                            {cn.status === 'completed' ? <FaEye className="text-muted" /> : <FaEdit className="text-primary" />}
+                          </div>
+                        </div>
+                      ))}
+                    </Card.Body>
+                  </Card>
+                )}
               </Tab>
 
 
@@ -1074,9 +1199,138 @@ const VisitDetailPage = () => {
             onSent={() => {
               setShowFollowupModal(false);
               refreshEmailHistory();
+              fetchFollowupReports();
             }}
           />
         )}
+
+        {/* View AI Report Modal */}
+        <Modal show={showReportModal} onHide={() => setShowReportModal(false)} size="lg" centered scrollable>
+          <Modal.Header closeButton>
+            <Modal.Title style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
+              🤖 {t('followup.viewReportTitle', 'AI Follow-up Report')}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {selectedReport && (
+              <>
+                <div className="mb-3 d-flex gap-3 text-muted small flex-wrap">
+                  <span><strong>{t('followup.sentDate', 'Sent')}:</strong> {new Date(selectedReport.sent_at).toLocaleString()}</span>
+                  <span><strong>{t('followup.to', 'To')}:</strong> {selectedReport.sent_to}</span>
+                  <Badge bg={selectedReport.status === 'sent' ? 'success' : 'danger'}>{selectedReport.status}</Badge>
+                </div>
+                <div className="mb-2">
+                  <strong>{t('followup.subject', 'Subject')}:</strong> {selectedReport.subject}
+                </div>
+                <hr />
+                <div className="border rounded p-3" style={{ backgroundColor: '#fff' }}>
+                  <iframe
+                    title="Report Preview"
+                    srcDoc={selectedReport.body_html}
+                    style={{ width: '100%', minHeight: '400px', border: 'none', backgroundColor: '#fff' }}
+                    sandbox=""
+                  />
+                </div>
+                {followupReports.length > 1 && (
+                  <div className="mt-3">
+                    <h6 className="text-muted small">{t('followup.previousReports', 'Previous reports')}</h6>
+                    {followupReports.slice(1).map(report => (
+                      <Button
+                        key={report.id}
+                        variant="link"
+                        size="sm"
+                        className="d-block text-start p-0 mb-1"
+                        onClick={() => setSelectedReport(report)}
+                      >
+                        {new Date(report.sent_at).toLocaleString()} — {report.subject}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowReportModal(false)}>
+              {t('common.close', 'Close')}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Start Consultation — Template Picker Modal */}
+        <Modal
+          show={showTemplatePicker}
+          onHide={() => setShowTemplatePicker(false)}
+          centered
+          size="lg"
+        >
+          <Modal.Header closeButton>
+            <Modal.Title style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
+              <FaClipboardList className="me-2" />
+              {t('consultationNotes.selectTemplate', 'Select a template')}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {templatesLoading ? (
+              <div className="text-center py-4">
+                <Spinner animation="border" />
+                <p className="mt-2 text-muted">{t('common.loading', 'Loading...')}</p>
+              </div>
+            ) : templates.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-muted mb-3">{t('consultationTemplates.noTemplates', 'No templates found')}</p>
+                <Button variant="primary" size="sm" onClick={() => { setShowTemplatePicker(false); navigate('/consultation-templates/new'); }}>
+                  {t('consultationTemplates.createFirst', 'Create your first template')}
+                </Button>
+              </div>
+            ) : (
+              <Row className="g-3">
+                {templates.map(tmpl => (
+                  <Col key={tmpl.id} xs={12} md={6}>
+                    <Card
+                      className="h-100 border-0 shadow-sm"
+                      style={{
+                        cursor: creatingNote ? 'wait' : 'pointer',
+                        borderLeft: `4px solid ${tmpl.color || '#9b59b6'}`,
+                        transition: 'transform 0.15s, box-shadow 0.15s',
+                        opacity: creatingNote ? 0.6 : 1
+                      }}
+                      onClick={() => !creatingNote && handleStartConsultation(tmpl.id)}
+                      onMouseEnter={e => { if (!creatingNote) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)'; } }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; }}
+                    >
+                      <Card.Body>
+                        <h6 className="mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
+                          {tmpl.name}
+                        </h6>
+                        {tmpl.description && (
+                          <small className="text-muted d-block mb-2" style={{ lineHeight: 1.3 }}>
+                            {tmpl.description.substring(0, 100)}{tmpl.description.length > 100 ? '...' : ''}
+                          </small>
+                        )}
+                        <div className="d-flex gap-2 flex-wrap">
+                          <Badge
+                            bg="none"
+                            style={{ backgroundColor: tmpl.color || '#9b59b6', fontSize: '0.7rem' }}
+                          >
+                            {t(`consultationTemplates.types.${tmpl.template_type}`, tmpl.template_type)}
+                          </Badge>
+                          <small className="text-muted">{tmpl.items?.length || 0} {t('consultationTemplates.items', 'items')}</small>
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            )}
+            {creatingNote && (
+              <div className="text-center mt-3">
+                <Spinner animation="border" size="sm" className="me-2" />
+                <span className="text-muted">{t('consultationNotes.creating', 'Creating note...')}</span>
+              </div>
+            )}
+          </Modal.Body>
+        </Modal>
       </Container>
     </Layout>
   );

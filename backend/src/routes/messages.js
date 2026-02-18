@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body, param, query } = require('express-validator');
 const authenticate = require('../middleware/authenticate');
+const { requirePermission } = require('../middleware/rbac');
 const db = require('../../../models');
 const { Op } = db.Sequelize;
 
@@ -9,7 +10,7 @@ const { Op } = db.Sequelize;
  * GET /api/messages/conversations — List conversations for current dietitian
  * Admin sees all; dietitian sees their own.
  */
-router.get('/conversations', authenticate, async (req, res) => {
+router.get('/conversations', authenticate, requirePermission('messages.read'), async (req, res) => {
   try {
     const roleName = req.user.role?.name || req.user.role;
     const where = {};
@@ -100,6 +101,7 @@ router.get('/conversations', authenticate, async (req, res) => {
  */
 router.post('/conversations',
   authenticate,
+  requirePermission('messages.create'),
   body('patient_id').isUUID(),
   async (req, res) => {
     try {
@@ -110,21 +112,10 @@ router.post('/conversations',
         return res.status(404).json({ success: false, error: 'Patient not found' });
       }
 
-      const [conversation, created] = await db.Conversation.findOrCreate({
-        where: { patient_id, dietitian_id: req.user.id },
-        defaults: {},
+      const conversation = await db.Conversation.create({
+        patient_id,
+        dietitian_id: req.user.id,
       });
-
-      if (created) {
-        // Reload with includes
-        const full = await db.Conversation.findByPk(conversation.id, {
-          include: [
-            { model: db.Patient, as: 'patient', attributes: ['id', 'first_name', 'last_name', 'email'] },
-            { model: db.User, as: 'dietitian', attributes: ['id', 'first_name', 'last_name'] },
-          ],
-        });
-        return res.status(201).json({ success: true, data: full });
-      }
 
       const full = await db.Conversation.findByPk(conversation.id, {
         include: [
@@ -132,10 +123,48 @@ router.post('/conversations',
           { model: db.User, as: 'dietitian', attributes: ['id', 'first_name', 'last_name'] },
         ],
       });
-      res.json({ success: true, data: full });
+      res.status(201).json({ success: true, data: full });
     } catch (error) {
       console.error('Error creating conversation:', error);
       res.status(500).json({ success: false, error: 'Failed to create conversation' });
+    }
+  }
+);
+
+/**
+ * DELETE /api/messages/conversations/:id — Delete a closed conversation
+ */
+router.delete('/conversations/:id',
+  authenticate,
+  requirePermission('messages.delete'),
+  param('id').isUUID(),
+  async (req, res) => {
+    try {
+      const conversation = await db.Conversation.findByPk(req.params.id);
+      if (!conversation) {
+        return res.status(404).json({ success: false, error: 'Conversation not found' });
+      }
+
+      // RBAC: owner or admin
+      const roleName = req.user.role?.name || req.user.role;
+      if (roleName !== 'ADMIN' && conversation.dietitian_id !== req.user.id) {
+        return res.status(403).json({ success: false, error: 'Access denied' });
+      }
+
+      // Only closed conversations can be deleted
+      if (conversation.status !== 'closed') {
+        return res.status(400).json({ success: false, error: 'Only closed conversations can be deleted' });
+      }
+
+      // Delete labels, messages, then conversation
+      await db.ConversationLabel.destroy({ where: { conversation_id: conversation.id } });
+      await db.Message.destroy({ where: { conversation_id: conversation.id }, force: true });
+      await conversation.destroy({ force: true });
+
+      res.json({ success: true, message: 'Conversation deleted' });
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+      res.status(500).json({ success: false, error: 'Failed to delete conversation' });
     }
   }
 );
@@ -145,6 +174,7 @@ router.post('/conversations',
  */
 router.get('/conversations/:id/messages',
   authenticate,
+  requirePermission('messages.read'),
   param('id').isUUID(),
   query('before').optional().isISO8601(),
   query('limit').optional().isInt({ min: 1, max: 100 }),
@@ -205,6 +235,7 @@ router.get('/conversations/:id/messages',
  */
 router.post('/conversations/:id/messages',
   authenticate,
+  requirePermission('messages.create'),
   param('id').isUUID(),
   body('content').notEmpty().isLength({ max: 5000 }),
   async (req, res) => {
@@ -275,6 +306,7 @@ router.post('/conversations/:id/messages',
  */
 router.put('/conversations/:id',
   authenticate,
+  requirePermission('messages.update'),
   param('id').isUUID(),
   async (req, res) => {
     try {
@@ -324,6 +356,7 @@ router.put('/conversations/:id',
  */
 router.post('/conversations/:id/labels',
   authenticate,
+  requirePermission('messages.update'),
   param('id').isUUID(),
   body('label').notEmpty().isLength({ max: 50 }),
   body('color').optional().matches(/^#[0-9a-fA-F]{6}$/),
@@ -364,6 +397,7 @@ router.post('/conversations/:id/labels',
  */
 router.delete('/conversations/:id/labels/:labelId',
   authenticate,
+  requirePermission('messages.update'),
   param('id').isUUID(),
   param('labelId').isUUID(),
   async (req, res) => {
@@ -387,7 +421,7 @@ router.delete('/conversations/:id/labels/:labelId',
 /**
  * GET /api/messages/labels — Distinct labels for the current dietitian (for autocomplete)
  */
-router.get('/labels', authenticate, async (req, res) => {
+router.get('/labels', authenticate, requirePermission('messages.read'), async (req, res) => {
   try {
     const labels = await db.ConversationLabel.findAll({
       where: { created_by: req.user.id },
@@ -406,6 +440,7 @@ router.get('/labels', authenticate, async (req, res) => {
  */
 router.put('/messages/:messageId',
   authenticate,
+  requirePermission('messages.update'),
   param('messageId').isUUID(),
   body('content').notEmpty().isLength({ max: 5000 }),
   async (req, res) => {
@@ -452,6 +487,7 @@ router.put('/messages/:messageId',
  */
 router.delete('/messages/:messageId',
   authenticate,
+  requirePermission('messages.delete'),
   param('messageId').isUUID(),
   async (req, res) => {
     try {
@@ -479,7 +515,7 @@ router.delete('/messages/:messageId',
 /**
  * GET /api/messages/unread-count — Get total unread count for dietitian
  */
-router.get('/unread-count', authenticate, async (req, res) => {
+router.get('/unread-count', authenticate, requirePermission('messages.read'), async (req, res) => {
   try {
     const roleName = req.user.role?.name || req.user.role;
     const where = {};
@@ -499,6 +535,7 @@ router.get('/unread-count', authenticate, async (req, res) => {
  */
 router.post('/conversations/:id/messages/from-journal',
   authenticate,
+  requirePermission('messages.create'),
   param('id').isUUID(),
   body('journal_entry_id').isInt(),
   body('comment').optional().isLength({ max: 5000 }),
@@ -589,6 +626,7 @@ router.post('/conversations/:id/messages/from-journal',
  */
 router.post('/conversations/:id/messages/from-objective',
   authenticate,
+  requirePermission('messages.create'),
   param('id').isUUID(),
   body('objective_number').isInt({ min: 1, max: 3 }),
   body('comment').optional().isLength({ max: 5000 }),

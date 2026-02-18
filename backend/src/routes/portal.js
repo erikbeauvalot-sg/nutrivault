@@ -347,9 +347,9 @@ router.post('/messages/conversations',
         return res.status(403).json({ success: false, error: 'This dietitian is not linked to your account' });
       }
 
-      const [conversation, created] = await db.Conversation.findOrCreate({
-        where: { patient_id: req.patient.id, dietitian_id },
-        defaults: {},
+      const conversation = await db.Conversation.create({
+        patient_id: req.patient.id,
+        dietitian_id,
       });
 
       const full = await db.Conversation.findByPk(conversation.id, {
@@ -358,7 +358,7 @@ router.post('/messages/conversations',
         ],
       });
 
-      res.status(created ? 201 : 200).json({ success: true, data: full });
+      res.status(201).json({ success: true, data: full });
     } catch (error) {
       console.error('Error creating patient conversation:', error);
       res.status(500).json({ success: false, error: 'Failed to create conversation' });

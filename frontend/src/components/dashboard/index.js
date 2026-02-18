@@ -11,3 +11,5 @@ export { default as PracticeHealthScoreWidget } from './PracticeHealthScoreWidge
 export { default as WhatsNewWidget } from './WhatsNewWidget';
 export { default as CampaignsWidget } from './CampaignsWidget';
 export { default as RecentJournalWidget } from './RecentJournalWidget';
+export { default as BirthdaysWidget } from './BirthdaysWidget';
+export { default as TasksDueTodayWidget } from './TasksDueTodayWidget';

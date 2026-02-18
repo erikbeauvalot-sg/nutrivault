@@ -217,6 +217,84 @@ const getRecentJournal = async (req, res) => {
   }
 };
 
+/**
+ * Get all day stats in one call
+ * GET /api/dashboard/day-stats
+ */
+const getDayStats = async (req, res) => {
+  try {
+    const stats = await dashboardStatsService.getDayStats(req.user);
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    console.error('Error fetching day stats:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch day stats' });
+  }
+};
+
+/**
+ * Get dashboard preferences
+ * GET /api/dashboard/preferences
+ */
+const DEFAULT_WIDGETS = {
+  todaysAppointments: true,
+  completedToday: true,
+  upcomingVisits: true,
+  newMessages: true,
+  unpaidInvoices: true,
+  pendingQuotes: true,
+  todaysJournalEntries: true,
+  patientsWithoutFollowup: true,
+  upcomingBirthdays: true,
+  tasksDueToday: true,
+  newPatientMeasures: true,
+  alertsWidget: true,
+  measureAlertsWidget: true,
+  recentJournalWidget: true,
+  todaysAppointmentsList: true,
+  birthdaysWidget: true,
+  tasksDueTodayWidget: true,
+};
+
+const getDashboardPreferences = async (req, res) => {
+  try {
+    const [pref] = await db.DashboardPreference.findOrCreate({
+      where: { user_id: req.user.id },
+      defaults: { widgets: DEFAULT_WIDGETS }
+    });
+    // Merge with defaults so new widgets are always enabled by default
+    const merged = { ...DEFAULT_WIDGETS, ...pref.widgets };
+    res.json({ success: true, data: { widgets: merged } });
+  } catch (error) {
+    console.error('Error fetching dashboard preferences:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch dashboard preferences' });
+  }
+};
+
+/**
+ * Update dashboard preferences
+ * PUT /api/dashboard/preferences
+ */
+const updateDashboardPreferences = async (req, res) => {
+  try {
+    const { widgets } = req.body;
+    if (!widgets || typeof widgets !== 'object') {
+      return res.status(400).json({ success: false, error: 'widgets object is required' });
+    }
+    const [pref] = await db.DashboardPreference.findOrCreate({
+      where: { user_id: req.user.id },
+      defaults: { widgets: DEFAULT_WIDGETS }
+    });
+    // Merge with existing so only the provided keys are toggled
+    const merged = { ...DEFAULT_WIDGETS, ...pref.widgets, ...widgets };
+    pref.widgets = merged;
+    await pref.save();
+    res.json({ success: true, data: { widgets: merged } });
+  } catch (error) {
+    console.error('Error updating dashboard preferences:', error);
+    res.status(500).json({ success: false, error: 'Failed to update dashboard preferences' });
+  }
+};
+
 module.exports = {
   getOverview,
   getRevenueChart,
@@ -225,5 +303,8 @@ module.exports = {
   getActivitySummary,
   getWhatsNew,
   getAllChangelogs,
-  getRecentJournal
+  getRecentJournal,
+  getDayStats,
+  getDashboardPreferences,
+  updateDashboardPreferences
 };

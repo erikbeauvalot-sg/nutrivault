@@ -197,25 +197,21 @@ const getFollowupHistory = async (req, res) => {
     // Get email logs for this visit
     const emailLogs = await EmailLog.findAll({
       where: {
-        template_slug: 'ai_followup'
+        template_slug: 'ai_followup',
+        visit_id: visitId
       },
       order: [['sent_at', 'DESC']],
       limit: 20
     });
 
-    // Filter by visit_id in variables_used
-    const visitLogs = emailLogs.filter(log => {
-      const variables = log.variables_used;
-      return variables && variables.visit_id === visitId;
-    });
-
     res.json({
       success: true,
-      data: visitLogs.map(log => ({
+      data: emailLogs.map(log => ({
         id: log.id,
         sent_at: log.sent_at,
         sent_to: log.sent_to,
         subject: log.subject,
+        body_html: log.body_html,
         status: log.status,
         ai_generated: log.variables_used?.ai_generated || false
       }))
@@ -268,9 +264,97 @@ const getAIStatus = async (req, res) => {
   }
 };
 
+/**
+ * Save follow-up report as draft (without sending)
+ * POST /api/followups/save/:visitId
+ */
+const saveFollowup = async (req, res) => {
+  try {
+    const { visitId } = req.params;
+    const { subject, body_html, body_text, ai_generated } = req.body;
+
+    if (!subject || !body_html) {
+      return res.status(400).json({
+        success: false,
+        error: 'Subject and HTML body are required'
+      });
+    }
+
+    const visit = await Visit.findByPk(visitId, {
+      include: [{
+        model: Patient,
+        as: 'patient',
+        attributes: ['id', 'first_name', 'last_name', 'email', 'language_preference']
+      }]
+    });
+
+    if (!visit) {
+      return res.status(404).json({ success: false, error: 'Visit not found' });
+    }
+
+    // Check if a draft already exists for this visit
+    const existingDraft = await EmailLog.findOne({
+      where: {
+        template_slug: 'ai_followup',
+        visit_id: visitId,
+        status: 'draft'
+      }
+    });
+
+    let emailLog;
+    if (existingDraft) {
+      await existingDraft.update({
+        subject,
+        body_html,
+        body_text: body_text || '',
+        sent_by: req.user.id
+      });
+      emailLog = existingDraft;
+    } else {
+      emailLog = await EmailLog.create({
+        template_id: null,
+        template_slug: 'ai_followup',
+        email_type: 'followup',
+        sent_to: visit.patient?.email || '',
+        patient_id: visit.patient?.id,
+        visit_id: visitId,
+        subject,
+        body_html,
+        body_text: body_text || '',
+        variables_used: {
+          visit_id: visitId,
+          ai_generated: ai_generated === true
+        },
+        status: 'draft',
+        sent_by: req.user.id,
+        language_code: visit.patient?.language_preference || 'fr'
+      });
+    }
+
+    await auditService.log({
+      user_id: req.user.id,
+      username: req.user.username,
+      action: 'SAVE_FOLLOWUP_DRAFT',
+      resource_type: 'visits',
+      resource_id: visitId,
+      ip_address: req.ip,
+      user_agent: req.get('user-agent')
+    });
+
+    res.json({
+      success: true,
+      data: { message: 'Report saved as draft', emailLogId: emailLog.id }
+    });
+  } catch (error) {
+    console.error('Error saving follow-up draft:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to save report' });
+  }
+};
+
 module.exports = {
   generateFollowup,
   sendFollowup,
+  saveFollowup,
   getFollowupHistory,
   getAIStatus
 };

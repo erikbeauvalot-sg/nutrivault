@@ -23,6 +23,7 @@ const SIDEBAR_ITEMS = {
   clients:      { path: '/clients',      icon: '🏢', labelKey: 'navigation.clients',    section: 'main', group: 'clinic' },
   agenda:       { path: '/agenda',       icon: '🗓️', labelKey: 'navigation.agenda',      section: 'main', group: 'clinic' },
   visits:       { path: '/visits',       icon: '📋', labelKey: 'navigation.visits',      section: 'main', group: 'clinic' },
+  'consultation-templates': { path: '/consultation-templates', icon: '📝', labelKey: 'navigation.consultationTemplates', section: 'main', group: 'clinic' },
   recipes:      { path: '/recipes',      icon: '🍽️', labelKey: 'navigation.recipes',     section: 'main', group: 'nutrition' },
   campaigns:    { path: '/campaigns',    icon: '📧', labelKey: 'navigation.campaigns',   section: 'main', group: 'communication' },
   messages:     { path: '/messages',     icon: '💬', labelKey: 'navigation.messages',    section: 'main', group: 'communication' },
@@ -45,6 +46,7 @@ const SIDEBAR_ITEMS = {
   'ai-config':       { path: '/settings/ai-config',       icon: '🤖', labelKey: 'navigation.aiConfig',      section: 'settings' },
   'scheduled-tasks': { path: '/settings/scheduled-tasks',  icon: '⏱️', labelKey: 'navigation.scheduledTasks', section: 'settings' },
   discord:           { path: '/settings/discord',          icon: '🔔', labelKey: 'navigation.discord',       section: 'settings' },
+  'dashboard-settings': { path: '/settings/dashboard',     icon: '📊', labelKey: 'navigation.dashboardSettings', section: 'settings' },
   'sidebar-config':  { path: '/settings/sidebar-config',   icon: '☰',  labelKey: 'navigation.sidebarConfig', section: 'settings' },
 };
 

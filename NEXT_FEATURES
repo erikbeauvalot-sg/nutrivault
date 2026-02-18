@@ -7,7 +7,7 @@
 - pour les Diets, ajouter la possibilité de créer des plans de repas personnalisés pour les patients, en fonction de leurs préférences alimentaires, de leurs objectifs de santé et de leurs restrictions alimentaires.
 - Pour les dieteticiens, ajouter la capacité de generer rapidement des devis a destination de leurs patients, pour faciliter la gestion administrative et financière de leur pratique.
 - Pour les dieteticiens et le cabinet, une gestion améliorée de la finance avec des outils de comptabilité intégrés pour suivre les revenus, les dépenses et les paiements des patients.
-- Pour les dieteticiens, pour faciliter les consultations, rajouter la possibilité de créer des modèles de consultation personnalisés, pour permettre aux diététiciens de gagner du temps lors de la préparation de leurs consultations et d'assurer une expérience cohérente pour leurs patients, en utilisant des modèles pré-définis pour les différentes étapes de la consultation, tels que l'anamnèse, l'évaluation nutritionnelle, la planification des repas et le suivi des progrès et en utilisant des champs personnalisables pour adapter les modèles aux besoins spécifiques de chaque patient.
+
 
 
 - en tant que patient, pouvoir prendre des rendez-vous directement depuis mon portal patient ou depuis l'application mobile, pour faciliter la gestion de leur emploi du temps et pour permettre une communication plus fluide avec leur diététicien.
@@ -33,3 +33,21 @@
 [ ] Dans la partie Communication du dieteticien, ajouter la possibilité de crééer un simple mail a destination de tous les patients ou d'un groupe de patients ou d'un simple patient, pour permettre aux diététiciens de communiquer rapidement et efficacement avec leurs patients, en envoyant des informations importantes, des rappels ou des encouragements à un large public ou à des groupes spécifiques de patients en fonction de leurs besoins et de leurs objectifs de santé.
 
 [x] Faire une application mobile pour les patients, pour leur permettre d'accéder à leur journal, à leurs objectifs et à leurs encouragements directement depuis leur smartphone, et pour faciliter la communication avec leur diététicien en temps réel.
+
+
+
+- Pour les dieteticiens, pour faciliter les consultations, rajouter la possibilité de créer des modèles de consultation personnalisés, 
+  pour permettre aux diététiciens de gagner du temps lors de la préparation de leurs consultations et d'assurer une expérience cohérente pour leurs patients, 
+  en utilisant des modèles pré-définis pour les différentes étapes de la consultation, tels que l'anamnèse, l'évaluation nutritionnelle, la planification des repas et 
+  le suivi des progrès et en utilisant des champs personnalisables pour adapter les modèles aux besoins spécifiques de chaque patient.
+  Ces modèles pourraient inclure des sections pour les notes du diététicien, les recommandations personnalisées, les objectifs de santé et les plans d'action,
+  pour permettre aux diététiciens de fournir des conseils nutritionnels personnalisés et de suivre les progrès de leurs patients de manière plus efficace et organisée.
+  Ces modèles pourraient être facilement accessibles depuis le journal du patient ou depuis la section "Mes objectifs", pour permettre aux diététiciens de les utiliser
+  rapidement lors de leurs consultations et de fournir des conseils nutritionnels personnalisés à leurs patients.
+  Ces modèles pourraient être partagés entre les diététiciens au sein d'un même cabinet, pour favoriser la collaboration et l'échange de bonnes pratiques entre les professionnels de santé.
+  Ces modèles pourraient être régulièrement mis à jour en fonction des dernières recherches et des meilleures pratiques en matière de nutrition, 
+  pour garantir que les diététiciens disposent des outils les plus récents et les plus efficaces pour aider leurs patients à atteindre leurs objectifs de santé.
+  Les dietéticiens pourraient également avoir la possibilité de créer leurs propres modèles personnalisés en fonction de leur style de consultation et des besoins spécifiques de leurs patients,
+  pour leur permettre de personnaliser davantage leur approche et de fournir des conseils nutritionnels encore plus adaptés à leurs patients.
+  Ces modèles pourraient être facilement modifiables et adaptables en fonction des besoins changeants des patients,
+  pour permettre aux diététiciens de fournir des conseils nutritionnels personnalisés et de suivre les progrès de leurs patients de manière plus efficace et organisée.

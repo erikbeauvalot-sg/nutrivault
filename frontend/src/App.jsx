@@ -70,6 +70,10 @@ const SidebarMenuConfigPage = lazy(() => import('./pages/SidebarMenuConfigPage')
 const ClientsPage = lazy(() => import('./pages/ClientsPage'));
 const QuotesPage = lazy(() => import('./pages/QuotesPage'));
 const FinancePage = lazy(() => import('./pages/FinancePage'));
+const DashboardSettingsPage = lazy(() => import('./pages/DashboardSettingsPage'));
+const ConsultationTemplatesPage = lazy(() => import('./pages/ConsultationTemplatesPage'));
+const ConsultationTemplateEditorPage = lazy(() => import('./pages/ConsultationTemplateEditorPage'));
+const ConsultationNoteEditorPage = lazy(() => import('./pages/ConsultationNoteEditorPage'));
 
 // Patient Portal pages
 const PatientPortalDashboard = lazy(() => import('./pages/portal/PatientPortalDashboard'));
@@ -538,6 +542,15 @@ function App() {
       />
 
       <Route
+        path="/settings/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardSettingsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/settings/sidebar-config"
         element={
           <ProtectedRoute>
@@ -551,6 +564,42 @@ function App() {
         element={
           <ProtectedRoute permission="patients.read">
             <AnalyticsDashboardPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/consultation-templates"
+        element={
+          <ProtectedRoute permission="consultation_templates.read">
+            <ConsultationTemplatesPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/consultation-templates/new"
+        element={
+          <ProtectedRoute permission="consultation_templates.create">
+            <ConsultationTemplateEditorPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/consultation-templates/:id/edit"
+        element={
+          <ProtectedRoute permission="consultation_templates.update">
+            <ConsultationTemplateEditorPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/consultation-notes/:id"
+        element={
+          <ProtectedRoute permission="consultation_templates.read">
+            <ConsultationNoteEditorPage />
           </ProtectedRoute>
         }
       />

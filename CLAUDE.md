@@ -33,6 +33,9 @@ After completing any feature implementation (frontend or backend):
 - Checked the backend logs for errors
 - Verified no 500 errors from API calls
 
+### specific instructions for frontend
+do not use any "window.confirm" or "alert" in the code as they are blocking and create a bad user experience. Instead, use the custom modal component that is already implemented in the frontend for any confirmation or alert messages. This will ensure a consistent and non-blocking user experience across the application.
+
 ### Testing API Endpoints
 
 When testing backend features:

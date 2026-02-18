@@ -75,6 +75,30 @@ export const getRecentJournal = async (limit = 10) => {
   return response.data;
 };
 
+/**
+ * Get all day stats in one call
+ */
+export const getDayStats = async () => {
+  const response = await api.get('/dashboard/day-stats');
+  return response.data;
+};
+
+/**
+ * Get dashboard preferences
+ */
+export const getDashboardPreferences = async () => {
+  const response = await api.get('/dashboard/preferences');
+  return response.data;
+};
+
+/**
+ * Update dashboard preferences
+ */
+export const updateDashboardPreferences = async (widgets) => {
+  const response = await api.put('/dashboard/preferences', { widgets });
+  return response.data;
+};
+
 export default {
   getOverview,
   getRevenueChart,
@@ -83,5 +107,8 @@ export default {
   getActivitySummary,
   getWhatsNew,
   getAllChangelogs,
-  getRecentJournal
+  getRecentJournal,
+  getDayStats,
+  getDashboardPreferences,
+  updateDashboardPreferences
 };
