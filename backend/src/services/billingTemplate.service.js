@@ -33,7 +33,7 @@ async function getAllTemplates(filters = {}, user = null) {
     // Role-based filtering:
     // - ADMIN: sees all templates
     // - DIETITIAN: sees only their own templates
-    if (user && user.role !== 'ADMIN') {
+    if (user && user.role?.name !== 'ADMIN') {
       where.created_by = user.id;
     }
 
@@ -105,7 +105,7 @@ async function getTemplateById(templateId, user = null) {
     }
 
     // Permission check: ADMIN can see all, DIETITIAN can only see their own
-    if (user && user.role !== 'ADMIN' && template.created_by !== user.id) {
+    if (user && user.role?.name !== 'ADMIN' && template.created_by !== user.id) {
       throw new Error('You do not have permission to view this template');
     }
 
@@ -190,7 +190,7 @@ async function updateTemplate(templateId, data, user) {
     }
 
     // Permission check: only ADMIN or template creator can update
-    if (user.role !== 'ADMIN' && template.created_by !== user.id) {
+    if (user.role?.name !== 'ADMIN' && template.created_by !== user.id) {
       throw new Error('You do not have permission to update this template');
     }
 
@@ -251,7 +251,7 @@ async function deleteTemplate(templateId, user) {
     }
 
     // Permission check: only ADMIN or template creator can delete
-    if (user.role !== 'ADMIN' && template.created_by !== user.id) {
+    if (user.role?.name !== 'ADMIN' && template.created_by !== user.id) {
       throw new Error('You do not have permission to delete this template');
     }
 
@@ -343,7 +343,7 @@ async function getDefaultTemplate(user = null) {
     // Role-based filtering:
     // - ADMIN: gets global default template
     // - DIETITIAN: gets their own default template
-    if (user && user.role !== 'ADMIN') {
+    if (user && user.role?.name !== 'ADMIN') {
       where.created_by = user.id;
     }
 
@@ -390,7 +390,7 @@ async function setAsDefault(templateId, user) {
     }
 
     // Permission check: only ADMIN or template creator can set as default
-    if (user.role !== 'ADMIN' && template.created_by !== user.id) {
+    if (user.role?.name !== 'ADMIN' && template.created_by !== user.id) {
       throw new Error('You do not have permission to set this template as default');
     }
 

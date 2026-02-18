@@ -65,6 +65,7 @@ const TEMPLATE_PLACEHOLDERS = {
  */
 function substituteTemplatePlaceholders(text, values) {
   if (!text) return '';
+  if (typeof text !== 'string') text = Array.isArray(text) ? text.join('\n') : String(text);
 
   let result = text;
   for (const [key, placeholder] of Object.entries(TEMPLATE_PLACEHOLDERS)) {
@@ -409,6 +410,7 @@ function createFallbackResponse(rawText, language = 'fr') {
  */
 function substituteVariables(template, data) {
   if (!template) return '';
+  if (typeof template !== 'string') template = String(template);
 
   let result = template;
 

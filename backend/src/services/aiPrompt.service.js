@@ -274,6 +274,8 @@ async function testPrompt(id, sampleData = {}) {
 
   // Simple variable substitution for testing
   const substituteVariables = (template, data) => {
+    if (!template) return '';
+    if (typeof template !== 'string') template = String(template);
     let result = template;
 
     // Replace {{variable}} patterns

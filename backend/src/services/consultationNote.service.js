@@ -54,7 +54,7 @@ async function getNotes(filters = {}, user) {
   }
 
   // RBAC: ADMIN sees all, DIETITIAN sees own
-  if (user && user.role !== 'ADMIN') {
+  if (user && user.role?.name !== 'ADMIN') {
     where.dietitian_id = user.id;
   }
 
@@ -122,7 +122,7 @@ async function getNoteById(id, user) {
     throw new Error('Note not found');
   }
 
-  if (user && user.role !== 'ADMIN' && note.dietitian_id !== user.id) {
+  if (user && user.role?.name !== 'ADMIN' && note.dietitian_id !== user.id) {
     throw new Error('You do not have permission to view this note');
   }
 
@@ -379,7 +379,7 @@ async function deleteNote(id, user) {
     throw new Error('Note not found');
   }
 
-  if (user.role !== 'ADMIN' && note.dietitian_id !== user.id) {
+  if (user.role?.name !== 'ADMIN' && note.dietitian_id !== user.id) {
     throw new Error('You do not have permission to delete this note');
   }
 

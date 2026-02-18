@@ -96,7 +96,7 @@ const getAllTemplates = async (req, res) => {
     };
 
     // Non-admin users: scope to their own templates + system templates
-    if (req.user && req.user.role !== 'ADMIN') {
+    if (req.user && req.user.role?.name !== 'ADMIN') {
       filters.userId = req.user.id;
     }
 

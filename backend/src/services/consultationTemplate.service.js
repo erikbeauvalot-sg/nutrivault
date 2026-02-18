@@ -30,7 +30,7 @@ const INCLUDE_ITEMS = [
  */
 function canAccess(template, user) {
   if (!user) return true;
-  if (user.role === 'ADMIN') return true;
+  if (user.role?.name === 'ADMIN') return true;
   if (template.created_by === user.id) return true;
   if (template.visibility === 'shared') return true;
   return false;
@@ -88,7 +88,7 @@ async function getTemplates(user, filters = {}) {
   }
 
   // RBAC: ADMIN sees all, others see own + shared
-  if (user && user.role !== 'ADMIN') {
+  if (user && user.role?.name !== 'ADMIN') {
     where[Op.or] = [
       { created_by: user.id },
       { visibility: 'shared' }
@@ -172,7 +172,7 @@ async function updateTemplate(id, data, user) {
       throw new Error('Template not found');
     }
 
-    if (user.role !== 'ADMIN' && template.created_by !== user.id) {
+    if (user.role?.name !== 'ADMIN' && template.created_by !== user.id) {
       throw new Error('You do not have permission to update this template');
     }
 
@@ -225,7 +225,7 @@ async function deleteTemplate(id, user) {
     throw new Error('Template not found');
   }
 
-  if (user.role !== 'ADMIN' && template.created_by !== user.id) {
+  if (user.role?.name !== 'ADMIN' && template.created_by !== user.id) {
     throw new Error('You do not have permission to delete this template');
   }
 
@@ -295,7 +295,7 @@ async function duplicateTemplate(id, name, userId) {
 async function addItem(templateId, data, user) {
   const template = await ConsultationTemplate.findByPk(templateId);
   if (!template) throw new Error('Template not found');
-  if (user.role !== 'ADMIN' && template.created_by !== user.id) {
+  if (user.role?.name !== 'ADMIN' && template.created_by !== user.id) {
     throw new Error('You do not have permission to update this template');
   }
 
@@ -321,7 +321,7 @@ async function updateItem(itemId, data, user) {
   });
 
   if (!item) throw new Error('Item not found');
-  if (user.role !== 'ADMIN' && item.template.created_by !== user.id) {
+  if (user.role?.name !== 'ADMIN' && item.template.created_by !== user.id) {
     throw new Error('You do not have permission to update this template');
   }
 
@@ -342,7 +342,7 @@ async function removeItem(itemId, user) {
   });
 
   if (!item) throw new Error('Item not found');
-  if (user.role !== 'ADMIN' && item.template.created_by !== user.id) {
+  if (user.role?.name !== 'ADMIN' && item.template.created_by !== user.id) {
     throw new Error('You do not have permission to delete this item');
   }
 
@@ -353,7 +353,7 @@ async function removeItem(itemId, user) {
 async function reorderItems(templateId, itemIds, user) {
   const template = await ConsultationTemplate.findByPk(templateId);
   if (!template) throw new Error('Template not found');
-  if (user.role !== 'ADMIN' && template.created_by !== user.id) {
+  if (user.role?.name !== 'ADMIN' && template.created_by !== user.id) {
     throw new Error('You do not have permission to update this template');
   }
 
