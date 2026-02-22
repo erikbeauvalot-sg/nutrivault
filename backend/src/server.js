@@ -280,6 +280,14 @@ app.use('/api/notifications', notificationRoutes);
 const sidebarMenuConfigRoutes = require('./routes/sidebarMenuConfigs');
 app.use('/api/sidebar-menu-configs', sidebarMenuConfigRoutes);
 
+// Sidebar Categories routes (admin management + sidebar reads)
+const sidebarCategoryRoutes = require('./routes/sidebarCategories');
+app.use('/api/sidebar-categories', sidebarCategoryRoutes);
+
+// Sidebar Sections routes (admin management + sidebar reads)
+const sidebarSectionRoutes = require('./routes/sidebarSections');
+app.use('/api/sidebar-sections', sidebarSectionRoutes);
+
 // Apple App Site Association — iOS credential autofill
 app.get('/.well-known/apple-app-site-association', (req, res) => {
   res.json({

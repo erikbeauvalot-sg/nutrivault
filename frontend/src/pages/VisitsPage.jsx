@@ -438,6 +438,21 @@ const VisitsPage = () => {
                               ⏱️ {visit.duration_minutes} min
                             </div>
                           )}
+                          {visit.consultation_notes && visit.consultation_notes.length > 0 && (
+                            <div className="small mb-1 d-flex gap-1 align-items-center">
+                              📝
+                              {visit.consultation_notes.some(n => n.status === 'completed') && (
+                                <Badge bg="success" pill>
+                                  ✓ {visit.consultation_notes.filter(n => n.status === 'completed').length}
+                                </Badge>
+                              )}
+                              {visit.consultation_notes.some(n => n.status === 'draft') && (
+                                <Badge bg="warning" text="dark" pill>
+                                  ✎ {visit.consultation_notes.filter(n => n.status === 'draft').length}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
                           {customFieldDefinitions.map(field => {
                             const value = visit.custom_field_values?.[field.field_name];
                             if (value === null || value === undefined || value === '') return null;
@@ -492,6 +507,7 @@ const VisitsPage = () => {
                           <th>{t('visits.type')}</th>
                           <th>{t('visits.status')}</th>
                           <th>{t('visits.duration')}</th>
+                          <th>{t('visits.notes', 'Notes')}</th>
                           {customFieldDefinitions.map(field => (
                             <th key={field.id}>{field.field_label}</th>
                           ))}
@@ -529,6 +545,24 @@ const VisitsPage = () => {
                             <td>{visit.visit_type || '-'}</td>
                             <td>{getStatusBadge(visit.status)}</td>
                             <td>{visit.duration_minutes ? `${visit.duration_minutes} min` : '-'}</td>
+                            <td>
+                              {visit.consultation_notes && visit.consultation_notes.length > 0 ? (
+                                <div className="d-flex gap-1 flex-wrap">
+                                  {visit.consultation_notes.some(n => n.status === 'completed') && (
+                                    <Badge bg="success" pill title={t('consultationNotes.statusCompleted', 'Completed')}>
+                                      ✓ {visit.consultation_notes.filter(n => n.status === 'completed').length}
+                                    </Badge>
+                                  )}
+                                  {visit.consultation_notes.some(n => n.status === 'draft') && (
+                                    <Badge bg="warning" text="dark" pill title={t('consultationNotes.statusDraft', 'Draft')}>
+                                      ✎ {visit.consultation_notes.filter(n => n.status === 'draft').length}
+                                    </Badge>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted">—</span>
+                              )}
+                            </td>
                             {customFieldDefinitions.map(field => (
                               <td key={field.id}>
                                 {formatCustomFieldValue(

@@ -1,0 +1,39 @@
+module.exports = (sequelize, DataTypes) => {
+  const SidebarSection = sequelize.define('SidebarSection', {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
+    },
+    key: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true
+    },
+    label: {
+      type: DataTypes.STRING(100),
+      allowNull: false
+    },
+    icon: {
+      type: DataTypes.STRING(10),
+      allowNull: false,
+      defaultValue: '📁'
+    },
+    display_order: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0
+    },
+    is_default_open: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true
+    }
+  }, {
+    tableName: 'sidebar_sections',
+    timestamps: true,
+    underscored: true
+  });
+
+  return SidebarSection;
+};

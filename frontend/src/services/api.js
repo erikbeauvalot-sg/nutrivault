@@ -225,12 +225,20 @@ api.interceptors.response.use(
       // Retry original request
       return api(originalRequest);
     } catch (refreshError) {
-      // Refresh failed, clear tokens and redirect to login
-      isRedirectingToLogin = true;
       processQueue(refreshError, null);
-      tokenStorage.clearTokens();
-      window.location.href = '/login';
-      return new Promise(() => {}); // Never resolve - page is redirecting
+
+      // Only force logout if the backend confirmed the refresh token is invalid (401).
+      // For network errors or server errors (5xx), the token may still be valid —
+      // don't logout on transient failures (e.g. server blip, network hiccup during auto-save).
+      if (refreshError.response?.status === 401) {
+        isRedirectingToLogin = true;
+        tokenStorage.clearTokens();
+        window.location.href = '/login';
+        return new Promise(() => {}); // Never resolve - page is redirecting
+      }
+
+      // Transient error: fail the current request without logging the user out
+      return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
     }

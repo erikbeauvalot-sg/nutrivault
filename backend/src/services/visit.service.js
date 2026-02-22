@@ -121,6 +121,12 @@ async function getVisits(user, filters = {}, requestMetadata = {}) {
           model: User,
           as: 'dietitian',
           attributes: ['id', 'username', 'first_name', 'last_name']
+        },
+        {
+          model: db.ConsultationNote,
+          as: 'consultation_notes',
+          attributes: ['id', 'status'],
+          required: false
         }
       ]
     });

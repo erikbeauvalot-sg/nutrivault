@@ -7,30 +7,35 @@ const { SidebarMenuConfig } = db;
  */
 const DEFAULT_ITEMS = [
   // Main section
-  { item_key: 'dashboard',         section: 'main',     display_order: 1,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'] },
-  { item_key: 'patients',          section: 'main',     display_order: 2,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'] },
-  { item_key: 'agenda',            section: 'main',     display_order: 3,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'] },
-  { item_key: 'visits',            section: 'main',     display_order: 4,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'] },
-  { item_key: 'recipes',           section: 'main',     display_order: 5,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'] },
-  { item_key: 'campaigns',         section: 'main',     display_order: 6,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'] },
-  { item_key: 'messages',          section: 'main',     display_order: 7,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'] },
-  { item_key: 'billing',           section: 'main',     display_order: 8,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'] },
-  { item_key: 'documents',         section: 'main',     display_order: 9,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'] },
-  { item_key: 'analytics',         section: 'main',     display_order: 10, allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'] },
-  { item_key: 'users',             section: 'main',     display_order: 11, allowed_roles: ['ADMIN'] },
+  { item_key: 'dashboard',         section: 'main',     display_order: 1,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'clinic' },
+  { item_key: 'patients',          section: 'main',     display_order: 2,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'clinic' },
+  { item_key: 'clients',           section: 'main',     display_order: 3,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'clinic' },
+  { item_key: 'agenda',            section: 'main',     display_order: 4,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'clinic' },
+  { item_key: 'visits',            section: 'main',     display_order: 5,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'clinic' },
+  { item_key: 'consultation-templates', section: 'main', display_order: 6, allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'clinic' },
+  { item_key: 'recipes',           section: 'main',     display_order: 7,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'nutrition' },
+  { item_key: 'campaigns',         section: 'main',     display_order: 8,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'communication' },
+  { item_key: 'messages',          section: 'main',     display_order: 9,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'communication' },
+  { item_key: 'billing',           section: 'main',     display_order: 10, allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'finance' },
+  { item_key: 'quotes',            section: 'main',     display_order: 11, allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'finance' },
+  { item_key: 'finance',           section: 'main',     display_order: 12, allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'finance' },
+  { item_key: 'documents',         section: 'main',     display_order: 13, allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'data' },
+  { item_key: 'analytics',         section: 'main',     display_order: 14, allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'data' },
+  { item_key: 'users',             section: 'main',     display_order: 15, allowed_roles: ['ADMIN'],                                 category_key: 'admin' },
   // Settings section
-  { item_key: 'myProfile',         section: 'settings', display_order: 1,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'] },
-  { item_key: 'themes',            section: 'settings', display_order: 2,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'] },
-  { item_key: 'email-templates',   section: 'settings', display_order: 3,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'] },
-  { item_key: 'email-config',      section: 'settings', display_order: 4,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'] },
-  { item_key: 'invoice-customization', section: 'settings', display_order: 5, allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'] },
-  { item_key: 'custom-fields',     section: 'settings', display_order: 6,  allowed_roles: ['ADMIN'] },
-  { item_key: 'measures',          section: 'settings', display_order: 7,  allowed_roles: ['ADMIN'] },
-  { item_key: 'roles',             section: 'settings', display_order: 8,  allowed_roles: ['ADMIN'] },
-  { item_key: 'ai-config',         section: 'settings', display_order: 9,  allowed_roles: ['ADMIN'] },
-  { item_key: 'scheduled-tasks',   section: 'settings', display_order: 10, allowed_roles: ['ADMIN'] },
-  { item_key: 'discord',           section: 'settings', display_order: 11, allowed_roles: ['ADMIN'] },
-  { item_key: 'sidebar-config',    section: 'settings', display_order: 12, allowed_roles: ['ADMIN'] },
+  { item_key: 'myProfile',         section: 'settings', display_order: 1,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'settings' },
+  { item_key: 'themes',            section: 'settings', display_order: 2,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'settings' },
+  { item_key: 'email-templates',   section: 'settings', display_order: 3,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'settings' },
+  { item_key: 'email-config',      section: 'settings', display_order: 4,  allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'settings' },
+  { item_key: 'invoice-customization', section: 'settings', display_order: 5, allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'settings' },
+  { item_key: 'custom-fields',     section: 'settings', display_order: 6,  allowed_roles: ['ADMIN'],                                 category_key: 'settings' },
+  { item_key: 'measures',          section: 'settings', display_order: 7,  allowed_roles: ['ADMIN'],                                 category_key: 'settings' },
+  { item_key: 'roles',             section: 'settings', display_order: 8,  allowed_roles: ['ADMIN'],                                 category_key: 'settings' },
+  { item_key: 'ai-config',         section: 'settings', display_order: 9,  allowed_roles: ['ADMIN'],                                 category_key: 'settings' },
+  { item_key: 'scheduled-tasks',   section: 'settings', display_order: 10, allowed_roles: ['ADMIN'],                                 category_key: 'settings' },
+  { item_key: 'discord',           section: 'settings', display_order: 11, allowed_roles: ['ADMIN'],                                 category_key: 'settings' },
+  { item_key: 'dashboard-settings',section: 'settings', display_order: 12, allowed_roles: ['ADMIN','DIETITIAN','ASSISTANT','VIEWER'], category_key: 'settings' },
+  { item_key: 'sidebar-config',    section: 'settings', display_order: 13, allowed_roles: ['ADMIN'],                                 category_key: 'settings' },
 ];
 
 /**
@@ -56,6 +61,7 @@ async function bulkUpdate(items) {
       if (item.is_visible !== undefined) updateData.is_visible = item.is_visible;
       if (item.allowed_roles !== undefined) updateData.allowed_roles = item.allowed_roles;
       if (item.section !== undefined) updateData.section = item.section;
+      if (item.category_key !== undefined) updateData.category_key = item.category_key;
 
       await SidebarMenuConfig.update(updateData, {
         where: { item_key: item.item_key },
@@ -107,6 +113,7 @@ async function resetToDefaults() {
       display_order: item.display_order,
       is_visible: true,
       allowed_roles: item.allowed_roles,
+      category_key: item.category_key || null,
     }));
 
     await SidebarMenuConfig.bulkCreate(rows, { transaction });

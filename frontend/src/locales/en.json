@@ -356,15 +356,15 @@
     "details": "Details"
   },
   "sidebarConfig": {
-    "title": "Sidebar Configuration",
-    "subtitle": "Reorder, show/hide, and control role access for sidebar menu items",
+    "title": "Menu Configuration",
+    "subtitle": "Manage categories and menu items for the navigation sidebar",
     "mainSection": "Main Navigation",
     "settingsSection": "Settings",
     "fetchError": "Failed to load sidebar configuration",
     "saveSuccess": "Sidebar configuration saved",
     "saveError": "Failed to save sidebar configuration",
-    "resetSuccess": "Sidebar configuration reset to defaults",
-    "resetError": "Failed to reset sidebar configuration",
+    "resetSuccess": "Configuration reset to defaults",
+    "resetError": "Failed to reset configuration",
     "reset": "Reset Defaults",
     "resetTitle": "Reset to Defaults",
     "resetMessage": "This will reset the sidebar configuration to its original defaults. All customizations will be lost.",
@@ -374,6 +374,31 @@
     "hidden": "Hidden",
     "roleLegend": "Roles",
     "adminAlwaysEnabled": "Admin always has access"
+  },
+  "sidebarCategories": {
+    "title": "Categories",
+    "addCategory": "Add category",
+    "categoryName": "Name",
+    "icon": "Icon",
+    "defaultOpen": "Open by default",
+    "deleteCategory": "Delete category",
+    "deleteCategoryConfirm": "Delete category",
+    "deleteCategoryError": "This category has items assigned. Move them first.",
+    "reorderError": "Error reordering categories",
+    "menuItems": "Menu Items",
+    "noCategory": "No category",
+    "saveCategories": "Save",
+    "categorySection": "Section",
+    "main": "Main",
+    "settings": "Settings"
+  },
+  "sidebarSections": {
+    "addSection": "Add section",
+    "deleteSection": "Delete section",
+    "deleteSectionError": "This section has categories. Move them first.",
+    "builtinError": "Cannot delete a built-in section",
+    "section": "Section",
+    "dragHere": "Drag items here"
   },
   "scheduledTasks": {
     "title": "Scheduled Tasks",

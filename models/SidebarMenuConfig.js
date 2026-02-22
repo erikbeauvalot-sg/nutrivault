@@ -13,10 +13,7 @@ module.exports = (sequelize, DataTypes) => {
     section: {
       type: DataTypes.STRING(20),
       allowNull: false,
-      defaultValue: 'main',
-      validate: {
-        isIn: [['main', 'settings']]
-      }
+      defaultValue: 'main'
     },
     display_order: {
       type: DataTypes.INTEGER,
@@ -46,6 +43,11 @@ module.exports = (sequelize, DataTypes) => {
       set(val) {
         this.setDataValue('allowed_roles', JSON.stringify(val));
       }
+    },
+    category_key: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      defaultValue: null
     }
   }, {
     tableName: 'sidebar_menu_configs',

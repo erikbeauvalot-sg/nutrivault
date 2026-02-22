@@ -15,8 +15,19 @@ const USER_KEY = 'nutrivault_user';
  * @param {boolean} rememberMe - If true, uses localStorage; otherwise sessionStorage
  */
 export const setTokens = (accessToken, refreshToken, rememberMe = false) => {
+  // Always clear the OTHER storage to prevent stale tokens from taking priority.
+  // e.g. if user previously used "remember me" (localStorage) and now logs in
+  // without it (sessionStorage), the old localStorage tokens must be removed,
+  // otherwise getAccessToken() / getRefreshToken() would return them first.
+  if (rememberMe) {
+    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+  } else {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
+
   const storage = rememberMe ? localStorage : sessionStorage;
-  
   storage.setItem(ACCESS_TOKEN_KEY, accessToken);
   storage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   localStorage.setItem(REMEMBER_ME_KEY, rememberMe.toString());

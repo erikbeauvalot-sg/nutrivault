@@ -3,7 +3,7 @@
  * Full page for editing existing visits with measurements
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Container, Row, Col, Card, Button, Form, Alert, Spinner, Badge } from 'react-bootstrap';
 import ResponsiveTabs, { Tab } from '../components/ResponsiveTabs';
@@ -117,6 +117,11 @@ const EditVisitPage = () => {
   // Finish visit confirm modal
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
 
+  // Auto-save for custom fields
+  const [autoSaveStatus, setAutoSaveStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
+  const [fieldsDirty, setFieldsDirty] = useState(false);
+  const autoSaveTimer = useRef(null);
+
   useEffect(() => {
     if (i18n.resolvedLanguage) {
       fetchVisitData();
@@ -126,7 +131,47 @@ const EditVisitPage = () => {
       fetchMeasureDefinitions();
       fetchExistingMeasures();
     }
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
   }, [id, i18n.resolvedLanguage]);
+
+  // Auto-save custom fields after 3 seconds of inactivity
+  const autoSaveCustomFields = useCallback(async (currentFieldValues, currentCategories) => {
+    const customFieldsToSave = [];
+    currentCategories.forEach(category => {
+      category.fields.forEach(field => {
+        if (currentFieldValues[field.definition_id] !== undefined && currentFieldValues[field.definition_id] !== null && currentFieldValues[field.definition_id] !== '') {
+          customFieldsToSave.push({
+            definition_id: field.definition_id,
+            value: currentFieldValues[field.definition_id]
+          });
+        }
+      });
+    });
+    if (customFieldsToSave.length === 0) return;
+    try {
+      setAutoSaveStatus('saving');
+      await visitCustomFieldService.updateVisitCustomFields(id, customFieldsToSave);
+      setAutoSaveStatus('saved');
+      setFieldsDirty(false);
+      setTimeout(() => setAutoSaveStatus(null), 2000);
+    } catch (err) {
+      setAutoSaveStatus('error');
+      console.error('Auto-save failed:', err);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (!fieldsDirty || customFieldCategories.length === 0) return;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      autoSaveCustomFields(fieldValues, customFieldCategories);
+    }, 3000);
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, [fieldValues, fieldsDirty, customFieldCategories, autoSaveCustomFields]);
 
   const fetchDietitians = async () => {
     try {
@@ -283,6 +328,7 @@ const EditVisitPage = () => {
       ...prev,
       [definitionId]: value
     }));
+    setFieldsDirty(true);
     // Clear any error for this field
     setFieldErrors(prev => {
       const newErrors = { ...prev };
@@ -797,10 +843,15 @@ const EditVisitPage = () => {
             <Button variant="outline-secondary" onClick={handleBack} className="mb-3">
               ← {t('visits.backToVisits')}
             </Button>
-            <h1 className="mb-0">
-              {t('visits.editVisit')}
-              {visit?.patient && ` - ${visit.patient.first_name} ${visit.patient.last_name}`}
-            </h1>
+            <div className="d-flex align-items-center gap-3 flex-wrap">
+              <h1 className="mb-0">
+                {t('visits.editVisit')}
+                {visit?.patient && ` - ${visit.patient.first_name} ${visit.patient.last_name}`}
+              </h1>
+              {autoSaveStatus === 'saving' && <Spinner animation="border" size="sm" className="text-muted" />}
+              {autoSaveStatus === 'saved' && <small className="text-success">{t('consultationNotes.autoSaved', 'Auto-saved')}</small>}
+              {autoSaveStatus === 'error' && <small className="text-danger">{t('consultationNotes.autoSaveError', 'Auto-save failed')}</small>}
+            </div>
             <p className="text-muted mb-0">
               {visit?.visit_date && formatDateTime(visit.visit_date, i18n.language)}
             </p>

@@ -91,6 +91,11 @@
   flex: 1;
 }
 
+.sidebar-group-icon {
+  margin-right: 0.3rem;
+  font-size: 0.9em;
+}
+
 .sidebar-group-items .sidebar-item {
   /* items inside a group keep normal padding */
 }
