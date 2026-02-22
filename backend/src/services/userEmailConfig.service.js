@@ -187,7 +187,7 @@ function createTransporterFromConfig(config) {
       pass: password
     },
     tls: {
-      rejectUnauthorized: false
+      rejectUnauthorized: process.env.NODE_ENV === 'production'
     }
   });
 }

@@ -297,10 +297,22 @@ app.get('/.well-known/apple-app-site-association', (req, res) => {
   });
 });
 
-// Serve uploaded files (logos, signatures)
-// Use /app in production (Docker), process.cwd() in development
+// Serve ONLY public upload subdirectories (logos, signatures) statically.
+// Patient documents are served exclusively through authenticated API endpoints.
 const uploadsBasePath = process.env.NODE_ENV === 'production' ? '/app/uploads' : path.join(process.cwd(), 'uploads');
-app.use('/uploads', express.static(uploadsBasePath));
+// 'journal_entry' photos are loaded via <img> tags (no auth headers possible).
+// 'invoice-customizations' holds dietitian logos/signatures embedded in PDFs.
+// All other paths (patient, visit, document, user) are blocked and must be
+// accessed exclusively through authenticated API endpoints.
+const ALLOWED_PUBLIC_DIRS = ['logos', 'signatures', 'journal_entry', 'invoice-customizations'];
+app.use('/uploads', (req, res, next) => {
+  const reqPath = req.path.replace(/^\/+/, '');
+  const topDir = reqPath.split('/')[0];
+  if (!ALLOWED_PUBLIC_DIRS.includes(topDir)) {
+    return res.status(403).json({ success: false, error: 'Access denied' });
+  }
+  next();
+}, express.static(uploadsBasePath));
 
 // Basic error handler
 app.use((err, req, res, next) => {

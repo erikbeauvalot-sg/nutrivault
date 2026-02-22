@@ -487,7 +487,7 @@ const RecipeDetailPage = () => {
             )}
 
             {/* Source URL */}
-            {recipe.source_url && (
+            {recipe.source_url && /^https?:\/\//i.test(recipe.source_url) && (
               <Card className="mb-4">
                 <Card.Body>
                   <Card.Title className="fs-6">{t('recipes.sourceUrl', 'Source')}</Card.Title>

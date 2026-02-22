@@ -183,6 +183,11 @@ exports.getPatientDietitians = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    const hasAccess = await canAccessPatient(req.user, { id });
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
     const links = await db.PatientDietitian.findAll({
       where: { patient_id: id },
       include: [{
@@ -298,6 +303,8 @@ exports.removePatientDietitian = async (req, res, next) => {
  */
 exports.getPortalStatus = async (req, res, next) => {
   try {
+    const hasAccess = await canAccessPatient(req.user, { id: req.params.id });
+    if (!hasAccess) return res.status(403).json({ success: false, error: 'Access denied' });
     const status = await portalService.getPortalStatus(req.params.id);
     res.json({ success: true, data: status });
   } catch (error) {
@@ -310,6 +317,8 @@ exports.getPortalStatus = async (req, res, next) => {
  */
 exports.activatePortal = async (req, res, next) => {
   try {
+    const hasAccess = await canAccessPatient(req.user, { id: req.params.id });
+    if (!hasAccess) return res.status(403).json({ success: false, error: 'Access denied' });
     const status = await portalService.activatePortal(req.params.id, req.user.id);
     res.json({ success: true, data: status, message: 'Portal activated. Invitation email sent.' });
   } catch (error) {
@@ -325,6 +334,8 @@ exports.activatePortal = async (req, res, next) => {
  */
 exports.deactivatePortal = async (req, res, next) => {
   try {
+    const hasAccess = await canAccessPatient(req.user, { id: req.params.id });
+    if (!hasAccess) return res.status(403).json({ success: false, error: 'Access denied' });
     const status = await portalService.deactivatePortal(req.params.id);
     res.json({ success: true, data: status, message: 'Portal deactivated.' });
   } catch (error) {
@@ -340,6 +351,8 @@ exports.deactivatePortal = async (req, res, next) => {
  */
 exports.reactivatePortal = async (req, res, next) => {
   try {
+    const hasAccess = await canAccessPatient(req.user, { id: req.params.id });
+    if (!hasAccess) return res.status(403).json({ success: false, error: 'Access denied' });
     const status = await portalService.reactivatePortal(req.params.id);
     res.json({ success: true, data: status, message: 'Portal reactivated.' });
   } catch (error) {
@@ -355,6 +368,8 @@ exports.reactivatePortal = async (req, res, next) => {
  */
 exports.resendInvitation = async (req, res, next) => {
   try {
+    const hasAccess = await canAccessPatient(req.user, { id: req.params.id });
+    if (!hasAccess) return res.status(403).json({ success: false, error: 'Access denied' });
     const status = await portalService.resendInvitation(req.params.id);
     res.json({ success: true, data: status, message: 'Invitation email resent.' });
   } catch (error) {
@@ -370,10 +385,12 @@ exports.resendInvitation = async (req, res, next) => {
  */
 exports.sendPortalPasswordReset = async (req, res, next) => {
   try {
+    const hasAccess = await canAccessPatient(req.user, { id: req.params.id });
+    if (!hasAccess) return res.status(403).json({ success: false, error: 'Access denied' });
     const status = await portalService.sendPasswordReset(req.params.id);
     res.json({ success: true, data: status, message: 'Password reset email sent.' });
   } catch (error) {
-    if (error.message.includes('not active') || error.message.includes('does not have') || error.message.includes('not active')) {
+    if (error.message.includes('not active') || error.message.includes('does not have')) {
       return res.status(400).json({ success: false, error: error.message });
     }
     next(error);
@@ -437,7 +454,7 @@ async function getObjectivesFromVisits(patientId) {
 exports.getPatientObjectives = async (req, res, next) => {
   try {
     const patientId = req.params.patientId || req.params.id;
-    const hasAccess = await canAccessPatient(req.user, patientId);
+    const hasAccess = await canAccessPatient(req.user, { id: patientId });
     if (!hasAccess) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }

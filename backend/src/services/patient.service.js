@@ -496,13 +496,13 @@ async function updatePatient(patientId, updateData, user, requestMetadata = {}) 
       throw error;
     }
 
-    // RBAC: In POC system, DIETITIANS can update all patients
-    // (Original restrictive logic commented out for POC purposes)
-    // if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
-    //   const error = new Error('Access denied. You can only update your assigned patients');
-    //   error.statusCode = 403;
-    //   throw error;
-    // }
+    // RBAC: verify the requesting user can access this patient
+    const hasAccess = await canAccessPatient(user, patient);
+    if (!hasAccess) {
+      const error = new Error('Access denied. You can only update your assigned patients');
+      error.statusCode = 403;
+      throw error;
+    }
 
     // Extract tags from update data if present
     const { tags, ...patientFields } = updateData;
@@ -623,13 +623,13 @@ async function deletePatient(patientId, user, requestMetadata = {}) {
       };
     }
 
-    // RBAC: In POC system, DIETITIANS can delete all patients
-    // (Original restrictive logic commented out for POC purposes)
-    // if (user.role.name === 'DIETITIAN' && patient.assigned_dietitian_id !== user.id) {
-    //   const error = new Error('Access denied. You can only delete your assigned patients');
-    //   error.statusCode = 403;
-    //   throw error;
-    // }
+    // RBAC: verify the requesting user can access this patient
+    const hasAccess = await canAccessPatient(user, patient);
+    if (!hasAccess) {
+      const error = new Error('Access denied. You can only delete your assigned patients');
+      error.statusCode = 403;
+      throw error;
+    }
 
     // Capture before state
     const beforeData = patient.toJSON();

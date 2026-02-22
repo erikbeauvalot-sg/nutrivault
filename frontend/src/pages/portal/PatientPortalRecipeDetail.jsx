@@ -113,7 +113,7 @@ const PatientPortalRecipeDetail = () => {
             </>
           )}
 
-          {recipe.source_url && (
+          {recipe.source_url && /^https?:\/\//i.test(recipe.source_url) && (
             <div className="mt-3">
               <a href={recipe.source_url} target="_blank" rel="noopener noreferrer">
                 🔗 {t('portal.sourceUrl', 'Source de la recette')}

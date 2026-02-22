@@ -13,9 +13,9 @@ const AUTH_TAG_LENGTH = 16;
  * Get the encryption key (32 bytes for AES-256)
  */
 function getKey() {
-  const raw = process.env.SMTP_ENCRYPTION_KEY || process.env.JWT_SECRET;
+  const raw = process.env.SMTP_ENCRYPTION_KEY;
   if (!raw) {
-    throw new Error('No encryption key available. Set SMTP_ENCRYPTION_KEY or JWT_SECRET.');
+    throw new Error('SMTP_ENCRYPTION_KEY environment variable is required for SMTP password encryption.');
   }
   // Hash to ensure exactly 32 bytes
   return crypto.createHash('sha256').update(raw).digest();

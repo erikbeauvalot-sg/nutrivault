@@ -189,8 +189,7 @@ function getAvailableProviders() {
       id: key,
       name: provider.name,
       configured: isConfigured,
-      models: provider.models,
-      envKey: provider.envKey
+      models: provider.models
     });
   }
 
