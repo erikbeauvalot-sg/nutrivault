@@ -270,7 +270,17 @@ async function seedBaseData() {
     { code: 'portal.own_visits', description: 'View own visits', resource: 'portal', action: 'own_visits' },
     { code: 'portal.own_documents', description: 'View own documents', resource: 'portal', action: 'own_documents' },
     { code: 'portal.own_recipes', description: 'View own recipes', resource: 'portal', action: 'own_recipes' },
-    { code: 'portal.own_profile', description: 'View and update own profile', resource: 'portal', action: 'own_profile' }
+    { code: 'portal.own_profile', description: 'View and update own profile', resource: 'portal', action: 'own_profile' },
+
+    // Dashboard permissions
+    { code: 'dashboard.read', description: 'View dashboard', resource: 'dashboard', action: 'read' },
+    { code: 'dashboard.update', description: 'Update dashboard preferences', resource: 'dashboard', action: 'update' },
+
+    // Task permissions
+    { code: 'tasks.read', description: 'View tasks', resource: 'tasks', action: 'read' },
+    { code: 'tasks.create', description: 'Create tasks', resource: 'tasks', action: 'create' },
+    { code: 'tasks.update', description: 'Update tasks', resource: 'tasks', action: 'update' },
+    { code: 'tasks.delete', description: 'Delete tasks', resource: 'tasks', action: 'delete' }
   ];
   const permissions = await db.Permission.bulkCreate(permissionData);
 
@@ -302,7 +312,9 @@ async function seedBaseData() {
     'quotes.read', 'quotes.create', 'quotes.update', 'quotes.send', 'quotes.convert',
     'expenses.read', 'expenses.create', 'expenses.update',
     'finance.read',
-    'accounting.read', 'accounting.create', 'accounting.update'
+    'accounting.read', 'accounting.create', 'accounting.update',
+    'dashboard.read', 'dashboard.update',
+    'tasks.read', 'tasks.create', 'tasks.update', 'tasks.delete'
   ];
   const dietitianPermissions = dietitianPermissionCodes
     .filter(code => permissionMap[code])
