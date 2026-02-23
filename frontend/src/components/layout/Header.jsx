@@ -37,7 +37,7 @@ const Header = ({ onToggleSidebar, hideHamburger = false }) => {
   };
 
   return (
-    <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
+    <Navbar bg="dark" variant="dark" expand="lg" className="mb-0">
       <Container fluid>
         {!hideHamburger && (
           <Button
