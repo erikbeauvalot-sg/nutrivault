@@ -399,7 +399,7 @@ function App() {
       <Route
         path="/settings/custom-fields"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="custom_fields.read">
             <CustomFieldsPage />
           </ProtectedRoute>
         }
@@ -408,7 +408,7 @@ function App() {
       <Route
         path="/settings/custom-fields/categories/:id/view"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="custom_fields.read">
             <CustomFieldCategoryDetailPage />
           </ProtectedRoute>
         }
@@ -417,7 +417,7 @@ function App() {
       <Route
         path="/settings/custom-fields/definitions/:id/view"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="custom_fields.read">
             <CustomFieldDefinitionDetailPage />
           </ProtectedRoute>
         }
@@ -435,7 +435,7 @@ function App() {
       <Route
         path="/settings/measures"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="measures.read">
             <MeasuresPage />
           </ProtectedRoute>
         }
@@ -444,7 +444,7 @@ function App() {
       <Route
         path="/settings/measures/:id/view"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute permission="measures.read">
             <MeasureDetailPage />
           </ProtectedRoute>
         }

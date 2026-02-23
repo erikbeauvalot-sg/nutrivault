@@ -21,7 +21,7 @@ import '../styles/MobileListCards.css';
 
 const MeasuresPage = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
 
   // Restore filter state from localStorage
@@ -63,15 +63,8 @@ const MeasuresPage = () => {
     { id: 'other', name: t('measures.categories.other', 'Other'), icon: '📊' }
   ];
 
-  // Redirect if not admin
   useEffect(() => {
-    if (user && user.role !== 'ADMIN') {
-      navigate('/dashboard');
-    }
-  }, [user, navigate]);
-
-  useEffect(() => {
-    if (user && user.role === 'ADMIN') {
+    if (user && hasPermission('measures.read')) {
       fetchMeasures();
     }
   }, [user]);
@@ -297,12 +290,16 @@ const MeasuresPage = () => {
               <Button variant="outline-secondary" size="sm" onClick={() => setShowExportModal(true)}>
                 {t('measures.exportBtn', 'Export')}
               </Button>
-              <Button variant="outline-secondary" size="sm" onClick={() => setShowImportModal(true)}>
-                {t('measures.importBtn', 'Import')}
-              </Button>
-              <Button variant="primary" size="sm" onClick={handleCreateMeasure}>
-                ➕ {t('measures.newMeasure')}
-              </Button>
+              {hasPermission('measures.create') && (
+                <Button variant="outline-secondary" size="sm" onClick={() => setShowImportModal(true)}>
+                  {t('measures.importBtn', 'Import')}
+                </Button>
+              )}
+              {hasPermission('measures.create') && (
+                <Button variant="primary" size="sm" onClick={handleCreateMeasure}>
+                  ➕ {t('measures.newMeasure')}
+                </Button>
+              )}
             </div>
           </Card.Header>
           <Card.Body>
@@ -490,28 +487,34 @@ const MeasuresPage = () => {
                           </td>
                           <td onClick={(e) => e.stopPropagation()}>
                             <div className="action-buttons">
-                              <ActionButton
-                                action="edit"
-                                onClick={() => handleEditMeasure(measure)}
-                                title={t('common.edit', 'Edit')}
-                              />
-                              <ActionButton
-                                action="translate"
-                                onClick={() => handleTranslateMeasure(measure)}
-                                title={t('measures.actions.translationsTooltip')}
-                              />
-                              {!measure.is_system ? (
+                              {hasPermission('measures.update') && (
                                 <ActionButton
-                                  action="delete"
-                                  onClick={() => handleDeleteMeasure(measure)}
-                                  title={t('common.delete', 'Delete')}
+                                  action="edit"
+                                  onClick={() => handleEditMeasure(measure)}
+                                  title={t('common.edit', 'Edit')}
                                 />
-                              ) : (
+                              )}
+                              {hasPermission('measures.update') && (
                                 <ActionButton
-                                  action="delete"
-                                  disabled={true}
-                                  title={t('measures.systemMeasureTooltip', 'System measures cannot be deleted')}
+                                  action="translate"
+                                  onClick={() => handleTranslateMeasure(measure)}
+                                  title={t('measures.actions.translationsTooltip')}
                                 />
+                              )}
+                              {hasPermission('measures.delete') && (
+                                !measure.is_system ? (
+                                  <ActionButton
+                                    action="delete"
+                                    onClick={() => handleDeleteMeasure(measure)}
+                                    title={t('common.delete', 'Delete')}
+                                  />
+                                ) : (
+                                  <ActionButton
+                                    action="delete"
+                                    disabled={true}
+                                    title={t('measures.systemMeasureTooltip', 'System measures cannot be deleted')}
+                                  />
+                                )
                               )}
                             </div>
                           </td>
@@ -563,28 +566,34 @@ const MeasuresPage = () => {
                         className="list-card-actions"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <ActionButton
-                          action="edit"
-                          onClick={() => handleEditMeasure(measure)}
-                          title={t('common.edit', 'Edit')}
-                        />
-                        <ActionButton
-                          action="translate"
-                          onClick={() => handleTranslateMeasure(measure)}
-                          title={t('measures.actions.translationsTooltip')}
-                        />
-                        {!measure.is_system ? (
+                        {hasPermission('measures.update') && (
                           <ActionButton
-                            action="delete"
-                            onClick={() => handleDeleteMeasure(measure)}
-                            title={t('common.delete', 'Delete')}
+                            action="edit"
+                            onClick={() => handleEditMeasure(measure)}
+                            title={t('common.edit', 'Edit')}
                           />
-                        ) : (
+                        )}
+                        {hasPermission('measures.update') && (
                           <ActionButton
-                            action="delete"
-                            disabled={true}
-                            title={t('measures.systemMeasureTooltip', 'System measures cannot be deleted')}
+                            action="translate"
+                            onClick={() => handleTranslateMeasure(measure)}
+                            title={t('measures.actions.translationsTooltip')}
                           />
+                        )}
+                        {hasPermission('measures.delete') && (
+                          !measure.is_system ? (
+                            <ActionButton
+                              action="delete"
+                              onClick={() => handleDeleteMeasure(measure)}
+                              title={t('common.delete', 'Delete')}
+                            />
+                          ) : (
+                            <ActionButton
+                              action="delete"
+                              disabled={true}
+                              title={t('measures.systemMeasureTooltip', 'System measures cannot be deleted')}
+                            />
+                          )
                         )}
                       </div>
                     </div>

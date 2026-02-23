@@ -34,7 +34,7 @@ const reorder = (list, startIndex, endIndex) => {
 
 const CustomFieldsPage = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
 
   // Restore filter state from localStorage
@@ -78,15 +78,8 @@ const CustomFieldsPage = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
 
-  // Redirect if not admin
   useEffect(() => {
-    if (user && user.role !== 'ADMIN') {
-      navigate('/dashboard');
-    }
-  }, [user, navigate]);
-
-  useEffect(() => {
-    if (user && user.role === 'ADMIN') {
+    if (user && hasPermission('custom_fields.read')) {
       fetchData();
     }
   }, [user]);
@@ -490,13 +483,15 @@ const CustomFieldsPage = () => {
                 >
                   📤 {t('customFields.exportBtn', 'Export')}
                 </Button>
-                <Button
-                  variant="outline-success"
-                  size="sm"
-                  onClick={() => setShowImportModal(true)}
-                >
-                  📥 {t('customFields.importBtn', 'Import')}
-                </Button>
+                {hasPermission('custom_fields.create') && (
+                  <Button
+                    variant="outline-success"
+                    size="sm"
+                    onClick={() => setShowImportModal(true)}
+                  >
+                    📥 {t('customFields.importBtn', 'Import')}
+                  </Button>
+                )}
               </div>
             </div>
           </Col>
@@ -518,9 +513,11 @@ const CustomFieldsPage = () => {
             <Card>
               <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h5 className="mb-0">{t('customFields.categoriesTitle', 'Field Categories')}</h5>
-                <Button variant="primary" size="sm" onClick={handleCreateCategory}>
-                  ➕ {t('customFields.newCategory', 'New Category')}
-                </Button>
+                {hasPermission('custom_fields.create') && (
+                  <Button variant="primary" size="sm" onClick={handleCreateCategory}>
+                    ➕ {t('customFields.newCategory', 'New Category')}
+                  </Button>
+                )}
               </Card.Header>
               <Card.Body>
                 {/* Search Bar */}
@@ -626,12 +623,18 @@ const CustomFieldsPage = () => {
                                         <td><Badge bg="secondary">{fieldCount} {t('customFields.fields', 'fields')}</Badge></td>
                                         <td onClick={(e) => e.stopPropagation()}>
                                           <div className="action-buttons">
-                                            <ActionButton action="duplicate" onClick={() => handleDuplicateCategory(category)} title={t('common.duplicate', 'Duplicate')} />
-                                            <ActionButton action="edit" onClick={() => handleEditCategory(category)} title={t('common.edit', 'Edit')} />
-                                            {fieldCount === 0 ? (
-                                              <ActionButton action="delete" onClick={() => handleDeleteCategory(category)} title={category.is_active ? t('common.deactivate', 'Deactivate') : t('common.deletePermanently', 'Delete permanently')} />
-                                            ) : (
-                                              <ActionButton action="delete" disabled={true} title={t('customFields.cannotDeleteCategoryWithFields', 'Cannot delete category with fields')} />
+                                            {hasPermission('custom_fields.create') && (
+                                              <ActionButton action="duplicate" onClick={() => handleDuplicateCategory(category)} title={t('common.duplicate', 'Duplicate')} />
+                                            )}
+                                            {hasPermission('custom_fields.update') && (
+                                              <ActionButton action="edit" onClick={() => handleEditCategory(category)} title={t('common.edit', 'Edit')} />
+                                            )}
+                                            {hasPermission('custom_fields.delete') && (
+                                              fieldCount === 0 ? (
+                                                <ActionButton action="delete" onClick={() => handleDeleteCategory(category)} title={category.is_active ? t('common.deactivate', 'Deactivate') : t('common.deletePermanently', 'Delete permanently')} />
+                                              ) : (
+                                                <ActionButton action="delete" disabled={true} title={t('customFields.cannotDeleteCategoryWithFields', 'Cannot delete category with fields')} />
+                                              )
                                             )}
                                           </div>
                                         </td>
@@ -688,11 +691,15 @@ const CustomFieldsPage = () => {
                                         </span>
                                       </div>
                                       <div className="card-mobile-actions" onClick={(e) => e.stopPropagation()}>
-                                        <ActionButton action="edit" onClick={() => handleEditCategory(category)} title={t('common.edit', 'Edit')} />
-                                        {fieldCount === 0 ? (
-                                          <ActionButton action="delete" onClick={() => handleDeleteCategory(category)} title={category.is_active ? t('common.deactivate', 'Deactivate') : t('common.deletePermanently', 'Delete permanently')} />
-                                        ) : (
-                                          <ActionButton action="delete" disabled={true} title={t('customFields.cannotDeleteCategoryWithFields', 'Cannot delete category with fields')} />
+                                        {hasPermission('custom_fields.update') && (
+                                          <ActionButton action="edit" onClick={() => handleEditCategory(category)} title={t('common.edit', 'Edit')} />
+                                        )}
+                                        {hasPermission('custom_fields.delete') && (
+                                          fieldCount === 0 ? (
+                                            <ActionButton action="delete" onClick={() => handleDeleteCategory(category)} title={category.is_active ? t('common.deactivate', 'Deactivate') : t('common.deletePermanently', 'Delete permanently')} />
+                                          ) : (
+                                            <ActionButton action="delete" disabled={true} title={t('customFields.cannotDeleteCategoryWithFields', 'Cannot delete category with fields')} />
+                                          )
                                         )}
                                       </div>
                                     </div>
@@ -716,9 +723,11 @@ const CustomFieldsPage = () => {
             <Card>
               <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h5 className="mb-0">{t('customFields.fieldDefinitionsTitle', 'Field Definitions')}</h5>
-                <Button variant="primary" size="sm" onClick={handleCreateDefinition}>
-                  ➕ {t('customFields.newField', 'New Field')}
-                </Button>
+                {hasPermission('custom_fields.create') && (
+                  <Button variant="primary" size="sm" onClick={handleCreateDefinition}>
+                    ➕ {t('customFields.newField', 'New Field')}
+                  </Button>
+                )}
               </Card.Header>
               <Card.Body>
                 {/* Search Bar and Category Filter */}
@@ -893,9 +902,15 @@ const CustomFieldsPage = () => {
                                       <td>{definition.is_active ? <Badge bg="success">{t('common.active', 'Active')}</Badge> : <Badge bg="secondary">{t('common.inactive', 'Inactive')}</Badge>}</td>
                                       <td onClick={(e) => e.stopPropagation()}>
                                         <div className="action-buttons">
-                                          <ActionButton action="duplicate" onClick={() => handleDuplicateDefinition(definition)} title={t('common.duplicate', 'Duplicate')} />
-                                          <ActionButton action="edit" onClick={() => handleEditDefinition(definition)} title={t('common.edit', 'Edit')} />
-                                          <ActionButton action="delete" onClick={() => handleDeleteDefinition(definition.id)} title={t('common.delete', 'Delete')} />
+                                          {hasPermission('custom_fields.create') && (
+                                            <ActionButton action="duplicate" onClick={() => handleDuplicateDefinition(definition)} title={t('common.duplicate', 'Duplicate')} />
+                                          )}
+                                          {hasPermission('custom_fields.update') && (
+                                            <ActionButton action="edit" onClick={() => handleEditDefinition(definition)} title={t('common.edit', 'Edit')} />
+                                          )}
+                                          {hasPermission('custom_fields.delete') && (
+                                            <ActionButton action="delete" onClick={() => handleDeleteDefinition(definition.id)} title={t('common.delete', 'Delete')} />
+                                          )}
                                         </div>
                                       </td>
                                     </tr>
@@ -947,8 +962,12 @@ const CustomFieldsPage = () => {
                                       {definition.is_required && <Badge bg="warning" text="dark">{t('customFields.required', 'Required')}</Badge>}
                                     </div>
                                     <div className="card-mobile-actions" onClick={(e) => e.stopPropagation()}>
-                                      <ActionButton action="edit" onClick={() => handleEditDefinition(definition)} title={t('common.edit', 'Edit')} />
-                                      <ActionButton action="delete" onClick={() => handleDeleteDefinition(definition.id)} title={t('common.delete', 'Delete')} />
+                                      {hasPermission('custom_fields.update') && (
+                                        <ActionButton action="edit" onClick={() => handleEditDefinition(definition)} title={t('common.edit', 'Edit')} />
+                                      )}
+                                      {hasPermission('custom_fields.delete') && (
+                                        <ActionButton action="delete" onClick={() => handleDeleteDefinition(definition.id)} title={t('common.delete', 'Delete')} />
+                                      )}
                                     </div>
                                   </div>
                                 )}
@@ -970,9 +989,11 @@ const CustomFieldsPage = () => {
             <Card>
               <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h5 className="mb-0">{t('visitTypes.titleManagement', 'Visit Types Management')}</h5>
-                <Button variant="primary" size="sm" onClick={handleCreateVisitType}>
-                  ➕ {t('visitTypes.newVisitType', 'New Visit Type')}
-                </Button>
+                {hasPermission('custom_fields.create') && (
+                  <Button variant="primary" size="sm" onClick={handleCreateVisitType}>
+                    ➕ {t('visitTypes.newVisitType', 'New Visit Type')}
+                  </Button>
+                )}
               </Card.Header>
               <Card.Body>
                 {/* Search Bar */}
@@ -1093,16 +1114,20 @@ const CustomFieldsPage = () => {
                               </td>
                               <td>
                                 <div className="action-buttons">
-                                  <ActionButton
-                                    action="edit"
-                                    onClick={() => handleEditVisitType(visitType)}
-                                    title={t('common.edit', 'Edit')}
-                                  />
-                                  <ActionButton
-                                    action="delete"
-                                    onClick={() => handleDeleteVisitType(visitType.id)}
-                                    title={t('common.delete', 'Delete')}
-                                  />
+                                  {hasPermission('custom_fields.update') && (
+                                    <ActionButton
+                                      action="edit"
+                                      onClick={() => handleEditVisitType(visitType)}
+                                      title={t('common.edit', 'Edit')}
+                                    />
+                                  )}
+                                  {hasPermission('custom_fields.delete') && (
+                                    <ActionButton
+                                      action="delete"
+                                      onClick={() => handleDeleteVisitType(visitType.id)}
+                                      title={t('common.delete', 'Delete')}
+                                    />
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -1165,16 +1190,20 @@ const CustomFieldsPage = () => {
                           </div>
 
                           <div className="card-mobile-actions">
-                            <ActionButton
-                              action="edit"
-                              onClick={() => handleEditVisitType(visitType)}
-                              title={t('common.edit', 'Edit')}
-                            />
-                            <ActionButton
-                              action="delete"
-                              onClick={() => handleDeleteVisitType(visitType.id)}
-                              title={t('common.delete', 'Delete')}
-                            />
+                            {hasPermission('custom_fields.update') && (
+                              <ActionButton
+                                action="edit"
+                                onClick={() => handleEditVisitType(visitType)}
+                                title={t('common.edit', 'Edit')}
+                              />
+                            )}
+                            {hasPermission('custom_fields.delete') && (
+                              <ActionButton
+                                action="delete"
+                                onClick={() => handleDeleteVisitType(visitType.id)}
+                                title={t('common.delete', 'Delete')}
+                              />
+                            )}
                           </div>
                         </div>
                       ))}

@@ -20,7 +20,7 @@ const MeasureDetailPage = () => {
   const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -39,8 +39,6 @@ const MeasureDetailPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingMeasure, setDeletingMeasure] = useState(null);
   const [deleting, setDeleting] = useState(false);
-
-  const isAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
     fetchData();
@@ -292,7 +290,7 @@ const MeasureDetailPage = () => {
                 <Table striped bordered hover size="sm" className="mb-0">
                   <thead className="table-secondary">
                     <tr>
-                      {isAdmin && <th style={{ width: '80px' }}>Actions</th>}
+                      {hasPermission('measures.update') && <th style={{ width: '80px' }}>Actions</th>}
                       <th>ID</th>
                       <th>Patient ID</th>
                       <th>Patient Name</th>
@@ -312,7 +310,7 @@ const MeasureDetailPage = () => {
                   <tbody>
                     {(displayLimit === 'all' ? measures : measures.slice(0, displayLimit)).map(measure => (
                       <tr key={measure.id}>
-                        {isAdmin && (
+                        {hasPermission('measures.update') && (
                           <td>
                             <div className="d-flex gap-1">
                               <Button
@@ -323,14 +321,16 @@ const MeasureDetailPage = () => {
                               >
                                 <FaEdit />
                               </Button>
-                              <Button
-                                variant="outline-danger"
-                                size="sm"
-                                title={t('actions.delete', 'Delete')}
-                                onClick={() => handleDeleteClick(measure)}
-                              >
-                                <FaTrash />
-                              </Button>
+                              {hasPermission('measures.delete') && (
+                                <Button
+                                  variant="outline-danger"
+                                  size="sm"
+                                  title={t('actions.delete', 'Delete')}
+                                  onClick={() => handleDeleteClick(measure)}
+                                >
+                                  <FaTrash />
+                                </Button>
+                              )}
                             </div>
                           </td>
                         )}

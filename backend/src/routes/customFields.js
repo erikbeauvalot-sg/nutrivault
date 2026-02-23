@@ -14,7 +14,7 @@ const customFieldCategoryController = require('../controllers/customFieldCategor
 const customFieldDefinitionController = require('../controllers/customFieldDefinitionController');
 const customFieldTranslationController = require('../controllers/customFieldTranslationController');
 const authenticate = require('../middleware/authenticate');
-const { requirePermission, requireRole } = require('../middleware/rbac');
+const { requirePermission } = require('../middleware/rbac');
 
 // ===========================================
 // Category Routes
@@ -23,36 +23,36 @@ const { requirePermission, requireRole } = require('../middleware/rbac');
 /**
  * GET /api/custom-fields/categories
  * Get all categories
- * Permission: patients.read
+ * Permission: custom_fields.read
  */
 router.get(
   '/categories',
   authenticate,
-  requirePermission('patients.read'),
+  requirePermission('custom_fields.read'),
   customFieldCategoryController.getAllCategories
 );
 
 /**
  * GET /api/custom-fields/categories/:id
  * Get category by ID
- * Permission: patients.read
+ * Permission: custom_fields.read
  */
 router.get(
   '/categories/:id',
   authenticate,
-  requirePermission('patients.read'),
+  requirePermission('custom_fields.read'),
   customFieldCategoryController.getCategoryById
 );
 
 /**
  * POST /api/custom-fields/categories
  * Create a new category
- * Role: ADMIN only
+ * Permission: custom_fields.create
  */
 router.post(
   '/categories',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.create'),
   customFieldCategoryController.validateCreateCategory,
   customFieldCategoryController.createCategory
 );
@@ -60,12 +60,12 @@ router.post(
 /**
  * PUT /api/custom-fields/categories/:id
  * Update a category
- * Role: ADMIN only
+ * Permission: custom_fields.update
  */
 router.put(
   '/categories/:id',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.update'),
   customFieldCategoryController.validateUpdateCategory,
   customFieldCategoryController.updateCategory
 );
@@ -73,24 +73,24 @@ router.put(
 /**
  * DELETE /api/custom-fields/categories/:id
  * Delete a category (soft delete)
- * Role: ADMIN only
+ * Permission: custom_fields.delete
  */
 router.delete(
   '/categories/:id',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.delete'),
   customFieldCategoryController.deleteCategory
 );
 
 /**
  * POST /api/custom-fields/categories/reorder
  * Reorder categories
- * Role: ADMIN only
+ * Permission: custom_fields.update
  */
 router.post(
   '/categories/reorder',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.update'),
   customFieldCategoryController.validateReorderCategories,
   customFieldCategoryController.reorderCategories
 );
@@ -98,12 +98,12 @@ router.post(
 /**
  * POST /api/custom-fields/categories/:id/duplicate
  * Duplicate a category
- * Role: ADMIN only
+ * Permission: custom_fields.create
  */
 router.post(
   '/categories/:id/duplicate',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.create'),
   customFieldCategoryController.duplicateCategory
 );
 
@@ -114,26 +114,26 @@ router.post(
 /**
  * POST /api/custom-fields/export
  * Export categories with their field definitions
- * Role: ADMIN only
+ * Permission: custom_fields.read
  * Body: { categoryIds: [...] } - optional array of category IDs (empty = all)
  */
 router.post(
   '/export',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.read'),
   customFieldCategoryController.exportCategories
 );
 
 /**
  * POST /api/custom-fields/import
  * Import categories with their field definitions
- * Role: ADMIN only
+ * Permission: custom_fields.create
  * Body: { importData: {...}, options: { skipExisting: true, updateExisting: false } }
  */
 router.post(
   '/import',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.create'),
   customFieldCategoryController.validateImport,
   customFieldCategoryController.importCategories
 );
@@ -141,12 +141,12 @@ router.post(
 /**
  * POST /api/custom-fields/definitions/:id/duplicate
  * Duplicate a field definition
- * Role: ADMIN only
+ * Permission: custom_fields.create
  */
 router.post(
   '/definitions/:id/duplicate',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.create'),
   customFieldDefinitionController.duplicateDefinition
 );
 
@@ -157,48 +157,48 @@ router.post(
 /**
  * GET /api/custom-fields/definitions
  * Get all active field definitions
- * Permission: patients.read
+ * Permission: custom_fields.read
  */
 router.get(
   '/definitions',
   authenticate,
-  requirePermission('patients.read'),
+  requirePermission('custom_fields.read'),
   customFieldDefinitionController.getAllActiveDefinitions
 );
 
 /**
  * GET /api/custom-fields/definitions/category/:categoryId
  * Get definitions by category
- * Permission: patients.read
+ * Permission: custom_fields.read
  */
 router.get(
   '/definitions/category/:categoryId',
   authenticate,
-  requirePermission('patients.read'),
+  requirePermission('custom_fields.read'),
   customFieldDefinitionController.getDefinitionsByCategory
 );
 
 /**
  * GET /api/custom-fields/definitions/:id
  * Get definition by ID
- * Permission: patients.read
+ * Permission: custom_fields.read
  */
 router.get(
   '/definitions/:id',
   authenticate,
-  requirePermission('patients.read'),
+  requirePermission('custom_fields.read'),
   customFieldDefinitionController.getDefinitionById
 );
 
 /**
  * POST /api/custom-fields/definitions
  * Create a new field definition
- * Role: ADMIN only
+ * Permission: custom_fields.create
  */
 router.post(
   '/definitions',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.create'),
   customFieldDefinitionController.validateCreateDefinition,
   customFieldDefinitionController.createDefinition
 );
@@ -206,12 +206,12 @@ router.post(
 /**
  * PUT /api/custom-fields/definitions/:id
  * Update a field definition
- * Role: ADMIN only
+ * Permission: custom_fields.update
  */
 router.put(
   '/definitions/:id',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.update'),
   customFieldDefinitionController.validateUpdateDefinition,
   customFieldDefinitionController.updateDefinition
 );
@@ -219,24 +219,24 @@ router.put(
 /**
  * DELETE /api/custom-fields/definitions/:id
  * Delete a field definition (soft delete)
- * Role: ADMIN only
+ * Permission: custom_fields.delete
  */
 router.delete(
   '/definitions/:id',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.delete'),
   customFieldDefinitionController.deleteDefinition
 );
 
 /**
  * POST /api/custom-fields/definitions/reorder
  * Reorder field definitions
- * Role: ADMIN only
+ * Permission: custom_fields.update
  */
 router.post(
   '/definitions/reorder',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.update'),
   customFieldDefinitionController.validateReorderFields,
   customFieldDefinitionController.reorderFields
 );
@@ -248,12 +248,12 @@ router.post(
 /**
  * GET /api/custom-fields/:entityType/:entityId/translations
  * Get all translations for an entity (all languages)
- * Role: ADMIN only
+ * Permission: custom_fields.update
  */
 router.get(
   '/:entityType/:entityId/translations',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.update'),
   customFieldTranslationController.translationValidation.entityType,
   customFieldTranslationController.translationValidation.entityId,
   customFieldTranslationController.getAllTranslations
@@ -262,12 +262,12 @@ router.get(
 /**
  * GET /api/custom-fields/:entityType/:entityId/translations/:languageCode
  * Get translations for an entity in a specific language
- * Role: ADMIN only
+ * Permission: custom_fields.update
  */
 router.get(
   '/:entityType/:entityId/translations/:languageCode',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.update'),
   customFieldTranslationController.translationValidation.entityType,
   customFieldTranslationController.translationValidation.entityId,
   customFieldTranslationController.translationValidation.languageCode,
@@ -277,14 +277,14 @@ router.get(
 /**
  * POST /api/custom-fields/:entityType/:entityId/translations/:languageCode
  * Set translations for an entity in a specific language (bulk)
- * Role: ADMIN only
+ * Permission: custom_fields.update
  * Body: { name: "...", description: "..." } for categories
  *       { field_label: "...", help_text: "..." } for definitions
  */
 router.post(
   '/:entityType/:entityId/translations/:languageCode',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.update'),
   customFieldTranslationController.translationValidation.entityType,
   customFieldTranslationController.translationValidation.entityId,
   customFieldTranslationController.translationValidation.languageCode,
@@ -295,13 +295,13 @@ router.post(
 /**
  * PUT /api/custom-fields/:entityType/:entityId/translations/:languageCode/:fieldName
  * Set a single translation
- * Role: ADMIN only
+ * Permission: custom_fields.update
  * Body: { value: "..." }
  */
 router.put(
   '/:entityType/:entityId/translations/:languageCode/:fieldName',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.update'),
   customFieldTranslationController.translationValidation.entityType,
   customFieldTranslationController.translationValidation.entityId,
   customFieldTranslationController.translationValidation.languageCode,
@@ -313,12 +313,12 @@ router.put(
 /**
  * DELETE /api/custom-fields/translations/:translationId
  * Delete a translation
- * Role: ADMIN only
+ * Permission: custom_fields.update
  */
 router.delete(
   '/translations/:translationId',
   authenticate,
-  requireRole('ADMIN'),
+  requirePermission('custom_fields.update'),
   customFieldTranslationController.deleteTranslation
 );
 

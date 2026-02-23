@@ -7,8 +7,8 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const ProtectedRoute = ({ children, requiredPermission = null }) => {
-  const { user, loading, isAuthenticated } = useAuth();
+const ProtectedRoute = ({ children, permission = null }) => {
+  const { user, loading, isAuthenticated, hasPermission } = useAuth();
 
   // Show loading spinner while checking authentication
   if (loading) {
@@ -32,10 +32,9 @@ const ProtectedRoute = ({ children, requiredPermission = null }) => {
     return <Navigate to="/portal" replace />;
   }
 
-  // Check permission if required (optional - for future use)
-  if (requiredPermission && user) {
-    const hasPermission = user.permissions?.includes(requiredPermission);
-    if (!hasPermission) {
+  // Check permission if required
+  if (permission && user) {
+    if (!hasPermission(permission)) {
       return (
         <div className="container mt-5">
           <div className="alert alert-danger">
