@@ -74,6 +74,7 @@ const DashboardSettingsPage = lazy(() => import('./pages/DashboardSettingsPage')
 const ConsultationTemplatesPage = lazy(() => import('./pages/ConsultationTemplatesPage'));
 const ConsultationTemplateEditorPage = lazy(() => import('./pages/ConsultationTemplateEditorPage'));
 const ConsultationNoteEditorPage = lazy(() => import('./pages/ConsultationNoteEditorPage'));
+const SessionsPage = lazy(() => import('./pages/SessionsPage'));
 
 // Patient Portal pages
 const PatientPortalDashboard = lazy(() => import('./pages/portal/PatientPortalDashboard'));
@@ -555,6 +556,15 @@ function App() {
         element={
           <ProtectedRoute>
             <SidebarMenuConfigPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/sessions"
+        element={
+          <ProtectedRoute permission="sessions.read">
+            <SessionsPage />
           </ProtectedRoute>
         }
       />

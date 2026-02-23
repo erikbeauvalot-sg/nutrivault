@@ -34,7 +34,10 @@ class AuthController {
 
       const { username, password, rememberMe } = req.body;
 
-      const result = await authService.login(username, password, rememberMe === true);
+      const result = await authService.login(username, password, rememberMe === true, {
+        userAgent: req.headers['user-agent'] || null,
+        ipAddress: req.ip || req.connection?.remoteAddress || null
+      });
 
       res.status(200).json({
         success: true,

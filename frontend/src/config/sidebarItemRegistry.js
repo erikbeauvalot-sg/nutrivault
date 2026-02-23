@@ -48,6 +48,7 @@ const SIDEBAR_ITEMS = {
   discord:           { path: '/settings/discord',          icon: '🔔', labelKey: 'navigation.discord',       section: 'settings' },
   'dashboard-settings': { path: '/settings/dashboard',     icon: '📊', labelKey: 'navigation.dashboardSettings', section: 'settings' },
   'sidebar-config':  { path: '/settings/sidebar-config',   icon: '☰',  labelKey: 'navigation.sidebarConfig', section: 'settings' },
+  sessions:          { path: '/settings/sessions',          icon: '🔑', labelKey: 'navigation.sessions',      section: 'settings' },
 };
 
 /**

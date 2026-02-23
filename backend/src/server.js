@@ -137,6 +137,10 @@ app.use('/api/gdpr', gdprRoutes);
 const customFieldsRoutes = require('./routes/customFields');
 app.use('/api/custom-fields', customFieldsRoutes);
 
+// Session management routes (protected - ADMIN only)
+const sessionRoutes = require('./routes/sessions');
+app.use('/api/sessions', sessionRoutes);
+
 // Role routes (protected - RBAC enforced in routes file)
 const roleRoutes = require('./routes/roles');
 app.use('/api/roles', roleRoutes);

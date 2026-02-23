@@ -91,7 +91,8 @@
     "clients": "Clients",
     "quotes": "Quotes",
     "finance": "Finance",
-    "consultationTemplates": "Consultation Templates"
+    "consultationTemplates": "Consultation Templates",
+    "sessions": "Sessions"
   },
   "sidebar": {
     "groups": {
@@ -101,6 +102,47 @@
       "finance": "Finance",
       "data": "Data",
       "admin": "Administration"
+    }
+  },
+  "sessions": {
+    "title": "Session Management",
+    "subtitle": "Monitor and manage active user sessions",
+    "errorLoading": "Failed to load sessions",
+    "searchPlaceholder": "Search by username or email…",
+    "revokeSession": "Revoke",
+    "revokeAll": "Revoke All",
+    "revokeTitle": "Revoke Session",
+    "revokeConfirm": "Are you sure you want to revoke this session? The user will be logged out immediately.",
+    "revokeUserTitle": "Revoke All Sessions",
+    "revokeUserConfirm": "This will log {{name}} out of all active sessions.",
+    "stats": {
+      "activeSessions": "Active Sessions",
+      "activeUsers": "Users Connected",
+      "logins24h": "Logins (24h)",
+      "revokedToday": "Revoked Today"
+    },
+    "filter": {
+      "active": "Active",
+      "revoked": "Revoked",
+      "all": "All"
+    },
+    "col": {
+      "user": "User",
+      "device": "Device",
+      "ip": "IP Address",
+      "started": "Started",
+      "expires": "Expires",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "revoked": "Revoked",
+      "expired": "Expired"
+    },
+    "empty": {
+      "title": "No sessions found",
+      "description": "No sessions match your current filters."
     }
   },
   "finance": {

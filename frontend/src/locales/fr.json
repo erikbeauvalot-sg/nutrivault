@@ -104,7 +104,8 @@
     "clients": "Clients",
     "quotes": "Devis",
     "finance": "Finance",
-    "consultationTemplates": "Modeles de consultation"
+    "consultationTemplates": "Modeles de consultation",
+    "sessions": "Sessions"
   },
   "sidebar": {
     "groups": {
@@ -114,6 +115,47 @@
       "finance": "Finance",
       "data": "Données",
       "admin": "Administration"
+    }
+  },
+  "sessions": {
+    "title": "Gestion des Sessions",
+    "subtitle": "Surveiller et gérer les sessions utilisateur actives",
+    "errorLoading": "Impossible de charger les sessions",
+    "searchPlaceholder": "Rechercher par nom d'utilisateur ou email…",
+    "revokeSession": "Révoquer",
+    "revokeAll": "Révoquer tout",
+    "revokeTitle": "Révoquer la session",
+    "revokeConfirm": "Êtes-vous sûr de vouloir révoquer cette session ? L'utilisateur sera déconnecté immédiatement.",
+    "revokeUserTitle": "Révoquer toutes les sessions",
+    "revokeUserConfirm": "Cela déconnectera {{name}} de toutes les sessions actives.",
+    "stats": {
+      "activeSessions": "Sessions actives",
+      "activeUsers": "Utilisateurs connectés",
+      "logins24h": "Connexions (24h)",
+      "revokedToday": "Révoquées aujourd'hui"
+    },
+    "filter": {
+      "active": "Actives",
+      "revoked": "Révoquées",
+      "all": "Toutes"
+    },
+    "col": {
+      "user": "Utilisateur",
+      "device": "Appareil",
+      "ip": "Adresse IP",
+      "started": "Démarré le",
+      "expires": "Expire le",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "revoked": "Révoquée",
+      "expired": "Expirée"
+    },
+    "empty": {
+      "title": "Aucune session trouvée",
+      "description": "Aucune session ne correspond aux filtres actuels."
     }
   },
   "finance": {

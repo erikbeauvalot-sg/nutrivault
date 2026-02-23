@@ -15,9 +15,10 @@ class AuthService {
    * @param {string} username - Username
    * @param {string} password - Plain text password
    * @param {boolean} rememberMe - If true, extend token validity to 24h
+   * @param {Object} options - Optional metadata { userAgent, ipAddress }
    * @returns {Object} User object with tokens
    */
-  async login(username, password, rememberMe = false) {
+  async login(username, password, rememberMe = false, options = {}) {
     try {
       // Find user by username, or by email (for patient portal login)
       let user = await db.User.findOne({
@@ -133,7 +134,9 @@ class AuthService {
       await db.RefreshToken.create({
         user_id: user.id,
         token_hash: refreshTokenHash,
-        expires_at: expiresAt
+        expires_at: expiresAt,
+        user_agent: options.userAgent || null,
+        ip_address: options.ipAddress || null
       });
 
       return {

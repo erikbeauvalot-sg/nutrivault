@@ -28,6 +28,14 @@ module.exports = (sequelize, DataTypes) => {
     revoked_at: {
       type: DataTypes.DATE,
       allowNull: true
+    },
+    user_agent: {
+      type: DataTypes.STRING(512),
+      allowNull: true
+    },
+    ip_address: {
+      type: DataTypes.STRING(45),
+      allowNull: true
     }
   }, {
     tableName: 'refresh_tokens',
