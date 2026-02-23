@@ -371,13 +371,6 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   return (
     <div className={`sidebar ${isOpen ? 'show' : ''}`}>
-      <div className="sidebar-brand">
-        <div className="sidebar-brand-icon">🌱</div>
-        <div className="sidebar-brand-text">
-          <span className="sidebar-brand-name">NutriVault</span>
-          <span className="sidebar-brand-sub">Dashboard</span>
-        </div>
-      </div>
       <Nav className="flex-column sidebar-nav">
         {sections.map(sec => {
           const sectionItems = allItems.filter(i => i.section === sec.key);
