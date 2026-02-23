@@ -1,6 +1,6 @@
 {
   "name": "nutrivault",
-  "version": "8.7.16",
+  "version": "8.7.17",
   "description": "",
   "main": "index.js",
   "directories": {
@@ -15,6 +15,9 @@
     "test:frontend": "cd frontend && npm test",
     "test:frontend:watch": "cd frontend && npm run test:watch",
     "test:frontend:coverage": "cd frontend && npm run test:coverage",
+    "test:e2e": "cd e2e && npm test",
+    "test:e2e:headed": "cd e2e && npm run test:headed",
+    "test:e2e:report": "cd e2e && npm run test:report",
     "test:all": "npm run test:backend && npm run test:frontend",
     "db:migrate": "sequelize-cli db:migrate",
     "db:migrate:undo": "sequelize-cli db:migrate:undo",
