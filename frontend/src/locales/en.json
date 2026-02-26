@@ -149,9 +149,33 @@
     "tabs": {
       "overview": "Overview",
       "cashFlow": "Cash Flow",
+      "revenue": "Revenue",
       "expenses": "Expenses",
-      "agingReport": "Aging Report",
-      "entries": "Entries"
+      "entries": "Entries",
+      "forecast": "Forecast",
+      "agingReport": "Aging Report"
+    },
+    "forecast": {
+      "totalExpected": "Expected Revenue",
+      "totalVisits": "Upcoming Consultations",
+      "visits": "consultation(s)",
+      "visitDate": "Date",
+      "visitType": "Type",
+      "status": "Status",
+      "estimatedAmount": "Estimated Amount",
+      "invoice": "Invoice",
+      "noInvoice": "Not billed",
+      "noVisits": "No upcoming consultations"
+    },
+    "revenue": {
+      "totalPaid": "Total Collected",
+      "count": "Payments",
+      "paymentDate": "Payment Date",
+      "invoiceDate": "Invoice Date",
+      "paymentMethod": "Payment Method",
+      "amountTotal": "Amount (incl. tax)",
+      "amountPaid": "Collected",
+      "noRevenue": "No revenue found"
     },
     "kpi": {
       "totalRevenue": "Total Revenue",
@@ -188,7 +212,12 @@
       "lastReminder": "Last Reminder",
       "noOverdue": "No overdue invoices — all clear!",
       "remindersSuccess": "Reminders sent successfully",
-      "selectAll": "Select All"
+      "selectAll": "Select All",
+      "draftsTitle": "Drafts — To be sent",
+      "entriesTitle": "Accounting Entries",
+      "entryCount": "entry(ies)",
+      "daysOld": "Age",
+      "totalEntries": "Total entries"
     },
     "profitLoss": {
       "title": "Profit & Loss",

@@ -517,9 +517,13 @@ async function getDocumentStats(user, requestMetadata = {}) {
 
     const whereClause = { is_active: true };
 
-    // Apply role-based filtering
-    if (user.role.name === 'VIEWER') {
-      whereClause.uploaded_by = user.id;
+    // Apply role-based filtering (ADMIN sees all; others see their own uploads)
+    const dietitianIds = await getScopedDietitianIds(user);
+    if (dietitianIds !== null) {
+      if (dietitianIds.length === 0) {
+        return { totalDocuments: 0, totalSize: 0, byType: [] };
+      }
+      whereClause.uploaded_by = { [Op.in]: dietitianIds };
     }
 
     const stats = await Document.findAll({
@@ -592,22 +596,24 @@ async function searchDocuments(user, filters = {}, requestMetadata = {}) {
       ];
     }
 
-    // RBAC: Scope by uploader (same as getDocuments)
-    const dietitianIds = await getScopedDietitianIds(user);
-    if (dietitianIds !== null) {
-      if (dietitianIds.length === 0) {
-        return { documents: [], total: 0, page: 1, limit: 20, totalPages: 0 };
-      }
-      const scopeCondition = { uploaded_by: { [Op.in]: dietitianIds } };
-      if (whereClause[Op.or]) {
-        const searchOr = whereClause[Op.or];
-        delete whereClause[Op.or];
-        whereClause[Op.and] = [
-          { [Op.or]: searchOr },
-          scopeCondition
-        ];
-      } else {
-        Object.assign(whereClause, scopeCondition);
+    // RBAC: Scope by uploader — skip for templates (shared institutional docs visible to all)
+    if (!filters.is_template) {
+      const dietitianIds = await getScopedDietitianIds(user);
+      if (dietitianIds !== null) {
+        if (dietitianIds.length === 0) {
+          return { documents: [], total: 0, page: 1, limit: 20, totalPages: 0 };
+        }
+        const scopeCondition = { uploaded_by: { [Op.in]: dietitianIds } };
+        if (whereClause[Op.or]) {
+          const searchOr = whereClause[Op.or];
+          delete whereClause[Op.or];
+          whereClause[Op.and] = [
+            { [Op.or]: searchOr },
+            scopeCondition
+          ];
+        } else {
+          Object.assign(whereClause, scopeCondition);
+        }
       }
     }
 

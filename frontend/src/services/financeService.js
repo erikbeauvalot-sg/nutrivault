@@ -20,6 +20,16 @@ export const getCashFlow = async (params = {}) => {
   return response;
 };
 
+export const getRevenue = async (params = {}) => {
+  const response = await api.get('/finance/revenue', { params });
+  return response;
+};
+
+export const getForecast = async (params = {}) => {
+  const response = await api.get('/finance/forecast', { params });
+  return response;
+};
+
 export const sendReminders = async (invoiceIds) => {
   const response = await api.post('/finance/send-reminders', { invoice_ids: invoiceIds });
   return response.data;

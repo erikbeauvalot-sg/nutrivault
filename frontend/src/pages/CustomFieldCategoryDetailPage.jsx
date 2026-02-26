@@ -37,13 +37,8 @@ const CustomFieldCategoryDetailPage = () => {
   const [showDeleteDefinitionConfirm, setShowDeleteDefinitionConfirm] = useState(false);
   const [definitionToDelete, setDefinitionToDelete] = useState(null);
 
-  const isAdmin = user?.role === 'ADMIN';
-
-  useEffect(() => {
-    if (user && user.role !== 'ADMIN') {
-      navigate('/dashboard');
-    }
-  }, [user, navigate]);
+  const roleName = typeof user?.role === 'string' ? user?.role : user?.role?.name;
+  const isAdmin = roleName === 'ADMIN';
 
   useEffect(() => {
     fetchData();

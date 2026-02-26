@@ -155,7 +155,7 @@ async function getDashboard(user, filters = {}) {
 }
 
 /**
- * Get aging report — unpaid invoices grouped by age brackets
+ * Get aging report — unpaid invoices + accounting entries grouped by age brackets
  */
 async function getAgingReport(user) {
   const now = new Date();
@@ -173,13 +173,14 @@ async function getAgingReport(user) {
     order: [['due_date', 'ASC']]
   });
 
-  const brackets = [
+  const makeBrackets = () => [
     { label: '0-30', min: 0, max: 30, count: 0, totalDue: 0, invoices: [] },
     { label: '31-60', min: 31, max: 60, count: 0, totalDue: 0, invoices: [] },
     { label: '61-90', min: 61, max: 90, count: 0, totalDue: 0, invoices: [] },
     { label: '90+', min: 91, max: Infinity, count: 0, totalDue: 0, invoices: [] }
   ];
 
+  const brackets = makeBrackets();
   let totalOverdue = 0;
   let totalAmount = 0;
 
@@ -218,6 +219,70 @@ async function getAgingReport(user) {
     }
   }
 
+  // Draft invoices — not yet sent
+  const draftInvoices = await db.Billing.findAll({
+    where: await buildBillingWhere(user, {
+      status: 'DRAFT',
+      is_active: true
+    }),
+    include: [
+      { model: db.Patient, as: 'patient', attributes: ['id', 'first_name', 'last_name'] }
+    ],
+    order: [['invoice_date', 'DESC']]
+  });
+
+  const draftList = draftInvoices.map(inv => ({
+    id: inv.id,
+    invoice_number: inv.invoice_number,
+    patient: inv.patient ? {
+      id: inv.patient.id,
+      first_name: inv.patient.first_name,
+      last_name: inv.patient.last_name
+    } : null,
+    invoice_date: inv.invoice_date,
+    amount_total: parseFloat(inv.amount_total || 0)
+  }));
+  const totalDraftAmount = draftList.reduce((sum, inv) => sum + inv.amount_total, 0);
+
+  // Accounting entries — grouped by age from entry_date
+  const entryBrackets = makeBrackets();
+  let totalEntries = 0;
+  let totalEntriesAmount = 0;
+
+  const entries = await db.AccountingEntry.findAll({
+    where: await buildEntryWhere(user, { is_active: true }),
+    order: [['entry_date', 'ASC']]
+  });
+
+  for (const entry of entries) {
+    const entryDate = new Date(entry.entry_date);
+    const daysOld = Math.max(0, Math.floor((now - entryDate) / 86400000));
+    const amount = parseFloat(entry.amount || 0);
+
+    totalEntries++;
+    totalEntriesAmount += amount;
+
+    const entryData = {
+      id: entry.id,
+      entry_date: entry.entry_date,
+      description: entry.description,
+      entry_type: entry.entry_type,
+      category: entry.category,
+      reference: entry.reference,
+      amount,
+      days_old: daysOld
+    };
+
+    for (const bracket of entryBrackets) {
+      if (daysOld >= bracket.min && daysOld <= bracket.max) {
+        bracket.count++;
+        bracket.totalDue += amount;
+        bracket.invoices.push(entryData);
+        break;
+      }
+    }
+  }
+
   return {
     brackets: brackets.map(b => ({
       label: b.label,
@@ -226,7 +291,76 @@ async function getAgingReport(user) {
       invoices: b.invoices
     })),
     totalOverdue,
-    totalAmount: parseFloat(totalAmount.toFixed(2))
+    totalAmount: parseFloat(totalAmount.toFixed(2)),
+    draftInvoices: draftList,
+    totalDraftCount: draftList.length,
+    totalDraftAmount: parseFloat(totalDraftAmount.toFixed(2)),
+    entryBrackets: entryBrackets.map(b => ({
+      label: b.label,
+      count: b.count,
+      totalAmount: parseFloat(b.totalDue.toFixed(2)),
+      entries: b.invoices
+    })),
+    totalEntries,
+    totalEntriesAmount: parseFloat(totalEntriesAmount.toFixed(2))
+  };
+}
+
+/**
+ * Get revenue — paid invoices list with optional date range filter
+ */
+async function getRevenue(user, filters = {}) {
+  const dateFilter = {};
+  if (filters.start_date) dateFilter[Op.gte] = filters.start_date;
+  if (filters.end_date) dateFilter[Op.lte] = filters.end_date;
+
+  const billingWhere = await buildBillingWhere(user, {
+    status: 'PAID',
+    is_active: true,
+    ...(filters.start_date || filters.end_date
+      ? { [Op.or]: [
+          { payment_date: dateFilter },
+          { invoice_date: dateFilter }
+        ] }
+      : {})
+  });
+
+  const page = parseInt(filters.page) || 1;
+  const limit = parseInt(filters.limit) || 25;
+  const offset = (page - 1) * limit;
+
+  const { count, rows } = await db.Billing.findAndCountAll({
+    where: billingWhere,
+    include: [
+      { model: db.Patient, as: 'patient', attributes: ['id', 'first_name', 'last_name'] }
+    ],
+    order: [['payment_date', 'DESC'], ['invoice_date', 'DESC']],
+    limit,
+    offset
+  });
+
+  const totalPaid = rows.reduce((sum, inv) => sum + parseFloat(inv.amount_paid || 0), 0);
+
+  return {
+    invoices: rows.map(inv => ({
+      id: inv.id,
+      invoice_number: inv.invoice_number,
+      patient: inv.patient ? {
+        id: inv.patient.id,
+        first_name: inv.patient.first_name,
+        last_name: inv.patient.last_name
+      } : null,
+      invoice_date: inv.invoice_date,
+      payment_date: inv.payment_date,
+      amount_total: parseFloat(inv.amount_total || 0),
+      amount_paid: parseFloat(inv.amount_paid || 0),
+      payment_method: inv.payment_method
+    })),
+    total: count,
+    page,
+    limit,
+    totalPages: Math.ceil(count / limit),
+    totalPaid: parseFloat(totalPaid.toFixed(2))
   };
 }
 
@@ -294,8 +428,110 @@ async function getCashFlow(user, filters = {}) {
   return data;
 }
 
+/**
+ * Get forecast — upcoming scheduled visits with estimated revenue
+ * Groups by month and uses VisitType.default_price (or existing invoice amount) per visit
+ */
+async function getForecast(user, filters = {}) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Default: next 3 months (end of day on last day); honour explicit end_date filter
+  const endDate = filters.end_date
+    ? new Date(filters.end_date)
+    : new Date(now.getFullYear(), now.getMonth() + 4, 0, 23, 59, 59);
+
+  const visitWhere = {
+    visit_date: { [Op.gte]: today, [Op.lte]: endDate },
+    status: { [Op.in]: ['SCHEDULED', 'REQUESTED'] }
+  };
+
+  // RBAC scope
+  const dietitianIds = await getScopedDietitianIds(user);
+  if (dietitianIds !== null) {
+    if (dietitianIds.length === 0) return { visits: [], byMonth: [], totalExpected: 0 };
+    visitWhere.dietitian_id = { [Op.in]: dietitianIds };
+  }
+
+  const visits = await db.Visit.findAll({
+    where: visitWhere,
+    include: [
+      { model: db.Patient, as: 'patient', attributes: ['id', 'first_name', 'last_name'] },
+      { model: db.Billing, as: 'billing', required: false, attributes: ['id', 'amount_total', 'status'] }
+    ],
+    order: [['visit_date', 'ASC']]
+  });
+
+  // Batch-load all needed VisitTypes in one query
+  const visitTypeNames = [...new Set(visits.map(v => v.visit_type).filter(Boolean))];
+  const visitTypes = visitTypeNames.length > 0
+    ? await db.VisitType.findAll({
+        where: { name: { [Op.in]: visitTypeNames }, is_active: true },
+        attributes: ['name', 'default_price']
+      })
+    : [];
+  const priceByType = {};
+  visitTypes.forEach(vt => { priceByType[vt.name] = parseFloat(vt.default_price || 0); });
+
+  // Build visit list with estimated amount
+  const visitList = visits.map(v => {
+    // Use existing invoice amount if available; otherwise VisitType default_price
+    const estimatedAmount = v.billing
+      ? parseFloat(v.billing.amount_total || 0)
+      : (v.visit_type ? (priceByType[v.visit_type] || 0) : 0);
+
+    return {
+      id: v.id,
+      visit_date: v.visit_date,
+      visit_type: v.visit_type,
+      status: v.status,
+      patient: v.patient ? {
+        id: v.patient.id,
+        first_name: v.patient.first_name,
+        last_name: v.patient.last_name
+      } : null,
+      estimated_amount: parseFloat(estimatedAmount.toFixed(2)),
+      has_invoice: !!v.billing,
+      invoice_status: v.billing?.status || null
+    };
+  });
+
+  // Group by month
+  const byMonthMap = {};
+  let totalExpected = 0;
+  for (const v of visitList) {
+    const d = new Date(v.visit_date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (!byMonthMap[key]) {
+      byMonthMap[key] = {
+        month: key,
+        monthLabel: d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
+        count: 0,
+        expectedRevenue: 0
+      };
+    }
+    byMonthMap[key].count++;
+    byMonthMap[key].expectedRevenue += v.estimated_amount;
+    totalExpected += v.estimated_amount;
+  }
+
+  const byMonth = Object.values(byMonthMap).map(m => ({
+    ...m,
+    expectedRevenue: parseFloat(m.expectedRevenue.toFixed(2))
+  }));
+
+  return {
+    visits: visitList,
+    byMonth,
+    totalExpected: parseFloat(totalExpected.toFixed(2)),
+    totalVisits: visitList.length
+  };
+}
+
 module.exports = {
   getDashboard,
   getAgingReport,
-  getCashFlow
+  getRevenue,
+  getCashFlow,
+  getForecast
 };

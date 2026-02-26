@@ -50,6 +50,33 @@ exports.getCashFlow = async (req, res, next) => {
   }
 };
 
+exports.getRevenue = async (req, res, next) => {
+  try {
+    const filters = {
+      start_date: req.query.start_date,
+      end_date: req.query.end_date,
+      page: req.query.page,
+      limit: req.query.limit
+    };
+    const revenue = await financeService.getRevenue(req.user, filters);
+    res.json({ success: true, data: revenue });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getForecast = async (req, res, next) => {
+  try {
+    const filters = {
+      end_date: req.query.end_date
+    };
+    const forecast = await financeService.getForecast(req.user, filters);
+    res.json({ success: true, data: forecast });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.sendReminders = async (req, res, next) => {
   try {
     const { invoice_ids } = req.body;

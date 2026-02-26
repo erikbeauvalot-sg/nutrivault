@@ -328,15 +328,15 @@ router.post(
       .optional()
       .trim(),
     body('prep_time_minutes')
-      .optional()
+      .optional({ values: 'null' })
       .isInt({ min: 0 })
       .withMessage('Prep time must be a positive integer'),
     body('cook_time_minutes')
-      .optional()
+      .optional({ values: 'null' })
       .isInt({ min: 0 })
       .withMessage('Cook time must be a positive integer'),
     body('servings')
-      .optional()
+      .optional({ values: 'null' })
       .isInt({ min: 1 })
       .withMessage('Servings must be at least 1'),
     body('difficulty')
@@ -348,16 +348,16 @@ router.post(
       .isIn(['draft', 'published', 'archived'])
       .withMessage('Status must be draft, published, or archived'),
     body('image_url')
-      .optional()
+      .optional({ values: 'null' })
       .trim()
       .isLength({ max: 500 })
       .withMessage('Image URL must be less than 500 characters'),
     body('tags')
-      .optional()
+      .optional({ values: 'null' })
       .isArray()
       .withMessage('Tags must be an array'),
     body('category_id')
-      .optional()
+      .optional({ values: 'null' })
       .isUUID()
       .withMessage('Category ID must be a valid UUID'),
     validate

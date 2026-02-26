@@ -584,15 +584,28 @@ const getDayStats = async (user) => {
   let upcomingBirthdays = 0;
   let birthdayList = [];
   try {
-    // Find the date_of_birth custom field definition
-    const dobField = await db.CustomFieldDefinition.findOne({
-      where: { field_name: 'date_of_birth', is_active: true },
+    // Target custom fields whose name contains "naissance" or "birth" (covers date_naissance, date_of_birth, birthday, etc.)
+    const birthdayFieldDefs = await db.CustomFieldDefinition.findAll({
+      where: {
+        field_type: 'date',
+        is_active: true,
+        [Op.or]: [
+          { field_name: { [Op.like]: '%naissance%' } },
+          { field_name: { [Op.like]: '%birth%' } }
+        ]
+      },
       raw: true
     });
 
-    if (dobField) {
-      // Get all patients' date_of_birth values
-      let cfvWhere = { field_definition_id: dobField.id };
+    // Fall back to ALL date fields if no birthday-specific fields found
+    const allDateFields = birthdayFieldDefs.length > 0
+      ? birthdayFieldDefs
+      : await db.CustomFieldDefinition.findAll({ where: { field_type: 'date', is_active: true }, raw: true });
+
+    if (allDateFields.length > 0) {
+      const allDateFieldIds = allDateFields.map(f => f.id);
+
+      let cfvWhere = { field_definition_id: { [Op.in]: allDateFieldIds } };
       if (patientIds !== null) {
         if (patientIds.length === 0) {
           cfvWhere.patient_id = null;
@@ -601,7 +614,7 @@ const getDayStats = async (user) => {
         }
       }
 
-      const dobValues = await db.PatientCustomFieldValue.findAll({
+      const allDateValues = await db.PatientCustomFieldValue.findAll({
         where: cfvWhere,
         include: [{
           model: db.Patient,
@@ -611,15 +624,29 @@ const getDayStats = async (user) => {
         raw: false
       });
 
-      // Filter for next 7 days by month+day
+      // Helper: parse a date string robustly (handles YYYY-MM-DD and DD/MM/YYYY)
+      const parseDateLocal = (str) => {
+        if (!str) return null;
+        const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) return new Date(+isoMatch[1], +isoMatch[2] - 1, +isoMatch[3]);
+        const frMatch = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+        if (frMatch) return new Date(+frMatch[3], +frMatch[2] - 1, +frMatch[1]);
+        return null;
+      };
+
+      const minBirthYear = now.getFullYear() - 5; // must be born at least 5 years ago
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      for (const val of dobValues) {
+      const seenPatients = new Set();
+
+      for (const val of allDateValues) {
+        if (seenPatients.has(val.patient_id)) continue;
         try {
-          const dob = new Date(val.field_value);
-          if (isNaN(dob.getTime())) continue;
-          // Calculate this year's birthday
+          const dob = parseDateLocal(val.value_text);
+          if (!dob || isNaN(dob.getTime())) continue;
+          // Only treat as birth date if year is plausibly in the past
+          if (dob.getFullYear() > minBirthYear) continue;
+
           let bday = new Date(now.getFullYear(), dob.getMonth(), dob.getDate());
-          // If already passed this year, check next year
           if (bday < today) {
             bday = new Date(now.getFullYear() + 1, dob.getMonth(), dob.getDate());
           }
@@ -629,18 +656,19 @@ const getDayStats = async (user) => {
             birthdayList.push({
               patient_id: val.patient_id,
               patient_name: val.patient ? `${val.patient.first_name} ${val.patient.last_name}` : '—',
-              date_of_birth: val.field_value,
+              date_of_birth: val.value_text,
               birthday_date: bday.toISOString().slice(0, 10),
               age,
               days_until: diffDays
             });
+            seenPatients.add(val.patient_id);
           }
-        } catch { /* skip invalid dates */ }
+        } catch { /* skip invalid date value */ }
       }
       birthdayList.sort((a, b) => a.days_until - b.days_until);
       upcomingBirthdays = birthdayList.length;
     }
-  } catch { /* no birthday field — count stays 0 */ }
+  } catch (birthdayErr) { console.error('[BIRTHDAY] Error computing birthdays:', birthdayErr?.message); }
 
   // --- Tasks due today ---
   const roleName = user.role?.name || user.role;
