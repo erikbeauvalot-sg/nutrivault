@@ -1,6 +1,6 @@
 {
   "name": "nutrivault-backend",
-  "version": "8.7.22",
+  "version": "8.8.0",
   "description": "NutriVault Backend API - POC",
   "main": "src/server.js",
   "scripts": {
