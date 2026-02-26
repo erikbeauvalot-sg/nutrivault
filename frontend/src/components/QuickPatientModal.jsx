@@ -142,8 +142,7 @@ const QuickPatientModal = ({ show, onHide, onSuccess }) => {
         ...(formData.phone.trim() && { phone: formData.phone.trim() })
       };
 
-      const response = await patientService.createPatient(patientData);
-      const createdPatient = response.data;
+      const createdPatient = await patientService.createPatient(patientData);
 
       // Save custom field values if any
       if (createdPatient && createdPatient.id && Object.keys(fieldValues).length > 0) {

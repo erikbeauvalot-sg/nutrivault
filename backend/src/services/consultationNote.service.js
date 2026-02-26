@@ -411,19 +411,19 @@ async function compileNoteContent(note) {
       }
     } else if (entry.entry_type === 'patient_custom_field' && entry.reference_id) {
       const cfv = await PatientCustomFieldValue.findByPk(entry.reference_id, {
-        include: [{ model: CustomFieldDefinition, as: 'fieldDefinition' }]
+        include: [{ model: CustomFieldDefinition, as: 'field_definition' }]
       });
       if (cfv) {
-        const label = cfv.fieldDefinition?.field_label || cfv.fieldDefinition?.field_name || '';
+        const label = cfv.field_definition?.field_label || cfv.field_definition?.field_name || '';
         const val = cfv.value_text || (cfv.value_number != null ? cfv.value_number : null);
         if (label && val != null && val !== '') lines.push(`${label} : ${val}`);
       }
     } else if (entry.entry_type === 'visit_custom_field' && entry.reference_id) {
       const cfv = await VisitCustomFieldValue.findByPk(entry.reference_id, {
-        include: [{ model: CustomFieldDefinition, as: 'fieldDefinition' }]
+        include: [{ model: CustomFieldDefinition, as: 'field_definition' }]
       });
       if (cfv) {
-        const label = cfv.fieldDefinition?.field_label || cfv.fieldDefinition?.field_name || '';
+        const label = cfv.field_definition?.field_label || cfv.field_definition?.field_name || '';
         const val = cfv.value_text || (cfv.value_number != null ? cfv.value_number : null);
         if (label && val != null && val !== '') lines.push(`${label} : ${val}`);
       }

@@ -85,6 +85,15 @@ const ConsultationNoteEditorPage = () => {
     sendEmail: false
   });
   const autoSaveTimer = useRef(null);
+  const stickyRef = useRef(null);
+
+  const scrollToSection = (sectionId) => {
+    const el = document.getElementById(sectionId);
+    if (!el) return;
+    const stickyHeight = (stickyRef.current?.offsetHeight || 140) + 8;
+    const top = el.getBoundingClientRect().top + window.scrollY - stickyHeight;
+    window.scrollTo({ top, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     loadNote();
@@ -455,7 +464,7 @@ const ConsultationNoteEditorPage = () => {
     const categoryLevel = item.item_type === 'category' && item.category ? getCategoryLevel(item.category) : null;
 
     return (
-      <Card key={item.id || index} className="mb-3 border-0 shadow-sm" style={{ borderLeft: `4px solid ${borderColor}` }}>
+      <Card id={`section-${item.id || index}`} key={item.id || index} className="mb-3 border-0 shadow-sm" style={{ borderLeft: `4px solid ${borderColor}` }}>
         <Card.Header className="bg-white border-0 py-2">
           <div className="d-flex align-items-center gap-2">
             <Icon style={{ color: borderColor }} />
@@ -526,41 +535,153 @@ const ConsultationNoteEditorPage = () => {
   return (
     <Layout>
       <Container fluid className="py-4">
-        {/* Header */}
-        <Row className="mb-4 align-items-center" style={{ position: 'sticky', top: 0, zIndex: 100, backgroundColor: 'var(--nv-parchment-light)', paddingTop: '0.5rem', paddingBottom: '0.75rem' }}>
-          <Col>
-            <Button variant="link" className="p-0 text-muted mb-2" onClick={() => navigate(-1)}>
-              <FaArrowLeft className="me-1" /> {t('common.back', 'Back')}
-            </Button>
-            <div className="d-flex align-items-center gap-3 flex-wrap">
-              <h2 className="mb-0" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800 }}>
-                {note.template?.name || t('consultationNotes.untitled', 'Consultation Note')}
-              </h2>
-              <Badge bg={isCompleted ? 'success' : 'warning'} text={isCompleted ? undefined : 'dark'}>
-                {isCompleted ? t('consultationNotes.statusCompleted', 'Completed') : t('consultationNotes.statusDraft', 'Draft')}
-              </Badge>
-              {autoSaveStatus === 'saving' && <Spinner animation="border" size="sm" className="text-muted" />}
-              {autoSaveStatus === 'saved' && <small className="text-success">{t('consultationNotes.autoSaved', 'Auto-saved')}</small>}
-              {autoSaveStatus === 'error' && <small className="text-danger">{t('consultationNotes.autoSaveError', 'Auto-save failed')}</small>}
-            </div>
-          </Col>
-          <Col xs="auto" className="d-flex gap-2">
-            <Button variant="outline-danger" onClick={() => setShowDeleteModal(true)} disabled={deleting}>
-              <FaTrash className="me-1" />
-              {t('common.delete', 'Delete')}
-            </Button>
-            <Button variant="outline-primary" onClick={handleManualSave} disabled={saving}>
-              {saving ? <Spinner animation="border" size="sm" className="me-1" /> : <FaSave className="me-1" />}
-              {t('common.save', 'Save')}
-            </Button>
-            {!isCompleted && (
-              <Button variant="success" onClick={() => setShowFinishModal(true)} disabled={completing}>
-                {completing ? <Spinner animation="border" size="sm" className="me-1" /> : <FaCheck className="me-1" />}
-                {t('visits.finishAndInvoice', 'Finish & Invoice')}
+        {/* Sticky header + nav */}
+        <div ref={stickyRef} style={{ position: 'sticky', top: 0, zIndex: 100, backgroundColor: 'var(--nv-parchment-light)', paddingTop: '0.5rem', marginBottom: '1rem' }}>
+          {/* Header row */}
+          <Row className="align-items-center pb-2">
+            <Col>
+              <Button variant="link" className="p-0 text-muted mb-1" onClick={() => navigate(-1)} style={{ fontSize: '0.85rem' }}>
+                <FaArrowLeft className="me-1" /> {t('common.back', 'Back')}
               </Button>
-            )}
-          </Col>
-        </Row>
+              <div className="d-flex align-items-center gap-3 flex-wrap">
+                <h2 className="mb-0" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800 }}>
+                  {note.template?.name || t('consultationNotes.untitled', 'Consultation Note')}
+                </h2>
+                <Badge bg={isCompleted ? 'success' : 'warning'} text={isCompleted ? undefined : 'dark'}>
+                  {isCompleted ? t('consultationNotes.statusCompleted', 'Completed') : t('consultationNotes.statusDraft', 'Draft')}
+                </Badge>
+                {autoSaveStatus === 'saving' && <Spinner animation="border" size="sm" className="text-muted" />}
+                {autoSaveStatus === 'saved' && <small className="text-success">{t('consultationNotes.autoSaved', 'Auto-saved')}</small>}
+                {autoSaveStatus === 'error' && <small className="text-danger">{t('consultationNotes.autoSaveError', 'Auto-save failed')}</small>}
+              </div>
+            </Col>
+            <Col xs="auto" className="d-flex gap-2">
+              <Button variant="outline-danger" onClick={() => setShowDeleteModal(true)} disabled={deleting}>
+                <FaTrash className="me-1" />
+                {t('common.delete', 'Delete')}
+              </Button>
+              <Button variant="outline-primary" onClick={handleManualSave} disabled={saving}>
+                {saving ? <Spinner animation="border" size="sm" className="me-1" /> : <FaSave className="me-1" />}
+                {t('common.save', 'Save')}
+              </Button>
+              {!isCompleted && (
+                <Button variant="success" onClick={() => setShowFinishModal(true)} disabled={completing}>
+                  {completing ? <Spinner animation="border" size="sm" className="me-1" /> : <FaCheck className="me-1" />}
+                  {t('visits.finishAndInvoice', 'Finish & Invoice')}
+                </Button>
+              )}
+            </Col>
+          </Row>
+
+          {/* Section navigation pills */}
+          {templateItems.length > 0 && (
+            <div
+              className="d-flex gap-1 pb-2"
+              style={{ overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none', borderBottom: '1px solid rgba(0,0,0,0.08)' }}
+            >
+              {templateItems.map((item, index) => {
+                const color = ITEM_COLORS[item.item_type] || '#6c757d';
+                const label = item.item_type === 'category'
+                  ? (item.category?.name || t('consultationNotes.categoryNotFound', 'Catégorie'))
+                  : item.item_type === 'measure'
+                    ? (item.measure?.display_name || item.measure?.name || t('consultationNotes.measureNotFound', 'Mesure'))
+                    : (item.instruction_title || t('consultationNotes.instructions', 'Instructions'));
+                return (
+                  <button
+                    key={item.id || index}
+                    onClick={() => scrollToSection(`section-${item.id || index}`)}
+                    style={{
+                      flexShrink: 0,
+                      background: `${color}12`,
+                      border: `1px solid ${color}40`,
+                      borderRadius: '20px',
+                      padding: '3px 10px',
+                      fontSize: '0.75rem',
+                      color,
+                      cursor: 'pointer',
+                      fontFamily: "'Space Grotesk', sans-serif",
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      transition: 'background 0.15s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = `${color}25`}
+                    onMouseLeave={e => e.currentTarget.style.background = `${color}12`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+              {/* Summary */}
+              <button
+                onClick={() => scrollToSection('section-summary')}
+                style={{
+                  flexShrink: 0,
+                  background: '#6c757d12',
+                  border: '1px solid #6c757d40',
+                  borderRadius: '20px',
+                  padding: '3px 10px',
+                  fontSize: '0.75rem',
+                  color: '#6c757d',
+                  cursor: 'pointer',
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  transition: 'background 0.15s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#6c757d25'}
+                onMouseLeave={e => e.currentTarget.style.background = '#6c757d12'}
+              >
+                📝 {t('consultationNotes.summary', 'Résumé')}
+              </button>
+              {/* AI Summary */}
+              <button
+                onClick={() => scrollToSection('section-ai-summary')}
+                style={{
+                  flexShrink: 0,
+                  background: '#6f42c112',
+                  border: '1px solid #6f42c140',
+                  borderRadius: '20px',
+                  padding: '3px 10px',
+                  fontSize: '0.75rem',
+                  color: '#6f42c1',
+                  cursor: 'pointer',
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  transition: 'background 0.15s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#6f42c125'}
+                onMouseLeave={e => e.currentTarget.style.background = '#6f42c112'}
+              >
+                🤖 {t('consultationNotes.aiSummaryTitle', 'Résumé IA')}
+              </button>
+              {/* Goals */}
+              {(note?.patient_id || note?.patient?.id) && (
+                <button
+                  onClick={() => scrollToSection('section-goals')}
+                  style={{
+                    flexShrink: 0,
+                    background: '#52b78812',
+                    border: '1px solid #52b78840',
+                    borderRadius: '20px',
+                    padding: '3px 10px',
+                    fontSize: '0.75rem',
+                    color: '#40916c',
+                    cursor: 'pointer',
+                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    transition: 'background 0.15s'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#52b78825'}
+                  onMouseLeave={e => e.currentTarget.style.background = '#52b78812'}
+                >
+                  🎯 {t('goals.tabTitle', 'Objectifs')}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
         {success && <Alert variant="success" dismissible onClose={() => setSuccess(null)}>{success}</Alert>}
@@ -589,7 +710,7 @@ const ConsultationNoteEditorPage = () => {
         )}
 
         {/* Summary */}
-        <Card className="mt-4 mb-3 border-0 shadow-sm">
+        <Card id="section-summary" className="mt-4 mb-3 border-0 shadow-sm">
           <Card.Header className="bg-white border-0 py-2">
             <h6 className="mb-0" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
               {t('consultationNotes.summary', 'Summary')}
@@ -607,7 +728,7 @@ const ConsultationNoteEditorPage = () => {
         </Card>
 
         {/* AI Summary */}
-        <Card className="mt-3 mb-3 border-0 shadow-sm" style={{ borderLeft: '4px solid #6f42c1' }}>
+        <Card id="section-ai-summary" className="mt-3 mb-3 border-0 shadow-sm" style={{ borderLeft: '4px solid #6f42c1' }}>
           <Card.Header className="bg-white border-0 py-2">
             <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
               <div className="d-flex align-items-center gap-2">
@@ -673,7 +794,7 @@ const ConsultationNoteEditorPage = () => {
 
         {/* Goals & Rewards */}
         {(note?.patient_id || note?.patient?.id) && (
-          <Card className="mt-3 mb-4 border-0 shadow-sm" style={{ borderLeft: '4px solid #52b788' }}>
+          <Card id="section-goals" className="mt-3 mb-4 border-0 shadow-sm" style={{ borderLeft: '4px solid #52b788' }}>
             <Card.Header className="bg-white border-0 py-2">
               <div className="d-flex align-items-center gap-2">
                 <span style={{ fontSize: '1rem' }}>🎯</span>
