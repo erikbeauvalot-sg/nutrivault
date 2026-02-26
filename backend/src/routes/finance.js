@@ -32,6 +32,14 @@ router.get('/aging-report', authenticate, requirePermission('finance.read'), fin
 // GET /api/finance/cash-flow
 router.get('/cash-flow', authenticate, requirePermission('finance.read'), dateQueryValidation, validate, financeController.getCashFlow);
 
+// GET /api/finance/revenue
+router.get('/revenue', authenticate, requirePermission('finance.read'), dateQueryValidation, validate, financeController.getRevenue);
+
+// GET /api/finance/forecast
+router.get('/forecast', authenticate, requirePermission('finance.read'), [
+  query('end_date').optional().isISO8601().withMessage('Invalid end_date')
+], validate, financeController.getForecast);
+
 // POST /api/finance/send-reminders
 router.post('/send-reminders', authenticate, requirePermission('billing.update'), [
   body('invoice_ids').isArray({ min: 1 }).withMessage('invoice_ids must be a non-empty array'),

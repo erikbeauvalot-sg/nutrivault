@@ -173,9 +173,33 @@
     "tabs": {
       "overview": "Aperçu",
       "cashFlow": "Trésorerie",
+      "revenue": "Recettes",
       "expenses": "Dépenses",
-      "agingReport": "Balance âgée",
-      "entries": "Écritures"
+      "entries": "Écritures",
+      "forecast": "Prévisionnel",
+      "agingReport": "Balance âgée"
+    },
+    "forecast": {
+      "totalExpected": "CA prévisionnel",
+      "totalVisits": "Consultations à venir",
+      "visits": "consultation(s)",
+      "visitDate": "Date",
+      "visitType": "Type",
+      "status": "Statut",
+      "estimatedAmount": "Montant estimé",
+      "invoice": "Facture",
+      "noInvoice": "Non facturé",
+      "noVisits": "Aucune consultation à venir"
+    },
+    "revenue": {
+      "totalPaid": "Total encaissé",
+      "count": "Règlements",
+      "paymentDate": "Date règlement",
+      "invoiceDate": "Date facture",
+      "paymentMethod": "Mode de paiement",
+      "amountTotal": "Montant TTC",
+      "amountPaid": "Encaissé",
+      "noRevenue": "Aucune recette trouvée"
     },
     "kpi": {
       "totalRevenue": "CA total",
@@ -212,7 +236,12 @@
       "lastReminder": "Dernière relance",
       "noOverdue": "Aucune facture en retard — tout est en ordre !",
       "remindersSuccess": "Relances envoyées avec succès",
-      "selectAll": "Tout sélectionner"
+      "selectAll": "Tout sélectionner",
+      "draftsTitle": "Brouillons — À envoyer",
+      "entriesTitle": "Écritures comptables",
+      "entryCount": "écriture(s)",
+      "daysOld": "Ancienneté",
+      "totalEntries": "Total écritures"
     },
     "profitLoss": {
       "title": "Compte de résultat",

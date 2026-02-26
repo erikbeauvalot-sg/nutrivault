@@ -54,10 +54,12 @@ const GoalCard = ({ goal, t }) => {
   const hasHistory = goal.history && goal.history.length > 1;
 
   const chartData = hasHistory
-    ? goal.history.map(h => ({
-        date: new Date(h.date).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }),
-        value: h.value
-      }))
+    ? [...goal.history]
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .map(h => ({
+          date: new Date(h.date).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }),
+          value: h.value
+        }))
     : [];
 
   const targetLine = goal.target_value ? parseFloat(goal.target_value) : null;

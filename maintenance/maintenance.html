@@ -153,6 +153,14 @@
       0%, 80%, 100% { opacity: 0.3; transform: scale(1); }
       40% { opacity: 1; transform: scale(1.4); }
     }
+
+    .status {
+      margin-top: 2rem;
+      font-size: 0.75rem;
+      opacity: 0.35;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
   </style>
 </head>
 <body>
@@ -167,6 +175,41 @@
       <span></span>
       <span></span>
     </div>
+    <p class="status" id="status">vérification en cours…</p>
   </div>
+
+  <script>
+    (function () {
+      var CHECK_INTERVAL = 5000; // ms between checks
+      var attempts = 0;
+
+      function check() {
+        attempts++;
+        // /api/* is blocked (503) while maintenance.flag exists in nginx.
+        // Any non-503 response means the flag was removed and the server is back.
+        fetch('/api/health', { method: 'GET', cache: 'no-store' })
+          .then(function (res) {
+            if (res.status !== 503) {
+              document.getElementById('status').textContent = 'retour en ligne — redirection…';
+              window.location.reload();
+            } else {
+              schedule();
+            }
+          })
+          .catch(function () {
+            // Network error — server not yet reachable, keep trying
+            schedule();
+          });
+      }
+
+      function schedule() {
+        document.getElementById('status').textContent =
+          'vérification dans ' + (CHECK_INTERVAL / 1000) + 's (tentative ' + attempts + ')';
+        setTimeout(check, CHECK_INTERVAL);
+      }
+
+      setTimeout(check, CHECK_INTERVAL);
+    })();
+  </script>
 </body>
 </html>

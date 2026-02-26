@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Container, Row, Col, Alert, Badge, Table, Form, Modal, Spinner, Button, InputGroup, Nav, Tab, Card } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
@@ -52,9 +53,12 @@ const KpiCard = ({ label, value, suffix, variant = 'primary' }) => {
 const FinancePage = () => {
   const { t } = useTranslation();
   const { hasPermission } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Global state
-  const [activeTab, setActiveTab] = useState('overview');
+  // Global state — persist active tab in URL query param
+  const VALID_TABS = ['overview', 'cashFlow', 'revenue', 'expenses', 'entries', 'forecast', 'agingReport'];
+  const tabFromUrl = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(VALID_TABS.includes(tabFromUrl) ? tabFromUrl : 'overview');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -88,6 +92,21 @@ const FinancePage = () => {
   const [entrySubmitting, setEntrySubmitting] = useState(false);
   const [showEntryDeleteConfirm, setShowEntryDeleteConfirm] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState(null);
+
+  // Revenue (Recettes) — default to current month
+  const [revenue, setRevenue] = useState(null);
+  const [revenueFilters, setRevenueFilters] = useState(() => {
+    const n = new Date();
+    return {
+      start_date: new Date(n.getFullYear(), n.getMonth(), 1).toISOString().slice(0, 10),
+      end_date: new Date(n.getFullYear(), n.getMonth() + 1, 0).toISOString().slice(0, 10),
+      page: 1,
+      limit: 25
+    };
+  });
+
+  // Forecast (Prévisionnel)
+  const [forecast, setForecast] = useState(null);
 
   // Aging report
   const [agingReport, setAgingReport] = useState(null);
@@ -153,6 +172,24 @@ const FinancePage = () => {
     }
   }, []);
 
+  const loadRevenue = useCallback(async () => {
+    try {
+      const res = await financeService.getRevenue(revenueFilters);
+      setRevenue(res.data?.data || res.data);
+    } catch (err) {
+      console.error('Failed to load revenue:', err);
+    }
+  }, [revenueFilters]);
+
+  const loadForecast = useCallback(async () => {
+    try {
+      const res = await financeService.getForecast();
+      setForecast(res.data?.data || res.data);
+    } catch (err) {
+      console.error('Failed to load forecast:', err);
+    }
+  }, []);
+
   const loadAgingReport = useCallback(async () => {
     try {
       const res = await financeService.getAgingReport();
@@ -165,7 +202,7 @@ const FinancePage = () => {
   useEffect(() => {
     const loadAll = async () => {
       setLoading(true);
-      await Promise.all([loadDashboard(), loadCashFlow(), loadExpenses(), loadExpenseSummary(), loadEntries(), loadEntrySummary(), loadAgingReport()]);
+      await Promise.all([loadDashboard(), loadCashFlow(), loadExpenses(), loadExpenseSummary(), loadEntries(), loadEntrySummary(), loadRevenue(), loadForecast(), loadAgingReport()]);
       setLoading(false);
     };
     loadAll();
@@ -178,6 +215,10 @@ const FinancePage = () => {
   useEffect(() => {
     if (!loading) loadEntries();
   }, [entryFilters]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!loading) loadRevenue();
+  }, [revenueFilters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Expense CRUD ---
   const handleOpenExpenseForm = (expense = null) => {
@@ -364,12 +405,14 @@ const FinancePage = () => {
         {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
         {success && <Alert variant="success" dismissible onClose={() => setSuccess(null)}>{success}</Alert>}
 
-        <Tab.Container activeKey={activeTab} onSelect={setActiveTab}>
+        <Tab.Container activeKey={activeTab} onSelect={(tab) => { setActiveTab(tab); setSearchParams({ tab }, { replace: true }); }}>
           <Nav variant="tabs" className="mb-4">
             <Nav.Item><Nav.Link eventKey="overview">{t('finance.tabs.overview', 'Overview')}</Nav.Link></Nav.Item>
             <Nav.Item><Nav.Link eventKey="cashFlow">{t('finance.tabs.cashFlow', 'Cash Flow')}</Nav.Link></Nav.Item>
+            <Nav.Item><Nav.Link eventKey="revenue">{t('finance.tabs.revenue', 'Recettes')}</Nav.Link></Nav.Item>
             <Nav.Item><Nav.Link eventKey="expenses">{t('finance.tabs.expenses', 'Expenses')}</Nav.Link></Nav.Item>
             <Nav.Item><Nav.Link eventKey="entries">{t('finance.tabs.entries', 'Entries')}</Nav.Link></Nav.Item>
+            <Nav.Item><Nav.Link eventKey="forecast">{t('finance.tabs.forecast', 'Prévisionnel')}</Nav.Link></Nav.Item>
             <Nav.Item><Nav.Link eventKey="agingReport">{t('finance.tabs.agingReport', 'Aging Report')}</Nav.Link></Nav.Item>
           </Nav>
 
@@ -448,6 +491,86 @@ const FinancePage = () => {
                   )}
                 </Card.Body>
               </Card>
+            </Tab.Pane>
+
+            {/* ========== RECETTES TAB ========== */}
+            <Tab.Pane eventKey="revenue">
+              {/* KPI */}
+              {revenue && (
+                <Row className="g-3 mb-4">
+                  <Col md={4}>
+                    <KpiCard label={t('finance.revenue.totalPaid', 'Total encaissé')} value={formatCurrency(revenue.totalPaid)} variant="success" />
+                  </Col>
+                  <Col md={4}>
+                    <KpiCard label={t('finance.revenue.count', 'Nombre de règlements')} value={revenue.total} variant="info" />
+                  </Col>
+                </Row>
+              )}
+
+              {/* Date filters */}
+              <div className="d-flex gap-2 mb-3 flex-wrap align-items-center">
+                <Form.Control
+                  type="date"
+                  style={{ maxWidth: 160 }}
+                  value={revenueFilters.start_date}
+                  onChange={e => setRevenueFilters(prev => ({ ...prev, start_date: e.target.value, page: 1 }))}
+                />
+                <span className="align-self-center text-muted">→</span>
+                <Form.Control
+                  type="date"
+                  style={{ maxWidth: 160 }}
+                  value={revenueFilters.end_date}
+                  onChange={e => setRevenueFilters(prev => ({ ...prev, end_date: e.target.value, page: 1 }))}
+                />
+                {(revenueFilters.start_date || revenueFilters.end_date) && (
+                  <Button variant="outline-secondary" size="sm" onClick={() => setRevenueFilters(prev => ({ ...prev, start_date: '', end_date: '', page: 1 }))}>
+                    ✕
+                  </Button>
+                )}
+              </div>
+
+              {/* Table */}
+              <Card className="border-0 shadow-sm">
+                <Table hover responsive size="sm" className="mb-0">
+                  <thead>
+                    <tr style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700 }}>
+                      <th>{t('finance.revenue.paymentDate', 'Date règlement')}</th>
+                      <th>{t('finance.revenue.invoiceDate', 'Date facture')}</th>
+                      <th>{t('finance.agingReport.patient', 'Patient')}</th>
+                      <th>{t('finance.agingReport.invoiceNumber', 'Facture')}</th>
+                      <th>{t('finance.revenue.paymentMethod', 'Mode')}</th>
+                      <th className="text-end">{t('finance.revenue.amountTotal', 'Montant TTC')}</th>
+                      <th className="text-end" style={{ color: '#2D6A4F' }}>{t('finance.revenue.amountPaid', 'Encaissé')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {!revenue || revenue.invoices.length === 0 ? (
+                      <tr><td colSpan={7} className="text-center text-muted py-4">{t('finance.revenue.noRevenue', 'Aucune recette trouvée')}</td></tr>
+                    ) : revenue.invoices.map(inv => (
+                      <tr key={inv.id}>
+                        <td>{inv.payment_date ? new Date(inv.payment_date).toLocaleDateString('fr-FR') : '—'}</td>
+                        <td className="text-muted">{inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString('fr-FR') : '—'}</td>
+                        <td>{inv.patient ? `${inv.patient.first_name} ${inv.patient.last_name}` : '—'}</td>
+                        <td><code>{inv.invoice_number}</code></td>
+                        <td className="text-muted">{inv.payment_method ? t(`billing.paymentMethods.${inv.payment_method}`, inv.payment_method) : '—'}</td>
+                        <td className="text-end text-muted">{formatCurrency(inv.amount_total)}</td>
+                        <td className="text-end" style={{ fontWeight: 700, fontFamily: 'Space Grotesk, sans-serif', color: '#2D6A4F' }}>{formatCurrency(inv.amount_paid)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </Card>
+
+              {/* Pagination */}
+              {revenue && revenue.totalPages > 1 && (
+                <div className="d-flex justify-content-center mt-3 gap-2">
+                  <Button variant="outline-secondary" size="sm" disabled={revenueFilters.page <= 1}
+                    onClick={() => setRevenueFilters(prev => ({ ...prev, page: prev.page - 1 }))}>{t('common.previous', 'Préc.')}</Button>
+                  <span className="align-self-center text-muted small">{revenueFilters.page} / {revenue.totalPages}</span>
+                  <Button variant="outline-secondary" size="sm" disabled={revenueFilters.page >= revenue.totalPages}
+                    onClick={() => setRevenueFilters(prev => ({ ...prev, page: prev.page + 1 }))}>{t('common.next', 'Suiv.')}</Button>
+                </div>
+              )}
             </Tab.Pane>
 
             {/* ========== EXPENSES TAB ========== */}
@@ -673,10 +796,128 @@ const FinancePage = () => {
               )}
             </Tab.Pane>
 
+            {/* ========== PREVISIONNEL TAB ========== */}
+            <Tab.Pane eventKey="forecast">
+              {forecast && (
+                <>
+                  {/* KPIs */}
+                  <Row className="g-3 mb-4">
+                    <Col md={4}>
+                      <KpiCard label={t('finance.forecast.totalExpected', 'CA prévisionnel')} value={formatCurrency(forecast.totalExpected)} variant="info" />
+                    </Col>
+                    <Col md={4}>
+                      <KpiCard label={t('finance.forecast.totalVisits', 'Consultations à venir')} value={forecast.totalVisits} variant="primary" />
+                    </Col>
+                  </Row>
+
+                  {/* Monthly breakdown */}
+                  {forecast.byMonth.length > 0 && (
+                    <Row className="g-3 mb-4">
+                      {forecast.byMonth.map(m => (
+                        <Col md={4} key={m.month}>
+                          <Card className="border-0 shadow-sm text-center" style={{ borderTop: '3px solid #457B9D' }}>
+                            <Card.Body className="py-3">
+                              <div className="text-muted small text-capitalize" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>{m.monthLabel}</div>
+                              <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800, fontSize: '1.4rem', color: '#457B9D' }}>
+                                {formatCurrency(m.expectedRevenue)}
+                              </div>
+                              <Badge bg="secondary" pill>{m.count} {t('finance.forecast.visits', 'consultation(s)')}</Badge>
+                            </Card.Body>
+                          </Card>
+                        </Col>
+                      ))}
+                    </Row>
+                  )}
+
+                  {/* Upcoming visits table */}
+                  {forecast.visits.length === 0 ? (
+                    <Alert variant="info">{t('finance.forecast.noVisits', 'Aucune consultation à venir')}</Alert>
+                  ) : (
+                    <Card className="border-0 shadow-sm">
+                      <Table hover responsive size="sm" className="mb-0">
+                        <thead>
+                          <tr style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700 }}>
+                            <th>{t('finance.forecast.visitDate', 'Date')}</th>
+                            <th>{t('finance.agingReport.patient', 'Patient')}</th>
+                            <th>{t('finance.forecast.visitType', 'Type')}</th>
+                            <th>{t('finance.forecast.status', 'Statut')}</th>
+                            <th className="text-end">{t('finance.forecast.estimatedAmount', 'Montant estimé')}</th>
+                            <th>{t('finance.forecast.invoice', 'Facture')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {forecast.visits.map(v => (
+                            <tr key={v.id}>
+                              <td>{new Date(v.visit_date).toLocaleDateString('fr-FR')}</td>
+                              <td>{v.patient ? `${v.patient.first_name} ${v.patient.last_name}` : '—'}</td>
+                              <td className="text-muted">{v.visit_type || '—'}</td>
+                              <td>
+                                <Badge bg={v.status === 'SCHEDULED' ? 'primary' : 'secondary'}>
+                                  {t(`visits.statuses.${v.status}`, v.status)}
+                                </Badge>
+                              </td>
+                              <td className="text-end" style={{ fontWeight: 700, fontFamily: 'Space Grotesk, sans-serif', color: '#457B9D' }}>
+                                {v.estimated_amount > 0 ? formatCurrency(v.estimated_amount) : <span className="text-muted">—</span>}
+                              </td>
+                              <td>
+                                {v.has_invoice ? (
+                                  <Badge bg={v.invoice_status === 'PAID' ? 'success' : 'warning'}>
+                                    {t(`billing.statuses.${v.invoice_status}`, v.invoice_status)}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted small">{t('finance.forecast.noInvoice', 'Non facturé')}</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </Table>
+                    </Card>
+                  )}
+                </>
+              )}
+            </Tab.Pane>
+
             {/* ========== AGING REPORT TAB ========== */}
             <Tab.Pane eventKey="agingReport">
               {agingReport && (
                 <>
+                  {/* ---- Draft invoices section ---- */}
+                  {agingReport.totalDraftCount > 0 && (
+                    <>
+                      <div className="d-flex align-items-center gap-2 mb-3">
+                        <h6 className="mb-0" style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700 }}>
+                          {t('finance.agingReport.draftsTitle', 'Brouillons — À envoyer')}
+                        </h6>
+                        <Badge bg="secondary" pill>{agingReport.totalDraftCount}</Badge>
+                        <span className="text-muted ms-auto small">{t('common.total', 'Total')} : <strong>{formatCurrency(agingReport.totalDraftAmount)}</strong></span>
+                      </div>
+                      <Card className="border-0 shadow-sm mb-4" style={{ borderLeft: '4px solid #6c757d' }}>
+                        <Table hover responsive size="sm" className="mb-0">
+                          <thead>
+                            <tr style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700 }}>
+                              <th>{t('finance.agingReport.patient', 'Patient')}</th>
+                              <th>{t('finance.agingReport.invoiceNumber', 'Facture')}</th>
+                              <th>{t('finance.revenue.invoiceDate', 'Date facture')}</th>
+                              <th className="text-end">{t('finance.revenue.amountTotal', 'Montant TTC')}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {agingReport.draftInvoices.map(inv => (
+                              <tr key={inv.id}>
+                                <td>{inv.patient ? `${inv.patient.first_name} ${inv.patient.last_name}` : '—'}</td>
+                                <td><code>{inv.invoice_number}</code></td>
+                                <td className="text-muted">{inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString('fr-FR') : '—'}</td>
+                                <td className="text-end" style={{ fontWeight: 700 }}>{formatCurrency(inv.amount_total)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </Table>
+                      </Card>
+                      <hr className="mb-4" />
+                    </>
+                  )}
+
                   {/* Bracket summary */}
                   <Row className="g-3 mb-4">
                     {agingReport.brackets.map((bracket) => (
@@ -762,6 +1003,82 @@ const FinancePage = () => {
                   <div className="mt-3 text-muted" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                     {t('finance.agingReport.totalDue', 'Total Due')}: <strong style={{ color: '#BC4749' }}>{formatCurrency(agingReport.totalAmount)}</strong>
                   </div>
+
+                  {/* ---- Accounting entries section ---- */}
+                  {agingReport.entryBrackets && agingReport.totalEntries > 0 && (
+                    <>
+                      <hr className="my-4" />
+                      <h6 style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, marginBottom: '1rem' }}>
+                        {t('finance.agingReport.entriesTitle', 'Écritures comptables')}
+                      </h6>
+
+                      {/* Entry brackets summary */}
+                      <Row className="g-3 mb-4">
+                        {agingReport.entryBrackets.map((bracket) => (
+                          <Col md={3} key={bracket.label}>
+                            <Card className="border-0 shadow-sm text-center h-100" style={{ borderTop: '3px solid #457B9D' }}>
+                              <Card.Body>
+                                <div className="text-muted small" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                                  {bracket.label === '0-30' ? t('finance.agingReport.bracket030', '0–30 jours') :
+                                   bracket.label === '31-60' ? t('finance.agingReport.bracket3160', '31–60 jours') :
+                                   bracket.label === '61-90' ? t('finance.agingReport.bracket6190', '61–90 jours') :
+                                   t('finance.agingReport.bracket90plus', '90+ jours')}
+                                </div>
+                                <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800, fontSize: '1.3rem', color: '#457B9D' }}>
+                                  {formatCurrency(bracket.totalAmount)}
+                                </div>
+                                <Badge bg="secondary" pill>{bracket.count} {t('finance.agingReport.entryCount', 'écriture(s)')}</Badge>
+                              </Card.Body>
+                            </Card>
+                          </Col>
+                        ))}
+                      </Row>
+
+                      {/* Entries table */}
+                      <Card className="border-0 shadow-sm">
+                        <Table hover responsive size="sm" className="mb-0">
+                          <thead>
+                            <tr style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700 }}>
+                              <th>{t('accounting.entryDate', 'Date écriture')}</th>
+                              <th>{t('accounting.description', 'Description')}</th>
+                              <th>{t('accounting.entryType', 'Type')}</th>
+                              <th>{t('accounting.category', 'Catégorie')}</th>
+                              <th>{t('accounting.reference', 'Référence')}</th>
+                              <th className="text-end">{t('accounting.amount', 'Montant')}</th>
+                              <th>{t('finance.agingReport.daysOld', 'Ancienneté')}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {agingReport.entryBrackets.flatMap(b => b.entries).map(entry => (
+                              <tr key={entry.id}>
+                                <td>{new Date(entry.entry_date).toLocaleDateString('fr-FR')}</td>
+                                <td>{entry.description}</td>
+                                <td>
+                                  <Badge bg={entry.entry_type === 'CREDIT' ? 'success' : 'danger'}>
+                                    {t(`accounting.types.${entry.entry_type}`, entry.entry_type)}
+                                  </Badge>
+                                </td>
+                                <td className="text-muted">{entry.category ? t(`accounting.categories.${entry.category}`, entry.category) : '—'}</td>
+                                <td className="text-muted"><code>{entry.reference || '—'}</code></td>
+                                <td className="text-end" style={{ fontWeight: 700, fontFamily: 'Space Grotesk, sans-serif', color: entry.amount >= 0 ? '#2D6A4F' : '#BC4749' }}>
+                                  {formatCurrency(entry.amount)}
+                                </td>
+                                <td>
+                                  <Badge bg={entry.days_old > 90 ? 'danger' : entry.days_old > 60 ? 'warning' : entry.days_old > 30 ? 'info' : 'secondary'}>
+                                    {entry.days_old}j
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </Table>
+                      </Card>
+
+                      <div className="mt-3 text-muted" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                        {t('finance.agingReport.totalEntries', 'Total écritures')}: <strong style={{ color: '#457B9D' }}>{formatCurrency(agingReport.totalEntriesAmount)}</strong>
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </Tab.Pane>

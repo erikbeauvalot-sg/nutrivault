@@ -274,8 +274,15 @@ export function mergeChartData(data, movingAverages = {}, trendLine = null) {
     return [];
   }
 
+  // Ensure chronological order (oldest → newest) regardless of backend response order
+  const sorted = [...data].sort((a, b) => {
+    const dateA = new Date(a.measured_at || a.date);
+    const dateB = new Date(b.measured_at || b.date);
+    return dateA - dateB;
+  });
+
   // Create base dataset from main data
-  const merged = data.map((point, index) => ({
+  const merged = sorted.map((point, index) => ({
     index,
     date: formatDate(point.measured_at || point.date),
     fullDate: point.measured_at || point.date,
@@ -286,7 +293,7 @@ export function mergeChartData(data, movingAverages = {}, trendLine = null) {
 
   // Add MA7 values
   if (movingAverages.ma7 && movingAverages.ma7.length > 0) {
-    const ma7StartIndex = data.length - movingAverages.ma7.length;
+    const ma7StartIndex = sorted.length - movingAverages.ma7.length;
     movingAverages.ma7.forEach((ma, i) => {
       const targetIndex = ma7StartIndex + i;
       if (merged[targetIndex]) {
@@ -297,7 +304,7 @@ export function mergeChartData(data, movingAverages = {}, trendLine = null) {
 
   // Add MA30 values
   if (movingAverages.ma30 && movingAverages.ma30.length > 0) {
-    const ma30StartIndex = data.length - movingAverages.ma30.length;
+    const ma30StartIndex = sorted.length - movingAverages.ma30.length;
     movingAverages.ma30.forEach((ma, i) => {
       const targetIndex = ma30StartIndex + i;
       if (merged[targetIndex]) {
@@ -308,7 +315,7 @@ export function mergeChartData(data, movingAverages = {}, trendLine = null) {
 
   // Add MA90 values
   if (movingAverages.ma90 && movingAverages.ma90.length > 0) {
-    const ma90StartIndex = data.length - movingAverages.ma90.length;
+    const ma90StartIndex = sorted.length - movingAverages.ma90.length;
     movingAverages.ma90.forEach((ma, i) => {
       const targetIndex = ma90StartIndex + i;
       if (merged[targetIndex]) {
