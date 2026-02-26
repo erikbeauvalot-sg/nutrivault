@@ -73,6 +73,7 @@ const PatientPortalVisits = () => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [visits, setVisits] = useState([]);
+  const [consultationNotes, setConsultationNotes] = useState([]);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState('all');
@@ -97,8 +98,12 @@ const PatientPortalVisits = () => {
 
   const loadVisits = async () => {
     try {
-      const data = await portalService.getVisits();
-      setVisits(data || []);
+      const [visitsData, notesData] = await Promise.allSettled([
+        portalService.getVisits(),
+        portalService.getConsultationNotes()
+      ]);
+      setVisits(visitsData.status === 'fulfilled' ? (visitsData.value || []) : []);
+      setConsultationNotes(notesData.status === 'fulfilled' ? (notesData.value || []) : []);
     } catch {
       setError(t('portal.loadError', 'Erreur lors du chargement'));
     } finally {
@@ -263,6 +268,8 @@ const PatientPortalVisits = () => {
               const { date, time } = formatVisitDate(v.visit_date);
               const globalIndex = (page - 1) * VISITS_PER_PAGE + index;
 
+              const visitNote = consultationNotes.find(n => n.visit_id === v.id && n.ai_summary);
+
               return (
                 <Accordion.Item key={v.id} eventKey={String(globalIndex)} className="mb-2 border rounded overflow-hidden">
                   <Accordion.Header>
@@ -273,6 +280,11 @@ const PatientPortalVisits = () => {
                         {v.visit_type && (
                           <Badge bg="light" text="dark" className="fw-normal" style={{ fontSize: '0.8em' }}>
                             {v.visit_type}
+                          </Badge>
+                        )}
+                        {visitNote && (
+                          <Badge bg="light" text="dark" className="fw-normal" style={{ fontSize: '0.75em', backgroundColor: '#f0ebff', color: '#6f42c1', border: '1px solid #d0c0f0' }}>
+                            ✨ {t('portal.hasSummary', 'Résumé disponible')}
                           </Badge>
                         )}
                       </div>
@@ -296,6 +308,27 @@ const PatientPortalVisits = () => {
                           {t('portal.yourMessage', 'Message')}
                         </strong>
                         <p className="mb-0 fst-italic" style={{ whiteSpace: 'pre-wrap' }}>{v.request_message}</p>
+                      </div>
+                    )}
+
+                    {/* AI consultation note summary */}
+                    {visitNote?.ai_summary && (
+                      <div className="mb-3 pb-3 border-bottom">
+                        <strong className="d-block mb-2" style={{ fontSize: '0.85em', textTransform: 'uppercase', letterSpacing: '0.03em', color: '#6f42c1' }}>
+                          ✨ {t('portal.consultationSummary', 'Résumé de consultation')}
+                        </strong>
+                        <div
+                          className="p-3 rounded"
+                          style={{
+                            backgroundColor: '#f8f5ff',
+                            border: '1px solid #e0d6f5',
+                            whiteSpace: 'pre-wrap',
+                            lineHeight: 1.7,
+                            fontSize: '0.92em'
+                          }}
+                        >
+                          {visitNote.ai_summary}
+                        </div>
                       </div>
                     )}
 

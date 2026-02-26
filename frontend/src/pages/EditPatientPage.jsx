@@ -572,104 +572,7 @@ const EditPatientPage = () => {
                   </Row>
                 </Tab>
 
-                {/* 2. Custom Field Categories Tabs */}
-                {loadingCustomFields ? (
-                  <Tab eventKey="loading" title="⏳ Chargement..." disabled>
-                    <div className="text-center py-5">
-                      <Spinner animation="border" />
-                      <p className="mt-3">Chargement des champs personnalisés...</p>
-                    </div>
-                  </Tab>
-                ) : (
-                  customFieldCategories.map((category) => {
-                    const displayLayout = category.display_layout || { type: 'columns', columns: 2 };
-                    const columnWidth = displayLayout.type === 'list' ? 12 : Math.floor(12 / (displayLayout.columns || 2));
-                    const entityTypes = category.entity_types || ['patient'];
-                    const isVisitOnly = entityTypes.includes('visit') && !entityTypes.includes('patient');
-                    const showHistory = isVisitOnly && category.show_history_at_patient_level;
-
-                    return (
-                    <Tab
-                      key={category.id}
-                      eventKey={`category-${category.id}`}
-                      title={
-                        <span>
-                          <span
-                            style={{
-                              display: 'inline-block',
-                              width: '12px',
-                              height: '12px',
-                              backgroundColor: category.color || '#3498db',
-                              borderRadius: '50%',
-                              marginRight: '8px',
-                              verticalAlign: 'middle',
-                              border: '2px solid rgba(255,255,255,0.5)'
-                            }}
-                          />
-                          {category.name}
-                        </span>
-                      }
-                    >
-                      <div
-                        className="mb-4"
-                        style={{
-                          borderLeft: `4px solid ${category.color || '#3498db'}`,
-                          paddingLeft: '15px'
-                        }}
-                      >
-                        {category.description && (
-                          <Alert
-                            variant="info"
-                            className="mb-3"
-                            style={{
-                              borderLeft: `4px solid ${category.color || '#3498db'}`,
-                              backgroundColor: `${category.color || '#3498db'}10`
-                            }}
-                          >
-                            {category.description}
-                          </Alert>
-                        )}
-
-                        {showHistory ? (
-                          <VisitFieldHistoryPanel
-                            patientId={id}
-                            categoryId={category.id}
-                            categoryColor={category.color}
-                          />
-                        ) : category.fields.length === 0 ? (
-                          <Alert variant="warning">
-                            Aucun champ défini pour cette catégorie
-                          </Alert>
-                        ) : (
-                          <Row>
-                            {category.fields.map((field) => (
-                              <Col xs={12} md={columnWidth} key={field.definition_id}>
-                                <Form.Group className="mb-3">
-                                  <CustomFieldInput
-                                    fieldDefinition={field}
-                                    value={fieldValues[field.definition_id] || ''}
-                                    onChange={handleFieldChange}
-                                    disabled={saving}
-                                    error={fieldErrors[field.definition_id]}
-                                    patientId={id}
-                                  />
-                                  {fieldErrors[field.definition_id] && (
-                                    <Form.Text className="text-danger">
-                                      {fieldErrors[field.definition_id]}
-                                    </Form.Text>
-                                  )}
-                                </Form.Group>
-                              </Col>
-                            ))}
-                          </Row>
-                        )}
-                      </div>
-                    </Tab>
-                    );
-                  })
-                )}
-
-                {/* 3. Measures Tab */}
+                {/* 2. Measures Tab */}
                 <Tab eventKey="measures" title={`📏 ${t('measures.healthMeasures', 'Mesures')}`}>
                   <h5 className="mb-3">{t('measures.patientMeasures', 'Patient Measures')}</h5>
 
@@ -679,6 +582,97 @@ const EditPatientPage = () => {
                     refreshTrigger={measuresRefreshTrigger}
                   />
                 </Tab>
+
+                {/* 3. Radar (éolienne) Custom Field Categories only */}
+                {!loadingCustomFields && customFieldCategories
+                  .filter(c => (c.display_layout?.type || 'columns') === 'radar')
+                  .map((category) => {
+                    const displayLayout = category.display_layout || { type: 'columns', columns: 2 };
+                    const columnWidth = Math.floor(12 / (displayLayout.columns || 2));
+                    const entityTypes = category.entity_types || ['patient'];
+                    const isVisitOnly = entityTypes.includes('visit') && !entityTypes.includes('patient');
+                    const showHistory = isVisitOnly && category.show_history_at_patient_level;
+
+                    return (
+                      <Tab
+                        key={category.id}
+                        eventKey={`category-${category.id}`}
+                        title={
+                          <span>
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                width: '12px',
+                                height: '12px',
+                                backgroundColor: category.color || '#3498db',
+                                borderRadius: '50%',
+                                marginRight: '8px',
+                                verticalAlign: 'middle',
+                                border: '2px solid rgba(255,255,255,0.5)'
+                              }}
+                            />
+                            {category.name}
+                          </span>
+                        }
+                      >
+                        <div
+                          className="mb-4"
+                          style={{
+                            borderLeft: `4px solid ${category.color || '#3498db'}`,
+                            paddingLeft: '15px'
+                          }}
+                        >
+                          {category.description && (
+                            <Alert
+                              variant="info"
+                              className="mb-3"
+                              style={{
+                                borderLeft: `4px solid ${category.color || '#3498db'}`,
+                                backgroundColor: `${category.color || '#3498db'}10`
+                              }}
+                            >
+                              {category.description}
+                            </Alert>
+                          )}
+
+                          {showHistory ? (
+                            <VisitFieldHistoryPanel
+                              patientId={id}
+                              categoryId={category.id}
+                              categoryColor={category.color}
+                            />
+                          ) : category.fields.length === 0 ? (
+                            <Alert variant="warning">
+                              Aucun champ défini pour cette catégorie
+                            </Alert>
+                          ) : (
+                            <Row>
+                              {category.fields.map((field) => (
+                                <Col xs={12} md={columnWidth} key={field.definition_id}>
+                                  <Form.Group className="mb-3">
+                                    <CustomFieldInput
+                                      fieldDefinition={field}
+                                      value={fieldValues[field.definition_id] || ''}
+                                      onChange={handleFieldChange}
+                                      disabled={saving}
+                                      error={fieldErrors[field.definition_id]}
+                                      patientId={id}
+                                    />
+                                    {fieldErrors[field.definition_id] && (
+                                      <Form.Text className="text-danger">
+                                        {fieldErrors[field.definition_id]}
+                                      </Form.Text>
+                                    )}
+                                  </Form.Group>
+                                </Col>
+                              ))}
+                            </Row>
+                          )}
+                        </div>
+                      </Tab>
+                    );
+                  })
+                }
               </ResponsiveTabs>
 
               {/* Action Buttons */}

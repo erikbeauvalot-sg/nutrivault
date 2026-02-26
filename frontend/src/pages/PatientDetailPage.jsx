@@ -35,6 +35,7 @@ import * as gdprService from '../services/gdprService';
 import * as billingService from '../services/billingService';
 import * as measureService from '../services/measureService';
 import api from '../services/api';
+import consultationNoteService from '../services/consultationNoteService';
 import * as patientService from '../services/patientService';
 import * as documentService from '../services/documentService';
 import visitService from '../services/visitService';
@@ -42,7 +43,7 @@ import * as recipeService from '../services/recipeService';
 import userService from '../services/userService';
 import PortalStatusCard from '../components/PortalStatusCard';
 import PatientJournalTab from '../components/PatientJournalTab';
-import SendToPatientModal from '../components/messages/SendToPatientModal';
+import PatientGoalsTab from '../components/PatientGoalsTab';
 import { FiSend } from 'react-icons/fi';
 import './PatientDetailPage.css';
 
@@ -76,7 +77,9 @@ const PatientDetailPage = () => {
     setSearchParams({ tab }, { replace: true });
   };
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [sendObjective, setSendObjective] = useState(null);
+  const [goalsSummary, setGoalsSummary] = useState(null);
+  const [consultationNotes, setConsultationNotes] = useState([]);
+  const [notesLoading, setNotesLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [customFieldCategories, setCustomFieldCategories] = useState([]);
@@ -100,7 +103,6 @@ const PatientDetailPage = () => {
   const [selectedNewDietitianId, setSelectedNewDietitianId] = useState('');
   const [availableGuides, setAvailableGuides] = useState([]);
   const [sharingGuide, setSharingGuide] = useState(false);
-  const [patientObjectives, setPatientObjectives] = useState([]);
 
   useEffect(() => {
     if (id) {
@@ -110,7 +112,8 @@ const PatientDetailPage = () => {
       fetchPatientMeasures();
       fetchPatientRecipes();
       fetchAvailableGuides();
-      fetchPatientObjectives();
+      fetchGoalsSummary();
+      fetchConsultationNotes();
     }
   }, [id]);
 
@@ -158,12 +161,34 @@ const PatientDetailPage = () => {
     }
   };
 
-  const fetchPatientObjectives = async () => {
+  const fetchConsultationNotes = async () => {
+    setNotesLoading(true);
     try {
-      const res = await api.get(`/patients/${id}/objectives`);
-      setPatientObjectives(res.data?.data || []);
+      const res = await consultationNoteService.getNotes({ patient_id: id });
+      setConsultationNotes(res.data || []);
     } catch {
       // silent
+    } finally {
+      setNotesLoading(false);
+    }
+  };
+
+  const fetchGoalsSummary = async () => {
+    try {
+      const [goalsRes, achRes] = await Promise.all([
+        api.get(`/patients/${id}/goals`),
+        api.get(`/patients/${id}/achievements`)
+      ]);
+      const goals = goalsRes.data?.data || [];
+      const achievements = achRes.data?.data || [];
+      setGoalsSummary({
+        active: goals.filter(g => g.status === 'active'),
+        completed: goals.filter(g => g.status === 'completed').length,
+        achievements,
+        totalPoints: achievements.reduce((s, a) => s + (a.reward_points || 0), 0)
+      });
+    } catch {
+      // silent — goals feature may not exist yet for this patient
     }
   };
 
@@ -853,41 +878,96 @@ const PatientDetailPage = () => {
                   </Card.Body>
                 </Card>
 
-                {/* Patient Objectives (read-only, from latest visit) */}
-                <Card className="mb-3">
-                  <Card.Header>
-                    <h6 className="mb-0">{'\uD83C\uDFAF'} {t('objectives.title', 'Objectifs du patient')}</h6>
+                {/* Goals Summary */}
+                <Card className="mb-3 border-0 shadow-sm" style={{ borderLeft: '4px solid #52b788' }}>
+                  <Card.Header className="bg-white border-0 pb-0 pt-3 px-3">
+                    <div className="d-flex align-items-center justify-content-between">
+                      <h6 className="mb-0" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
+                        🎯 {t('goals.tabTitle', 'Objectifs')}
+                      </h6>
+                      <Button
+                        size="sm"
+                        variant="link"
+                        className="p-0 text-decoration-none"
+                        style={{ color: '#2d6a4f', fontSize: '0.8rem' }}
+                        onClick={() => setActiveTab('goals')}
+                      >
+                        {t('common.view', 'Voir')} →
+                      </Button>
+                    </div>
                   </Card.Header>
-                  <Card.Body>
-                    {patientObjectives.length === 0 ? (
-                      <p className="text-muted mb-0">{t('objectives.none', 'Aucun objectif défini')}</p>
+                  <Card.Body className="pt-2 px-3 pb-3">
+                    {!goalsSummary ? (
+                      <p className="text-muted mb-0 small">{t('common.loading', 'Chargement...')}</p>
+                    ) : goalsSummary.active.length === 0 && goalsSummary.completed === 0 ? (
+                      <p className="text-muted mb-0 small">{t('goals.noGoals', 'Aucun objectif défini pour ce patient.')}</p>
                     ) : (
-                      <ol className="mb-0 ps-3">
-                        {[1, 2, 3].map(num => {
-                          const obj = patientObjectives.find(o => o.objective_number === num);
-                          if (!obj) return null;
+                      <>
+                        {/* Stats row */}
+                        <div className="d-flex gap-3 mb-3 flex-wrap">
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#2d6a4f', lineHeight: 1 }}>
+                              {goalsSummary.active.length}
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: '#74c69d' }}>{t('goals.statusActive', 'En cours')}</div>
+                          </div>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#1b4332', lineHeight: 1 }}>
+                              {goalsSummary.completed}
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: '#74c69d' }}>{t('goals.statusCompleted', 'Atteints')}</div>
+                          </div>
+                          {goalsSummary.totalPoints > 0 && (
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#b7791f', lineHeight: 1 }}>
+                                {goalsSummary.totalPoints}
+                              </div>
+                              <div style={{ fontSize: '0.7rem', color: '#d4a017' }}>{t('goals.achievementPoints', 'pts')}</div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Active goals list (up to 3) */}
+                        {goalsSummary.active.slice(0, 3).map(goal => {
+                          const pct = goal.progress_pct;
+                          const color = pct >= 100 ? '#1b4332' : pct >= 75 ? '#2d6a4f' : pct >= 50 ? '#52b788' : '#74c69d';
                           return (
-                            <li key={num} className="mb-1 d-flex align-items-start gap-2">
-                              <div className="flex-grow-1">
-                                {obj.content}
-                                {obj.visit_date && (
-                                  <small className="text-muted ms-2">({new Date(obj.visit_date).toLocaleDateString()})</small>
+                            <div key={goal.id} className="mb-2">
+                              <div className="d-flex justify-content-between align-items-center mb-1">
+                                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#1b2d1f' }} className="text-truncate me-2">
+                                  {goal.title}
+                                </span>
+                                {pct !== null && (
+                                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color, flexShrink: 0 }}>
+                                    {pct}%
+                                  </span>
                                 )}
                               </div>
-                              <Button
-                                size="sm"
-                                variant="outline-primary"
-                                className="flex-shrink-0 p-0 border-0"
-                                onClick={() => setSendObjective(obj)}
-                                title={t('messages.sendToPatient', 'Envoyer dans un message')}
-                                style={{ lineHeight: 1 }}
-                              >
-                                <FiSend size={13} />
-                              </Button>
-                            </li>
+                              {pct !== null && (
+                                <div style={{ height: '4px', borderRadius: '10px', background: '#e9f5ee', overflow: 'hidden' }}>
+                                  <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: '10px' }} />
+                                </div>
+                              )}
+                            </div>
                           );
                         })}
-                      </ol>
+
+                        {/* Badges */}
+                        {goalsSummary.achievements.length > 0 && (
+                          <div className="d-flex gap-1 flex-wrap mt-2">
+                            {goalsSummary.achievements.slice(0, 5).map(a => (
+                              <span key={a.id} title={a.title} style={{ fontSize: '1.1rem', cursor: 'default' }}>
+                                {a.badge_icon || '🏅'}
+                              </span>
+                            ))}
+                            {goalsSummary.achievements.length > 5 && (
+                              <span style={{ fontSize: '0.75rem', color: '#adb5bd', alignSelf: 'center' }}>
+                                +{goalsSummary.achievements.length - 5}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </>
                     )}
                   </Card.Body>
                 </Card>
@@ -942,96 +1022,87 @@ const PatientDetailPage = () => {
                   })}
               </Tab>
 
-              {/* Dynamic Custom Field Category Tabs */}
-              {customFieldCategories.map((category) => {
-                // Get display layout configuration
-                const displayLayout = category.display_layout || { type: 'columns', columns: 2 };
-                const columnWidth = getColumnWidth(displayLayout.columns || 2);
-                const entityTypes = category.entity_types || ['patient'];
-                const isVisitOnly = entityTypes.includes('visit') && !entityTypes.includes('patient');
-                const showHistory = isVisitOnly && category.show_history_at_patient_level;
-
-                return (
-                  <Tab
-                    key={category.id}
-                    eventKey={`category-${category.id}`}
-                    title={
-                      <span>
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            width: '12px',
-                            height: '12px',
-                            backgroundColor: category.color || '#3498db',
-                            borderRadius: '50%',
-                            marginRight: '8px',
-                            verticalAlign: 'middle',
-                            border: '2px solid rgba(255,255,255,0.5)'
-                          }}
-                        />
-                        {category.name}
-                      </span>
-                    }
-                  >
-                    <div
-                      className="mb-3"
-                      style={{
-                        borderLeft: `4px solid ${category.color || '#3498db'}`,
-                        paddingLeft: '15px'
-                      }}
-                    >
-                      {category.description && (
-                        <Alert
-                          variant="info"
-                          style={{
-                            borderLeft: `4px solid ${category.color || '#3498db'}`,
-                            backgroundColor: `${category.color || '#3498db'}10`
-                          }}
-                        >
-                          {category.description}
-                        </Alert>
-                      )}
-                      {showHistory ? (
-                        <VisitFieldHistoryPanel
-                          patientId={id}
-                          categoryId={category.id}
-                          categoryColor={category.color}
-                        />
-                      ) : category.fields.length === 0 ? (
-                        <Alert variant="warning">
-                          Aucun champ défini pour cette catégorie
-                        </Alert>
-                      ) : displayLayout.type === 'radar' ? (
-                        <CustomFieldRadarChart
-                          category={category}
-                          fieldValues={fieldValues}
-                          options={displayLayout.options || {}}
-                        />
-                      ) : (
-                        <Row>
-                          {category.fields.map(field => (
-                            <Col
-                              key={field.definition_id}
-                              xs={12}
-                              md={columnWidth}
-                              className={(field.field_type === 'separator' || field.field_type === 'blank') ? 'mb-3' : ''}
+              {/* Notes de visite Tab */}
+              <Tab eventKey="consultation-notes" title={`📝 ${t('consultationNotes.tab', 'Notes de visite')} ${consultationNotes.length > 0 ? `(${consultationNotes.length})` : ''}`}>
+                <Card className="border-0">
+                  <Card.Body className="p-3">
+                    {notesLoading ? (
+                      <div className="text-center py-4"><Spinner animation="border" size="sm" /></div>
+                    ) : consultationNotes.length === 0 ? (
+                      <div className="text-center py-5" style={{ background: '#f8fdf9', borderRadius: '14px', border: '1px dashed #b7e4c7' }}>
+                        <div style={{ fontSize: '2.5rem', opacity: 0.4, marginBottom: '12px' }}>📝</div>
+                        <p className="text-muted mb-0">{t('consultationNotes.noNotes', 'Aucune note de consultation pour ce patient.')}</p>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {consultationNotes.map(note => {
+                          const isCompleted = note.status === 'completed';
+                          return (
+                            <div
+                              key={note.id}
+                              onClick={() => navigate(`/consultation-notes/${note.id}`)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '14px',
+                                padding: '12px 16px',
+                                background: '#fff',
+                                border: `1px solid ${isCompleted ? '#b7e4c7' : '#fde8a0'}`,
+                                borderLeft: `4px solid ${isCompleted ? '#2d6a4f' : '#f6c90e'}`,
+                                borderRadius: '12px',
+                                cursor: 'pointer',
+                                transition: 'box-shadow 0.15s',
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.08)'}
+                              onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
                             >
-                              <CustomFieldDisplay
-                                fieldDefinition={field}
-                                value={fieldValues[field.definition_id]}
-                                searchQuery={searchQuery}
-                                highlightText={highlightText}
-                              />
-                            </Col>
-                          ))}
-                        </Row>
-                      )}
-                    </div>
-                  </Tab>
-                );
-              })}
+                              <span style={{ fontSize: '1.3rem' }}>{isCompleted ? '✅' : '📋'}</span>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#1b2d1f', fontFamily: "'Space Grotesk', sans-serif" }}>
+                                  {note.template?.name || t('consultationNotes.untitled', 'Note de consultation')}
+                                </div>
+                                <div style={{ fontSize: '0.78rem', color: '#888', marginTop: '2px' }}>
+                                  {note.visit?.visit_date
+                                    ? `${t('visits.visitDate', 'Consultation')} · ${new Date(note.visit.visit_date).toLocaleDateString('fr-FR')}`
+                                    : new Date(note.created_at).toLocaleDateString('fr-FR')}
+                                  {note.dietitian && ` · ${note.dietitian.first_name} ${note.dietitian.last_name}`}
+                                </div>
+                              </div>
+                              <Badge
+                                bg="none"
+                                style={{
+                                  background: isCompleted ? '#d8f3dc' : '#fff8e1',
+                                  color: isCompleted ? '#2d6a4f' : '#b5830a',
+                                  border: `1px solid ${isCompleted ? '#b7e4c7' : '#fde8a0'}`,
+                                  fontSize: '0.72rem',
+                                  padding: '4px 10px',
+                                  borderRadius: '20px',
+                                  flexShrink: 0
+                                }}
+                              >
+                                {isCompleted
+                                  ? t('consultationNotes.statusCompleted', 'Terminée')
+                                  : t('consultationNotes.statusDraft', 'Brouillon')}
+                              </Badge>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </Card.Body>
+                </Card>
+              </Tab>
 
-              {/* 3. Measures Tab */}
+              {/* Goals Tab */}
+              <Tab eventKey="goals" title={`🎯 ${t('goals.tabTitle', 'Objectifs')}`}>
+                <Card>
+                  <Card.Body className="p-4">
+                    <PatientGoalsTab patientId={id} />
+                  </Card.Body>
+                </Card>
+              </Tab>
+
+              {/* Measures Tab */}
               <Tab eventKey="measures" title={`📊 ${t('patients.measures', 'Measures')}`}>
                 <Card>
                   <Card.Header>
@@ -1045,6 +1116,50 @@ const PatientDetailPage = () => {
                   </Card.Body>
                 </Card>
               </Tab>
+
+              {/* Éolienne / Radar tabs */}
+              {customFieldCategories.filter(c => (c.display_layout?.type || 'columns') === 'radar').map((category) => {
+                const displayLayout = category.display_layout || { type: 'columns', columns: 2 };
+                const columnWidth = getColumnWidth(displayLayout.columns || 2);
+                const entityTypes = category.entity_types || ['patient'];
+                const isVisitOnly = entityTypes.includes('visit') && !entityTypes.includes('patient');
+                const showHistory = isVisitOnly && category.show_history_at_patient_level;
+                return (
+                  <Tab
+                    key={category.id}
+                    eventKey={`category-${category.id}`}
+                    title={
+                      <span>
+                        <span style={{ display: 'inline-block', width: '12px', height: '12px', backgroundColor: category.color || '#3498db', borderRadius: '50%', marginRight: '8px', verticalAlign: 'middle', border: '2px solid rgba(255,255,255,0.5)' }} />
+                        {category.name}
+                      </span>
+                    }
+                  >
+                    <div className="mb-3" style={{ borderLeft: `4px solid ${category.color || '#3498db'}`, paddingLeft: '15px' }}>
+                      {category.description && (
+                        <Alert variant="info" style={{ borderLeft: `4px solid ${category.color || '#3498db'}`, backgroundColor: `${category.color || '#3498db'}10` }}>
+                          {category.description}
+                        </Alert>
+                      )}
+                      {showHistory ? (
+                        <VisitFieldHistoryPanel patientId={id} categoryId={category.id} categoryColor={category.color} />
+                      ) : category.fields.length === 0 ? (
+                        <Alert variant="warning">Aucun champ défini pour cette catégorie</Alert>
+                      ) : displayLayout.type === 'radar' ? (
+                        <CustomFieldRadarChart category={category} fieldValues={fieldValues} options={displayLayout.options || {}} />
+                      ) : (
+                        <Row>
+                          {category.fields.map(field => (
+                            <Col key={field.definition_id} xs={12} md={columnWidth} className={(field.field_type === 'separator' || field.field_type === 'blank') ? 'mb-3' : ''}>
+                              <CustomFieldDisplay fieldDefinition={field} value={fieldValues[field.definition_id]} searchQuery={searchQuery} highlightText={highlightText} />
+                            </Col>
+                          ))}
+                        </Row>
+                      )}
+                    </div>
+                  </Tab>
+                );
+              })}
 
               {/* 4. Documents Tab */}
               <Tab eventKey="documents" title={`📄 Documents (${documents.length})`}>
@@ -1654,14 +1769,6 @@ const PatientDetailPage = () => {
           selectedPatient={patient}
         />
 
-        <SendToPatientModal
-          show={!!sendObjective}
-          onClose={() => setSendObjective(null)}
-          patientId={id}
-          type="objective"
-          referenceId={sendObjective?.objective_number}
-          referenceTitle={sendObjective?.content || ''}
-        />
 
       </Container>
     </Layout>

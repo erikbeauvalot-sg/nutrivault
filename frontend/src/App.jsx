@@ -78,6 +78,7 @@ const SessionsPage = lazy(() => import('./pages/SessionsPage'));
 
 // Patient Portal pages
 const PatientPortalDashboard = lazy(() => import('./pages/portal/PatientPortalDashboard'));
+const PatientPortalProgress = lazy(() => import('./pages/portal/PatientPortalProgress'));
 const PatientPortalMeasures = lazy(() => import('./pages/portal/PatientPortalMeasures'));
 const PatientPortalVisits = lazy(() => import('./pages/portal/PatientPortalVisits'));
 const PatientPortalDocuments = lazy(() => import('./pages/portal/PatientPortalDocuments'));
@@ -683,6 +684,7 @@ function App() {
 
       {/* Patient Portal Routes (Protected - PATIENT role only) */}
       <Route path="/portal" element={<PatientProtectedRoute><PatientPortalDashboard /></PatientProtectedRoute>} />
+      <Route path="/portal/progress" element={<PatientProtectedRoute><PatientPortalProgress /></PatientProtectedRoute>} />
       <Route path="/portal/radar" element={<PatientProtectedRoute><PatientPortalRadar /></PatientProtectedRoute>} />
       <Route path="/portal/measures" element={<PatientProtectedRoute><PatientPortalMeasures /></PatientProtectedRoute>} />
       <Route path="/portal/visits" element={<PatientProtectedRoute><PatientPortalVisits /></PatientProtectedRoute>} />

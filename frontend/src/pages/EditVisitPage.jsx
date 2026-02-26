@@ -19,6 +19,7 @@ import { fetchMeasureTranslations } from '../utils/measureTranslations';
 import { formatDateTime, getTimezone } from '../utils/dateUtils';
 import CustomFieldInput from '../components/CustomFieldInput';
 import ConfirmModal from '../components/ConfirmModal';
+import PatientGoalsTab from '../components/PatientGoalsTab';
 
 /**
  * Convert a local datetime string (YYYY-MM-DDTHH:mm) to ISO UTC string
@@ -1265,6 +1266,17 @@ const EditVisitPage = () => {
                         </Card.Body>
                       </Card>
                     ))}
+                  </Tab>
+                )}
+
+                {/* Goals Tab */}
+                {visit?.patient_id && (
+                  <Tab eventKey="goals" title={`🎯 ${t('goals.tabTitle', 'Objectifs')}`}>
+                    <Card className="border-0 mt-2">
+                      <Card.Body className="p-3">
+                        <PatientGoalsTab patientId={visit.patient_id} />
+                      </Card.Body>
+                    </Card>
                   </Tab>
                 )}
               </ResponsiveTabs>

@@ -197,3 +197,27 @@ export const setPassword = async (token, password) => {
   const response = await api.post('/portal/set-password', { token, password });
   return extractData(response);
 };
+
+// =============================================
+// Progress & Goals
+// =============================================
+
+export const getProgress = async () => {
+  const response = await api.get('/portal/progress');
+  return extractData(response);
+};
+
+export const getGoals = async () => {
+  const response = await api.get('/portal/goals');
+  return extractData(response);
+};
+
+export const getAchievements = async () => {
+  const response = await api.get('/portal/achievements');
+  return extractData(response);
+};
+
+export const getConsultationNotes = async () => {
+  const response = await api.get('/portal/consultation-notes');
+  return extractData(response);
+};

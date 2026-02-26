@@ -195,6 +195,30 @@ router.get('/recipes/:id',
 router.get('/objectives', portalController.getObjectives);
 
 // ==========================================
+// PROGRESS & GOALS ROUTES
+// ==========================================
+
+/**
+ * GET /api/portal/progress — Full progress summary (goals + achievements + stats)
+ */
+router.get('/progress', portalController.getProgress);
+
+/**
+ * GET /api/portal/goals — Get patient's goals
+ */
+router.get('/goals', portalController.getGoals);
+
+/**
+ * GET /api/portal/achievements — Get patient's achievements
+ */
+router.get('/achievements', portalController.getAchievements);
+
+/**
+ * GET /api/portal/consultation-notes — Get patient's consultation notes (with AI summaries)
+ */
+router.get('/consultation-notes', portalController.getConsultationNotes);
+
+// ==========================================
 // RADAR CHART (WIND ROSE) ROUTES
 // ==========================================
 

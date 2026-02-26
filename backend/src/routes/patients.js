@@ -15,6 +15,7 @@ const patientTagController = require('../controllers/patientTagController');
 const patientCustomFieldController = require('../controllers/patientCustomFieldController');
 const authenticate = require('../middleware/authenticate');
 const { requirePermission } = require('../middleware/rbac');
+const db = require('../../../models');
 
 // Multer config for journal photo uploads (images only, max 10MB per file)
 const journalPhotoUpload = multer({
@@ -676,6 +677,163 @@ router.get(
   authenticate,
   requirePermission('patients.read'),
   emailLogController.getPatientEmailStats
+);
+
+// =============================================
+// PATIENT GOALS ROUTES (dietitian side)
+// =============================================
+
+const progressService = require('../services/progress.service');
+
+/**
+ * GET /api/patients/:patientId/goals — List goals for a patient
+ */
+router.get(
+  '/:patientId/goals',
+  authenticate,
+  requirePermission('patients.read'),
+  async (req, res, next) => {
+    try {
+      const goals = await db.PatientGoal.findAll({
+        where: { patient_id: req.params.patientId },
+        include: [
+          { model: db.MeasureDefinition, as: 'measureDefinition', attributes: ['id', 'name', 'display_name', 'unit'] }
+        ],
+        order: [['display_order', 'ASC'], ['created_at', 'ASC']]
+      });
+      const enriched = await Promise.all(goals.map(g => progressService.enrichGoalWithProgress(g, req.params.patientId)));
+      res.json({ success: true, data: enriched });
+    } catch (error) { next(error); }
+  }
+);
+
+/**
+ * POST /api/patients/:patientId/goals — Create a goal for a patient
+ */
+router.post(
+  '/:patientId/goals',
+  authenticate,
+  requirePermission('patients.update'),
+  body('title').notEmpty().withMessage('Title is required').isLength({ max: 200 }),
+  body('description').optional().isString(),
+  body('measure_definition_id').optional({ nullable: true }).isUUID(),
+  body('direction').optional().isIn(['increase', 'decrease', 'reach', 'maintain']),
+  body('start_value').optional({ nullable: true }).isDecimal(),
+  body('target_value').optional({ nullable: true }).isDecimal(),
+  body('start_date').optional({ nullable: true }).isISO8601(),
+  body('target_date').optional({ nullable: true }).isISO8601(),
+  body('notes').optional().isString(),
+  body('display_order').optional().isInt({ min: 0 }),
+  async (req, res, next) => {
+    try {
+      const goal = await db.PatientGoal.create({
+        patient_id: req.params.patientId,
+        created_by: req.user.id,
+        title: req.body.title,
+        description: req.body.description || null,
+        measure_definition_id: req.body.measure_definition_id || null,
+        direction: req.body.direction || 'reach',
+        start_value: req.body.start_value || null,
+        target_value: req.body.target_value || null,
+        start_date: req.body.start_date || null,
+        target_date: req.body.target_date || null,
+        notes: req.body.notes || null,
+        display_order: req.body.display_order || 0,
+        status: 'active'
+      });
+
+      const withDef = await db.PatientGoal.findByPk(goal.id, {
+        include: [{ model: db.MeasureDefinition, as: 'measureDefinition', attributes: ['id', 'name', 'display_name', 'unit'] }]
+      });
+
+      res.status(201).json({ success: true, data: withDef });
+    } catch (error) { next(error); }
+  }
+);
+
+/**
+ * PUT /api/patients/:patientId/goals/:goalId — Update a goal
+ */
+router.put(
+  '/:patientId/goals/:goalId',
+  authenticate,
+  requirePermission('patients.update'),
+  async (req, res, next) => {
+    try {
+      const goal = await db.PatientGoal.findOne({
+        where: { id: req.params.goalId, patient_id: req.params.patientId }
+      });
+      if (!goal) return res.status(404).json({ success: false, error: 'Goal not found' });
+
+      const fields = ['title', 'description', 'direction', 'start_value', 'target_value',
+        'start_date', 'target_date', 'status', 'notes', 'display_order', 'measure_definition_id'];
+      for (const f of fields) {
+        if (req.body[f] !== undefined) goal[f] = req.body[f];
+      }
+      await goal.save();
+
+      res.json({ success: true, data: goal });
+    } catch (error) { next(error); }
+  }
+);
+
+/**
+ * DELETE /api/patients/:patientId/goals/:goalId — Delete a goal
+ */
+router.delete(
+  '/:patientId/goals/:goalId',
+  authenticate,
+  requirePermission('patients.update'),
+  async (req, res, next) => {
+    try {
+      const goal = await db.PatientGoal.findOne({
+        where: { id: req.params.goalId, patient_id: req.params.patientId }
+      });
+      if (!goal) return res.status(404).json({ success: false, error: 'Goal not found' });
+      await goal.destroy();
+      res.json({ success: true, message: 'Goal deleted' });
+    } catch (error) { next(error); }
+  }
+);
+
+/**
+ * GET /api/patients/:patientId/achievements — List achievements for a patient
+ */
+router.get(
+  '/:patientId/achievements',
+  authenticate,
+  requirePermission('patients.read'),
+  async (req, res, next) => {
+    try {
+      const achievements = await db.PatientAchievement.findAll({
+        where: { patient_id: req.params.patientId },
+        include: [
+          { model: db.PatientGoal, as: 'goal', attributes: ['id', 'title'], required: false }
+        ],
+        order: [['earned_at', 'DESC']]
+      });
+      res.json({ success: true, data: achievements });
+    } catch (error) { next(error); }
+  }
+);
+
+/**
+ * DELETE /api/patients/:patientId/achievements/:achievementId — Delete an achievement
+ */
+router.delete(
+  '/:patientId/achievements/:achievementId',
+  authenticate,
+  requirePermission('patients.update'),
+  async (req, res, next) => {
+    try {
+      const achievement = await db.PatientAchievement.findOne({
+        where: { id: req.params.achievementId, patient_id: req.params.patientId }
+      });
+      if (!achievement) return res.status(404).json({ success: false, error: 'Achievement not found' });
+      await achievement.destroy();
+      res.json({ success: true, message: 'Achievement deleted' });
+    } catch (error) { next(error); }
+  }
 );
 
 module.exports = router;

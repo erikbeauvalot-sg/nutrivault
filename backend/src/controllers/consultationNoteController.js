@@ -75,11 +75,42 @@ const deleteNote = async (req, res) => {
   }
 };
 
+const generateAISummary = async (req, res) => {
+  try {
+    const result = await consultationNoteService.generateAISummary(req.params.id, req.user.id);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('[ConsultationNoteController] Error generating AI summary:', error);
+    const status = error.message === 'Note not found' ? 404
+      : error.message.includes('permission') ? 403
+      : error.message.includes('not configured') ? 503
+      : 500;
+    res.status(status).json({ success: false, error: error.message });
+  }
+};
+
+const sendAISummaryEmail = async (req, res) => {
+  try {
+    const result = await consultationNoteService.sendAISummaryEmail(req.params.id, req.user.id);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('[ConsultationNoteController] Error sending AI summary email:', error);
+    const status = error.message === 'Note not found' ? 404
+      : error.message.includes('permission') ? 403
+      : error.message.includes('No AI summary') ? 400
+      : error.message.includes('no email') ? 400
+      : 500;
+    res.status(status).json({ success: false, error: error.message });
+  }
+};
+
 module.exports = {
   createNote,
   getNotes,
   getNoteById,
   saveNoteValues,
   completeNote,
-  deleteNote
+  deleteNote,
+  generateAISummary,
+  sendAISummaryEmail
 };

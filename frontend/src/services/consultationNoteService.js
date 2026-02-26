@@ -35,11 +35,23 @@ export const deleteNote = async (id) => {
   return response.data;
 };
 
+export const generateAISummary = async (id) => {
+  const response = await api.post(`/consultation-notes/${id}/generate-summary`);
+  return response.data;
+};
+
+export const sendAISummaryEmail = async (id) => {
+  const response = await api.post(`/consultation-notes/${id}/send-summary`);
+  return response.data;
+};
+
 export default {
   createNote,
   getNotes,
   getNoteById,
   saveNoteValues,
   completeNote,
-  deleteNote
+  deleteNote,
+  generateAISummary,
+  sendAISummaryEmail
 };

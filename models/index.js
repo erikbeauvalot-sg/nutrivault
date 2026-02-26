@@ -1027,4 +1027,19 @@ db.ConsultationNote.hasMany(db.ConsultationNoteEntry, { foreignKey: 'note_id', a
 db.ConsultationNoteEntry.belongsTo(db.ConsultationNote, { foreignKey: 'note_id', as: 'note' });
 db.ConsultationNoteEntry.belongsTo(db.ConsultationTemplateItem, { foreignKey: 'template_item_id', as: 'templateItem' });
 
+// PatientGoal associations
+db.PatientGoal = require('./PatientGoal')(sequelize, DataTypes);
+db.PatientGoal.belongsTo(db.Patient, { foreignKey: 'patient_id', as: 'patient' });
+db.Patient.hasMany(db.PatientGoal, { foreignKey: 'patient_id', as: 'goals' });
+db.PatientGoal.belongsTo(db.User, { foreignKey: 'created_by', as: 'creator' });
+db.User.hasMany(db.PatientGoal, { foreignKey: 'created_by', as: 'created_goals' });
+db.PatientGoal.belongsTo(db.MeasureDefinition, { foreignKey: 'measure_definition_id', as: 'measureDefinition' });
+
+// PatientAchievement associations
+db.PatientAchievement = require('./PatientAchievement')(sequelize, DataTypes);
+db.PatientAchievement.belongsTo(db.Patient, { foreignKey: 'patient_id', as: 'patient' });
+db.Patient.hasMany(db.PatientAchievement, { foreignKey: 'patient_id', as: 'achievements' });
+db.PatientAchievement.belongsTo(db.PatientGoal, { foreignKey: 'goal_id', as: 'goal' });
+db.PatientGoal.hasMany(db.PatientAchievement, { foreignKey: 'goal_id', as: 'achievements' });
+
 module.exports = db;

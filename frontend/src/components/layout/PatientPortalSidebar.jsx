@@ -14,6 +14,7 @@ const PatientPortalSidebar = ({ isOpen, onClose }) => {
 
   const menuItems = [
     { path: '/portal', icon: '🏠', label: t('portal.nav.home', 'Accueil'), exact: true },
+    { path: '/portal/progress', icon: '🌱', label: t('portal.nav.progress', 'Mes progrès') },
     { path: '/portal/journal', icon: '📓', label: t('portal.nav.journal', 'Mon journal') },
     { path: '/portal/messages', icon: '💬', label: t('portal.nav.messages', 'Messages') },
     { path: '/portal/visits', icon: '📋', label: t('portal.nav.visits', 'Mes consultations') },

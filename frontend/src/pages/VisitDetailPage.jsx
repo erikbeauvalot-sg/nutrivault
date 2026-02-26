@@ -23,6 +23,7 @@ import { getMeasuresByVisit, formatMeasureValue, getAllMeasureTranslations } fro
 import { getInvoicesByVisit, downloadInvoicePDF } from '../services/billingService';
 import VisitEmailHistory from '../components/VisitEmailHistory';
 import consultationNoteService from '../services/consultationNoteService';
+import PatientGoalsTab from '../components/PatientGoalsTab';
 import consultationTemplateService from '../services/consultationTemplateService';
 import followupService from '../services/followupService';
 import { FaClipboardList, FaEdit, FaEye } from 'react-icons/fa';
@@ -905,6 +906,17 @@ const VisitDetailPage = () => {
                   </Table>
                 )}
               </Tab>
+
+              {/* Goals Tab */}
+              {(visit?.patient?.id || visit?.patient_id) && (
+                <Tab eventKey="goals" title={`🎯 ${t('goals.tabTitle', 'Objectifs')}`}>
+                  <Card className="border-0 mt-2">
+                    <Card.Body className="p-3">
+                      <PatientGoalsTab patientId={visit.patient?.id || visit.patient_id} />
+                    </Card.Body>
+                  </Card>
+                </Tab>
+              )}
 
               {/* Invoices Tab */}
               <Tab eventKey="invoices" title={`💰 ${t('visits.invoicesTab', 'Invoices')} (${invoices.length})`}>

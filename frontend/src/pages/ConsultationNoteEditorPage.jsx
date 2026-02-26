@@ -21,12 +21,15 @@ import {
   FaLayerGroup,
   FaRuler,
   FaInfoCircle,
-  FaSyncAlt
+  FaSyncAlt,
+  FaRobot,
+  FaEnvelope
 } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import CustomFieldInput from '../components/CustomFieldInput';
 import EmbeddedMeasureField from '../components/EmbeddedMeasureField';
+import PatientGoalsTab from '../components/PatientGoalsTab';
 import consultationNoteService from '../services/consultationNoteService';
 import visitCustomFieldService from '../services/visitCustomFieldService';
 import { getPatientCustomFields } from '../services/customFieldService';
@@ -70,6 +73,9 @@ const ConsultationNoteEditorPage = () => {
   const [instructionNotes, setInstructionNotes] = useState({});
   const [summary, setSummary] = useState('');
   const [dirty, setDirty] = useState(false);
+  const [aiSummary, setAiSummary] = useState('');
+  const [generatingAI, setGeneratingAI] = useState(false);
+  const [sendingAI, setSendingAI] = useState(false);
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -108,6 +114,7 @@ const ConsultationNoteEditorPage = () => {
       const noteData = response.data;
       setNote(noteData);
       setSummary(noteData.summary || '');
+      setAiSummary(noteData.ai_summary || '');
 
       // Load existing custom field values from visit/patient tables
       await loadExistingValues(noteData);
@@ -294,6 +301,34 @@ const ConsultationNoteEditorPage = () => {
       setError(err.response?.data?.error || t('consultationNotes.deleteError', 'Failed to delete note'));
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleGenerateAISummary = async () => {
+    setGeneratingAI(true);
+    setError(null);
+    try {
+      // Auto-save first so AI has latest data
+      await consultationNoteService.saveNoteValues(id, buildPayload());
+      const result = await consultationNoteService.generateAISummary(id);
+      setAiSummary(result.data?.ai_summary || '');
+    } catch (err) {
+      setError(err.response?.data?.error || t('consultationNotes.aiGenerateError', 'Erreur lors de la génération du résumé IA'));
+    } finally {
+      setGeneratingAI(false);
+    }
+  };
+
+  const handleSendAISummaryEmail = async () => {
+    setSendingAI(true);
+    setError(null);
+    try {
+      await consultationNoteService.sendAISummaryEmail(id);
+      setSuccess(t('consultationNotes.aiSummarySent', 'Résumé envoyé au patient par email'));
+    } catch (err) {
+      setError(err.response?.data?.error || t('consultationNotes.aiSendError', 'Erreur lors de l\'envoi'));
+    } finally {
+      setSendingAI(false);
     }
   };
 
@@ -570,6 +605,88 @@ const ConsultationNoteEditorPage = () => {
             />
           </Card.Body>
         </Card>
+
+        {/* AI Summary */}
+        <Card className="mt-3 mb-3 border-0 shadow-sm" style={{ borderLeft: '4px solid #6f42c1' }}>
+          <Card.Header className="bg-white border-0 py-2">
+            <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <div className="d-flex align-items-center gap-2">
+                <FaRobot style={{ color: '#6f42c1' }} />
+                <h6 className="mb-0" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
+                  {t('consultationNotes.aiSummaryTitle', 'Résumé IA')}
+                </h6>
+              </div>
+              <div className="d-flex gap-2 flex-wrap">
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  onClick={handleGenerateAISummary}
+                  disabled={generatingAI}
+                >
+                  {generatingAI
+                    ? <><Spinner animation="border" size="sm" className="me-1" />{t('consultationNotes.aiGenerating', 'Génération...')}</>
+                    : <><FaRobot className="me-1" />{aiSummary ? t('consultationNotes.aiRegenerate', 'Regénérer') : t('consultationNotes.aiGenerate', 'Générer le résumé IA')}</>
+                  }
+                </Button>
+                {aiSummary && note?.patient?.email && (
+                  <Button
+                    variant="outline-primary"
+                    size="sm"
+                    onClick={handleSendAISummaryEmail}
+                    disabled={sendingAI}
+                  >
+                    {sendingAI
+                      ? <><Spinner animation="border" size="sm" className="me-1" />{t('common.sending', 'Envoi...')}</>
+                      : <><FaEnvelope className="me-1" />{t('consultationNotes.aiSendEmail', 'Envoyer au patient')}</>
+                    }
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Card.Header>
+          <Card.Body>
+            {aiSummary ? (
+              <div
+                className="p-3 rounded"
+                style={{
+                  backgroundColor: '#f8f5ff',
+                  border: '1px solid #e0d6f5',
+                  whiteSpace: 'pre-wrap',
+                  lineHeight: 1.7,
+                  fontSize: '0.95rem'
+                }}
+              >
+                {aiSummary}
+              </div>
+            ) : (
+              <p className="text-muted mb-0 small">
+                {t('consultationNotes.aiSummaryEmpty', 'Cliquez sur "Générer le résumé IA" pour créer automatiquement un résumé de cette consultation.')}
+              </p>
+            )}
+            {aiSummary && !note?.patient?.email && (
+              <p className="text-warning small mt-2 mb-0">
+                {t('consultationNotes.aiNoEmail', 'Le patient n\'a pas d\'adresse email — impossible d\'envoyer le résumé.')}
+              </p>
+            )}
+          </Card.Body>
+        </Card>
+
+        {/* Goals & Rewards */}
+        {(note?.patient_id || note?.patient?.id) && (
+          <Card className="mt-3 mb-4 border-0 shadow-sm" style={{ borderLeft: '4px solid #52b788' }}>
+            <Card.Header className="bg-white border-0 py-2">
+              <div className="d-flex align-items-center gap-2">
+                <span style={{ fontSize: '1rem' }}>🎯</span>
+                <h6 className="mb-0" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 }}>
+                  {t('goals.tabTitle', 'Objectifs')}
+                </h6>
+              </div>
+            </Card.Header>
+            <Card.Body className="pt-2">
+              <PatientGoalsTab patientId={note.patient_id || note.patient?.id} />
+            </Card.Body>
+          </Card>
+        )}
       </Container>
 
       {/* Finish & Invoice Modal */}

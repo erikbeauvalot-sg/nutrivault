@@ -388,11 +388,153 @@ async function deleteNote(id, user) {
   return { success: true, message: 'Note deleted successfully' };
 }
 
+/**
+ * Compile readable content from a note's entries for AI summary generation
+ */
+async function compileNoteContent(note) {
+  const lines = [];
+
+  for (const entry of (note.entries || [])) {
+    if (entry.entry_type === 'instruction_note' && entry.note_text) {
+      lines.push(`Observation : ${entry.note_text}`);
+    } else if (entry.entry_type === 'patient_measure' && entry.reference_id) {
+      const measure = await PatientMeasure.findByPk(entry.reference_id, {
+        include: [{ model: MeasureDefinition, as: 'definition' }]
+      });
+      if (measure) {
+        const val = measure.value_number != null ? measure.value_number : measure.value_text;
+        const name = measure.definition?.name || 'Mesure';
+        const unit = measure.definition?.unit || '';
+        if (val != null && val !== '') {
+          lines.push(`${name} : ${val}${unit ? ' ' + unit : ''}`);
+        }
+      }
+    } else if (entry.entry_type === 'patient_custom_field' && entry.reference_id) {
+      const cfv = await PatientCustomFieldValue.findByPk(entry.reference_id, {
+        include: [{ model: CustomFieldDefinition, as: 'fieldDefinition' }]
+      });
+      if (cfv) {
+        const label = cfv.fieldDefinition?.field_label || cfv.fieldDefinition?.field_name || '';
+        const val = cfv.value_text || (cfv.value_number != null ? cfv.value_number : null);
+        if (label && val != null && val !== '') lines.push(`${label} : ${val}`);
+      }
+    } else if (entry.entry_type === 'visit_custom_field' && entry.reference_id) {
+      const cfv = await VisitCustomFieldValue.findByPk(entry.reference_id, {
+        include: [{ model: CustomFieldDefinition, as: 'fieldDefinition' }]
+      });
+      if (cfv) {
+        const label = cfv.fieldDefinition?.field_label || cfv.fieldDefinition?.field_name || '';
+        const val = cfv.value_text || (cfv.value_number != null ? cfv.value_number : null);
+        if (label && val != null && val !== '') lines.push(`${label} : ${val}`);
+      }
+    }
+  }
+
+  if (note.summary) {
+    lines.push(`Notes du diététicien : ${note.summary}`);
+  }
+
+  return lines;
+}
+
+async function generateAISummary(noteId, userId) {
+  const note = await ConsultationNote.findByPk(noteId, {
+    include: [
+      { model: Patient, as: 'patient', attributes: ['first_name', 'last_name', 'email'] },
+      { model: User, as: 'dietitian', attributes: ['first_name', 'last_name'] },
+      { model: ConsultationNoteEntry, as: 'entries', separate: true }
+    ]
+  });
+
+  if (!note) throw new Error('Note not found');
+  if (note.dietitian_id !== userId) throw new Error('You do not have permission to update this note');
+
+  const contentLines = await compileNoteContent(note);
+
+  const patientName = `${note.patient?.first_name || ''} ${note.patient?.last_name || ''}`.trim();
+  const dietitianName = `${note.dietitian?.first_name || ''} ${note.dietitian?.last_name || ''}`.trim();
+  const noteDate = note.created_at
+    ? new Date(note.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '';
+
+  const systemPrompt = `Tu es un assistant diététicien-nutritionniste. Tu génères des résumés de consultation clairs, positifs et encourageants destinés aux patients. Le résumé doit être en français, facile à lire, sans jargon médical excessif. Il doit mettre en valeur les observations clés, les progrès du patient, et les recommandations principales. Synthétise les données de façon humaine et bienveillante. Ne répète pas les valeurs brutes de façon mécanique.`;
+
+  const userPrompt = `Génère un résumé de consultation pour le patient ${patientName}, suivi(e) par ${dietitianName} le ${noteDate}.
+
+Données enregistrées lors de la consultation :
+${contentLines.length > 0 ? contentLines.join('\n') : 'Aucune donnée enregistrée.'}
+
+Le résumé doit :
+- Être rédigé en français, sur un ton bienveillant et encourageant
+- Faire entre 100 et 250 mots
+- Résumer les points clés de la consultation
+- Inclure des recommandations pratiques si les données le permettent
+- Être adapté pour être envoyé directement au patient par email`;
+
+  const { generateContent } = require('./aiProvider.service');
+  const aiSummary = await generateContent(systemPrompt, userPrompt, { maxTokens: 600 });
+
+  await note.update({ ai_summary: aiSummary });
+
+  return { ai_summary: aiSummary };
+}
+
+async function sendAISummaryEmail(noteId, userId) {
+  const note = await ConsultationNote.findByPk(noteId, {
+    include: [
+      { model: Patient, as: 'patient', attributes: ['id', 'first_name', 'last_name', 'email'] },
+      { model: User, as: 'dietitian', attributes: ['id', 'first_name', 'last_name'] }
+    ]
+  });
+
+  if (!note) throw new Error('Note not found');
+  if (note.dietitian_id !== userId) throw new Error('You do not have permission to update this note');
+  if (!note.ai_summary) throw new Error('No AI summary generated yet');
+  if (!note.patient?.email) throw new Error('Patient has no email address');
+
+  const { sendEmail } = require('./email.service');
+
+  const patientFirstName = note.patient.first_name || '';
+  const dietitianName = `${note.dietitian?.first_name || ''} ${note.dietitian?.last_name || ''}`.trim();
+  const noteDate = note.created_at
+    ? new Date(note.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '';
+
+  const htmlBody = `
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+      <div style="background: linear-gradient(135deg, #52b788, #40916c); padding: 30px; border-radius: 12px 12px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 1.4em;">Résumé de votre consultation</h1>
+        <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0;">Du ${noteDate}</p>
+      </div>
+      <div style="background: #f9f9f7; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e8e8e0;">
+        <p>Bonjour ${patientFirstName},</p>
+        <p>Suite à votre consultation avec ${dietitianName}, voici un résumé personnalisé de notre échange :</p>
+        <div style="background: white; border-left: 4px solid #52b788; padding: 20px; border-radius: 0 8px 8px 0; margin: 20px 0; white-space: pre-line; line-height: 1.7;">
+${note.ai_summary}
+        </div>
+        <p style="color: #666; font-size: 0.9em;">Vous retrouverez ce résumé dans votre espace patient dans la section <strong>Mes Consultations</strong>.</p>
+        <p>À bientôt,<br><strong>${dietitianName}</strong></p>
+      </div>
+    </div>
+  `;
+
+  await sendEmail({
+    to: note.patient.email,
+    subject: `Résumé de votre consultation du ${noteDate}`,
+    html: htmlBody,
+    sendingUserId: userId
+  });
+
+  return { success: true, sent_to: note.patient.email };
+}
+
 module.exports = {
   createNote,
   getNotes,
   getNoteById,
   saveNoteValues,
   completeNote,
-  deleteNote
+  deleteNote,
+  generateAISummary,
+  sendAISummaryEmail
 };

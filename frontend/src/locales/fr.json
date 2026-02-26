@@ -70,7 +70,17 @@
     "help": "Aide",
     "deletePermanently": "Supprimer définitivement",
     "moveUp": "Monter",
-    "moveDown": "Descendre"
+    "moveDown": "Descendre",
+    "required": "Requis",
+    "searchByName": "Rechercher par nom...",
+    "noResults": "Aucun résultat",
+    "clear": "Effacer",
+    "saveDraft": "Enregistrer le brouillon",
+    "none": "Aucun",
+    "noData": "Aucune donnée",
+    "resetToDefault": "Réinitialiser par défaut",
+    "remove": "Retirer",
+    "sending": "Envoi..."
   },
   "navigation": {
     "dashboard": "Tableau de bord",
@@ -105,7 +115,8 @@
     "quotes": "Devis",
     "finance": "Finance",
     "consultationTemplates": "Modeles de consultation",
-    "sessions": "Sessions"
+    "sessions": "Sessions",
+    "documents": "Documents"
   },
   "sidebar": {
     "groups": {
@@ -769,7 +780,8 @@
       "clove": "gousse",
       "sprig": "brin",
       "leaf": "feuille",
-      "handful": "poignée"
+      "handful": "poignée",
+      "unit": "unité"
     },
     "duplicated": "Ingrédient dupliqué avec succès",
     "duplicateError": "Impossible de dupliquer l'ingrédient"
@@ -852,6 +864,8 @@
     "totalPatients": "Total : {{count}} patient{{plural}}",
     "patient": "patient",
     "patients": "patients",
+    "identity": "Identité",
+    "contact": "Contact",
     "firstName": "Prénom",
     "lastName": "Nom",
     "name": "Nom",
@@ -1114,6 +1128,9 @@
     "decline": "Refuser",
     "inProgress": "En cours",
     "createVisit": "Programmer une consultation",
+    "createVisitSubtitle": "Planifier une consultation",
+    "appointmentDetails": "Détails du rendez-vous",
+    "typeAndDuration": "Type et durée",
     "scheduleVisit": "Programmer une consultation",
     "editVisit": "Modifier la consultation",
     "deleteVisit": "Supprimer la consultation",
@@ -1418,6 +1435,12 @@
     "widget_todaysAppointmentsList": "RDV du jour (liste)",
     "widget_birthdaysWidget": "Anniversaires (liste)",
     "widget_tasksDueTodayWidget": "Tâches du jour (liste)",
+    "alertsWidget": "Alertes",
+    "measureAlertsWidget": "Alertes mesures",
+    "recentJournalWidget": "Journal récent",
+    "todaysAppointmentsList": "RDV du jour",
+    "birthdaysWidget": "Anniversaires",
+    "tasksDueTodayWidget": "Tâches du jour",
     "birthdayToday": "Aujourd'hui",
     "inDays": "dans {{count}}j"
   },
@@ -1484,6 +1507,7 @@
     "updating": "Mise à jour en cours...",
     "recording": "Enregistrement...",
     "optional": "Optionnel",
+    "patientAndVisit": "Patient & Consultation",
     "status": {
       "draft": "Brouillon",
       "sent": "Envoyé",
@@ -1576,6 +1600,9 @@
   },
   "users": {
     "title": "Gestion des utilisateurs",
+    "user": "Utilisateur",
+    "landingPageSlug": "Page d'accueil",
+    "landingPageSlugHelp": "Chemin interne de l'application pour la page d'accueil (ex : /mariondiet)",
     "createUser": "Créer un utilisateur",
     "viewUser": "Voir l'utilisateur",
     "editUser": "Modifier l'utilisateur",
@@ -1692,7 +1719,8 @@
     "minValue": "La valeur doit être au moins {{count}}",
     "maxValue": "La valeur doit être au plus {{count}}",
     "mustBeNumber": "La valeur doit être un nombre",
-    "invalidPhone": "Veuillez saisir un numéro de téléphone valide"
+    "invalidPhone": "Veuillez saisir un numéro de téléphone valide",
+    "maxCharacters": "Maximum 500 caractères"
   },
   "errors": {
     "generic": "Une erreur s'est produite. Veuillez réessayer.",
@@ -2184,7 +2212,25 @@
     "chartView": "Graphique",
     "visitDate": "Date de visite",
     "visitType": "Type de visite",
-    "viewsCount": "{{count}} visite(s)"
+    "viewsCount": "{{count}} visite(s)",
+    "subtitle": "Définissez des champs personnalisés pour les profils patients et les consultations",
+    "categoriesTitle": "Catégories de champs",
+    "newCategory": "Nouvelle catégorie",
+    "searchCategoriesPlaceholder": "Rechercher par nom ou description...",
+    "showingResults": "Affichage de {{filtered}} sur {{total}} catégorie(s)",
+    "noCategoriesFound": "Aucune catégorie correspondant à votre recherche.",
+    "fieldDefinitions": "Définitions des champs",
+    "fieldDefinitionsTitle": "Définitions des champs",
+    "newField": "Nouveau champ",
+    "searchFieldsPlaceholder": "Rechercher par nom, libellé ou texte d'aide...",
+    "filterByCategory": "Filtrer par catégorie",
+    "selectCategory": "Sélectionner une catégorie...",
+    "selectAll": "Tout sélectionner",
+    "deselectAll": "Désélectionner tout",
+    "showingFieldsResults": "Affichage de {{filtered}} sur {{total}} champ(s)",
+    "clearAllFilters": "Effacer tous les filtres",
+    "lowerNumbersFirst": "Les valeurs basses apparaissent en premier",
+    "loading": "Chargement des champs personnalisés..."
   },
   "visitTypes": {
     "title": "Types de Consultation",
@@ -3143,6 +3189,7 @@
     "deviceTypes": "Appareils",
     "browsers": "Navigateurs",
     "topReferrers": "Principales sources",
+    "topIPs": "Top IPs",
     "recentViews": "Vues récentes",
     "noRecentViews": "Aucune vue récente",
     "date": "Date",
@@ -3248,7 +3295,8 @@
       "syncError": "Échec de la synchronisation",
       "connectSuccess": "Calendrier connecté",
       "loadError": "Échec du chargement des diététiciens",
-      "noDietitians": "Aucun diététicien trouvé"
+      "noDietitians": "Aucun diététicien trouvé",
+      "noData": "Aucune donnée de calendrier disponible"
     },
     "conflict": {
       "title": "Conflit de synchronisation détecté",
@@ -3298,7 +3346,8 @@
       "help": "Entrez une URL complète (ex: https://www.monsite.com)",
       "saved": "Sites internet enregistrés avec succès",
       "saveError": "Échec de l'enregistrement des sites internet",
-      "loadError": "Échec du chargement des sites internet"
+      "loadError": "Échec du chargement des sites internet",
+      "externalUrls": "URLs externes"
     },
     "analytics": {
       "sectionTitle": "Analytiques de page"
@@ -3620,6 +3669,7 @@
     "welcome": "Bienvenue",
     "nav": {
       "home": "Accueil",
+      "progress": "Mes progrès",
       "measures": "Mes mesures",
       "visits": "Mes consultations",
       "journal": "Mon journal",
@@ -3628,6 +3678,32 @@
       "radar": "Mon bilan",
       "recipes": "Mes recettes",
       "profile": "Mon profil"
+    },
+    "progress": {
+      "title": "Mes Progrès",
+      "subtitle": "Suivez votre évolution et célébrez vos réussites",
+      "loadError": "Erreur lors du chargement des données.",
+      "activeGoals": "Objectifs actifs",
+      "completedGoals": "Objectifs atteints",
+      "badges": "Badges obtenus",
+      "points": "Points",
+      "recommendations": "Recommandations personnalisées",
+      "activeGoalsTitle": "Objectifs en cours",
+      "completedGoalsTitle": "Objectifs atteints",
+      "noGoals": "Pas encore d'objectifs définis",
+      "noGoalsDesc": "Votre diététicien définira bientôt des objectifs personnalisés pour vous.",
+      "logMeasures": "Enregistrer des mesures",
+      "achievementsTitle": "Mes badges",
+      "noAchievements": "Continuez à progresser pour débloquer des badges !",
+      "progressLabel": "Progression",
+      "current": "Actuel",
+      "target": "Objectif",
+      "statusActive": "En cours",
+      "statusCompleted": "Atteint",
+      "statusAbandoned": "Abandonné",
+      "overdue": "Date dépassée",
+      "dueToday": "Échéance aujourd'hui !",
+      "daysLeft": "{{n}} jours restants"
     },
     "myProfile": "Mon profil",
     "recentMeasures": "Mesures récentes",
@@ -3668,6 +3744,8 @@
     "status": "Statut",
     "summary": "Résumé",
     "noVisitDetails": "Aucun détail pour cette consultation",
+    "hasSummary": "Résumé disponible",
+    "consultationSummary": "Résumé de consultation",
     "fileName": "Fichier",
     "category": "Catégorie",
     "size": "Taille",
@@ -4135,6 +4213,77 @@
     "deleteNote": "Supprimer la note",
     "deleteWarning": "Cette action est irreversible.",
     "deleteConfirmMessage": "Etes-vous sur de vouloir supprimer cette note de consultation ? Les entrees de la note seront supprimees, mais les donnees patient (champs personnalises, mesures) seront conservees.",
-    "deleteError": "Echec de la suppression de la note"
+    "deleteError": "Echec de la suppression de la note",
+    "tab": "Notes de visite",
+    "aiSummaryTitle": "Résumé IA",
+    "aiGenerate": "Générer le résumé IA",
+    "aiRegenerate": "Regénérer",
+    "aiGenerating": "Génération en cours...",
+    "aiSummaryEmpty": "Cliquez sur \"Générer le résumé IA\" pour créer automatiquement un résumé de cette consultation.",
+    "aiSendEmail": "Envoyer au patient",
+    "aiSummarySent": "Résumé envoyé au patient par email",
+    "aiGenerateError": "Erreur lors de la génération du résumé IA",
+    "aiSendError": "Erreur lors de l'envoi du résumé",
+    "aiNoEmail": "Le patient n'a pas d'adresse email — impossible d'envoyer le résumé."
+  },
+  "goals": {
+    "title": "Objectifs de santé",
+    "subtitle": "Définissez des objectifs mesurables liés aux mesures du patient",
+    "tabTitle": "Objectifs",
+    "addGoal": "Ajouter un objectif",
+    "defineFirst": "Définir le premier objectif",
+    "noGoals": "Aucun objectif défini pour ce patient.",
+    "newGoal": "Nouvel objectif",
+    "editGoal": "Modifier l'objectif",
+    "titleLabel": "Titre",
+    "titlePlaceholder": "Ex : Atteindre un poids de 70 kg",
+    "titleRequired": "Le titre est obligatoire",
+    "descriptionLabel": "Description",
+    "linkedMeasure": "Mesure liée",
+    "noMeasure": "— Aucune mesure liée —",
+    "direction": "Direction",
+    "directionIncrease": "Augmenter",
+    "directionDecrease": "Diminuer",
+    "directionReach": "Atteindre",
+    "directionMaintain": "Maintenir",
+    "startValue": "Valeur de départ",
+    "targetValue": "Valeur cible",
+    "startDate": "Début",
+    "targetDate": "Échéance",
+    "status": "Statut",
+    "statusActive": "En cours",
+    "statusCompleted": "Atteint",
+    "statusAbandoned": "Abandonné",
+    "notes": "Notes",
+    "progress": "Progression",
+    "create": "Créer",
+    "loadError": "Erreur lors du chargement des objectifs",
+    "saveError": "Erreur lors de la sauvegarde",
+    "deleteError": "Erreur lors de la suppression",
+    "created": "Objectif créé",
+    "updated": "Objectif mis à jour",
+    "deleted": "Objectif supprimé",
+    "deleteConfirmTitle": "Supprimer l'objectif",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cet objectif ? Cette action est irréversible.",
+    "achievementsTitle": "Récompenses obtenues",
+    "achievementsSubtitle": "Badges et points gagnés par le patient",
+    "noAchievements": "Aucune récompense pour ce patient.",
+    "achievementPoints": "pts",
+    "achievementEarnedAt": "Obtenu le",
+    "deleteAchievement": "Supprimer la récompense",
+    "deleteAchievementConfirm": "Supprimer cette récompense ? Le patient ne la verra plus dans son portail.",
+    "achievementDeleted": "Récompense supprimée",
+    "achievementDeleteError": "Erreur lors de la suppression de la récompense",
+    "achievementsLoadError": "Erreur lors du chargement des récompenses"
+  },
+  "legal": {
+    "privacyPolicy": "Politique de confidentialité"
+  },
+  "biometric": {
+    "setupTitle": "Activer {{type}} ?",
+    "setupDescription": "Utilisez {{type}} pour déverrouiller NutriVault rapidement et en toute sécurité.",
+    "enable": "Activer {{type}}",
+    "notNow": "Pas maintenant",
+    "dontAskAgain": "Ne plus demander"
   }
 }

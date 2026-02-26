@@ -1777,3 +1777,86 @@ exports.setPassword = async (req, res, next) => {
     next(error);
   }
 };
+
+// ==========================================
+// PROGRESS & GOALS CONTROLLERS
+// ==========================================
+
+const progressService = require('../services/progress.service');
+
+/**
+ * GET /api/portal/progress — Full progress summary
+ */
+exports.getProgress = async (req, res, next) => {
+  try {
+    const lang = req.patient.language_preference || req.query.lang || 'fr';
+    const summary = await progressService.getProgressSummary(req.patient.id, lang);
+    res.json({ success: true, data: summary });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/portal/goals — Patient's goals list
+ */
+exports.getGoals = async (req, res, next) => {
+  try {
+    const goals = await db.PatientGoal.findAll({
+      where: { patient_id: req.patient.id },
+      include: [
+        { model: db.MeasureDefinition, as: 'measureDefinition', attributes: ['id', 'name', 'display_name', 'unit'] }
+      ],
+      order: [['display_order', 'ASC'], ['created_at', 'ASC']]
+    });
+
+    const enriched = await Promise.all(
+      goals.map(g => progressService.enrichGoalWithProgress(g, req.patient.id))
+    );
+
+    res.json({ success: true, data: enriched });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/portal/achievements — Patient's achievements
+ */
+exports.getAchievements = async (req, res, next) => {
+  try {
+    const achievements = await db.PatientAchievement.findAll({
+      where: { patient_id: req.patient.id },
+      order: [['earned_at', 'DESC']]
+    });
+    const totalPoints = achievements.reduce((sum, a) => sum + (a.reward_points || 0), 0);
+    res.json({ success: true, data: { achievements, total_points: totalPoints } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getConsultationNotes = async (req, res, next) => {
+  try {
+    const notes = await db.ConsultationNote.findAll({
+      where: { patient_id: req.patient.id },
+      include: [
+        {
+          model: db.ConsultationTemplate,
+          as: 'template',
+          attributes: ['id', 'name', 'color']
+        },
+        {
+          model: db.User,
+          as: 'dietitian',
+          attributes: ['id', 'first_name', 'last_name']
+        }
+      ],
+      attributes: ['id', 'visit_id', 'status', 'ai_summary', 'created_at', 'completed_at'],
+      order: [['created_at', 'DESC']]
+    });
+    res.json({ success: true, data: notes });
+  } catch (error) {
+    next(error);
+  }
+};

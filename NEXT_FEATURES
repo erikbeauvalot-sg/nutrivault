@@ -1,11 +1,10 @@
 - Encouragements, a envoyer directement ou les programmer a travers le journal du patient dans son portal.
-- Amélioration de la section "Mes objectifs" pour permettre aux patients de suivre leurs progrès et de recevoir des recommandations personnalisées.
-- Intégration d'un système de récompenses pour motiver les patients à atteindre leurs objectifs de santé.
 - Pour faciliter la gestion des patients : rajouter la possibilité de créer des groupes de patients pour les dieteticiens, afin de leur permettre de suivre plus facilement les progrès de leurs patients et de leur envoyer des encouragements ciblés.
 - Dans le journal du patient, ajouter une section "Mes progrès" où les patients peuvent voir un résumé de leurs progrès au fil du temps, avec des graphiques et des statistiques pour les aider à visualiser leur évolution.
 - pouvoir utiliser les groups de patient dans l'envoie des campagnes de communication, pour permettre aux diététiciens d'envoyer des messages ciblés à des groupes spécifiques de patients en fonction de leurs besoins et de leurs objectifs de santé.
 - pour les Diets, ajouter la possibilité de créer des plans de repas personnalisés pour les patients, en fonction de leurs préférences alimentaires, de leurs objectifs de santé et de leurs restrictions alimentaires.
 - Pour les dieteticiens, ajouter la capacité de generer rapidement des devis a destination de leurs patients, pour faciliter la gestion administrative et financière de leur pratique.
+
 - Pour les dieteticiens et le cabinet, une gestion améliorée de la finance avec des outils de comptabilité intégrés pour suivre les revenus, les dépenses et les paiements des patients.
 
 
@@ -51,3 +50,21 @@
   pour leur permettre de personnaliser davantage leur approche et de fournir des conseils nutritionnels encore plus adaptés à leurs patients.
   Ces modèles pourraient être facilement modifiables et adaptables en fonction des besoins changeants des patients,
   pour permettre aux diététiciens de fournir des conseils nutritionnels personnalisés et de suivre les progrès de leurs patients de manière plus efficace et organisée.
+
+
+
+[ ] Pour les patients, ajouter la possibilité de suivre leurs progrès de manière plus détaillée, en utilisant des graphiques et des statistiques pour visualiser
+  leur évolution au fil du temps, et en fournissant des recommandations personnalisées en fonction de leurs progrès et de leurs objectifs de santé,
+  pour les aider à rester motivés et à atteindre leurs objectifs de santé de manière plus efficace. Amélioration de la section "Mes objectifs" pour 
+  permettre aux patients de suivre leurs progrès et de recevoir des recommandations personnalisées. Intégration d'un système de récompenses pour motiver 
+  les patients à atteindre leurs objectifs de santé. Ajout de fonctionnalités de suivi des progrès, telles que des graphiques et des statistiques, 
+  pour aider les patients à visualiser leur évolution au fil du temps. Intégration de recommandations personnalisées en fonction des progrès et des 
+  objectifs de santé des patients, pour les aider à rester motivés et à atteindre leurs objectifs de santé de manière plus efficace. 
+  Amélioration de l'interface utilisateur pour faciliter la navigation et la compréhension des progrès et des recommandations, 
+  avec des fonctionnalités telles que des notifications et des rappels pour encourager les patients à rester engagés dans leur parcours de santé.
+  Tout ceci pourrait être intégré dans une section dédiée du portal patient, pour permettre aux patients de suivre facilement leurs progrès et 
+  de recevoir des recommandations personnalisées en fonction de leurs objectifs de santé.
+  Tout ceci dans une branch git dédiée, pour permettre une gestion efficace du développement de ces fonctionnalités et pour faciliter 
+  la collaboration entre les membres de l'équipe de développement.
+  
+

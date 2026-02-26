@@ -34,6 +34,10 @@ module.exports = (sequelize, DataTypes) => {
     summary: {
       type: DataTypes.TEXT,
       allowNull: true
+    },
+    ai_summary: {
+      type: DataTypes.TEXT,
+      allowNull: true
     }
   }, {
     tableName: 'consultation_notes',
