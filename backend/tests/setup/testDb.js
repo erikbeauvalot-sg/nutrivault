@@ -59,6 +59,34 @@ async function reset() {
     'Billing',
     'MeasureAlert',
     'PatientMeasure',
+    // Consultation models
+    'ConsultationNoteEntry',
+    'ConsultationNote',
+    'ConsultationTemplateItem',
+    'ConsultationTemplate',
+    // Messaging models
+    'Message',
+    'ConversationLabel',
+    'Conversation',
+    // Notification models
+    'Notification',
+    'NotificationPreference',
+    // Sidebar config models
+    'SidebarMenuConfig',
+    'SidebarSection',
+    'SidebarCategory',
+    // Journal/Activity models
+    'JournalComment',
+    'JournalEntry',
+    'PatientObjective',
+    'PatientAchievement',
+    'PatientGoal',
+    // Other models
+    'DashboardPreference',
+    'UserEmailConfig',
+    'DeviceToken',
+    'PatientDietitian',
+    'UserSupervisor',
     'MeasureTranslation',
     'MeasureDefinition',
     'VisitCustomFieldValue',
@@ -280,7 +308,23 @@ async function seedBaseData() {
     { code: 'tasks.read', description: 'View tasks', resource: 'tasks', action: 'read' },
     { code: 'tasks.create', description: 'Create tasks', resource: 'tasks', action: 'create' },
     { code: 'tasks.update', description: 'Update tasks', resource: 'tasks', action: 'update' },
-    { code: 'tasks.delete', description: 'Delete tasks', resource: 'tasks', action: 'delete' }
+    { code: 'tasks.delete', description: 'Delete tasks', resource: 'tasks', action: 'delete' },
+
+    // Consultation Template permissions
+    { code: 'consultation_templates.create', description: 'Create consultation templates', resource: 'consultation_templates', action: 'create' },
+    { code: 'consultation_templates.read', description: 'View consultation templates', resource: 'consultation_templates', action: 'read' },
+    { code: 'consultation_templates.update', description: 'Update consultation templates', resource: 'consultation_templates', action: 'update' },
+    { code: 'consultation_templates.delete', description: 'Delete consultation templates', resource: 'consultation_templates', action: 'delete' },
+
+    // Session permissions
+    { code: 'sessions.read', description: 'View active sessions', resource: 'sessions', action: 'read' },
+    { code: 'sessions.revoke', description: 'Revoke sessions', resource: 'sessions', action: 'revoke' },
+
+    // Messages permissions
+    { code: 'messages.read', description: 'Read messages', resource: 'messages', action: 'read' },
+    { code: 'messages.create', description: 'Send messages', resource: 'messages', action: 'create' },
+    { code: 'messages.update', description: 'Update messages', resource: 'messages', action: 'update' },
+    { code: 'messages.delete', description: 'Delete messages', resource: 'messages', action: 'delete' }
   ];
   const permissions = await db.Permission.bulkCreate(permissionData);
 
@@ -314,7 +358,9 @@ async function seedBaseData() {
     'finance.read',
     'accounting.read', 'accounting.create', 'accounting.update',
     'dashboard.read', 'dashboard.update',
-    'tasks.read', 'tasks.create', 'tasks.update', 'tasks.delete'
+    'tasks.read', 'tasks.create', 'tasks.update', 'tasks.delete',
+    'consultation_templates.create', 'consultation_templates.read', 'consultation_templates.update', 'consultation_templates.delete',
+    'messages.read', 'messages.create', 'messages.update', 'messages.delete'
   ];
   const dietitianPermissions = dietitianPermissionCodes
     .filter(code => permissionMap[code])
@@ -328,7 +374,8 @@ async function seedBaseData() {
   const assistantPermissionCodes = [
     'patients.read', 'visits.read', 'billing.read',
     'custom_fields.read', 'measures.read', 'email_templates.read', 'billing_templates.read',
-    'clients.read', 'quotes.read', 'expenses.read', 'finance.read', 'accounting.read'
+    'clients.read', 'quotes.read', 'expenses.read', 'finance.read', 'accounting.read',
+    'consultation_templates.read', 'messages.read'
   ];
   const assistantPermissions = assistantPermissionCodes
     .filter(code => permissionMap[code])

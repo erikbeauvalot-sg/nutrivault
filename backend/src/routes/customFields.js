@@ -14,7 +14,7 @@ const customFieldCategoryController = require('../controllers/customFieldCategor
 const customFieldDefinitionController = require('../controllers/customFieldDefinitionController');
 const customFieldTranslationController = require('../controllers/customFieldTranslationController');
 const authenticate = require('../middleware/authenticate');
-const { requirePermission } = require('../middleware/rbac');
+const { requirePermission, requireRole } = require('../middleware/rbac');
 
 // ===========================================
 // Category Routes
@@ -120,7 +120,7 @@ router.post(
 router.post(
   '/export',
   authenticate,
-  requirePermission('custom_fields.read'),
+  requireRole('ADMIN'),
   customFieldCategoryController.exportCategories
 );
 

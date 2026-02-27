@@ -61,6 +61,17 @@ function createTestApp() {
   const expenseRoutes = require('../../src/routes/expenses');
   const financeRoutes = require('../../src/routes/finance');
   const accountingEntryRoutes = require('../../src/routes/accountingEntries');
+  const alertsRoutes = require('../../src/routes/alerts');
+  const consultationNotesRoutes = require('../../src/routes/consultationNotes');
+  const consultationTemplatesRoutes = require('../../src/routes/consultationTemplates');
+  const sidebarCategoriesRoutes = require('../../src/routes/sidebarCategories');
+  const sidebarSectionsRoutes = require('../../src/routes/sidebarSections');
+  const sidebarMenuConfigsRoutes = require('../../src/routes/sidebarMenuConfigs');
+  const sessionsRoutes = require('../../src/routes/sessions');
+  const emailConfigRoutes = require('../../src/routes/emailConfig');
+  const notificationsRoutes = require('../../src/routes/notifications');
+  const notificationPreferencesRoutes = require('../../src/routes/notificationPreferences');
+  const messagesRoutes = require('../../src/routes/messages');
 
   // Mount routes
   app.use('/api/auth', authRoutes);
@@ -102,6 +113,17 @@ function createTestApp() {
   app.use('/api/expenses', expenseRoutes);
   app.use('/api/finance', financeRoutes);
   app.use('/api/accounting-entries', accountingEntryRoutes);
+  app.use('/api/alerts', alertsRoutes);
+  app.use('/api/consultation-notes', consultationNotesRoutes);
+  app.use('/api/consultation-templates', consultationTemplatesRoutes);
+  app.use('/api/sidebar-categories', sidebarCategoriesRoutes);
+  app.use('/api/sidebar-sections', sidebarSectionsRoutes);
+  app.use('/api/sidebar-menu-configs', sidebarMenuConfigsRoutes);
+  app.use('/api/sessions', sessionsRoutes);
+  app.use('/api/email-config', emailConfigRoutes);
+  app.use('/api/notifications', notificationsRoutes);
+  app.use('/api/notification-preferences', notificationPreferencesRoutes);
+  app.use('/api/messages', messagesRoutes);
 
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(__dirname, '../../../uploads')));

@@ -126,6 +126,7 @@ describe('AnalyticsDashboardPage', () => {
     analyticsService.getHealthTrends.mockResolvedValue(mockHealthData);
     analyticsService.getFinancialMetrics.mockResolvedValue(mockFinancialData);
     analyticsService.getCommunicationEffectiveness.mockResolvedValue(mockCommunicationData);
+    analyticsService.getQuoteMetrics?.mockResolvedValue({ data: { summary: {}, quotes: [] } });
   });
 
   describe('Rendering', () => {
