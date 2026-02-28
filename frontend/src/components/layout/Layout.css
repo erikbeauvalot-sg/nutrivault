@@ -6,6 +6,11 @@
   overflow: hidden;
 }
 
+/* Remove Bootstrap default bottom margin from navbar */
+.layout-wrapper > .navbar {
+  margin-bottom: 0 !important;
+}
+
 .layout-container {
   display: flex;
   flex: 1;
@@ -23,6 +28,7 @@
   -webkit-overflow-scrolling: touch;
   min-width: 0; /* prevent flex child overflow */
   min-height: 0; /* allow flex child to shrink */
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Native iOS page transitions */

@@ -102,7 +102,12 @@
       "finance": "Finance",
       "data": "Data",
       "admin": "Administration"
-    }
+    },
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar",
+    "mainSection": "Main",
+    "quickAction": "Quick action",
+    "addPatient": "New patient"
   },
   "sessions": {
     "title": "Session Management",
