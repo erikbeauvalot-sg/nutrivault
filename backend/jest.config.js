@@ -60,6 +60,9 @@ module.exports = {
   // Verbose output
   verbose: true,
 
+  // Run tests serially to avoid SQLite in-memory database lock contention
+  maxWorkers: 1,
+
   // Force exit after tests complete
   forceExit: true,
 

@@ -260,7 +260,7 @@ const getRevenueChart = async (user, period = 'monthly') => {
     // Last 12 months
     for (let i = 11; i >= 0; i--) {
       const startDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const endDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+      const endDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59, 999);
 
       const result = await db.Billing.findOne({
         attributes: [
@@ -302,7 +302,7 @@ const getRevenueChart = async (user, period = 'monthly') => {
     // Last 4 quarters
     for (let i = 3; i >= 0; i--) {
       const quarterStart = new Date(now.getFullYear(), now.getMonth() - (i * 3) - 2, 1);
-      const quarterEnd = new Date(now.getFullYear(), now.getMonth() - (i * 3) + 1, 0);
+      const quarterEnd = new Date(now.getFullYear(), now.getMonth() - (i * 3) + 1, 0, 23, 59, 59, 999);
 
       const result = await db.Billing.findOne({
         attributes: [
