@@ -6,14 +6,14 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Nav } from 'react-bootstrap';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import SIDEBAR_ITEMS, { getItemPath, GROUP_ORDER, GROUP_LABELS } from '../../config/sidebarItemRegistry';
 import { getAllConfigs } from '../../services/sidebarMenuConfigService';
 import { getAllCategories } from '../../services/sidebarCategoryService';
 import { getAllSections } from '../../services/sidebarSectionService';
-import { FiChevronLeft, FiChevronRight, FiPlus } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import './Sidebar.css';
 
 const CACHE_KEYS = {
@@ -45,7 +45,7 @@ function buildOpenState(sections, categories) {
 
   const state = {};
   if (sections) {
-    sections.filter(s => s.key !== 'main').forEach(s => {
+    sections.forEach(s => {
       state[`section:${s.key}`] = s.key in saved ? saved[s.key] : (s.is_default_open !== false);
     });
   }
@@ -73,7 +73,6 @@ function getInitials(user) {
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const { user } = useAuth();
 
@@ -126,7 +125,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
         setOpenState(prev => {
           const next = { ...prev };
-          secData.filter(s => s.key !== 'main').forEach(s => {
+          secData.forEach(s => {
             if (applyDefaults || !(`section:${s.key}` in next)) {
               next[`section:${s.key}`] = s.is_default_open !== false;
             }
@@ -298,9 +297,29 @@ const Sidebar = ({ isOpen, onClose }) => {
       }
     });
 
-    return renderOrder.map((entry, idx) => {
+    // Merge consecutive ungrouped items into blocks so they share a single vertical line
+    const mergedOrder = [];
+    let currentBlock = null;
+    renderOrder.forEach(entry => {
       if (entry.type === 'item') {
-        return <div key={entry.item.path || idx}>{renderItem(entry.item)}</div>;
+        if (!currentBlock) {
+          currentBlock = { type: 'item-block', items: [] };
+          mergedOrder.push(currentBlock);
+        }
+        currentBlock.items.push(entry.item);
+      } else {
+        currentBlock = null;
+        mergedOrder.push(entry);
+      }
+    });
+
+    return mergedOrder.map((entry, idx) => {
+      if (entry.type === 'item-block') {
+        return (
+          <div key={`ungrouped-${idx}`} className="sidebar-group-items">
+            {entry.items.map(renderItem)}
+          </div>
+        );
       }
 
       const items = grouped[entry.key];
@@ -309,18 +328,23 @@ const Sidebar = ({ isOpen, onClose }) => {
       const cat = catMap[entry.key] || { key: entry.key, label: entry.key, icon: '' };
 
       if (items.length === 1) {
-        return <div key={cat.key}>{renderItem(items[0])}</div>;
+        return (
+          <div key={cat.key} className="sidebar-group-items">
+            {renderItem(items[0])}
+          </div>
+        );
       }
 
       const stateKey = `cat:${cat.key}`;
-      const isOpen = openState[stateKey] !== false;
+      const hasActiveItem = items.some(i => location.pathname === i.path || location.pathname.startsWith(i.path + '/'));
+      const isOpen = hasActiveItem || openState[stateKey] !== false;
       const label = cat.label || t(GROUP_LABELS[cat.key] || `sidebar.groups.${cat.key}`, cat.key);
 
       return (
-        <div key={cat.key} className="sidebar-group">
+        <div key={cat.key} className={`sidebar-group ${hasActiveItem ? 'has-active' : ''}`}>
           <div className={`sidebar-group-header ${isOpen ? 'open' : ''}`} onClick={() => toggle(stateKey)}>
-            {cat.icon && <span className="sidebar-group-icon">{cat.icon}</span>}
             <span className="sidebar-group-label">{label}</span>
+            <span className="sidebar-group-line" aria-hidden="true" />
             <span className="sidebar-chevron">{isOpen ? '▾' : '›'}</span>
           </div>
           {isOpen && <div className="sidebar-group-items">{items.map(renderItem)}</div>}
@@ -331,30 +355,19 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   const renderNonMainSection = (sec, sectionItems) => {
     const stateKey = `section:${sec.key}`;
-    const isOpen = stateKey in openState ? openState[stateKey] : sec.is_default_open !== false;
-
-    const secCats = categoriesBySection[sec.key] || [];
-    const hasCategories = secCats.length > 0 && sectionItems.some(i => i.group && secCats.find(c => c.key === i.group));
-
+    const isOpen = openState[stateKey] !== false;
+    const hasActive = sectionItems.some(i => location.pathname === i.path || location.pathname.startsWith(i.path + '/'));
     return (
-      <div key={sec.key} className="sidebar-section-block">
+      <div key={sec.key} className={`sidebar-section-block ${hasActive ? 'has-active' : ''}`}>
         <div
-          className={`sidebar-section-header ${isOpen ? 'open' : ''}`}
+          className="sidebar-section-label sidebar-section-divider sidebar-section-header"
           onClick={() => toggle(stateKey)}
         >
-          <span className="sidebar-icon">{sec.icon}</span>
-          <span className="sidebar-label">{sec.label}</span>
+          <span className="sidebar-section-divider-label">{sec.label}</span>
+          <span className="sidebar-group-line" aria-hidden="true" />
           <span className="sidebar-chevron">{isOpen ? '▾' : '›'}</span>
-          {collapsed && <span className="sidebar-tooltip">{sec.label}</span>}
         </div>
-        {isOpen && (
-          <div className="sidebar-section-items">
-            {hasCategories
-              ? renderMainSection(sectionItems, sec.key)
-              : sectionItems.map(renderItem)
-            }
-          </div>
-        )}
+        {isOpen && renderMainSection(sectionItems, sec.key)}
       </div>
     );
   };
@@ -394,12 +407,20 @@ const Sidebar = ({ isOpen, onClose }) => {
           if (sectionItems.length === 0) return null;
 
           if (sec.key === 'main') {
+            const stateKey = `section:${sec.key}`;
+            const isOpen = openState[stateKey] !== false;
+            const hasActive = sectionItems.some(i => location.pathname === i.path || location.pathname.startsWith(i.path + '/'));
             return (
-              <div key="main">
-                <div className="sidebar-section-label">
-                  {t('sidebar.mainSection', 'Main')}
+              <div key="main" className={`sidebar-section-block ${hasActive ? 'has-active' : ''}`}>
+                <div
+                  className="sidebar-section-label sidebar-section-header"
+                  onClick={() => toggle(stateKey)}
+                >
+                  <span>{t('sidebar.mainSection', 'Main')}</span>
+                  <span className="sidebar-group-line" aria-hidden="true" />
+                  <span className="sidebar-chevron">{isOpen ? '▾' : '›'}</span>
                 </div>
-                {renderMainSection(sectionItems)}
+                {isOpen && renderMainSection(sectionItems)}
               </div>
             );
           }
@@ -408,20 +429,6 @@ const Sidebar = ({ isOpen, onClose }) => {
         })}
       </Nav>
 
-      {/* Bottom CTA card */}
-      <div className="sidebar-bottom-card">
-        <div className="sidebar-bottom-card-icon">🌱</div>
-        <div className="sidebar-bottom-card-text">
-          {t('sidebar.quickAction', 'Quick action')}
-        </div>
-        <button
-          className="sidebar-bottom-card-btn"
-          onClick={() => { navigate('/patients'); handleNavClick(); }}
-        >
-          <FiPlus size={14} />
-          <span>{t('sidebar.addPatient', 'New patient')}</span>
-        </button>
-      </div>
     </div>
   );
 };
