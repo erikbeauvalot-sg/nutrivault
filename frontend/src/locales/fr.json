@@ -126,7 +126,12 @@
       "finance": "Finance",
       "data": "Données",
       "admin": "Administration"
-    }
+    },
+    "expand": "Déplier la barre latérale",
+    "collapse": "Replier la barre latérale",
+    "mainSection": "Principal",
+    "quickAction": "Action rapide",
+    "addPatient": "Nouveau patient"
   },
   "sessions": {
     "title": "Gestion des Sessions",
