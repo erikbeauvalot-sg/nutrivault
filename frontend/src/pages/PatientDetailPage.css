@@ -124,6 +124,54 @@
   }
 }
 
+/* Inline editable fields */
+.inline-field {
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: border-color 0.15s, background-color 0.15s;
+  width: 100%;
+  font-size: 0.9rem;
+  color: inherit;
+}
+
+.inline-field:hover {
+  border-color: #dee2e6;
+  background-color: #f8f9fa;
+}
+
+.inline-field:focus {
+  border-color: #0d6efd;
+  background-color: #fff;
+  outline: none;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+.inline-field-textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.inline-field-select {
+  appearance: auto;
+  cursor: pointer;
+}
+
+.inline-saved-indicator {
+  font-size: 0.72rem;
+  color: #198754;
+  margin-left: 4px;
+  animation: fadeInOut 2s ease;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* Small tablets: Adjust info card internal layout */
 @media (max-width: 767px) {
   /* Make label/value pairs stack on very small screens if needed */

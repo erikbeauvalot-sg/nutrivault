@@ -1476,7 +1476,15 @@
     "birthdaysWidget": "Anniversaires",
     "tasksDueTodayWidget": "Tâches du jour",
     "birthdayToday": "Aujourd'hui",
-    "inDays": "dans {{count}}j"
+    "inDays": "dans {{count}}j",
+    "birthday": {
+      "sendWish": "Souhaiter un bon anniversaire",
+      "modalTitle": "Message d'anniversaire",
+      "defaultMessage": "Cher(e) {{firstName}}, toute l'équipe vous souhaite un très joyeux anniversaire ! 🎂 Nous espérons que cette nouvelle année vous apporte santé et bonheur.",
+      "sending": "Envoi...",
+      "sent": "Message envoyé !",
+      "sendError": "Erreur lors de l'envoi du message"
+    }
   },
   "billing": {
     "title": "Gestion de la facturation",

@@ -1428,7 +1428,15 @@
     "widget_birthdaysWidget": "Birthdays (list)",
     "widget_tasksDueTodayWidget": "Tasks Due Today (list)",
     "birthdayToday": "Today",
-    "inDays": "in {{count}}d"
+    "inDays": "in {{count}}d",
+    "birthday": {
+      "sendWish": "Send birthday wish",
+      "modalTitle": "Birthday message",
+      "defaultMessage": "Dear {{firstName}}, our whole team wishes you a very happy birthday! 🎂 We hope this new year brings you health and happiness.",
+      "sending": "Sending...",
+      "sent": "Message sent!",
+      "sendError": "Error sending the message"
+    }
   },
   "billing": {
     "title": "Billing Management",

@@ -3,7 +3,7 @@
  * Detailed patient view with tabbed interface
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import useModalParam from '../hooks/useModalParam';
 import { Container, Row, Col, Card, Button, Badge, Alert, Spinner, Dropdown, Modal, Form, InputGroup } from 'react-bootstrap';
@@ -104,6 +104,12 @@ const PatientDetailPage = () => {
   const [availableGuides, setAvailableGuides] = useState([]);
   const [sharingGuide, setSharingGuide] = useState(false);
 
+  // Inline editing state
+  const [localPatient, setLocalPatient] = useState({});
+  const [fieldSaving, setFieldSaving] = useState({});
+  const [fieldSaved, setFieldSaved] = useState({});
+  const saveTimers = useRef({});
+
   useEffect(() => {
     if (id) {
       fetchPatientDetails();
@@ -125,6 +131,78 @@ const PatientDetailPage = () => {
   }, [id, i18n.resolvedLanguage, i18n.language]);
 
   const [accessDenied, setAccessDenied] = useState(false);
+
+  // Sync localPatient whenever patient data loads
+  useEffect(() => {
+    if (patient) {
+      setLocalPatient({
+        first_name: patient.first_name || '',
+        last_name: patient.last_name || '',
+        email: patient.email || '',
+        phone: patient.phone || '',
+        date_of_birth: patient.date_of_birth || '',
+        gender: patient.gender || '',
+        address: patient.address || '',
+        medical_notes: patient.medical_notes || '',
+        allergies: patient.allergies || '',
+        dietary_preferences: patient.dietary_preferences || '',
+        is_active: !!patient.is_active,
+        appointment_reminders_enabled: !!patient.appointment_reminders_enabled,
+      });
+    }
+  }, [patient]);
+
+  // Inline edit: save a single patient field
+  const savePatientField = useCallback(async (field, value) => {
+    setFieldSaving(prev => ({ ...prev, [field]: true }));
+    try {
+      const updated = await patientService.updatePatient(id, { [field]: value });
+      setPatient(updated);
+      setFieldSaved(prev => ({ ...prev, [field]: true }));
+      setTimeout(() => setFieldSaved(prev => ({ ...prev, [field]: false })), 2000);
+    } catch (err) {
+      toast.error(err.response?.data?.error || t('patients.failedToUpdate', 'Erreur lors de la sauvegarde'));
+      // Reset to server value
+      setLocalPatient(prev => ({ ...prev, [field]: patient?.[field] ?? '' }));
+    } finally {
+      setFieldSaving(prev => ({ ...prev, [field]: false }));
+    }
+  }, [id, patient, t]);
+
+  const handlePatientFieldChange = (field, value) => {
+    setLocalPatient(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handlePatientFieldBlur = (field) => {
+    const current = localPatient[field];
+    const original = patient?.[field] ?? '';
+    if (current !== original) {
+      savePatientField(field, current);
+    }
+  };
+
+  const handleToggleChange = (field) => {
+    const newValue = !localPatient[field];
+    setLocalPatient(prev => ({ ...prev, [field]: newValue }));
+    savePatientField(field, newValue);
+  };
+
+  // Auto-save a single custom field (debounced 800ms)
+  const handleCustomFieldAutoSave = useCallback((definitionId, value) => {
+    if (saveTimers.current[definitionId]) {
+      clearTimeout(saveTimers.current[definitionId]);
+    }
+    saveTimers.current[definitionId] = setTimeout(async () => {
+      try {
+        await customFieldService.updatePatientCustomFields(id, [{ definition_id: definitionId, value }]);
+        const key = `cf_${definitionId}`;
+        setFieldSaved(prev => ({ ...prev, [key]: true }));
+        setTimeout(() => setFieldSaved(prev => ({ ...prev, [key]: false })), 2000);
+      } catch (err) {
+        toast.error(err.response?.data?.error || t('patients.failedToUpdate', 'Erreur lors de la sauvegarde'));
+      }
+    }, 800);
+  }, [id, t]);
 
   // Fetch all dietitians for ADMIN management
   useEffect(() => {
@@ -776,50 +854,182 @@ const PatientDetailPage = () => {
             <ResponsiveTabs activeKey={activeTab} onSelect={handleTabSelect} id="patient-detail-tabs">
               {/* 1. Aperçu Tab */}
               <Tab eventKey="basic-info" title={`📋 ${t('patients.basicInformation', 'Overview')}`}>
-                {/* Essential Patient Info */}
+                {/* Inline-editable patient info */}
                 <Card className="mb-3">
-                  <Card.Header className="bg-primary text-white">
+                  <Card.Header className="bg-primary text-white d-flex align-items-center justify-content-between">
                     <h6 className="mb-0">{t('patients.basicInformationTitle', 'Patient Basic Information')}</h6>
+                    <small className="opacity-75" style={{ fontSize: '0.72rem' }}>
+                      ✏️ {t('patients.clickToEdit', 'Cliquer pour modifier — sauvegarde automatique')}
+                    </small>
                   </Card.Header>
                   <Card.Body>
-                    <Row>
-                      <Col xs={12} md={6}>
-                        <Row className="mb-2">
-                          <Col sm={5}><strong>{t('patients.firstName', 'First Name')}:</strong></Col>
-                          <Col sm={7}>{patient.first_name}</Col>
+                    {/* Helper to render one inline editable row */}
+                    {(() => {
+                      const InlineRow = ({ label, field, type = 'text', children }) => (
+                        <Row className="mb-2 align-items-center">
+                          <Col sm={4}>
+                            <small className="text-muted fw-semibold">{label}</small>
+                          </Col>
+                          <Col sm={8}>
+                            <div className="d-flex align-items-center gap-1">
+                              {children}
+                              {fieldSaving[field] && <Spinner animation="border" size="sm" style={{ width: '12px', height: '12px', borderWidth: '2px' }} />}
+                              {fieldSaved[field] && <span className="inline-saved-indicator">✓</span>}
+                            </div>
+                          </Col>
                         </Row>
-                        <Row className="mb-2">
-                          <Col sm={5}><strong>{t('patients.lastName', 'Last Name')}:</strong></Col>
-                          <Col sm={7}>{patient.last_name}</Col>
+                      );
+
+                      return canEditPatient ? (
+                        <>
+                          <Row>
+                            <Col xs={12} md={6}>
+                              <InlineRow label={t('patients.firstName', 'Prénom')} field="first_name">
+                                <input
+                                  className="inline-field"
+                                  type="text"
+                                  value={localPatient.first_name ?? ''}
+                                  onChange={e => handlePatientFieldChange('first_name', e.target.value)}
+                                  onBlur={() => handlePatientFieldBlur('first_name')}
+                                />
+                              </InlineRow>
+                              <InlineRow label={t('patients.lastName', 'Nom')} field="last_name">
+                                <input
+                                  className="inline-field"
+                                  type="text"
+                                  value={localPatient.last_name ?? ''}
+                                  onChange={e => handlePatientFieldChange('last_name', e.target.value)}
+                                  onBlur={() => handlePatientFieldBlur('last_name')}
+                                />
+                              </InlineRow>
+                              <InlineRow label={t('patients.email', 'Email')} field="email">
+                                <input
+                                  className="inline-field"
+                                  type="email"
+                                  value={localPatient.email ?? ''}
+                                  onChange={e => handlePatientFieldChange('email', e.target.value)}
+                                  onBlur={() => handlePatientFieldBlur('email')}
+                                />
+                              </InlineRow>
+                              <InlineRow label={t('patients.phone', 'Téléphone')} field="phone">
+                                <input
+                                  className="inline-field"
+                                  type="tel"
+                                  value={localPatient.phone ?? ''}
+                                  onChange={e => handlePatientFieldChange('phone', e.target.value)}
+                                  onBlur={() => handlePatientFieldBlur('phone')}
+                                />
+                              </InlineRow>
+                              <InlineRow label={t('patients.dateOfBirth', 'Date de naissance')} field="date_of_birth">
+                                <input
+                                  className="inline-field"
+                                  type="date"
+                                  value={localPatient.date_of_birth ?? ''}
+                                  onChange={e => handlePatientFieldChange('date_of_birth', e.target.value)}
+                                  onBlur={() => handlePatientFieldBlur('date_of_birth')}
+                                />
+                              </InlineRow>
+                              <InlineRow label={t('patients.gender', 'Genre')} field="gender">
+                                <select
+                                  className="inline-field inline-field-select"
+                                  value={localPatient.gender ?? ''}
+                                  onChange={e => { handlePatientFieldChange('gender', e.target.value); savePatientField('gender', e.target.value); }}
+                                >
+                                  <option value="">{t('patients.selectGender', '—')}</option>
+                                  <option value="Male">{t('patients.male', 'Homme')}</option>
+                                  <option value="Female">{t('patients.female', 'Femme')}</option>
+                                  <option value="Other">{t('patients.other', 'Autre')}</option>
+                                  <option value="Prefer not to say">{t('patients.preferNotToSay', 'Non renseigné')}</option>
+                                </select>
+                              </InlineRow>
+                            </Col>
+                            <Col xs={12} md={6}>
+                              <InlineRow label={t('patients.address', 'Adresse')} field="address">
+                                <textarea
+                                  className="inline-field inline-field-textarea"
+                                  rows={2}
+                                  value={localPatient.address ?? ''}
+                                  onChange={e => handlePatientFieldChange('address', e.target.value)}
+                                  onBlur={() => handlePatientFieldBlur('address')}
+                                />
+                              </InlineRow>
+                              <InlineRow label={t('patients.medicalNotes', 'Notes médicales')} field="medical_notes">
+                                <textarea
+                                  className="inline-field inline-field-textarea"
+                                  rows={2}
+                                  value={localPatient.medical_notes ?? ''}
+                                  onChange={e => handlePatientFieldChange('medical_notes', e.target.value)}
+                                  onBlur={() => handlePatientFieldBlur('medical_notes')}
+                                />
+                              </InlineRow>
+                              <InlineRow label={t('patients.allergies', 'Allergies')} field="allergies">
+                                <textarea
+                                  className="inline-field inline-field-textarea"
+                                  rows={2}
+                                  value={localPatient.allergies ?? ''}
+                                  onChange={e => handlePatientFieldChange('allergies', e.target.value)}
+                                  onBlur={() => handlePatientFieldBlur('allergies')}
+                                />
+                              </InlineRow>
+                              <InlineRow label={t('patients.dietaryPreferences', 'Préférences alimentaires')} field="dietary_preferences">
+                                <textarea
+                                  className="inline-field inline-field-textarea"
+                                  rows={2}
+                                  value={localPatient.dietary_preferences ?? ''}
+                                  onChange={e => handlePatientFieldChange('dietary_preferences', e.target.value)}
+                                  onBlur={() => handlePatientFieldBlur('dietary_preferences')}
+                                />
+                              </InlineRow>
+                            </Col>
+                          </Row>
+                          <hr />
+                          <Row>
+                            <Col xs={12} md={6} className="mb-2 d-flex align-items-center gap-2">
+                              <small className="text-muted fw-semibold">{t('patients.status', 'Statut')} :</small>
+                              <Form.Check
+                                type="switch"
+                                id="inline-is_active"
+                                checked={!!localPatient.is_active}
+                                onChange={() => handleToggleChange('is_active')}
+                                label={localPatient.is_active ? t('patients.active', 'Actif') : t('patients.inactive', 'Inactif')}
+                              />
+                              {fieldSaving.is_active && <Spinner animation="border" size="sm" style={{ width: '12px', height: '12px' }} />}
+                              {fieldSaved.is_active && <span className="inline-saved-indicator">✓</span>}
+                            </Col>
+                            <Col xs={12} md={6} className="mb-2 d-flex align-items-center gap-2">
+                              <small className="text-muted fw-semibold">{t('patients.acceptsEmails', 'Rappels email')} :</small>
+                              <Form.Check
+                                type="switch"
+                                id="inline-reminders"
+                                checked={!!localPatient.appointment_reminders_enabled}
+                                onChange={() => handleToggleChange('appointment_reminders_enabled')}
+                                label={localPatient.appointment_reminders_enabled ? t('common.yes', 'Oui') : t('common.no', 'Non')}
+                              />
+                              {fieldSaving.appointment_reminders_enabled && <Spinner animation="border" size="sm" style={{ width: '12px', height: '12px' }} />}
+                              {fieldSaved.appointment_reminders_enabled && <span className="inline-saved-indicator">✓</span>}
+                            </Col>
+                          </Row>
+                        </>
+                      ) : (
+                        // Read-only for non-editors
+                        <Row>
+                          <Col xs={12} md={6}>
+                            <Row className="mb-2"><Col sm={5}><strong>{t('patients.firstName', 'Prénom')}:</strong></Col><Col sm={7}>{patient.first_name}</Col></Row>
+                            <Row className="mb-2"><Col sm={5}><strong>{t('patients.lastName', 'Nom')}:</strong></Col><Col sm={7}>{patient.last_name}</Col></Row>
+                            <Row className="mb-2"><Col sm={5}><strong>{t('patients.email', 'Email')}:</strong></Col><Col sm={7}>{patient.email || '-'}</Col></Row>
+                            <Row className="mb-2"><Col sm={5}><strong>{t('patients.phone', 'Téléphone')}:</strong></Col><Col sm={7}>{patient.phone || '-'}</Col></Row>
+                          </Col>
+                          <Col xs={12} md={6}>
+                            <Row className="mb-2"><Col sm={5}><strong>{t('patients.status', 'Statut')}:</strong></Col><Col sm={7}><Badge bg={patient.is_active ? 'success' : 'secondary'}>{patient.is_active ? t('patients.active') : t('patients.inactive')}</Badge></Col></Row>
+                            <Row className="mb-2"><Col sm={5}><strong>{t('patients.acceptsEmails', 'Rappels email')}:</strong></Col><Col sm={7}><Badge bg={patient.appointment_reminders_enabled ? 'success' : 'warning'}>{patient.appointment_reminders_enabled ? t('common.yes') : t('common.no')}</Badge></Col></Row>
+                          </Col>
                         </Row>
-                      </Col>
-                      <Col xs={12} md={6}>
-                        <Row className="mb-2">
-                          <Col sm={5}><strong>{t('patients.email', 'Email')}:</strong></Col>
-                          <Col sm={7}>{patient.email || '-'}</Col>
-                        </Row>
-                        <Row className="mb-2">
-                          <Col sm={5}><strong>{t('patients.phone', 'Phone')}:</strong></Col>
-                          <Col sm={7}>{patient.phone || '-'}</Col>
-                        </Row>
-                      </Col>
-                    </Row>
+                      );
+                    })()}
                     <hr />
                     <Row>
-                      <Col xs={12} md={6} className="mb-2">
-                        <strong>{t('patients.status', 'Status')}:</strong>{' '}
-                        <Badge bg={patient.is_active ? 'success' : 'secondary'}>
-                          {patient.is_active ? t('patients.active', 'Active') : t('patients.inactive', 'Inactive')}
-                        </Badge>
-                      </Col>
-                      <Col xs={12} md={6} className="mb-2">
-                        <strong>{t('patients.acceptsEmails', 'Accepte les emails')}:</strong>{' '}
-                        <Badge bg={patient.appointment_reminders_enabled ? 'success' : 'warning'}>
-                          {patient.appointment_reminders_enabled ? t('common.yes', 'Oui') : t('common.no', 'Non')}
-                        </Badge>
-                      </Col>
                       <Col xs={12} className="mt-2">
-                        <strong>{t('patients.linkedDietitians', 'Linked Dietitians')}:</strong>{' '}
+                        <strong>{t('patients.linkedDietitians', 'Diététiciens liés')}:</strong>{' '}
                         {patient.linked_dietitians && patient.linked_dietitians.length > 0 ? (
                           <div className="d-flex flex-wrap gap-2 mt-1 align-items-center">
                             {patient.linked_dietitians.map(d => (
@@ -972,7 +1182,7 @@ const PatientDetailPage = () => {
                   </Card.Body>
                 </Card>
 
-                {/* Custom Fields marked as "show_in_basic_info", grouped by category */}
+                {/* Custom Fields marked as "show_in_basic_info" — inline editable */}
                 {customFieldCategories
                   .filter(category => category.fields.some(field => field.show_in_basic_info))
                   .map((category) => {
@@ -1006,13 +1216,23 @@ const PatientDetailPage = () => {
                         <Card.Body>
                           <Row>
                             {basicInfoFields.map((field) => (
-                              <Col xs={12} md={6} key={field.definition_id} className={(field.field_type === 'separator' || field.field_type === 'blank') ? 'mb-3' : ''}>
-                                <CustomFieldDisplay
-                                  fieldDefinition={field}
-                                  value={fieldValues[field.definition_id]}
-                                  searchQuery={searchQuery}
-                                  highlightText={highlightText}
-                                />
+                              <Col xs={12} md={6} key={field.definition_id} className={(field.field_type === 'separator' || field.field_type === 'blank') ? 'mb-3' : 'mb-2'}>
+                                <div className="d-flex align-items-start gap-1">
+                                  <div style={{ flex: 1 }}>
+                                    <CustomFieldInput
+                                      fieldDefinition={field}
+                                      value={fieldValues[field.definition_id]}
+                                      onChange={(_defId, val) => {
+                                        handleFieldChange(field.definition_id, val);
+                                        handleCustomFieldAutoSave(field.definition_id, val);
+                                      }}
+                                      error={fieldErrors[field.definition_id]}
+                                    />
+                                  </div>
+                                  {fieldSaved[`cf_${field.definition_id}`] && (
+                                    <span className="inline-saved-indicator mt-1">✓</span>
+                                  )}
+                                </div>
                               </Col>
                             ))}
                           </Row>
