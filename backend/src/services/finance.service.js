@@ -373,7 +373,7 @@ async function getCashFlow(user, filters = {}) {
 
   for (let i = 11; i >= 0; i--) {
     const startDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const endDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+    const endDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59, 999);
 
     // Revenue for this month
     const revenueResult = await db.Billing.findOne({
