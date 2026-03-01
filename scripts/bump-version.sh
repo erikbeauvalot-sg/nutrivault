@@ -20,6 +20,7 @@ BUMP_TYPE="${1:-patch}"
 PBXPROJ="$ROOT_DIR/frontend/ios/App/App.xcodeproj/project.pbxproj"
 ROOT_PKG="$ROOT_DIR/package.json"
 FRONTEND_PKG="$ROOT_DIR/frontend/package.json"
+BACKEND_PKG="$ROOT_DIR/backend/package.json"
 
 # Read current version from root package.json
 CURRENT_VERSION=$(node -p "require('$ROOT_PKG').version")
@@ -66,6 +67,14 @@ node -e "
   const pkg = JSON.parse(fs.readFileSync('$FRONTEND_PKG', 'utf8'));
   pkg.version = '$NEW_VERSION';
   fs.writeFileSync('$FRONTEND_PKG', JSON.stringify(pkg, null, 2) + '\n');
+"
+
+# Update backend/package.json
+node -e "
+  const fs = require('fs');
+  const pkg = JSON.parse(fs.readFileSync('$BACKEND_PKG', 'utf8'));
+  pkg.version = '$NEW_VERSION';
+  fs.writeFileSync('$BACKEND_PKG', JSON.stringify(pkg, null, 2) + '\n');
 "
 
 # Update Xcode project — MARKETING_VERSION and CURRENT_PROJECT_VERSION (both Debug and Release)
