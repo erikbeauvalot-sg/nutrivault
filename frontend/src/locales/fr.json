@@ -2337,6 +2337,8 @@
     "additionalInfo": "Informations Complémentaires",
     "visibleOnCreation": "Visible à la création du patient",
     "visibleOnCreationHelp": "Si coché, ce champ sera affiché dans le formulaire de création rapide de patient",
+    "showInConsultation": "Afficher lors de la création de consultation",
+    "showInConsultationHelp": "Si coché, ce champ sera visible lors de la création d'une nouvelle consultation",
     "showInVisitList": "Afficher dans la liste des consultations",
     "showInVisitListHelp": "Si coché, ce champ sera affiché comme colonne dans la liste des consultations",
     "showInPortal": "Afficher dans le portail patient",

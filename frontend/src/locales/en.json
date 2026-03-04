@@ -2260,6 +2260,8 @@
     "additionalInfo": "Additional Information",
     "visibleOnCreation": "Visible on Patient Creation",
     "visibleOnCreationHelp": "If checked, this field will be displayed in the quick patient creation form",
+    "showInConsultation": "Show in Consultation Creation",
+    "showInConsultationHelp": "If checked, this field will be shown when creating a new consultation",
     "showInVisitList": "Show in Visits List",
     "showInVisitListHelp": "If checked, this field will appear as a column in the visits list",
     "showInPortal": "Show in Patient Portal",
