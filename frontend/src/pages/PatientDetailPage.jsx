@@ -667,6 +667,8 @@ const PatientDetailPage = () => {
 
   // Check permissions
   const canEditPatient = user?.role === 'ADMIN' || user?.role === 'DIETITIAN';
+  const canReadMealPlans = user?.role === 'ADMIN' || user?.role === 'DIETITIAN' || user?.role === 'ASSISTANT' || user?.role === 'VIEWER';
+  const canCreateMealPlans = user?.role === 'ADMIN' || user?.role === 'DIETITIAN' || user?.role === 'ASSISTANT';
   const canViewMedicalData = user?.role === 'ADMIN' || user?.role === 'DIETITIAN' || user?.role === 'ASSISTANT';
   const canEditVisits = user?.role === 'ADMIN' || user?.role === 'DIETITIAN' || user?.role === 'ASSISTANT';
   const canDeleteVisits = user?.role === 'ADMIN' || user?.role === 'DIETITIAN';
@@ -1725,12 +1727,12 @@ const PatientDetailPage = () => {
               </Tab>
 
               {/* Meal Plans Tab */}
-              {hasPermission('meal_plans.read') && (
+              {canReadMealPlans && (
                 <Tab eventKey="meal-plans" title={`📅 ${t('mealPlans.title', 'Plans de repas')} (${patientMealPlans.length})`}>
                   <Card>
                     <Card.Header className="d-flex justify-content-between align-items-center">
                       <h5 className="mb-0">{t('mealPlans.title', 'Plans de repas')}</h5>
-                      {hasPermission('meal_plans.create') && (
+                      {canCreateMealPlans && (
                         <Button
                           variant="primary"
                           size="sm"
@@ -1752,7 +1754,7 @@ const PatientDetailPage = () => {
                           <div className="mb-3" style={{ fontSize: '3rem' }}>📅</div>
                           <h6>{t('mealPlans.noPlans', 'Aucun plan de repas')}</h6>
                           <p className="text-muted">{t('mealPlans.noPlansForPatient', 'Aucun plan de repas créé pour ce patient.')}</p>
-                          {hasPermission('meal_plans.create') && (
+                          {canCreateMealPlans && (
                             <Button variant="outline-primary" onClick={() => navigate('/meal-plans')}>
                               {t('mealPlans.createFirst', 'Créer un plan de repas')}
                             </Button>
