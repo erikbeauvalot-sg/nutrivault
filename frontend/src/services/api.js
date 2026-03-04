@@ -65,6 +65,36 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
+// Cross-tab token refresh coordination via BroadcastChannel.
+// When one tab successfully refreshes tokens, it broadcasts the new tokens
+// so other tabs can update without making their own (now-invalid) refresh request.
+let authChannel = null;
+try {
+  authChannel = new BroadcastChannel('nutrivault_auth');
+} catch (_) {
+  // BroadcastChannel not supported (rare: very old browser)
+}
+
+// New tokens received from another tab while this tab's refresh was in-flight
+let tokensFromBroadcast = null;
+
+if (authChannel) {
+  authChannel.onmessage = ({ data }) => {
+    if (data.type === 'tokens_refreshed') {
+      // Another tab refreshed successfully — sync tokens here immediately
+      tokensFromBroadcast = { accessToken: data.accessToken, refreshToken: data.refreshToken };
+      tokenStorage.setTokens(data.accessToken, data.refreshToken, data.rememberMe);
+      api.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
+    } else if (data.type === 'signed_out') {
+      if (!isRedirectingToLogin) {
+        isRedirectingToLogin = true;
+        tokenStorage.clearTokens();
+        window.location.href = '/login';
+      }
+    }
+  };
+}
+
 // Endpoint-specific TTL configuration (in milliseconds)
 const CACHE_TTL = {
   '/portal/profile': 7 * 24 * 60 * 60 * 1000,    // 7 days
@@ -173,6 +203,16 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // If another tab just refreshed and broadcast new tokens, use them directly
+    // without making another refresh request (avoids token rotation conflict)
+    if (tokensFromBroadcast) {
+      const { accessToken } = tokensFromBroadcast;
+      tokensFromBroadcast = null;
+      originalRequest._retry = true;
+      originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+      return api(originalRequest);
+    }
+
     // If already refreshing, queue this request
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
@@ -195,6 +235,7 @@ api.interceptors.response.use(
     if (!refreshToken) {
       // No refresh token available, redirect to login
       isRedirectingToLogin = true;
+      if (authChannel) authChannel.postMessage({ type: 'signed_out' });
       tokenStorage.clearTokens();
       window.location.href = '/login';
       return new Promise(() => {}); // Never resolve - page is redirecting
@@ -219,6 +260,16 @@ api.interceptors.response.use(
       api.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
       originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
 
+      // Broadcast new tokens to other tabs so they don't need to refresh separately
+      if (authChannel) {
+        authChannel.postMessage({
+          type: 'tokens_refreshed',
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          rememberMe: tokenStorage.isRemembered()
+        });
+      }
+
       // Process queued requests
       processQueue(null, data.accessToken);
 
@@ -231,7 +282,17 @@ api.interceptors.response.use(
       // For network errors or server errors (5xx), the token may still be valid —
       // don't logout on transient failures (e.g. server blip, network hiccup during auto-save).
       if (refreshError.response?.status === 401) {
+        // Last chance: check if another tab already refreshed while our request was in-flight
+        if (tokensFromBroadcast) {
+          const { accessToken } = tokensFromBroadcast;
+          tokensFromBroadcast = null;
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          processQueue(null, accessToken);
+          return api(originalRequest);
+        }
+
         isRedirectingToLogin = true;
+        if (authChannel) authChannel.postMessage({ type: 'signed_out' });
         tokenStorage.clearTokens();
         window.location.href = '/login';
         return new Promise(() => {}); // Never resolve - page is redirecting
@@ -244,5 +305,13 @@ api.interceptors.response.use(
     }
   }
 );
+
+/**
+ * Broadcast a sign-out event to all other tabs.
+ * Call this when the user deliberately logs out.
+ */
+export function broadcastSignOut() {
+  if (authChannel) authChannel.postMessage({ type: 'signed_out' });
+}
 
 export default api;

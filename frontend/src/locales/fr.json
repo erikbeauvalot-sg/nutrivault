@@ -116,7 +116,8 @@
     "finance": "Finance",
     "consultationTemplates": "Modeles de consultation",
     "sessions": "Sessions",
-    "documents": "Documents"
+    "documents": "Documents",
+    "mealPlans": "Plans de repas"
   },
   "sidebar": {
     "groups": {
@@ -708,6 +709,104 @@
       "fat": "Lipides",
       "fiber": "Fibres",
       "sodium": "Sodium"
+    }
+  },
+  "mealPlans": {
+    "title": "Plans de repas",
+    "new": "Nouveau plan",
+    "create": "Créer un plan de repas",
+    "edit": "Modifier le plan",
+    "search": "Rechercher des plans...",
+    "noPlans": "Aucun plan de repas pour le moment",
+    "noPlansForPatient": "Aucun plan de repas créé pour ce patient.",
+    "noResults": "Aucun plan ne correspond à vos filtres",
+    "createFirst": "Créez le premier plan de repas",
+    "allStatuses": "Tous les statuts",
+    "allPatients": "Tous les patients",
+    "patient": "Patient",
+    "duration": "Durée",
+    "durationWeeks": "{{count}} semaine(s)",
+    "startDate": "Date de début",
+    "endDate": "Date de fin",
+    "goals": "Objectifs",
+    "dietaryRestrictions": "Restrictions alimentaires",
+    "notes": "Notes",
+    "description": "Description",
+    "descriptionPlaceholder": "Description du plan de repas...",
+    "notesPlaceholder": "Notes et commentaires...",
+    "status": {
+      "label": "Statut",
+      "draft": "Brouillon",
+      "active": "Actif",
+      "completed": "Terminé",
+      "archived": "Archivé"
+    },
+    "mealTypes": {
+      "breakfast": "Petit-déjeuner",
+      "morning_snack": "Collation matin",
+      "lunch": "Déjeuner",
+      "afternoon_snack": "Collation après-midi",
+      "dinner": "Dîner",
+      "evening_snack": "Collation soir",
+      "other": "Autre"
+    },
+    "days": {
+      "title": "Jours",
+      "day": "Jour {{number}}",
+      "addDay": "Ajouter un jour",
+      "removeDay": "Supprimer ce jour",
+      "noMeals": "Aucun repas pour ce jour"
+    },
+    "meals": {
+      "addMeal": "Ajouter un repas",
+      "removeMeal": "Supprimer ce repas",
+      "label": "Libellé (optionnel)"
+    },
+    "items": {
+      "addItem": "Ajouter un aliment",
+      "removeItem": "Supprimer",
+      "name": "Aliment ou recette",
+      "quantity": "Quantité",
+      "unit": "Unité",
+      "namePlaceholder": "Ex: Avoine, Salade niçoise..."
+    },
+    "actions": {
+      "activate": "Activer",
+      "complete": "Marquer terminé",
+      "archive": "Archiver",
+      "delete": "Supprimer",
+      "saveDays": "Enregistrer le programme"
+    },
+    "confirmDelete": "Supprimer ce plan de repas ?",
+    "deleteSuccess": "Plan de repas supprimé",
+    "createSuccess": "Plan de repas créé",
+    "updateSuccess": "Plan de repas mis à jour",
+    "daysUpdated": "Programme mis à jour",
+    "createdBy": "Créé par",
+    "createdAt": "Créé le",
+    "goalsOptions": {
+      "weight_loss": "Perte de poids",
+      "weight_gain": "Prise de masse",
+      "balanced_diet": "Alimentation équilibrée",
+      "muscle_building": "Prise de muscle",
+      "heart_health": "Santé cardiaque",
+      "diabetes_management": "Gestion du diabète",
+      "digestive_health": "Santé digestive",
+      "energy_boost": "Boost d'énergie",
+      "cholesterol": "Gestion du cholestérol"
+    },
+    "restrictionOptions": {
+      "gluten_free": "Sans gluten",
+      "lactose_free": "Sans lactose",
+      "vegetarian": "Végétarien",
+      "vegan": "Végétalien",
+      "nut_free": "Sans fruits à coque",
+      "egg_free": "Sans œuf",
+      "shellfish_free": "Sans crustacés",
+      "low_sugar": "Faible en sucre",
+      "low_sodium": "Faible en sodium",
+      "low_fat": "Faible en gras",
+      "high_protein": "Riche en protéines"
     }
   },
   "ingredients": {
@@ -2238,6 +2337,8 @@
     "additionalInfo": "Informations Complémentaires",
     "visibleOnCreation": "Visible à la création du patient",
     "visibleOnCreationHelp": "Si coché, ce champ sera affiché dans le formulaire de création rapide de patient",
+    "showInConsultation": "Afficher lors de la création de consultation",
+    "showInConsultationHelp": "Si coché, ce champ sera visible lors de la création d'une nouvelle consultation",
     "showInVisitList": "Afficher dans la liste des consultations",
     "showInVisitListHelp": "Si coché, ce champ sera affiché comme colonne dans la liste des consultations",
     "showInPortal": "Afficher dans le portail patient",

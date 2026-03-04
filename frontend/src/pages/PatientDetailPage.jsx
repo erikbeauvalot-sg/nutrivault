@@ -40,6 +40,7 @@ import * as patientService from '../services/patientService';
 import * as documentService from '../services/documentService';
 import visitService from '../services/visitService';
 import * as recipeService from '../services/recipeService';
+import * as mealPlanService from '../services/mealPlanService';
 import userService from '../services/userService';
 import PortalStatusCard from '../components/PortalStatusCard';
 import PatientJournalTab from '../components/PatientJournalTab';
@@ -97,6 +98,8 @@ const PatientDetailPage = () => {
   const [invoiceToDelete, setInvoiceToDelete] = useState(null);
   const [patientRecipes, setPatientRecipes] = useState([]);
   const [recipesLoading, setRecipesLoading] = useState(false);
+  const [patientMealPlans, setPatientMealPlans] = useState([]);
+  const [mealPlansLoading, setMealPlansLoading] = useState(false);
   const [showCreateVisitModal, openCreateVisitModal, closeCreateVisitModal] = useModalParam('new-visit');
   const [allDietitians, setAllDietitians] = useState([]);
   const [addingDietitian, setAddingDietitian] = useState(false);
@@ -117,6 +120,7 @@ const PatientDetailPage = () => {
       fetchPatientInvoices();
       fetchPatientMeasures();
       fetchPatientRecipes();
+      fetchPatientMealPlans();
       fetchAvailableGuides();
       fetchGoalsSummary();
       fetchConsultationNotes();
@@ -349,6 +353,18 @@ const PatientDetailPage = () => {
       // Don't set error for recipes failure
     } finally {
       setRecipesLoading(false);
+    }
+  };
+
+  const fetchPatientMealPlans = async () => {
+    try {
+      setMealPlansLoading(true);
+      const result = await mealPlanService.getMealPlans({ patient_id: id });
+      setPatientMealPlans(result.data || []);
+    } catch (err) {
+      console.error('Error fetching patient meal plans:', err);
+    } finally {
+      setMealPlansLoading(false);
     }
   };
 
@@ -651,6 +667,8 @@ const PatientDetailPage = () => {
 
   // Check permissions
   const canEditPatient = user?.role === 'ADMIN' || user?.role === 'DIETITIAN';
+  const canReadMealPlans = user?.role === 'ADMIN' || user?.role === 'DIETITIAN' || user?.role === 'ASSISTANT' || user?.role === 'VIEWER';
+  const canCreateMealPlans = user?.role === 'ADMIN' || user?.role === 'DIETITIAN' || user?.role === 'ASSISTANT';
   const canViewMedicalData = user?.role === 'ADMIN' || user?.role === 'DIETITIAN' || user?.role === 'ASSISTANT';
   const canEditVisits = user?.role === 'ADMIN' || user?.role === 'DIETITIAN' || user?.role === 'ASSISTANT';
   const canDeleteVisits = user?.role === 'ADMIN' || user?.role === 'DIETITIAN';
@@ -1708,7 +1726,101 @@ const PatientDetailPage = () => {
                 </Card>
               </Tab>
 
-              {/* 8. Administrative Tab */}
+              {/* Meal Plans Tab */}
+              {canReadMealPlans && (
+                <Tab eventKey="meal-plans" title={`📅 ${t('mealPlans.title', 'Plans de repas')} (${patientMealPlans.length})`}>
+                  <Card>
+                    <Card.Header className="d-flex justify-content-between align-items-center">
+                      <h5 className="mb-0">{t('mealPlans.title', 'Plans de repas')}</h5>
+                      {canCreateMealPlans && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => navigate('/meal-plans')}
+                        >
+                          + {t('mealPlans.new', 'Nouveau plan')}
+                        </Button>
+                      )}
+                    </Card.Header>
+                    <Card.Body>
+                      {mealPlansLoading ? (
+                        <div className="text-center py-5">
+                          <Spinner animation="border" role="status">
+                            <span className="visually-hidden">{t('common.loading')}</span>
+                          </Spinner>
+                        </div>
+                      ) : patientMealPlans.length === 0 ? (
+                        <div className="text-center py-5">
+                          <div className="mb-3" style={{ fontSize: '3rem' }}>📅</div>
+                          <h6>{t('mealPlans.noPlans', 'Aucun plan de repas')}</h6>
+                          <p className="text-muted">{t('mealPlans.noPlansForPatient', 'Aucun plan de repas créé pour ce patient.')}</p>
+                          {canCreateMealPlans && (
+                            <Button variant="outline-primary" onClick={() => navigate('/meal-plans')}>
+                              {t('mealPlans.createFirst', 'Créer un plan de repas')}
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="table-responsive">
+                          <table className="table table-hover mb-0">
+                            <thead>
+                              <tr>
+                                <th>{t('common.title', 'Titre')}</th>
+                                <th>{t('mealPlans.status.label', 'Statut')}</th>
+                                <th>{t('mealPlans.duration', 'Durée')}</th>
+                                <th>{t('mealPlans.startDate', 'Date début')}</th>
+                                <th>{t('mealPlans.goals', 'Objectifs')}</th>
+                                <th className="text-end">{t('common.actions', 'Actions')}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {patientMealPlans.map(plan => (
+                                <tr
+                                  key={plan.id}
+                                  style={{ cursor: 'pointer' }}
+                                  onClick={() => navigate(`/meal-plans/${plan.id}`)}
+                                >
+                                  <td><strong>{plan.title}</strong></td>
+                                  <td>
+                                    <Badge bg={{ draft: 'secondary', active: 'success', completed: 'primary', archived: 'warning' }[plan.status] || 'secondary'}>
+                                      {t(`mealPlans.status.${plan.status}`, plan.status)}
+                                    </Badge>
+                                  </td>
+                                  <td>{plan.duration_weeks ? t('mealPlans.durationWeeks', '{{count}} sem.', { count: plan.duration_weeks }) : '-'}</td>
+                                  <td>{plan.start_date ? new Date(plan.start_date).toLocaleDateString() : '-'}</td>
+                                  <td>
+                                    <div className="d-flex flex-wrap gap-1">
+                                      {(plan.goals || []).slice(0, 2).map(g => (
+                                        <Badge key={g} bg="success" style={{ fontSize: '0.75rem' }}>
+                                          {t(`mealPlans.goalsOptions.${g}`, g)}
+                                        </Badge>
+                                      ))}
+                                      {(plan.goals || []).length > 2 && (
+                                        <Badge bg="light" text="dark" style={{ fontSize: '0.75rem' }}>
+                                          +{(plan.goals || []).length - 2}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="text-end" onClick={e => e.stopPropagation()}>
+                                    <ActionButton
+                                      action="view"
+                                      onClick={() => navigate(`/meal-plans/${plan.id}`)}
+                                      title={t('common.view', 'Voir')}
+                                    />
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </Card.Body>
+                  </Card>
+                </Tab>
+              )}
+
+              {/* Administrative Tab */}
               {canEditPatient && (
                 <Tab eventKey="admin" title={t('patients.administrativeTab', 'Administratif')}>
                   {/* Administrative Info Card */}

@@ -3,7 +3,7 @@
  * Handles login, logout, token refresh, and user management
  */
 
-import api from './api';
+import api, { broadcastSignOut } from './api';
 import * as tokenStorage from '../utils/tokenStorage';
 
 /**
@@ -52,6 +52,8 @@ export const logout = async () => {
     console.error('Logout error:', error);
     // Continue with local cleanup even if backend call fails
   } finally {
+    // Notify other tabs so they also sign out
+    broadcastSignOut();
     // Clear all tokens and user data from storage
     tokenStorage.clearTokens();
     tokenStorage.clearUser();

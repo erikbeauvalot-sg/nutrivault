@@ -25,6 +25,7 @@ const SIDEBAR_ITEMS = {
   visits:       { path: '/visits',       icon: '📋', labelKey: 'navigation.visits',      section: 'main', group: 'clinic' },
   'consultation-templates': { path: '/consultation-templates', icon: '📝', labelKey: 'navigation.consultationTemplates', section: 'main', group: 'clinic' },
   recipes:      { path: '/recipes',      icon: '🍽️', labelKey: 'navigation.recipes',     section: 'main', group: 'nutrition' },
+  'meal-plans': { path: '/meal-plans',   icon: '📅', labelKey: 'navigation.mealPlans',   section: 'main', group: 'nutrition' },
   campaigns:    { path: '/campaigns',    icon: '📧', labelKey: 'navigation.campaigns',   section: 'main', group: 'communication' },
   messages:     { path: '/messages',     icon: '💬', labelKey: 'navigation.messages',    section: 'main', group: 'communication' },
   billing:      { path: '/billing',      icon: '💰', labelKey: 'navigation.billing',     section: 'main', group: 'finance' },

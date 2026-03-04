@@ -92,7 +92,8 @@
     "quotes": "Quotes",
     "finance": "Finance",
     "consultationTemplates": "Consultation Templates",
-    "sessions": "Sessions"
+    "sessions": "Sessions",
+    "mealPlans": "Meal Plans"
   },
   "sidebar": {
     "groups": {
@@ -683,6 +684,104 @@
       "fat": "Fat",
       "fiber": "Fiber",
       "sodium": "Sodium"
+    }
+  },
+  "mealPlans": {
+    "title": "Meal Plans",
+    "new": "New Plan",
+    "create": "Create Meal Plan",
+    "edit": "Edit Plan",
+    "search": "Search plans...",
+    "noPlans": "No meal plans yet",
+    "noPlansForPatient": "No meal plans created for this patient.",
+    "noResults": "No plans match your filters",
+    "createFirst": "Create the first meal plan",
+    "allStatuses": "All statuses",
+    "allPatients": "All patients",
+    "patient": "Patient",
+    "duration": "Duration",
+    "durationWeeks": "{{count}} week(s)",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "goals": "Goals",
+    "dietaryRestrictions": "Dietary restrictions",
+    "notes": "Notes",
+    "description": "Description",
+    "descriptionPlaceholder": "Meal plan description...",
+    "notesPlaceholder": "Notes and comments...",
+    "status": {
+      "label": "Status",
+      "draft": "Draft",
+      "active": "Active",
+      "completed": "Completed",
+      "archived": "Archived"
+    },
+    "mealTypes": {
+      "breakfast": "Breakfast",
+      "morning_snack": "Morning Snack",
+      "lunch": "Lunch",
+      "afternoon_snack": "Afternoon Snack",
+      "dinner": "Dinner",
+      "evening_snack": "Evening Snack",
+      "other": "Other"
+    },
+    "days": {
+      "title": "Days",
+      "day": "Day {{number}}",
+      "addDay": "Add day",
+      "removeDay": "Remove day",
+      "noMeals": "No meals for this day"
+    },
+    "meals": {
+      "addMeal": "Add meal",
+      "removeMeal": "Remove meal",
+      "label": "Label (optional)"
+    },
+    "items": {
+      "addItem": "Add food item",
+      "removeItem": "Remove",
+      "name": "Food or recipe",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "namePlaceholder": "E.g. Oatmeal, Nicoise salad..."
+    },
+    "actions": {
+      "activate": "Activate",
+      "complete": "Mark complete",
+      "archive": "Archive",
+      "delete": "Delete",
+      "saveDays": "Save schedule"
+    },
+    "confirmDelete": "Delete this meal plan?",
+    "deleteSuccess": "Meal plan deleted",
+    "createSuccess": "Meal plan created",
+    "updateSuccess": "Meal plan updated",
+    "daysUpdated": "Schedule updated",
+    "createdBy": "Created by",
+    "createdAt": "Created",
+    "goalsOptions": {
+      "weight_loss": "Weight loss",
+      "weight_gain": "Weight gain",
+      "balanced_diet": "Balanced diet",
+      "muscle_building": "Muscle building",
+      "heart_health": "Heart health",
+      "diabetes_management": "Diabetes management",
+      "digestive_health": "Digestive health",
+      "energy_boost": "Energy boost",
+      "cholesterol": "Cholesterol management"
+    },
+    "restrictionOptions": {
+      "gluten_free": "Gluten-free",
+      "lactose_free": "Lactose-free",
+      "vegetarian": "Vegetarian",
+      "vegan": "Vegan",
+      "nut_free": "Nut-free",
+      "egg_free": "Egg-free",
+      "shellfish_free": "Shellfish-free",
+      "low_sugar": "Low sugar",
+      "low_sodium": "Low sodium",
+      "low_fat": "Low fat",
+      "high_protein": "High protein"
     }
   },
   "ingredients": {
@@ -2161,6 +2260,8 @@
     "additionalInfo": "Additional Information",
     "visibleOnCreation": "Visible on Patient Creation",
     "visibleOnCreationHelp": "If checked, this field will be displayed in the quick patient creation form",
+    "showInConsultation": "Show in Consultation Creation",
+    "showInConsultationHelp": "If checked, this field will be shown when creating a new consultation",
     "showInVisitList": "Show in Visits List",
     "showInVisitListHelp": "If checked, this field will appear as a column in the visits list",
     "showInPortal": "Show in Patient Portal",

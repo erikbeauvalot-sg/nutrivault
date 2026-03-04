@@ -199,7 +199,6 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
 
       const transformedCategories = visitCategories.map(category => {
         const defs = category.field_definitions || [];
-        const hasVisibleOnCreation = defs.some(def => def.visible_on_creation);
 
         return {
         id: category.id,
@@ -212,10 +211,7 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
         fields: defs
           .filter(def => {
             if (def.is_active === false) return false;
-            // If any field has visible_on_creation set, use that flag
-            if (hasVisibleOnCreation) return def.visible_on_creation;
-            // Otherwise show all non-utility fields
-            return true;
+            return def.show_in_consultation === true;
           })
           .map(def => {
           let validationRules = def.validation_rules;

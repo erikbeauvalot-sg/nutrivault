@@ -57,6 +57,7 @@ const definitionSchema = (t) => yup.object().shape({
   show_in_basic_info: yup.boolean(),
   show_in_list: yup.boolean(),
   visible_on_creation: yup.boolean(),
+  show_in_consultation: yup.boolean(),
   show_in_visit_list: yup.boolean(),
   show_in_portal: yup.boolean()
 });
@@ -107,6 +108,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
       show_in_basic_info: false,
       show_in_list: false,
       visible_on_creation: false,
+      show_in_consultation: false,
       show_in_visit_list: false,
       show_in_portal: false
     }
@@ -164,6 +166,7 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
         show_in_basic_info: definition.show_in_basic_info || false,
         show_in_list: definition.show_in_list || false,
         visible_on_creation: definition.visible_on_creation || false,
+        show_in_consultation: definition.show_in_consultation || false,
         show_in_visit_list: definition.show_in_visit_list || false,
         show_in_portal: definition.show_in_portal || false
       });
@@ -818,6 +821,15 @@ const CustomFieldDefinitionModal = ({ show, onHide, definition, categories, onSu
                 />
                 <Form.Text className="text-muted d-block mb-3">
                   {t('customFields.visibleOnCreationHelp', 'If checked, this field will be shown in the patient creation modal')}
+                </Form.Text>
+
+                <Form.Check
+                  type="checkbox"
+                  label={t('customFields.showInConsultation', 'Show in Consultation Creation')}
+                  {...register('show_in_consultation')}
+                />
+                <Form.Text className="text-muted d-block mb-3">
+                  {t('customFields.showInConsultationHelp', 'If checked, this field will be shown when creating a new consultation')}
                 </Form.Text>
 
                 <Form.Check

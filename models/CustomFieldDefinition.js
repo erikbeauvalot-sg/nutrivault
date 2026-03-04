@@ -119,6 +119,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: false
     },
+    show_in_consultation: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
     show_in_visit_list: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

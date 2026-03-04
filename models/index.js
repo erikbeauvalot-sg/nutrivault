@@ -82,6 +82,10 @@ db.ConsultationTemplate = require('./ConsultationTemplate')(sequelize, DataTypes
 db.ConsultationTemplateItem = require('./ConsultationTemplateItem')(sequelize, DataTypes);
 db.ConsultationNote = require('./ConsultationNote')(sequelize, DataTypes);
 db.ConsultationNoteEntry = require('./ConsultationNoteEntry')(sequelize, DataTypes);
+db.MealPlan = require('./MealPlan')(sequelize, DataTypes);
+db.MealPlanDay = require('./MealPlanDay')(sequelize, DataTypes);
+db.MealPlanMeal = require('./MealPlanMeal')(sequelize, DataTypes);
+db.MealPlanItem = require('./MealPlanItem')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship
@@ -1041,5 +1045,18 @@ db.PatientAchievement.belongsTo(db.Patient, { foreignKey: 'patient_id', as: 'pat
 db.Patient.hasMany(db.PatientAchievement, { foreignKey: 'patient_id', as: 'achievements' });
 db.PatientAchievement.belongsTo(db.PatientGoal, { foreignKey: 'goal_id', as: 'goal' });
 db.PatientGoal.hasMany(db.PatientAchievement, { foreignKey: 'goal_id', as: 'achievements' });
+
+// MealPlan associations
+db.MealPlan.belongsTo(db.Patient, { foreignKey: 'patient_id', as: 'patient' });
+db.Patient.hasMany(db.MealPlan, { foreignKey: 'patient_id', as: 'meal_plans' });
+db.MealPlan.belongsTo(db.User, { foreignKey: 'created_by', as: 'creator' });
+db.User.hasMany(db.MealPlan, { foreignKey: 'created_by', as: 'created_meal_plans' });
+db.MealPlan.hasMany(db.MealPlanDay, { foreignKey: 'meal_plan_id', as: 'days', onDelete: 'CASCADE' });
+db.MealPlanDay.belongsTo(db.MealPlan, { foreignKey: 'meal_plan_id', as: 'mealPlan' });
+db.MealPlanDay.hasMany(db.MealPlanMeal, { foreignKey: 'meal_plan_day_id', as: 'meals', onDelete: 'CASCADE' });
+db.MealPlanMeal.belongsTo(db.MealPlanDay, { foreignKey: 'meal_plan_day_id', as: 'day' });
+db.MealPlanMeal.hasMany(db.MealPlanItem, { foreignKey: 'meal_plan_meal_id', as: 'items', onDelete: 'CASCADE' });
+db.MealPlanItem.belongsTo(db.MealPlanMeal, { foreignKey: 'meal_plan_meal_id', as: 'meal' });
+db.MealPlanItem.belongsTo(db.Recipe, { foreignKey: 'recipe_id', as: 'recipe' });
 
 module.exports = db;
