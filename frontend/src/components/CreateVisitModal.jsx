@@ -199,7 +199,6 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
 
       const transformedCategories = visitCategories.map(category => {
         const defs = category.field_definitions || [];
-        const hasShowInConsultation = defs.some(def => def.show_in_consultation);
 
         return {
         id: category.id,
@@ -212,10 +211,7 @@ const CreateVisitModal = ({ show, onHide, onSuccess, selectedPatient, prefilledD
         fields: defs
           .filter(def => {
             if (def.is_active === false) return false;
-            // If any field has show_in_consultation set, use that flag
-            if (hasShowInConsultation) return def.show_in_consultation;
-            // Otherwise show all non-utility fields
-            return true;
+            return def.show_in_consultation === true;
           })
           .map(def => {
           let validationRules = def.validation_rules;
