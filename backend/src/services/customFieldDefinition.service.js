@@ -289,6 +289,7 @@ async function createDefinition(user, definitionData, requestMetadata = {}) {
       show_in_basic_info: definitionData.show_in_basic_info || false,
       show_in_list: definitionData.show_in_list || false,
       visible_on_creation: definitionData.visible_on_creation || false,
+      show_in_consultation: definitionData.show_in_consultation || false,
       show_in_visit_list: definitionData.show_in_visit_list || false,
       show_in_portal: definitionData.show_in_portal || false,
       formula: definitionData.formula || null,
@@ -364,6 +365,7 @@ async function updateDefinition(user, definitionId, updateData, requestMetadata 
     if (updateData.show_in_basic_info !== undefined) definition.show_in_basic_info = updateData.show_in_basic_info;
     if (updateData.show_in_list !== undefined) definition.show_in_list = updateData.show_in_list;
     if (updateData.visible_on_creation !== undefined) definition.visible_on_creation = updateData.visible_on_creation;
+    if (updateData.show_in_consultation !== undefined) definition.show_in_consultation = updateData.show_in_consultation;
     if (updateData.show_in_visit_list !== undefined) definition.show_in_visit_list = updateData.show_in_visit_list;
     if (updateData.show_in_portal !== undefined) definition.show_in_portal = updateData.show_in_portal;
     if (updateData.formula !== undefined) definition.formula = updateData.formula;
