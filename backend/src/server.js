@@ -234,6 +234,10 @@ app.use('/api/recipe-categories', (req, res, next) => {
 const ingredientRoutes = require('./routes/ingredients');
 app.use('/api/ingredients', ingredientRoutes);
 
+// Meal Plan routes (protected - RBAC enforced in routes file)
+const mealPlanRoutes = require('./routes/mealPlans');
+app.use('/api/meal-plans', mealPlanRoutes);
+
 // Recipe access routes (for revoking/updating shares)
 const recipeController = require('./controllers/recipeController');
 app.delete('/api/recipe-access/:id', authenticate, requirePermission('recipes.share'), recipeController.revokeAccess);

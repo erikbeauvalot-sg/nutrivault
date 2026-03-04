@@ -99,6 +99,11 @@ async function reset() {
     'DocumentAccessLog',
     'DocumentShare',
     'Document',
+    // Meal Plan models
+    'MealPlanItem',
+    'MealPlanMeal',
+    'MealPlanDay',
+    'MealPlan',
     // Recipe models
     'RecipePatientAccess',
     'RecipeIngredient',
@@ -324,7 +329,16 @@ async function seedBaseData() {
     { code: 'messages.read', description: 'Read messages', resource: 'messages', action: 'read' },
     { code: 'messages.create', description: 'Send messages', resource: 'messages', action: 'create' },
     { code: 'messages.update', description: 'Update messages', resource: 'messages', action: 'update' },
-    { code: 'messages.delete', description: 'Delete messages', resource: 'messages', action: 'delete' }
+    { code: 'messages.delete', description: 'Delete messages', resource: 'messages', action: 'delete' },
+
+    // Meal Plan permissions
+    { code: 'meal_plans.read', description: 'View meal plans', resource: 'meal_plans', action: 'read' },
+    { code: 'meal_plans.create', description: 'Create meal plans', resource: 'meal_plans', action: 'create' },
+    { code: 'meal_plans.update', description: 'Update meal plans', resource: 'meal_plans', action: 'update' },
+    { code: 'meal_plans.delete', description: 'Delete meal plans', resource: 'meal_plans', action: 'delete' },
+
+    // Portal meal plans permission
+    { code: 'portal.own_meal_plans', description: 'View own meal plans', resource: 'portal', action: 'own_meal_plans' }
   ];
   const permissions = await db.Permission.bulkCreate(permissionData);
 
@@ -360,7 +374,8 @@ async function seedBaseData() {
     'dashboard.read', 'dashboard.update',
     'tasks.read', 'tasks.create', 'tasks.update', 'tasks.delete',
     'consultation_templates.create', 'consultation_templates.read', 'consultation_templates.update', 'consultation_templates.delete',
-    'messages.read', 'messages.create', 'messages.update', 'messages.delete'
+    'messages.read', 'messages.create', 'messages.update', 'messages.delete',
+    'meal_plans.read', 'meal_plans.create', 'meal_plans.update', 'meal_plans.delete'
   ];
   const dietitianPermissions = dietitianPermissionCodes
     .filter(code => permissionMap[code])
@@ -388,7 +403,7 @@ async function seedBaseData() {
   // Assign portal permissions to PATIENT role
   const patientPermissionCodes = [
     'portal.own_measures', 'portal.own_visits', 'portal.own_documents',
-    'portal.own_recipes', 'portal.own_profile'
+    'portal.own_recipes', 'portal.own_profile', 'portal.own_meal_plans'
   ];
   const patientPermissions = patientPermissionCodes
     .filter(code => permissionMap[code])

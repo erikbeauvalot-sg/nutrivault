@@ -41,6 +41,7 @@ function createTestApp() {
   const campaignRoutes = require('../../src/routes/campaigns');
   const documentRoutes = require('../../src/routes/documents');
   const recipeRoutes = require('../../src/routes/recipes');
+  const mealPlanRoutes = require('../../src/routes/mealPlans');
   const ingredientRoutes = require('../../src/routes/ingredients');
   const gdprRoutes = require('../../src/routes/gdpr');
   const analyticsRoutes = require('../../src/routes/analytics');
@@ -94,6 +95,7 @@ function createTestApp() {
   app.use('/api/documents', documentRoutes);
   app.use('/api/recipes', recipeRoutes);
   app.use('/api/ingredients', ingredientRoutes);
+  app.use('/api/meal-plans', mealPlanRoutes);
   app.use('/api/gdpr', gdprRoutes);
   app.use('/api/analytics', analyticsRoutes);
   app.use('/api/dashboard', dashboardRoutes);

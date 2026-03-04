@@ -58,6 +58,8 @@ const MarionDietPage = lazy(() => import('./pages/MarionDietPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const RecipesPage = lazy(() => import('./pages/RecipesPage'));
 const RecipeDetailPage = lazy(() => import('./pages/RecipeDetailPage'));
+const MealPlansPage = lazy(() => import('./pages/MealPlansPage'));
+const MealPlanDetailPage = lazy(() => import('./pages/MealPlanDetailPage'));
 const CampaignsPage = lazy(() => import('./pages/CampaignsPage'));
 const CampaignEditorPage = lazy(() => import('./pages/CampaignEditorPage'));
 const CampaignStatsPage = lazy(() => import('./pages/CampaignStatsPage'));
@@ -630,6 +632,24 @@ function App() {
         element={
           <ProtectedRoute permission="recipes.read">
             <RecipeDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/meal-plans"
+        element={
+          <ProtectedRoute permission="meal_plans.read">
+            <MealPlansPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/meal-plans/:id"
+        element={
+          <ProtectedRoute permission="meal_plans.read">
+            <MealPlanDetailPage />
           </ProtectedRoute>
         }
       />
