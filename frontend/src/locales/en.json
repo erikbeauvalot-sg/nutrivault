@@ -693,6 +693,7 @@
     "edit": "Edit Plan",
     "search": "Search plans...",
     "noPlans": "No meal plans yet",
+    "noPlansForPatient": "No meal plans created for this patient.",
     "noResults": "No plans match your filters",
     "createFirst": "Create the first meal plan",
     "allStatuses": "All statuses",

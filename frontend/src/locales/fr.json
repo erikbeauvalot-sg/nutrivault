@@ -718,6 +718,7 @@
     "edit": "Modifier le plan",
     "search": "Rechercher des plans...",
     "noPlans": "Aucun plan de repas pour le moment",
+    "noPlansForPatient": "Aucun plan de repas créé pour ce patient.",
     "noResults": "Aucun plan ne correspond à vos filtres",
     "createFirst": "Créez le premier plan de repas",
     "allStatuses": "Tous les statuts",
