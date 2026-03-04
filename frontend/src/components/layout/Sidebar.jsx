@@ -4,7 +4,7 @@
  * Features: user profile section, collapsible mode, warm gradient, glassmorphism.
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Nav } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -75,6 +75,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const { t } = useTranslation();
   const { user } = useAuth();
+  const sidebarRef = useRef(null);
 
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(COLLAPSED_KEY) === 'true'; } catch { return false; }
@@ -252,18 +253,30 @@ const Sidebar = ({ isOpen, onClose }) => {
     };
   }, [visibleItems, userRole, user, t]);
 
+  // Scroll active item into view on route change
+  useEffect(() => {
+    if (!sidebarRef.current) return;
+    const activeEl = sidebarRef.current.querySelector('.sidebar-item.active');
+    if (activeEl) {
+      activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [location.pathname]);
+
   const handleNavClick = useCallback(() => {
     if (window.innerWidth < 992) onClose();
   }, [onClose]);
 
   // ── Render helpers ────────────────────────────────────────────────────────
 
-  const renderItem = (item) => (
+  const renderItem = (item) => {
+    const isActive = location.pathname === item.path ||
+      (item.path !== '/' && location.pathname.startsWith(item.path + '/'));
+    return (
     <Nav.Link
       key={item.path}
       as={item.disabled ? 'span' : Link}
       to={item.disabled ? undefined : item.path}
-      className={`sidebar-item ${location.pathname === item.path ? 'active' : ''} ${item.disabled ? 'disabled' : ''}`}
+      className={`sidebar-item ${isActive ? 'active' : ''} ${item.disabled ? 'disabled' : ''}`}
       disabled={item.disabled}
       onClick={item.disabled ? undefined : handleNavClick}
     >
@@ -271,7 +284,8 @@ const Sidebar = ({ isOpen, onClose }) => {
       <span className="sidebar-label">{item.label}</span>
       {collapsed && <span className="sidebar-tooltip">{item.label}</span>}
     </Nav.Link>
-  );
+    );
+  };
 
   const renderMainSection = (sectionItems, sectionKey = 'main') => {
     const cats = categoriesBySection[sectionKey] || GROUP_ORDER.map(k => ({
@@ -336,7 +350,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       }
 
       const stateKey = `cat:${cat.key}`;
-      const hasActiveItem = items.some(i => location.pathname === i.path || location.pathname.startsWith(i.path + '/'));
+      const hasActiveItem = items.some(i => location.pathname === i.path || (i.path !== '/' && location.pathname.startsWith(i.path + '/')));
       const isOpen = hasActiveItem || openState[stateKey] !== false;
       const label = cat.label || t(GROUP_LABELS[cat.key] || `sidebar.groups.${cat.key}`, cat.key);
 
@@ -379,7 +393,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   ];
 
   return (
-    <div className={`sidebar ${isOpen ? 'show' : ''} ${collapsed ? 'collapsed' : ''}`}>
+    <div ref={sidebarRef} className={`sidebar ${isOpen ? 'show' : ''} ${collapsed ? 'collapsed' : ''}`}>
       {/* Collapse toggle */}
       <button
         className="sidebar-collapse-btn"
