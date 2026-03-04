@@ -352,6 +352,26 @@ class AuthController {
       next(error);
     }
   }
+
+  /**
+   * Get current user - GET /api/auth/me
+   * Returns fresh user data with up-to-date permissions from DB.
+   * Used by the frontend to refresh permissions after role/permission changes.
+   */
+  async me(req, res) {
+    const user = req.user; // already loaded with role + permissions by authenticate middleware
+    return res.json({
+      success: true,
+      data: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role.name,
+        permissions: user.role.permissions.map(p => p.code),
+        theme_id: user.theme_id || null
+      }
+    });
+  }
 }
 
 module.exports = new AuthController();

@@ -98,6 +98,22 @@ export const refreshToken = async () => {
 };
 
 /**
+ * Fetch current user from server with fresh permissions.
+ * Used at app startup to ensure cached permissions are up-to-date.
+ * @returns {Promise<object|null>} Fresh user object or null on failure
+ */
+export const getMe = async () => {
+  try {
+    const response = await api.get('/auth/me');
+    const user = response.data.data;
+    tokenStorage.setUser(user, tokenStorage.isRemembered());
+    return user;
+  } catch {
+    return null;
+  }
+};
+
+/**
  * Request password reset email
  * @param {string} email - User email
  * @returns {Promise<object>}

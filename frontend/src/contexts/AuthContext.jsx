@@ -19,20 +19,29 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [biometricUnlocked, setBiometricUnlocked] = useState(!isNative);
 
-  // Initialize auth state from stored token on mount
+  // Initialize auth state from stored token on mount, then refresh from server
   useEffect(() => {
-    const initializeAuth = () => {
+    const initializeAuth = async () => {
       try {
         if (authService.isAuthenticated()) {
+          // Immediately restore from cache so the UI is responsive
           const currentUser = authService.getCurrentUser();
           setUser(currentUser);
           setIsAuthenticated(true);
+          setLoading(false);
+
+          // Then fetch fresh user data (permissions may have changed since last login)
+          const freshUser = await authService.getMe();
+          if (freshUser) {
+            setUser(freshUser);
+          }
+        } else {
+          setLoading(false);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
         setUser(null);
         setIsAuthenticated(false);
-      } finally {
         setLoading(false);
       }
     };

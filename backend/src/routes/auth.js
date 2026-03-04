@@ -215,6 +215,16 @@ router.post(
 );
 
 /**
+ * GET /api/auth/me
+ * Authenticated endpoint - Returns current user with fresh permissions from DB
+ */
+router.get(
+  '/me',
+  authenticate,
+  authController.me
+);
+
+/**
  * GET /api/auth/api-keys
  * Authenticated endpoint - List user's API keys
  */
