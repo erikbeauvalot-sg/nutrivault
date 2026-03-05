@@ -90,9 +90,11 @@ const ConsultationNoteEditorPage = () => {
   const scrollToSection = (sectionId) => {
     const el = document.getElementById(sectionId);
     if (!el) return;
+    const container = document.querySelector('.layout-content');
+    if (!container) return;
     const stickyHeight = (stickyRef.current?.offsetHeight || 140) + 8;
-    const top = el.getBoundingClientRect().top + window.scrollY - stickyHeight;
-    window.scrollTo({ top, behavior: 'smooth' });
+    const top = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - stickyHeight;
+    container.scrollTo({ top, behavior: 'smooth' });
   };
 
   useEffect(() => {

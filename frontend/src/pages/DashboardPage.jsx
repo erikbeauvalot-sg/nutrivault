@@ -335,7 +335,7 @@ const DashboardPage = () => {
                               {todaysVisits.map((visit) => (
                                 <tr
                                   key={visit.id}
-                                  onClick={() => navigate(`/visits/${visit.id}/edit`)}
+                                  onClick={() => navigate(`/visits/${visit.id}`)}
                                   style={{ cursor: 'pointer' }}
                                 >
                                   <td className="fw-bold text-primary">
