@@ -36,12 +36,17 @@ async function sendTokenToBackend(tokenValue) {
 
 // Capture FCM token immediately at module load — before auth is ready.
 // The native AppDelegate dispatches this event ~2s after launch.
+// If setup() already ran (biometric fast-login), send token directly.
 if (isNative) {
   window.addEventListener('fcmToken', (e) => {
     const token = e.detail;
-    if (token) {
-      console.log('[Push] FCM token captured from native');
-      pendingFcmToken = token;
+    if (!token) return;
+    console.log('[Push] FCM token captured from native');
+    pendingFcmToken = token;
+    // If setup already ran before the token arrived, send it now
+    if (setupDone) {
+      console.log('[Push] Setup already done — sending FCM token immediately');
+      sendTokenToBackend(token);
     }
   });
 }
