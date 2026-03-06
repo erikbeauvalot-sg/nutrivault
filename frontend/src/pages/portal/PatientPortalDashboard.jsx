@@ -99,22 +99,22 @@ const PatientPortalDashboard = () => {
   const [allMeasures, setAllMeasures] = useState([]);
   const [journalEntries, setJournalEntries] = useState([]);
   const [radarCategories, setRadarCategories] = useState([]);
-  const [objectives, setObjectives] = useState([]);
+  const [goals, setGoals] = useState([]);
   const [error, setError] = useState('');
 
   const loadData = useCallback(async (silent = false) => {
     try {
-      const [measuresData, journalData, radarData, objectivesData] = await Promise.all([
+      const [measuresData, journalData, radarData, goalsData] = await Promise.all([
         portalService.getMeasures().catch(() => ({ measures: [] })),
         portalService.getJournalEntries({ limit: 3 }).catch(() => ({ data: [] })),
         portalService.getRadarData().catch(() => []),
-        portalService.getObjectives().catch(() => []),
+        portalService.getGoals().catch(() => []),
       ]);
       setAllMeasures(Array.isArray(measuresData?.measures) ? measuresData.measures : []);
       const jEntries = journalData?.data;
       setJournalEntries(Array.isArray(jEntries) ? jEntries.slice(0, 3) : []);
       setRadarCategories(Array.isArray(radarData) ? radarData : []);
-      setObjectives(Array.isArray(objectivesData) ? objectivesData : []);
+      setGoals(Array.isArray(goalsData) ? goalsData : []);
     } catch (err) {
       if (!silent) setError(t('portal.loadError', 'Erreur lors du chargement des donn\u00e9es'));
     } finally {
@@ -161,25 +161,50 @@ const PatientPortalDashboard = () => {
         <Col xs={12} md={6}>
           <Card className="h-100">
             <Card.Header className="d-flex justify-content-between align-items-center py-2">
-              <span style={{ fontSize: '0.9em' }}>{'\uD83C\uDFAF'} {t('portal.myObjectives', 'Mes objectifs')}</span>
+              <span style={{ fontSize: '0.9em' }}>🎯 {t('portal.myObjectives', 'Mes objectifs')}</span>
+              <Link to="/portal/progress" className="btn btn-sm btn-outline-primary" style={{ fontSize: '0.8em' }}>
+                {t('common.viewAll', 'Voir tout')}
+              </Link>
             </Card.Header>
             <Card.Body className="py-2 px-3">
-              {objectives.length === 0 ? (
+              {goals.length === 0 ? (
                 <p className="text-muted mb-0" style={{ fontSize: '0.9em' }}>
-                  {t('portal.noObjectives', 'Vos objectifs seront d\u00e9finis avec votre di\u00e9t\u00e9ticien')}
+                  {t('portal.noObjectives', 'Vos objectifs seront définis avec votre diététicien')}
                 </p>
               ) : (
-                <ol className="mb-0 ps-3" style={{ fontSize: '0.9em' }}>
-                  {[1, 2, 3].map(num => {
-                    const obj = objectives.find(o => o.objective_number === num);
-                    if (!obj) return null;
+                <ul className="list-unstyled mb-0">
+                  {goals.filter(g => g.status === 'active').slice(0, 4).map(goal => {
+                    const pct = Math.min(100, Math.max(0, goal.progress_pct ?? 0));
+                    const unit = goal.measureDefinition?.unit || '';
                     return (
-                      <li key={num} className="py-1">
-                        {obj.content}
+                      <li key={goal.id} className="py-2 border-bottom">
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                          <span style={{ fontSize: '0.88em', fontWeight: 600 }} className="text-truncate me-2">
+                            {goal.title}
+                          </span>
+                          <span style={{ fontSize: '0.8em', whiteSpace: 'nowrap', color: pct >= 100 ? '#1b4332' : '#2d6a4f', fontWeight: 700 }}>
+                            {pct}%
+                          </span>
+                        </div>
+                        {(goal.current_value !== null || goal.target_value !== null) && (
+                          <div style={{ fontSize: '0.78em', color: '#6c757d', marginBottom: '4px' }}>
+                            {goal.current_value !== null && <span>{t('portal.progress.current', 'Actuel')} : <strong>{goal.current_value}{unit ? ` ${unit}` : ''}</strong></span>}
+                            {goal.current_value !== null && goal.target_value !== null && <span className="mx-1">→</span>}
+                            {goal.target_value !== null && <span>{t('portal.progress.target', 'Objectif')} : <strong>{goal.target_value}{unit ? ` ${unit}` : ''}</strong></span>}
+                          </div>
+                        )}
+                        <div style={{ height: '5px', background: '#e9ecef', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ width: `${pct}%`, height: '100%', background: pct >= 100 ? '#1b4332' : '#2d6a4f', borderRadius: '3px', transition: 'width 0.3s' }} />
+                        </div>
                       </li>
                     );
                   })}
-                </ol>
+                  {goals.filter(g => g.status === 'active').length === 0 && goals.length > 0 && (
+                    <li className="py-1 text-muted" style={{ fontSize: '0.9em' }}>
+                      {t('portal.allGoalsCompleted', 'Tous vos objectifs sont atteints ! 🏆')}
+                    </li>
+                  )}
+                </ul>
               )}
             </Card.Body>
           </Card>
