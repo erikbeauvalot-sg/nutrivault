@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { FiHome, FiEdit3, FiActivity, FiFile, FiMoreHorizontal, FiCalendar, FiPieChart, FiCreditCard, FiUser, FiBook, FiMessageSquare } from 'react-icons/fi';
+import { FiHome, FiEdit3, FiActivity, FiFile, FiMoreHorizontal, FiCalendar, FiPieChart, FiCreditCard, FiUser, FiBook, FiMessageSquare, FiTrendingUp } from 'react-icons/fi';
 import useHaptics from '../../hooks/useHaptics';
 import './BottomTabBar.css';
 
@@ -22,11 +22,12 @@ const BottomTabBar = () => {
   const tabs = [
     { path: '/portal', icon: FiHome, label: t('portal.nav.home', 'Accueil'), exact: true },
     { path: '/portal/messages', icon: FiMessageSquare, label: t('portal.nav.messages', 'Messages') },
+    { path: '/portal/progress', icon: FiTrendingUp, label: t('portal.nav.progress', 'Progrès') },
     { path: '/portal/journal', icon: FiEdit3, label: t('portal.nav.journal', 'Journal') },
-    { path: '/portal/measures', icon: FiActivity, label: t('portal.nav.measures', 'Mesures') },
   ];
 
   const moreTabs = [
+    { path: '/portal/measures', icon: FiActivity, label: t('portal.nav.measures', 'Mesures') },
     { path: '/portal/visits', icon: FiCalendar, label: t('portal.nav.visits', 'Consultations') },
     { path: '/portal/recipes', icon: FiBook, label: t('portal.nav.recipes', 'Recettes') },
     { path: '/portal/documents', icon: FiFile, label: t('portal.nav.documents', 'Documents') },

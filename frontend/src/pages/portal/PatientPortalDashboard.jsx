@@ -104,17 +104,15 @@ const PatientPortalDashboard = () => {
 
   const loadData = useCallback(async (silent = false) => {
     try {
-      const [measuresData, journalData, radarData, goalsData] = await Promise.all([
+      const [measuresData, journalData, radarData] = await Promise.all([
         portalService.getMeasures().catch(() => ({ measures: [] })),
         portalService.getJournalEntries({ limit: 3 }).catch(() => ({ data: [] })),
         portalService.getRadarData().catch(() => []),
-        portalService.getGoals().catch(() => []),
       ]);
       setAllMeasures(Array.isArray(measuresData?.measures) ? measuresData.measures : []);
       const jEntries = journalData?.data;
       setJournalEntries(Array.isArray(jEntries) ? jEntries.slice(0, 3) : []);
       setRadarCategories(Array.isArray(radarData) ? radarData : []);
-      setGoals(Array.isArray(goalsData) ? goalsData : []);
     } catch (err) {
       if (!silent) setError(t('portal.loadError', 'Erreur lors du chargement des donn\u00e9es'));
     } finally {
@@ -122,10 +120,20 @@ const PatientPortalDashboard = () => {
     }
   }, [t]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  const loadGoals = useCallback(async () => {
+    try {
+      const data = await portalService.getProgress();
+      const arr = Array.isArray(data?.goals) ? data.goals : [];
+      setGoals(arr);
+    } catch (e) {
+      console.error('[Dashboard] loadGoals error:', e?.response?.status, e?.message);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); loadGoals(); }, [loadData, loadGoals]);
 
   // Silent refresh for polling & focus return
-  const silentRefresh = useCallback(() => loadData(true), [loadData]);
+  const silentRefresh = useCallback(() => { loadData(true); loadGoals(); }, [loadData, loadGoals]);
   useRefreshOnFocus(silentRefresh);
 
   // Poll every 60s for updates
@@ -173,7 +181,7 @@ const PatientPortalDashboard = () => {
                 </p>
               ) : (
                 <ul className="list-unstyled mb-0">
-                  {goals.filter(g => g.status === 'active').slice(0, 4).map(goal => {
+                  {goals.filter(g => g.status === 'active' || g.status === 'completed').slice(0, 4).map(goal => {
                     const pct = Math.min(100, Math.max(0, goal.progress_pct ?? 0));
                     const unit = goal.measureDefinition?.unit || '';
                     return (
@@ -199,7 +207,7 @@ const PatientPortalDashboard = () => {
                       </li>
                     );
                   })}
-                  {goals.filter(g => g.status === 'active').length === 0 && goals.length > 0 && (
+                  {goals.filter(g => g.status === 'active' || g.status === 'completed').length === 0 && goals.length > 0 && (
                     <li className="py-1 text-muted" style={{ fontSize: '0.9em' }}>
                       {t('portal.allGoalsCompleted', 'Tous vos objectifs sont atteints ! 🏆')}
                     </li>
