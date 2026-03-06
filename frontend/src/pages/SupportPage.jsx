@@ -3,22 +3,28 @@
  * Public page accessible without authentication — required by Apple App Store.
  */
 
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import './PrivacyPolicyPage.css';
 
 const SupportPage = () => {
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
-  const isFr = i18n.language?.startsWith('fr');
+  const { i18n } = useTranslation();
+  const [lang, setLang] = useState(i18n.language?.startsWith('fr') ? 'fr' : 'en');
+  const isFr = lang === 'fr';
 
   return (
     <div className="privacy-page">
       <div className="privacy-wrapper">
-        <header className="privacy-header">
+        <header className="privacy-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div className="privacy-brand" onClick={() => navigate('/login')} role="button" tabIndex={0}>
             <span className="privacy-brand-icon">🌱</span>
             <span className="privacy-brand-title">NutriVault</span>
+          </div>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button onClick={() => setLang('fr')} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #ccc', background: isFr ? '#2d6a4f' : 'transparent', color: isFr ? '#fff' : '#555', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}>FR</button>
+            <button onClick={() => setLang('en')} style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #ccc', background: !isFr ? '#2d6a4f' : 'transparent', color: !isFr ? '#fff' : '#555', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}>EN</button>
           </div>
         </header>
 
