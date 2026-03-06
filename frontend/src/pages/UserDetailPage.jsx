@@ -1131,7 +1131,9 @@ const UserDetailPage = () => {
         <ChangePasswordModal
           show={showPasswordModal}
           onHide={() => setShowPasswordModal(false)}
-          user={user}
+          userId={user.id}
+          username={user.username}
+          isAdmin={isAdmin}
           onSuccess={() => {
             setShowPasswordModal(false);
             fetchUser();
