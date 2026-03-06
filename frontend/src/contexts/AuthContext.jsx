@@ -30,6 +30,9 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(true);
           setLoading(false);
 
+          // Register push notifications — token may be new after app update/reinstall
+          pushNotificationService.setup();
+
           // Then fetch fresh user data (permissions may have changed since last login)
           const freshUser = await authService.getMe();
           if (freshUser) {
