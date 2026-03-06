@@ -108,10 +108,14 @@ async function sendToUser(userId, { title, body, data = {} }, preferenceKey = nu
           // Update last used timestamp
           await deviceToken.update({ last_used_at: new Date() });
         } catch (sendError) {
+          const errorCode = sendError.code || sendError.errorInfo?.code || 'unknown';
+          console.error(`[PushNotification] Send error for token ${deviceToken.token.substring(0, 20)}...: code=${errorCode}, message=${sendError.message}`);
+
           // Deactivate stale/invalid tokens
           if (
-            sendError.code === 'messaging/invalid-registration-token' ||
-            sendError.code === 'messaging/registration-token-not-registered'
+            errorCode === 'messaging/invalid-registration-token' ||
+            errorCode === 'messaging/registration-token-not-registered' ||
+            errorCode === 'messaging/invalid-argument'
           ) {
             await deviceToken.update({ is_active: false });
             console.log(`[PushNotification] Deactivated stale token for user ${userId}`);
@@ -124,7 +128,7 @@ async function sendToUser(userId, { title, body, data = {} }, preferenceKey = nu
 
     const failures = results.filter((r) => r.status === 'rejected');
     if (failures.length > 0) {
-      console.error(`[PushNotification] ${failures.length} send failures for user ${userId}`);
+      console.error(`[PushNotification] ${failures.length} send failures for user ${userId}:`, failures.map((f) => f.reason?.message || f.reason));
     }
   } catch (error) {
     console.error('[PushNotification] sendToUser error:', error.message);
