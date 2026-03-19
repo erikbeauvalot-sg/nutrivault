@@ -3,7 +3,7 @@
  * Split layout: sidebar (toolbar + today's schedule) | calendar
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Container, Alert, Spinner, Badge, Card, ListGroup, Button } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -16,6 +16,7 @@ import AgendaToolbar from '../components/AgendaToolbar';
 import VisitEventModal from '../components/VisitEventModal';
 import CreateVisitModal from '../components/CreateVisitModal';
 import visitService from '../services/visitService';
+import { getAllVisitTypes } from '../services/visitTypeService';
 import './AgendaPage.css';
 
 const AgendaPage = () => {
@@ -34,6 +35,9 @@ const AgendaPage = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showCreateModal, openCreateModal, closeCreateModal] = useModalParam('new-visit');
   const [createModalDate, setCreateModalDate] = useState(null);
+  const [visitTypeColors, setVisitTypeColors] = useState({});
+  const visitTypeColorsRef = useRef({});
+  visitTypeColorsRef.current = visitTypeColors;
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -46,9 +50,29 @@ const AgendaPage = () => {
     fetchCalendarVisits();
   }, [view, date]);
 
-  // Fetch today's visits once on mount
+  // When visit type colors arrive after events are already loaded, re-apply them
+  useEffect(() => {
+    if (Object.keys(visitTypeColors).length > 0) {
+      setEvents(prev => prev.map(ev => ({
+        ...ev,
+        resource: {
+          ...ev.resource,
+          visitTypeColor: ev.resource.visitType ? visitTypeColorsRef.current[ev.resource.visitType] : undefined
+        }
+      })));
+    }
+  }, [visitTypeColors]);
+
+
+  // Fetch today's visits and visit types once on mount
   useEffect(() => {
     fetchTodaysVisits();
+    getAllVisitTypes({ is_active: true }).then(res => {
+      const map = {};
+      const types = res?.data || [];
+      types.forEach(vt => { if (vt.color) map[vt.name] = vt.color; });
+      setVisitTypeColors(map);
+    }).catch(() => {});
   }, []);
 
   const getDateRange = useCallback(() => {
@@ -129,6 +153,7 @@ const AgendaPage = () => {
           visitId: visit.id,
           status: visit.status,
           visitType: visit.visit_type,
+          visitTypeColor: visit.visit_type ? visitTypeColorsRef.current[visit.visit_type] : undefined,
           patientName: `${visit.patient?.first_name || ''} ${visit.patient?.last_name || ''}`.trim() || t('visits.unknown'),
           duration
         }
@@ -272,7 +297,10 @@ const AgendaPage = () => {
               <span className="agenda-today-duration">
                 {visit.duration_minutes || 30}{t('agenda.minutesShort')}
               </span>
-              <span className={`agenda-today-dot agenda-today-dot--${visit.status}`} />
+              <span
+                className={`agenda-today-dot agenda-today-dot--${visit.status}`}
+                style={visitTypeColorsRef.current[visit.visit_type] ? { backgroundColor: visitTypeColorsRef.current[visit.visit_type] } : undefined}
+              />
             </div>
           ))
         )}

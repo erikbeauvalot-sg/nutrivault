@@ -60,15 +60,21 @@ const CalendarView = ({
   // Solarpunk event style getter
   const eventStyleGetter = (event) => {
     const status = event.resource?.status;
-    const colors = STATUS_COLORS[status] || STATUS_COLORS.SCHEDULED;
+    const typeColor = event.resource?.visitTypeColor;
+    const statusColors = STATUS_COLORS[status] || STATUS_COLORS.SCHEDULED;
     const isRequested = status === 'REQUESTED';
+
+    const bg = typeColor || statusColors.bg;
+    const border = typeColor
+      ? (isRequested ? `2px dashed ${typeColor}` : 'none')
+      : (isRequested ? `2px dashed ${statusColors.border}` : 'none');
 
     return {
       style: {
-        backgroundColor: colors.bg,
+        backgroundColor: bg,
         color: 'white',
         borderRadius: '6px',
-        border: isRequested ? `2px dashed ${colors.border}` : 'none',
+        border,
         opacity: isRequested ? 0.75 : 1,
         padding: '2px 5px',
         fontSize: '0.8rem'
