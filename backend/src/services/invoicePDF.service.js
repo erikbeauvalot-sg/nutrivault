@@ -34,7 +34,7 @@ const CONTENT_HEIGHT = PAGE_HEIGHT - (MARGIN * 2) - FOOTER_HEIGHT;
 const translations = {
   fr: {
     invoice: 'FACTURE',
-    billTo: 'FACTURER À :',
+    billTo: 'FACTURÉ À :',
     invoiceNumber: 'Facture N° :',
     date: 'Date :',
     dueDate: 'Échéance :',
@@ -268,12 +268,11 @@ function drawInvoiceAndPatientInfo(doc, invoice, patient, customization, t, lang
   doc.fontSize(10).fillColor('#333').font('Helvetica');
   doc.text(`${t.invoiceNumber} ${invoice.invoice_number}`, rightCol, y);
   doc.text(`${t.date} ${formatDate(invoice.invoice_date, language)}`, rightCol, y + 14);
-  doc.text(`${t.dueDate} ${formatDate(invoice.due_date, language)}`, rightCol, y + 28);
 
   // Translate status
   const translatedStatus = t[invoice.status] || invoice.status;
   doc.fontSize(11).fillColor('#e74c3c').font('Helvetica-Bold');
-  doc.text(`${t.status} ${translatedStatus}`, rightCol, y + 46);
+  doc.text(`${t.status} ${translatedStatus}`, rightCol, y + 32);
 
   doc.y = y + 80; // Increased spacing
 }
