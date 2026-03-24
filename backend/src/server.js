@@ -73,9 +73,10 @@ app.use('/public/documents', publicDocumentRoutes);
 const publicContactRoutes = require('./routes/publicContact');
 app.use('/api/public/contact', publicContactRoutes);
 
-// Authentication routes (public)
+// Authentication routes (public) — IP blacklist check applied before auth
+const { ipBlacklistMiddleware } = require('./middleware/ipBlacklist');
 const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', ipBlacklistMiddleware, authRoutes);
 
 // Patient portal routes (mixed public/protected)
 const portalRoutes = require('./routes/portal');
@@ -263,6 +264,10 @@ app.use('/api/campaigns', campaignRoutes);
 // Discord webhook routes (protected - Admin only)
 const discordRoutes = require('./routes/discord');
 app.use('/api/discord', discordRoutes);
+
+// IP Blacklist routes (protected - Admin only)
+const ipBlacklistRoutes = require('./routes/ipBlacklist');
+app.use('/api/ip-blacklist', ipBlacklistRoutes);
 
 // Page Views routes (partially public - tracking is public, stats require auth)
 const pageViewsRoutes = require('./routes/pageViews');

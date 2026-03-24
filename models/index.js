@@ -86,6 +86,7 @@ db.MealPlan = require('./MealPlan')(sequelize, DataTypes);
 db.MealPlanDay = require('./MealPlanDay')(sequelize, DataTypes);
 db.MealPlanMeal = require('./MealPlanMeal')(sequelize, DataTypes);
 db.MealPlanItem = require('./MealPlanItem')(sequelize, DataTypes);
+db.IpBlacklist = require('./IpBlacklist')(sequelize, DataTypes);
 
 // Define associations
 // User - Role relationship

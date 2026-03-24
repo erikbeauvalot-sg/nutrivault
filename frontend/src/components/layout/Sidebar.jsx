@@ -443,6 +443,9 @@ const Sidebar = ({ isOpen, onClose }) => {
         })}
       </Nav>
 
+      {/* Bottom spacer for mobile — ensures last menu item is reachable above the tab bar */}
+      <div style={{ height: '5rem', flexShrink: 0 }} />
+
     </div>
   );
 };

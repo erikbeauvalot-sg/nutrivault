@@ -5,6 +5,7 @@ const db = require('../../../models');
 const { generateTokenPair } = require('../auth/jwt');
 const auditService = require('./audit.service');
 const { sendEmail } = require('./email.service');
+const discordService = require('./discord.service');
 
 const MAX_LOGIN_ATTEMPTS = parseInt(process.env.MAX_LOGIN_ATTEMPTS) || 5;
 const LOCKOUT_DURATION_MINUTES = parseInt(process.env.LOCKOUT_DURATION_MINUTES) || 30;
@@ -18,7 +19,9 @@ class AuthService {
    * @param {Object} options - Optional metadata { userAgent, ipAddress }
    * @returns {Object} User object with tokens
    */
-  async login(username, password, rememberMe = false, options = {}) {
+  async login(username, password, rememberMe = false, options = {}, ipAddress = null) {
+    // ipAddress is passed separately for Discord notifications; options.ipAddress is also set below
+    ipAddress = options.ipAddress || ipAddress;
     try {
       // Find user by username, or by email (for patient portal login)
       let user = await db.User.findOne({
@@ -84,6 +87,12 @@ class AuthService {
       }
 
       if (!user) {
+        discordService.notifySecurity({
+          eventCode: 'security.LOGIN_FAILED',
+          username,
+          ipAddress,
+          reason: 'Utilisateur inconnu'
+        }).catch(() => {});
         throw new Error('Invalid credentials');
       }
 
@@ -95,6 +104,12 @@ class AuthService {
       // Check if account is locked
       if (user.locked_until && new Date(user.locked_until) > new Date()) {
         const minutesRemaining = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
+        discordService.notifySecurity({
+          eventCode: 'security.ACCOUNT_LOCKED',
+          username: user.username,
+          ipAddress,
+          reason: `Compte verrouillé encore ${minutesRemaining} min`
+        }).catch(() => {});
         throw new Error(`Account is locked. Try again in ${minutesRemaining} minutes`);
       }
 
@@ -104,6 +119,17 @@ class AuthService {
       if (!isValidPassword) {
         // Increment failed login attempts
         await this.incrementFailedAttempts(user.id);
+        // Reload user to get updated attempt count
+        const updatedUser = await db.User.findByPk(user.id, { attributes: ['failed_login_attempts', 'locked_until'] });
+        const attempts = updatedUser ? updatedUser.failed_login_attempts : null;
+        const isNowLocked = updatedUser && updatedUser.locked_until && new Date(updatedUser.locked_until) > new Date();
+        discordService.notifySecurity({
+          eventCode: isNowLocked ? 'security.ACCOUNT_LOCKED' : 'security.LOGIN_FAILED',
+          username: user.username,
+          ipAddress,
+          reason: isNowLocked ? `Compte verrouillé après ${attempts} tentatives` : 'Mot de passe incorrect',
+          attemptCount: attempts
+        }).catch(() => {});
         throw new Error('Invalid credentials');
       }
 

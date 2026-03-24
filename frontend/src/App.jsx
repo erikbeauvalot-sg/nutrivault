@@ -67,6 +67,7 @@ const CampaignStatsPage = lazy(() => import('./pages/CampaignStatsPage'));
 const ThemeManagementPage = lazy(() => import('./pages/ThemeManagementPage'));
 const ScheduledTasksPage = lazy(() => import('./pages/ScheduledTasksPage'));
 const DiscordWebhookPage = lazy(() => import('./pages/DiscordWebhookPage'));
+const IpBlacklistPage = lazy(() => import('./pages/IpBlacklistPage'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const NotificationCenterPage = lazy(() => import('./pages/NotificationCenterPage'));
 const SidebarMenuConfigPage = lazy(() => import('./pages/SidebarMenuConfigPage'));
@@ -545,6 +546,15 @@ function App() {
         element={
           <ProtectedRoute>
             <DiscordWebhookPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings/ip-blacklist"
+        element={
+          <ProtectedRoute>
+            <IpBlacklistPage />
           </ProtectedRoute>
         }
       />

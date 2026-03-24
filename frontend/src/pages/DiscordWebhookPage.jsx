@@ -127,7 +127,8 @@ const DiscordWebhookPage = () => {
     documents: t('discord.categoryDocuments', 'Documents'),
     billing: t('discord.categoryBilling', 'Facturation'),
     campaigns: t('discord.categoryCampaigns', 'Campagnes'),
-    contact: t('discord.categoryContact', 'Contact MarionDiet')
+    contact: t('discord.categoryContact', 'Contact MarionDiet'),
+    security: t('discord.categorySecurity', 'Sécurité')
   };
 
   if (loading) {

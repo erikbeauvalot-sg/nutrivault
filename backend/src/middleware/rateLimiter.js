@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
  */
 
 // Auth rate limiter: 5 attempts per 15 minutes
+// After hitting the limit, the IP is auto-blacklisted.
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 requests per window
@@ -16,7 +17,14 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Don't count successful logins
-  skip: (req) => req.method === 'GET' // Skip GET requests
+  skip: (req) => req.method === 'GET', // Skip GET requests
+  handler: (req, res, next, options) => {
+    // Auto-blacklist the IP after rate limit is hit
+    const { autoBlacklistIp } = require('./ipBlacklist');
+    const ip = req.ip || req.connection?.remoteAddress || '';
+    autoBlacklistIp(ip.replace(/^::ffff:/, ''), 'Trop de tentatives de connexion (rate limit déclenché)');
+    res.status(options.statusCode).json(options.message);
+  }
 });
 
 // API rate limiter: 100 requests per 15 minutes

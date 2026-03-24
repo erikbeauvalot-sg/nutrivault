@@ -31,7 +31,10 @@ const AVAILABLE_EVENTS = [
   { code: 'campaigns.SCHEDULE', label: 'Planification campagne', category: 'campaigns' },
   { code: 'campaigns.CANCEL', label: 'Annulation campagne', category: 'campaigns' },
   { code: 'campaigns.DELETE', label: 'Suppression campagne', category: 'campaigns' },
-  { code: 'contact.SUBMIT', label: 'Formulaire de contact', category: 'contact' }
+  { code: 'contact.SUBMIT', label: 'Formulaire de contact', category: 'contact' },
+  { code: 'security.LOGIN_FAILED', label: 'Échec de connexion', category: 'security' },
+  { code: 'security.IP_BLOCKED', label: 'IP bloquée (rate limit)', category: 'security' },
+  { code: 'security.ACCOUNT_LOCKED', label: 'Compte verrouillé', category: 'security' }
 ];
 
 // Settings cache
@@ -92,8 +95,11 @@ function getColorForAction(action) {
     case 'SEND':     return 0xe67e22; // orange
     case 'SCHEDULE': return 0x1abc9c; // teal
     case 'CANCEL':   return 0xe74c3c; // red
-    case 'SUBMIT':   return 0xe91e63; // pink
-    default:         return 0x95a5a6; // grey
+    case 'SUBMIT':      return 0xe91e63; // pink
+    case 'LOGIN_FAILED': return 0xe74c3c; // red
+    case 'IP_BLOCKED':   return 0xc0392b; // dark red
+    case 'ACCOUNT_LOCKED': return 0xe67e22; // orange
+    default:            return 0x95a5a6; // grey
   }
 }
 
@@ -111,7 +117,10 @@ function getActionLabel(action) {
     SEND: 'Envoi',
     SCHEDULE: 'Planification',
     CANCEL: 'Annulation',
-    SUBMIT: 'Soumission'
+    SUBMIT: 'Soumission',
+    LOGIN_FAILED: 'Échec de connexion',
+    IP_BLOCKED: 'IP bloquée',
+    ACCOUNT_LOCKED: 'Compte verrouillé'
   };
   return labels[action] || action;
 }
@@ -128,7 +137,8 @@ function getResourceLabel(resourceType) {
     document: 'Document',
     billing: 'Facture',
     campaigns: 'Campagne',
-    contact: 'Contact'
+    contact: 'Contact',
+    security: 'Sécurité'
   };
   return labels[resourceType] || resourceType;
 }
@@ -290,6 +300,40 @@ async function notify(auditData) {
 }
 
 /**
+ * Notify Discord of a security event (login failure, IP block, account lock)
+ * fire-and-forget
+ */
+async function notifySecurity({ eventCode, username, ipAddress, reason, attemptCount }) {
+  try {
+    const settings = await loadSettings();
+    if (!settings.webhookUrl) return;
+    if (!settings.enabledEvents.includes(eventCode)) return;
+
+    const action = eventCode.split('.')[1]; // LOGIN_FAILED, IP_BLOCKED, ACCOUNT_LOCKED
+    const actionLabel = getActionLabel(action);
+
+    const fields = [];
+    if (username) fields.push({ name: 'Utilisateur', value: username, inline: true });
+    if (ipAddress) fields.push({ name: 'Adresse IP', value: `\`${ipAddress}\``, inline: true });
+    if (attemptCount) fields.push({ name: 'Tentatives', value: String(attemptCount), inline: true });
+    if (reason) fields.push({ name: 'Raison', value: reason, inline: false });
+
+    const embed = {
+      title: `🚨 ${actionLabel} — Sécurité`,
+      color: getColorForAction(action),
+      fields,
+      timestamp: new Date().toISOString(),
+      footer: { text: 'NutriVault — Sécurité' }
+    };
+
+    messageQueue.push({ webhookUrl: settings.webhookUrl, embed });
+    processQueue();
+  } catch (err) {
+    console.error('[Discord] notifySecurity error:', err.message);
+  }
+}
+
+/**
  * Send a test message to verify webhook URL
  */
 async function sendTestMessage(webhookUrl) {
@@ -324,6 +368,7 @@ async function sendTestMessage(webhookUrl) {
 module.exports = {
   notify,
   notifyContact,
+  notifySecurity,
   sendTestMessage,
   loadSettings,
   invalidateCache,
