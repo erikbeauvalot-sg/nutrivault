@@ -164,6 +164,16 @@ export const getMeasureTrend = async (patientId, measureDefId, options = {}) => 
 };
 
 /**
+ * Get a single patient measure by ID
+ * @param {string} measureId - Patient measure UUID
+ * @returns {Promise<object>} Measure record
+ */
+export const getPatientMeasureById = async (measureId) => {
+  const response = await api.get(`/patient-measures/${measureId}`);
+  return response.data.data || response.data;
+};
+
+/**
  * Update a patient measure
  * @param {string} measureId - Patient measure UUID
  * @param {object} measureData - Updated measure data

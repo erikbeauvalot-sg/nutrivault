@@ -176,12 +176,6 @@ const PatientMeasuresTable = ({ patientId, refreshTrigger }) => {
   };
 
   const handleEdit = (measure) => {
-    // Prevent editing calculated measures
-    if (measure.measureDefinition?.measure_type === 'calculated') {
-      alert(t('measures.cannotEditCalculated', 'Calculated measures cannot be edited. Update the source measures instead.'));
-      return;
-    }
-
     setEditingMeasure(measure);
     setShowEditModal(true);
   };

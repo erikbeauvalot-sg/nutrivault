@@ -416,6 +416,7 @@ const LogMeasureModal = ({ show, onHide, patientId, visitId, measure, onSuccess 
                   onChange={handleDefinitionChange}
                   required
                   autoFocus
+                  disabled={isEditMode}
                 >
                   <option value="">{t('measures.selectMeasure', 'Select a measure...')}</option>
                   {Object.keys(groupedDefinitions).map(category => (
@@ -435,6 +436,12 @@ const LogMeasureModal = ({ show, onHide, patientId, visitId, measure, onSuccess 
                   </Form.Text>
                 )}
               </Form.Group>
+
+              {isEditMode && selectedDefinition?.measure_type === 'calculated' && (
+                <Alert variant="info" className="mb-3">
+                  {t('measures.cannotEditCalculated', 'Calculated measures cannot be edited directly. Update the source measures instead.')}
+                </Alert>
+              )}
 
               <Form.Group className="mb-3">
                 <Form.Label>
@@ -488,7 +495,7 @@ const LogMeasureModal = ({ show, onHide, patientId, visitId, measure, onSuccess 
           <Button variant="secondary" onClick={handleClose} disabled={loading}>
             {t('common.cancel', 'Cancel')}
           </Button>
-          <Button variant="primary" type="submit" disabled={loading || success || loadingDefinitions}>
+          <Button variant="primary" type="submit" disabled={loading || success || loadingDefinitions || (isEditMode && selectedDefinition?.measure_type === 'calculated')}>
             {loading ? (
               <>
                 <Spinner animation="border" size="sm" className="me-2" />

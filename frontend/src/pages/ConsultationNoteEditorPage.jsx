@@ -69,6 +69,7 @@ const ConsultationNoteEditorPage = () => {
   const [autoSaveStatus, setAutoSaveStatus] = useState(null);
 
   const [note, setNote] = useState(null);
+  const [noteEntries, setNoteEntries] = useState([]); // live copy of note entries (updated when measures are linked)
   const [fieldValues, setFieldValues] = useState({});
   const [instructionNotes, setInstructionNotes] = useState({});
   const [summary, setSummary] = useState('');
@@ -124,10 +125,11 @@ const ConsultationNoteEditorPage = () => {
       const response = await consultationNoteService.getNoteById(id);
       const noteData = response.data;
       setNote(noteData);
+      setNoteEntries(noteData.entries || []);
       setSummary(noteData.summary || '');
       setAiSummary(noteData.ai_summary || '');
 
-      // Load existing custom field values from visit/patient tables
+      // Load existing custom field values (note-specific, or empty for new notes)
       await loadExistingValues(noteData);
 
       // Load instruction notes from entries
@@ -150,24 +152,31 @@ const ConsultationNoteEditorPage = () => {
   const loadExistingValues = async (noteData) => {
     const valMap = {};
 
-    try {
-      // Load patient-level custom field values first
-      if (noteData.patient_id) {
-        const patientFields = await getPatientCustomFields(noteData.patient_id);
-        extractFieldValues(patientFields, valMap);
-      }
+    // Load only values saved for THIS note via its entries.
+    // Never pre-populate from shared visit/patient tables — each note starts fresh.
+    const customFieldEntries = (noteData.entries || []).filter(
+      e => (e.entry_type === 'custom_field_value' || e.entry_type === 'visit_custom_field' || e.entry_type === 'patient_custom_field')
+        && e.field_definition_id !== undefined
+    );
 
-      // Load visit-level custom field values (overrides patient-level for same fields)
-      if (noteData.visit_id) {
-        const visitFields = await visitCustomFieldService.getVisitCustomFields(noteData.visit_id);
-        extractFieldValues(visitFields, valMap);
+    for (const entry of customFieldEntries) {
+      if (entry.value !== undefined && entry.value !== null) {
+        valMap[entry.field_definition_id] = entry.value;
       }
-    } catch (err) {
-      console.error('Error loading existing field values:', err);
     }
 
     setFieldValues(valMap);
   };
+
+  // Called by EmbeddedMeasureField after it creates and links a new measure to this note
+  const handleMeasureLinked = useCallback((templateItemId, measureId) => {
+    setNoteEntries(prev => {
+      const filtered = prev.filter(
+        e => !(e.entry_type === 'patient_measure' && e.template_item_id === templateItemId)
+      );
+      return [...filtered, { entry_type: 'patient_measure', template_item_id: templateItemId, reference_id: measureId }];
+    });
+  }, []);
 
   const extractFieldValues = (categories, valMap) => {
     if (!Array.isArray(categories)) return;
@@ -371,6 +380,9 @@ const ConsultationNoteEditorPage = () => {
           onChange={handleFieldChange}
           patientId={note?.patient_id}
           visitId={note?.visit_id}
+          noteId={note?.id}
+          noteEntries={noteEntries}
+          onMeasureLinked={handleMeasureLinked}
         />
       );
     };
@@ -405,6 +417,12 @@ const ConsultationNoteEditorPage = () => {
 
     const measure = item.measure;
 
+    // Find the measure linked to this note for this template item (if any)
+    const linkedEntry = noteEntries.find(
+      e => e.entry_type === 'patient_measure' && e.template_item_id === item.id
+    );
+    const existingMeasureId = linkedEntry?.reference_id || null;
+
     return (
       <div>
         <div className="d-flex align-items-center gap-2 mb-2">
@@ -418,6 +436,10 @@ const ConsultationNoteEditorPage = () => {
           measureName={measure.name}
           fieldLabel={measure.display_name || measure.name}
           visitId={note?.visit_id}
+          noteId={note?.id}
+          templateItemId={item.id}
+          existingMeasureId={existingMeasureId}
+          onMeasureLinked={handleMeasureLinked}
         />
       </div>
     );

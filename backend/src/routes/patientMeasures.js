@@ -97,6 +97,18 @@ router.post(
 );
 
 /**
+ * GET /api/patient-measures/:id
+ * Get a single measure by ID
+ * Permission: measures:read
+ */
+router.get(
+  '/patient-measures/:id',
+  authenticate,
+  requirePermission('measures.read'),
+  patientMeasureController.getMeasureById
+);
+
+/**
  * PUT /api/patient-measures/:id
  * Update a measure
  * Permission: measures:update

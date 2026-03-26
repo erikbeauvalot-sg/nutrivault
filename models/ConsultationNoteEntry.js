@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(30),
       allowNull: false,
       validate: {
-        isIn: [['visit_custom_field', 'patient_custom_field', 'patient_measure', 'instruction_note']]
+        isIn: [['visit_custom_field', 'patient_custom_field', 'patient_measure', 'instruction_note', 'custom_field_value']]
       }
     },
     reference_id: {

@@ -130,9 +130,35 @@ async function getNoteById(id, user) {
   const noteJson = note.toJSON();
   if (noteJson.template && noteJson.template.items) {
     const { enrichTemplateItems } = require('./consultationTemplate.service');
-    // Use the raw items from the template include (they're already plain objects from toJSON)
     const rawItems = note.template.items;
     noteJson.template.items = await enrichTemplateItems(rawItems);
+  }
+
+  // Enrich entries with usable field_definition_id + value for the frontend.
+  for (const entry of noteJson.entries || []) {
+    if (entry.entry_type === 'custom_field_value') {
+      // Values stored directly in note_text as JSON — fast, no extra query needed.
+      entry.field_definition_id = entry.reference_id;
+      try { entry.value = JSON.parse(entry.note_text); } catch { entry.value = entry.note_text; }
+    } else if (entry.entry_type === 'visit_custom_field' && entry.reference_id) {
+      // Legacy entries (before this fix) — still enrich for backward compat.
+      const rec = await VisitCustomFieldValue.findByPk(entry.reference_id, {
+        include: [{ model: CustomFieldDefinition, as: 'field_definition' }]
+      });
+      if (rec) {
+        entry.field_definition_id = rec.field_definition_id;
+        entry.value = rec.getValue(rec.field_definition?.field_type, rec.field_definition?.allow_multiple);
+      }
+    } else if (entry.entry_type === 'patient_custom_field' && entry.reference_id) {
+      // Legacy entries — still enrich for backward compat.
+      const rec = await PatientCustomFieldValue.findByPk(entry.reference_id, {
+        include: [{ model: CustomFieldDefinition, as: 'field_definition' }]
+      });
+      if (rec) {
+        entry.field_definition_id = rec.field_definition_id;
+        entry.value = rec.getValue(rec.field_definition?.field_type, rec.field_definition?.allow_multiple);
+      }
+    }
   }
 
   return noteJson;
@@ -162,85 +188,20 @@ async function saveNoteValues(noteId, payload, userId) {
   try {
     const { customFieldValues, measureValues, instructionNotes, summary } = payload;
 
-    // 1. Custom field values — upsert to VisitCustomFieldValue or PatientCustomFieldValue
+    // 1. Custom field values — stored directly in ConsultationNoteEntry (note-specific).
+    // We do NOT write to patient_custom_field_values or visit_custom_field_values
+    // because those tables have UNIQUE constraints that prevent per-note isolation.
+    // Each note owns its values via entry_type='custom_field_value'.
     if (customFieldValues && customFieldValues.length > 0) {
       for (const cfv of customFieldValues) {
         const { definition_id, value, template_item_id } = cfv;
 
-        // Determine storage: visit-level or patient-level
-        const fieldDef = await CustomFieldDefinition.findByPk(definition_id, {
-          include: [{ model: CustomFieldCategory, as: 'category' }]
-        });
-
-        if (!fieldDef) continue;
-
-        const entityTypes = fieldDef.category?.entity_types || ['patient'];
-        // Match existing visitCustomField.service logic: categories with 'patient' in
-        // entity_types store in patient_custom_field_values (shared across visits).
-        // Only categories with ONLY 'visit' use visit_custom_field_values.
-        const isPatientLevel = entityTypes.includes('patient');
-        const isVisitField = !isPatientLevel && entityTypes.includes('visit') && note.visit_id;
-
-        let valueRecord;
-
-        if (isVisitField) {
-          // Upsert into VisitCustomFieldValue
-          const existing = await VisitCustomFieldValue.findOne({
-            where: { visit_id: note.visit_id, field_definition_id: definition_id },
-            transaction
-          });
-
-          if (existing) {
-            existing.setValue(value, fieldDef.field_type, fieldDef.allow_multiple);
-            existing.updated_by = userId;
-            await existing.save({ transaction });
-            valueRecord = existing;
-          } else {
-            const newVal = VisitCustomFieldValue.build({
-              visit_id: note.visit_id,
-              field_definition_id: definition_id,
-              updated_by: userId
-            });
-            newVal.setValue(value, fieldDef.field_type, fieldDef.allow_multiple);
-            await newVal.save({ transaction });
-            valueRecord = newVal;
-          }
-
-          // Track in entries
-          await upsertEntry(noteId, {
-            entry_type: 'visit_custom_field',
-            reference_id: valueRecord.id,
-            template_item_id
-          }, transaction);
-        } else {
-          // Upsert into PatientCustomFieldValue
-          const existing = await PatientCustomFieldValue.findOne({
-            where: { patient_id: note.patient_id, field_definition_id: definition_id },
-            transaction
-          });
-
-          if (existing) {
-            existing.setValue(value, fieldDef.field_type, fieldDef.allow_multiple);
-            existing.updated_by = userId;
-            await existing.save({ transaction });
-            valueRecord = existing;
-          } else {
-            const newVal = PatientCustomFieldValue.build({
-              patient_id: note.patient_id,
-              field_definition_id: definition_id,
-              updated_by: userId
-            });
-            newVal.setValue(value, fieldDef.field_type, fieldDef.allow_multiple);
-            await newVal.save({ transaction });
-            valueRecord = newVal;
-          }
-
-          await upsertEntry(noteId, {
-            entry_type: 'patient_custom_field',
-            reference_id: valueRecord.id,
-            template_item_id
-          }, transaction);
-        }
+        await upsertEntry(noteId, {
+          entry_type: 'custom_field_value',
+          reference_id: definition_id,
+          template_item_id,
+          note_text: JSON.stringify(value !== undefined ? value : null)
+        }, transaction);
       }
     }
 
@@ -335,6 +296,12 @@ async function upsertEntry(noteId, data, transaction) {
 
   if (data.template_item_id) {
     where.template_item_id = data.template_item_id;
+  }
+
+  // For custom_field_value, multiple fields in the same category share the same
+  // template_item_id, so we must also use reference_id (= definition_id) as key.
+  if (data.entry_type === 'custom_field_value' && data.reference_id) {
+    where.reference_id = data.reference_id;
   }
 
   const existing = await ConsultationNoteEntry.findOne({ where, transaction });
@@ -528,11 +495,34 @@ ${note.ai_summary}
   return { success: true, sent_to: note.patient.email };
 }
 
+/**
+ * Link an existing PatientMeasure to a note via ConsultationNoteEntry.
+ * Used by EmbeddedMeasureField after it creates a new measure independently.
+ */
+async function linkMeasureToNote(noteId, measureId, templateItemId, userId) {
+  const note = await ConsultationNote.findByPk(noteId);
+  if (!note) throw new Error('Note not found');
+  if (note.dietitian_id !== userId) throw new Error('You do not have permission to update this note');
+
+  const { PatientMeasure } = db;
+  const measure = await PatientMeasure.findByPk(measureId);
+  if (!measure) throw new Error('Measure not found');
+
+  await upsertEntry(noteId, {
+    entry_type: 'patient_measure',
+    reference_id: measureId,
+    template_item_id: templateItemId
+  }, null);
+
+  return { success: true };
+}
+
 module.exports = {
   createNote,
   getNotes,
   getNoteById,
   saveNoteValues,
+  linkMeasureToNote,
   completeNote,
   deleteNote,
   generateAISummary,

@@ -8,6 +8,7 @@ router.post('/', authenticate, requirePermission('consultation_templates.create'
 router.get('/', authenticate, requirePermission('consultation_templates.read'), controller.getNotes);
 router.get('/:id', authenticate, requirePermission('consultation_templates.read'), controller.getNoteById);
 router.put('/:id/values', authenticate, requirePermission('consultation_templates.update'), controller.saveNoteValues);
+router.post('/:id/link-measure', authenticate, requirePermission('consultation_templates.update'), controller.linkMeasure);
 router.put('/:id/complete', authenticate, requirePermission('consultation_templates.update'), controller.completeNote);
 router.post('/:id/generate-summary', authenticate, requirePermission('consultation_templates.update'), controller.generateAISummary);
 router.post('/:id/send-summary', authenticate, requirePermission('consultation_templates.update'), controller.sendAISummaryEmail);

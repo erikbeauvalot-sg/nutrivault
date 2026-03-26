@@ -45,11 +45,20 @@ export const sendAISummaryEmail = async (id) => {
   return response.data;
 };
 
+export const linkMeasureToNote = async (noteId, measureId, templateItemId) => {
+  const response = await api.post(`/consultation-notes/${noteId}/link-measure`, {
+    measure_id: measureId,
+    template_item_id: templateItemId
+  });
+  return response.data;
+};
+
 export default {
   createNote,
   getNotes,
   getNoteById,
   saveNoteValues,
+  linkMeasureToNote,
   completeNote,
   deleteNote,
   generateAISummary,

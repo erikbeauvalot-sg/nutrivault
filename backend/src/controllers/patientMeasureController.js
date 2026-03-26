@@ -692,10 +692,29 @@ async function recalculateMeasureAcrossAllPatients(req, res) {
   }
 }
 
+async function getMeasureById(req, res) {
+  try {
+    const measure = await PatientMeasure.findByPk(req.params.id, {
+      include: [
+        { model: MeasureDefinition, as: 'measureDefinition' },
+        { model: Patient, as: 'patient', attributes: ['id', 'first_name', 'last_name'] }
+      ]
+    });
+    if (!measure) {
+      return res.status(404).json({ success: false, error: 'Measure not found' });
+    }
+    res.json({ success: true, data: measure });
+  } catch (error) {
+    console.error('Error in getMeasureById:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+}
+
 module.exports = {
   logMeasure,
   getMeasures,
   getMeasureHistory,
+  getMeasureById,
   updateMeasure,
   deleteMeasure,
   getMeasuresByVisit,
