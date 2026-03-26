@@ -104,11 +104,27 @@ const sendAISummaryEmail = async (req, res) => {
   }
 };
 
+const linkMeasure = async (req, res) => {
+  try {
+    const { measure_id, template_item_id } = req.body;
+    if (!measure_id || !template_item_id) {
+      return res.status(400).json({ success: false, error: 'measure_id and template_item_id are required' });
+    }
+    const result = await consultationNoteService.linkMeasureToNote(req.params.id, measure_id, template_item_id, req.user.id);
+    res.json(result);
+  } catch (error) {
+    console.error('[ConsultationNoteController] Error linking measure:', error);
+    const status = error.message.includes('not found') ? 404 : error.message.includes('permission') ? 403 : 400;
+    res.status(status).json({ success: false, error: error.message });
+  }
+};
+
 module.exports = {
   createNote,
   getNotes,
   getNoteById,
   saveNoteValues,
+  linkMeasure,
   completeNote,
   deleteNote,
   generateAISummary,

@@ -6,6 +6,24 @@ const dbConfig = config[env];
 
 const sequelize = new Sequelize(dbConfig);
 
+// SQLite: enable WAL mode and busy timeout to prevent SQLITE_BUSY errors under concurrent writes
+if (dbConfig.dialect === 'sqlite') {
+  sequelize.afterConnect((connection) => {
+    return new Promise((resolve, reject) => {
+      connection.run('PRAGMA journal_mode = WAL;', (err) => {
+        if (err) return reject(err);
+        connection.run('PRAGMA busy_timeout = 5000;', (err2) => {
+          if (err2) return reject(err2);
+          connection.run('PRAGMA synchronous = NORMAL;', (err3) => {
+            if (err3) return reject(err3);
+            resolve();
+          });
+        });
+      });
+    });
+  });
+}
+
 const db = {};
 
 db.Sequelize = Sequelize;

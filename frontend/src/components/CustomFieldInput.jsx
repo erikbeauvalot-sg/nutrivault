@@ -8,7 +8,7 @@ import { Form } from 'react-bootstrap';
 import PropTypes from 'prop-types';
 import EmbeddedMeasureField from './EmbeddedMeasureField';
 
-const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, error = null, patientId = null, visitId = null }) => {
+const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, error = null, patientId = null, visitId = null, noteId = null, noteEntries = [], onMeasureLinked = null }) => {
   const {
     field_name,
     field_label,
@@ -216,22 +216,19 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
         return <div style={{ height: '20px' }}>&nbsp;</div>;
 
       case 'embedded': {
-        // Get measure_name from select_options
         const measureName = select_options?.measure_name;
         if (!measureName) {
-          return (
-            <div className="text-muted">
-              <em>Measure not configured</em>
-            </div>
-          );
+          return <div className="text-muted"><em>Measure not configured</em></div>;
         }
         if (!patientId) {
-          return (
-            <div className="text-muted">
-              <em>Patient context required</em>
-            </div>
-          );
+          return <div className="text-muted"><em>Patient context required</em></div>;
         }
+        // Use definition_id as templateItemId so each embedded measure field
+        // gets its own ConsultationNoteEntry (definition_id is a UUID, valid as FK).
+        const embeddedTemplateItemId = fieldDefinition.definition_id;
+        const embeddedEntry = noteId
+          ? noteEntries.find(e => e.entry_type === 'patient_measure' && e.template_item_id === embeddedTemplateItemId)
+          : null;
         return (
           <EmbeddedMeasureField
             patientId={patientId}
@@ -239,6 +236,10 @@ const CustomFieldInput = ({ fieldDefinition, value, onChange, disabled = false, 
             fieldLabel={field_label}
             visitId={visitId}
             readOnly={disabled}
+            noteId={noteId}
+            templateItemId={embeddedTemplateItemId}
+            existingMeasureId={embeddedEntry?.reference_id || null}
+            onMeasureLinked={onMeasureLinked}
           />
         );
       }

@@ -1,7 +1,13 @@
 /**
  * EmbeddedMeasureField Component
- * Inline editing of a patient measure directly within a custom field category.
- * Loads the latest value and allows direct inline editing with save-on-blur.
+ * Inline editing of a patient measure within a consultation note.
+ *
+ * When used inside a consultation note (noteId + templateItemId props provided):
+ * - Loads the measure linked to THIS note via ConsultationNoteEntry
+ * - If no linked measure yet (new note), starts empty
+ * - On save: creates a new PatientMeasure then links it to the note
+ *
+ * When used standalone (no noteId): original behaviour — loads latest measure.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -10,20 +16,33 @@ import { useTranslation } from 'react-i18next';
 import {
   getMeasureDefinitions,
   getPatientMeasures,
+  getPatientMeasureById,
   logPatientMeasure,
   updatePatientMeasure
 } from '../services/measureService';
+import { linkMeasureToNote } from '../services/consultationNoteService';
 import { formatDateTimeShort } from '../utils/dateUtils';
 
-const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, readOnly = false }) => {
+const EmbeddedMeasureField = ({
+  patientId,
+  measureName,
+  fieldLabel,
+  visitId,
+  readOnly = false,
+  // Note-aware props
+  noteId = null,
+  templateItemId = null,
+  existingMeasureId = null,   // reference_id from ConsultationNoteEntry
+  onMeasureLinked = null      // callback(templateItemId, measureId) after first save
+}) => {
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [measureDefinition, setMeasureDefinition] = useState(null);
-  const [latestMeasure, setLatestMeasure] = useState(null);
+  const [currentMeasure, setCurrentMeasure] = useState(null); // measure linked to this note
   const [editValue, setEditValue] = useState('');
   const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState(null); // 'saved' | 'error' | null
+  const [saveStatus, setSaveStatus] = useState(null);
   const saveTimeoutRef = useRef(null);
 
   const loadMeasureData = useCallback(async () => {
@@ -36,6 +55,7 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
       setLoading(true);
       setError(null);
 
+      // Find measure definition
       const definitions = await getMeasureDefinitions({ is_active: true });
       const definition = definitions.find(
         d => d.name?.toLowerCase() === measureName.toLowerCase() ||
@@ -50,17 +70,30 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
 
       setMeasureDefinition(definition);
 
-      const measures = await getPatientMeasures(patientId, {
-        measure_definition_id: definition.id,
-        limit: 1
-      });
-
-      if (measures && measures.length > 0) {
-        setLatestMeasure(measures[0]);
-        initEditValue(measures[0], definition);
+      if (noteId) {
+        // NOTE-AWARE MODE: load only the measure linked to this note
+        if (existingMeasureId) {
+          const measure = await getPatientMeasureById(existingMeasureId);
+          setCurrentMeasure(measure);
+          initEditValue(measure, definition);
+        } else {
+          // New note — start empty, no pre-population
+          setCurrentMeasure(null);
+          setEditValue('');
+        }
       } else {
-        setLatestMeasure(null);
-        setEditValue('');
+        // STANDALONE MODE: load latest measure (original behaviour)
+        const measures = await getPatientMeasures(patientId, {
+          measure_definition_id: definition.id,
+          limit: 1
+        });
+        if (measures && measures.length > 0) {
+          setCurrentMeasure(measures[0]);
+          initEditValue(measures[0], definition);
+        } else {
+          setCurrentMeasure(null);
+          setEditValue('');
+        }
       }
     } catch (err) {
       console.error('Error loading embedded measure:', err);
@@ -68,19 +101,15 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
     } finally {
       setLoading(false);
     }
-  }, [patientId, measureName, t]);
+  }, [patientId, measureName, noteId, existingMeasureId, t]);
 
   const initEditValue = (measure, definition) => {
-    if (!measure || !definition) {
-      setEditValue('');
-      return;
-    }
+    if (!measure || !definition) { setEditValue(''); return; }
     switch (definition.measure_type) {
       case 'numeric':
       case 'calculated':
         setEditValue(measure.numeric_value !== null && measure.numeric_value !== undefined
-          ? String(measure.numeric_value)
-          : '');
+          ? String(measure.numeric_value) : '');
         break;
       case 'text':
         setEditValue(measure.text_value || '');
@@ -90,8 +119,7 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
         break;
       default:
         setEditValue(measure.numeric_value !== null && measure.numeric_value !== undefined
-          ? String(measure.numeric_value)
-          : '');
+          ? String(measure.numeric_value) : '');
     }
   };
 
@@ -99,7 +127,6 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
     loadMeasureData();
   }, [loadMeasureData]);
 
-  // Clear save status after a delay
   useEffect(() => {
     if (saveStatus) {
       saveTimeoutRef.current = setTimeout(() => setSaveStatus(null), 2000);
@@ -126,36 +153,27 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
     return payload;
   };
 
+  const hasValueChanged = (value) => {
+    if (!currentMeasure) return true;
+    const { measure_type } = measureDefinition;
+    if (measure_type === 'boolean') return value !== currentMeasure.boolean_value;
+    if (measure_type === 'text') return value !== (currentMeasure.text_value || '');
+    if (value === '' && (currentMeasure.numeric_value === null || currentMeasure.numeric_value === undefined)) return false;
+    if (value !== '' && parseFloat(value) === parseFloat(currentMeasure.numeric_value)) return false;
+    return true;
+  };
+
   const saveValue = async (value) => {
-    // For non-boolean: skip save if value is empty and no existing measure
-    if (measureDefinition.measure_type !== 'boolean') {
-      if ((value === '' || value === null || value === undefined) && !latestMeasure) {
-        return;
-      }
-    }
+    if (!measureDefinition) return;
 
-    // Check if value actually changed
-    if (latestMeasure) {
-      const currentVal = measureDefinition.measure_type === 'boolean'
-        ? latestMeasure.boolean_value
-        : measureDefinition.measure_type === 'text'
-          ? latestMeasure.text_value
-          : latestMeasure.numeric_value;
-
-      if (measureDefinition.measure_type === 'boolean') {
-        if (value === currentVal) return;
-      } else if (measureDefinition.measure_type === 'text') {
-        if (value === (currentVal || '')) return;
-      } else {
-        if (value === '' && (currentVal === null || currentVal === undefined)) return;
-        if (value !== '' && parseFloat(value) === parseFloat(currentVal)) return;
-      }
-    }
-
-    // Don't save empty numeric values as new measures
+    // Skip empty numeric saves with no existing measure
     if (measureDefinition.measure_type !== 'boolean' && measureDefinition.measure_type !== 'text') {
-      if (value === '' || isNaN(parseFloat(value))) return;
+      if ((value === '' || isNaN(parseFloat(value))) && !currentMeasure) return;
     }
+    if (measureDefinition.measure_type !== 'boolean' && !value && value !== false && !currentMeasure) return;
+
+    // Skip if value unchanged
+    if (currentMeasure && !hasValueChanged(value)) return;
 
     setSaving(true);
     setSaveStatus(null);
@@ -163,10 +181,12 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
     try {
       const payload = buildPayload(value);
 
-      if (latestMeasure) {
-        await updatePatientMeasure(latestMeasure.id, payload);
-        setLatestMeasure(prev => ({ ...prev, ...payload }));
+      if (currentMeasure) {
+        // Update the measure already linked to this note (or latest in standalone mode)
+        await updatePatientMeasure(currentMeasure.id, payload);
+        setCurrentMeasure(prev => ({ ...prev, ...payload }));
       } else {
+        // Create a new measure
         const createPayload = {
           measure_definition_id: measureDefinition.id,
           measured_at: new Date().toISOString(),
@@ -174,7 +194,15 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
           ...payload
         };
         const newMeasure = await logPatientMeasure(patientId, createPayload);
-        setLatestMeasure(newMeasure);
+        setCurrentMeasure(newMeasure);
+
+        // If in note context, link this measure to the note
+        if (noteId && templateItemId) {
+          await linkMeasureToNote(noteId, newMeasure.id, templateItemId);
+          if (onMeasureLinked) {
+            onMeasureLinked(templateItemId, newMeasure.id);
+          }
+        }
       }
       setSaveStatus('saved');
     } catch (err) {
@@ -185,15 +213,10 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
     }
   };
 
-  const handleBlur = () => {
-    saveValue(editValue);
-  };
+  const handleBlur = () => saveValue(editValue);
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      e.target.blur();
-    }
+    if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
   };
 
   const handleCheckboxChange = (e) => {
@@ -202,9 +225,7 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
     saveValue(checked);
   };
 
-  const formatMeasureDate = (dateString) => {
-    return formatDateTimeShort(dateString, i18n.language);
-  };
+  const formatMeasureDate = (dateString) => formatDateTimeShort(dateString, i18n.language);
 
   if (loading) {
     return (
@@ -232,38 +253,34 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
   }
 
   const formatDisplayValue = () => {
-    if (!latestMeasure || !measureDefinition) return '—';
+    if (!currentMeasure) return '—';
     switch (measureDefinition.measure_type) {
       case 'numeric':
       case 'calculated': {
-        const val = latestMeasure.numeric_value;
+        const val = currentMeasure.numeric_value;
         if (val === null || val === undefined) return '—';
         const decimals = measureDefinition.decimal_places ?? 2;
         const formatted = parseFloat(val).toFixed(decimals);
         return measureDefinition.unit ? `${formatted} ${measureDefinition.unit}` : formatted;
       }
       case 'text':
-        return latestMeasure.text_value || '—';
+        return currentMeasure.text_value || '—';
       case 'boolean':
-        return latestMeasure.boolean_value ? t('common.yes', 'Yes') : t('common.no', 'No');
+        return currentMeasure.boolean_value ? t('common.yes', 'Yes') : t('common.no', 'No');
       default:
         return '—';
     }
   };
 
-  // Read-only display mode
   if (readOnly) {
     return (
       <div>
-        <span
-          className="fw-medium"
-          style={{ fontSize: '1.1rem', color: latestMeasure ? 'inherit' : '#6c757d' }}
-        >
+        <span className="fw-medium" style={{ fontSize: '1.1rem', color: currentMeasure ? 'inherit' : '#6c757d' }}>
           {formatDisplayValue()}
         </span>
-        {latestMeasure?.measured_at && (
+        {currentMeasure?.measured_at && (
           <small className="text-muted d-block" style={{ fontSize: '0.75rem' }}>
-            {t('measures.lastRecorded', 'Last')}: {formatMeasureDate(latestMeasure.measured_at)}
+            {t('measures.lastRecorded', 'Last')}: {formatMeasureDate(currentMeasure.measured_at)}
           </small>
         )}
       </div>
@@ -271,15 +288,9 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
   }
 
   const renderSaveIndicator = () => {
-    if (saving) {
-      return <Spinner animation="border" size="sm" className="ms-2 text-muted" />;
-    }
-    if (saveStatus === 'saved') {
-      return <span className="ms-2 text-success" style={{ fontSize: '0.85rem' }}>✓</span>;
-    }
-    if (saveStatus === 'error') {
-      return <span className="ms-2 text-danger" style={{ fontSize: '0.85rem' }}>✗</span>;
-    }
+    if (saving) return <Spinner animation="border" size="sm" className="ms-2 text-muted" />;
+    if (saveStatus === 'saved') return <span className="ms-2 text-success" style={{ fontSize: '0.85rem' }}>✓</span>;
+    if (saveStatus === 'error') return <span className="ms-2 text-danger" style={{ fontSize: '0.85rem' }}>✗</span>;
     return null;
   };
 
@@ -315,7 +326,6 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
       );
     }
 
-    // Numeric (default)
     const unit = measureDefinition.unit;
     return (
       <div className="d-flex align-items-center">
@@ -341,9 +351,9 @@ const EmbeddedMeasureField = ({ patientId, measureName, fieldLabel, visitId, rea
   return (
     <div>
       {renderInput()}
-      {latestMeasure?.measured_at && (
+      {currentMeasure?.measured_at && (
         <small className="text-muted" style={{ fontSize: '0.75rem' }}>
-          {t('measures.lastRecorded', 'Last')}: {formatMeasureDate(latestMeasure.measured_at)}
+          {t('measures.lastRecorded', 'Last')}: {formatMeasureDate(currentMeasure.measured_at)}
         </small>
       )}
     </div>
