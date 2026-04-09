@@ -388,6 +388,19 @@ async function updateInvoice(invoiceId, updateData, user, requestMetadata = {}) 
       updates.amount_due = Math.max(0, newTotal - currentPaid);
     }
 
+    // Track payment_method change in update_log
+    if (updates.payment_method !== undefined && updates.payment_method !== oldData.payment_method) {
+      const currentLog = invoice.update_log || [];
+      currentLog.push({
+        field: 'payment_method',
+        old_value: oldData.payment_method || null,
+        new_value: updates.payment_method || null,
+        changed_by: { id: user.id, username: user.username },
+        changed_at: new Date().toISOString()
+      });
+      updates.update_log = currentLog;
+    }
+
     await invoice.update(updates);
 
     // Audit log

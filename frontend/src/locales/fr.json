@@ -1670,6 +1670,8 @@
     "paymentNotesOptional": "Les notes sont optionnelles",
     "recordPaymentHelp": "Enregistrer un paiement contre cette facture. Le montant du paiement ne peut pas dépasser le solde restant.",
     "selectPaymentMethod": "Sélectionner un mode de paiement",
+    "updated": "Modifié",
+    "previousValue": "Précédemment",
     "paymentMethods": {
       "cash": "Espèces",
       "creditCard": "Carte de crédit",
