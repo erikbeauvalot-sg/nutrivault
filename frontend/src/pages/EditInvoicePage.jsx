@@ -53,7 +53,8 @@ const EditInvoicePage = () => {
     visit_id: '',
     service_description: '',
     amount_total: '',
-    due_date: ''
+    due_date: '',
+    payment_method: ''
   });
 
   useEffect(() => {
@@ -113,7 +114,8 @@ const EditInvoicePage = () => {
       visit_id: invoice.visit_id || '',
       service_description: invoice.service_description || '',
       amount_total: invoice.amount_total || '',
-      due_date: invoice.due_date ? new Date(invoice.due_date).toISOString().split('T')[0] : ''
+      due_date: invoice.due_date ? new Date(invoice.due_date).toISOString().split('T')[0] : '',
+      payment_method: invoice.payment_method || ''
     });
 
     // Fetch visits for the selected patient
@@ -172,7 +174,8 @@ const EditInvoicePage = () => {
         service_description: formData.service_description.trim(),
         amount_total: parseFloat(formData.amount_total),
         due_date: formData.due_date || null,
-        visit_id: formData.visit_id || null
+        visit_id: formData.visit_id || null,
+        payment_method: formData.payment_method || null
       };
 
       await updateInvoice(id, submitData);
@@ -330,6 +333,24 @@ const EditInvoicePage = () => {
                       </Form.Group>
                     </Col>
                   </Row>
+
+                  <Form.Group className="mb-3">
+                    <Form.Label>{t('billing.paymentMethod', 'Mode de paiement')} ({t('common.optional', 'Optional')})</Form.Label>
+                    <Form.Select
+                      name="payment_method"
+                      value={formData.payment_method}
+                      onChange={handleInputChange}
+                      disabled={saving}
+                    >
+                      <option value="">{t('billing.selectPaymentMethod', 'Sélectionner un mode de paiement')}</option>
+                      <option value="cash">{t('billing.paymentMethods.cash', 'Espèces')}</option>
+                      <option value="credit_card">{t('billing.paymentMethods.creditCard', 'Carte de crédit')}</option>
+                      <option value="bank_transfer">{t('billing.paymentMethods.bankTransfer', 'Virement bancaire')}</option>
+                      <option value="check">{t('billing.paymentMethods.check', 'Chèque')}</option>
+                      <option value="insurance">{t('billing.paymentMethods.insurance', 'Assurance')}</option>
+                      <option value="other">{t('billing.paymentMethods.other', 'Autre')}</option>
+                    </Form.Select>
+                  </Form.Group>
 
                   <div className="d-flex gap-2 mt-4">
                     <Button variant="secondary" onClick={handleCancel} disabled={saving}>

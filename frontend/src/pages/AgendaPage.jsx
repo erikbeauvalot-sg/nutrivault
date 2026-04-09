@@ -225,6 +225,17 @@ const AgendaPage = () => {
     fetchTodaysVisits();
   };
 
+  const handleDeleteVisit = async (visitId) => {
+    try {
+      await visitService.deleteVisit(visitId);
+      fetchCalendarVisits();
+      fetchTodaysVisits();
+    } catch (err) {
+      console.error('Failed to delete visit:', err);
+      setError(t('visits.failedToLoad', 'Erreur lors de la suppression'));
+    }
+  };
+
   const getStatusBadge = (status) => {
     const variants = {
       REQUESTED: 'warning', SCHEDULED: 'info', COMPLETED: 'success', CANCELLED: 'secondary', NO_SHOW: 'danger'
@@ -429,6 +440,7 @@ const AgendaPage = () => {
           show={showEventModal}
           onHide={() => setShowEventModal(false)}
           event={selectedEvent}
+          onDelete={handleDeleteVisit}
         />
 
         <CreateVisitModal

@@ -25,6 +25,7 @@ const EditInvoiceModal = ({ show, onHide, onSubmit, invoice }) => {
     service_description: '',
     amount_total: '',
     due_date: '',
+    payment_method: '',
     items: []
   });
 
@@ -46,6 +47,7 @@ const EditInvoiceModal = ({ show, onHide, onSubmit, invoice }) => {
       service_description: invoice.service_description || '',
       amount_total: invoice.amount_total || '',
       due_date: invoice.due_date ? new Date(invoice.due_date).toISOString().split('T')[0] : '',
+      payment_method: invoice.payment_method || '',
       items: invoice.items || []
     });
 
@@ -144,6 +146,7 @@ const EditInvoiceModal = ({ show, onHide, onSubmit, invoice }) => {
       service_description: '',
       amount_total: '',
       due_date: '',
+      payment_method: '',
       items: []
     });
     setError(null);
@@ -260,6 +263,23 @@ const EditInvoiceModal = ({ show, onHide, onSubmit, invoice }) => {
               </Form.Group>
             </Col>
           </Row>
+
+          <Form.Group className="mb-3">
+            <Form.Label>{t('billing.paymentMethod', 'Payment Method')} ({t('common.optional', 'optional')})</Form.Label>
+            <Form.Select
+              name="payment_method"
+              value={formData.payment_method}
+              onChange={handleInputChange}
+            >
+              <option value="">{t('billing.selectPaymentMethod', 'Select a payment method')}</option>
+              <option value="cash">{t('billing.paymentMethods.cash', 'Cash')}</option>
+              <option value="credit_card">{t('billing.paymentMethods.creditCard', 'Credit Card')}</option>
+              <option value="bank_transfer">{t('billing.paymentMethods.bankTransfer', 'Bank Transfer')}</option>
+              <option value="check">{t('billing.paymentMethods.check', 'Check')}</option>
+              <option value="insurance">{t('billing.paymentMethods.insurance', 'Insurance')}</option>
+              <option value="other">{t('billing.paymentMethods.other', 'Other')}</option>
+            </Form.Select>
+          </Form.Group>
         </Modal.Body>
 
         <Modal.Footer>

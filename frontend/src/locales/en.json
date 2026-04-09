@@ -1617,6 +1617,7 @@
     "paymentDateRequired": "Payment date is required",
     "paymentNotesOptional": "Notes are optional",
     "recordPaymentHelp": "Record a payment against this invoice. The payment amount cannot exceed the outstanding balance.",
+    "selectPaymentMethod": "Select a payment method",
     "paymentMethods": {
       "cash": "Cash",
       "creditCard": "Credit Card",
