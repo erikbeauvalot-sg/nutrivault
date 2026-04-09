@@ -82,6 +82,17 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true
+    },
+    update_log: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      get() {
+        const raw = this.getDataValue('update_log');
+        try { return raw ? JSON.parse(raw) : []; } catch { return []; }
+      },
+      set(value) {
+        this.setDataValue('update_log', value ? JSON.stringify(value) : null);
+      }
     }
   }, {
     tableName: 'billing',

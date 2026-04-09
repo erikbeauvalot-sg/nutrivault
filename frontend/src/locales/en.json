@@ -1618,6 +1618,8 @@
     "paymentNotesOptional": "Notes are optional",
     "recordPaymentHelp": "Record a payment against this invoice. The payment amount cannot exceed the outstanding balance.",
     "selectPaymentMethod": "Select a payment method",
+    "updated": "Updated",
+    "previousValue": "Previously",
     "paymentMethods": {
       "cash": "Cash",
       "creditCard": "Credit Card",

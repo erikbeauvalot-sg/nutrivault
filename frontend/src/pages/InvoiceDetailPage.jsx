@@ -263,7 +263,7 @@ const InvoiceDetailPage = () => {
     return new Date(dateString).toLocaleString(locale);
   };
 
-  // Combine payments and email history into a unified timeline
+  // Combine payments, email history and update log into a unified timeline
   const getHistory = () => {
     const history = [];
 
@@ -282,6 +282,17 @@ const InvoiceDetailPage = () => {
         type: 'email',
         date: email.sent_at,
         data: email
+      });
+    });
+
+    // Add update log entries
+    const updateLog = invoice?.update_log;
+    const logEntries = Array.isArray(updateLog) ? updateLog : [];
+    logEntries.forEach(entry => {
+      history.push({
+        type: 'update',
+        date: entry.changed_at,
+        data: entry
       });
     });
 
@@ -562,7 +573,7 @@ const InvoiceDetailPage = () => {
                           )}
                         </tr>
                       );
-                    } else {
+                    } else if (item.type === 'email') {
                       const email = item.data;
                       return (
                         <tr key={`email-${email.id}`}>
@@ -590,6 +601,38 @@ const InvoiceDetailPage = () => {
                               {email.status === 'SUCCESS' ? '✓ ' + t('billing.sent', 'Sent') : '✗ ' + t('billing.failed', 'Failed')}
                             </Badge>
                           </td>
+                          {hasPermission('billing.update') && <td>-</td>}
+                        </tr>
+                      );
+                    } else if (item.type === 'update') {
+                      const entry = item.data;
+                      const getPaymentMethodLabel = (val) => {
+                        if (!val) return t('common.none', '—');
+                        const key = val === 'credit_card' ? 'creditCard' : val === 'bank_transfer' ? 'bankTransfer' : val;
+                        return t(`billing.paymentMethods.${key}`, val);
+                      };
+                      return (
+                        <tr key={`update-${index}`}>
+                          <td>{formatDateTime(entry.changed_at)}</td>
+                          <td>
+                            <Badge bg="warning" text="dark">✏️ {t('billing.updated', 'Modifié')}</Badge>
+                          </td>
+                          <td>
+                            <div className="small">
+                              {t('billing.paymentMethod', 'Mode de paiement')} : <strong>{getPaymentMethodLabel(entry.new_value)}</strong>
+                            </div>
+                            {entry.old_value !== entry.new_value && (
+                              <div className="small text-muted">
+                                {t('billing.previousValue', 'Précédemment')} : {getPaymentMethodLabel(entry.old_value)}
+                              </div>
+                            )}
+                            {entry.changed_by && (
+                              <div className="small text-muted">
+                                {t('billing.sentBy', 'Par')} : {entry.changed_by.username}
+                              </div>
+                            )}
+                          </td>
+                          <td>-</td>
                           {hasPermission('billing.update') && <td>-</td>}
                         </tr>
                       );
