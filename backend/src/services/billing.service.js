@@ -371,7 +371,7 @@ async function updateInvoice(invoiceId, updateData, user, requestMetadata = {}) 
 
     // Update fields
     const allowedFields = [
-      'service_description', 'amount_total', 'due_date', 'status', 'notes'
+      'service_description', 'amount_total', 'due_date', 'status', 'notes', 'payment_method'
     ];
 
     const updates = {};

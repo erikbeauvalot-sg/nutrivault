@@ -107,6 +107,11 @@ const updateInvoiceValidation = [
     .isIn(['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED'])
     .withMessage('Invalid status value'),
 
+  body('payment_method')
+    .optional({ nullable: true })
+    .isIn(['cash', 'credit_card', 'bank_transfer', 'check', 'insurance', 'other', ''])
+    .withMessage('Invalid payment method'),
+
   body('items')
     .optional({ nullable: true })
     .isArray()
