@@ -1449,7 +1449,7 @@ const PatientDetailPage = () => {
                       ) : category.fields.length === 0 ? (
                         <Alert variant="warning">Aucun champ défini pour cette catégorie</Alert>
                       ) : displayLayout.type === 'radar' ? (
-                        <CustomFieldRadarChart category={category} fieldValues={fieldValues} options={displayLayout.options || {}} />
+                        <CustomFieldRadarChart category={category} fieldValues={fieldValues} options={displayLayout.options || {}} patientId={id} />
                       ) : (
                         <Row>
                           {category.fields.map(field => (

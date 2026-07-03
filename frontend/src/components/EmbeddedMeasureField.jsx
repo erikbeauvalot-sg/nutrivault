@@ -76,8 +76,24 @@ const EmbeddedMeasureField = ({
           const measure = await getPatientMeasureById(existingMeasureId);
           setCurrentMeasure(measure);
           initEditValue(measure, definition);
+        } else if (visitId) {
+          // No note link yet — this happens for notes saved before measure
+          // linking existed. Fall back to the measure recorded for this note's
+          // visit so legacy values remain visible (visit-scoped, deterministic).
+          const measures = await getPatientMeasures(patientId, {
+            measure_definition_id: definition.id,
+            visit_id: visitId,
+            limit: 1
+          });
+          if (measures && measures.length > 0) {
+            setCurrentMeasure(measures[0]);
+            initEditValue(measures[0], definition);
+          } else {
+            setCurrentMeasure(null);
+            setEditValue('');
+          }
         } else {
-          // New note — start empty, no pre-population
+          // New note, no visit context — start empty, no pre-population
           setCurrentMeasure(null);
           setEditValue('');
         }
@@ -101,7 +117,7 @@ const EmbeddedMeasureField = ({
     } finally {
       setLoading(false);
     }
-  }, [patientId, measureName, noteId, existingMeasureId, t]);
+  }, [patientId, measureName, noteId, existingMeasureId, visitId, t]);
 
   const initEditValue = (measure, definition) => {
     if (!measure || !definition) { setEditValue(''); return; }

@@ -100,7 +100,7 @@ export const getMeasureCategories = async () => {
  */
 export const logPatientMeasure = async (patientId, measureData) => {
   const response = await api.post(`/patients/${patientId}/measures`, measureData);
-  return response.data;
+  return response.data.data || response.data;
 };
 
 /**
@@ -181,7 +181,7 @@ export const getPatientMeasureById = async (measureId) => {
  */
 export const updatePatientMeasure = async (measureId, measureData) => {
   const response = await api.put(`/patient-measures/${measureId}`, measureData);
-  return response.data;
+  return response.data.data || response.data;
 };
 
 /**

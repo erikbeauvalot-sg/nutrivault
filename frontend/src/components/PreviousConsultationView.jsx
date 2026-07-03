@@ -16,10 +16,19 @@ const ITEM_ICONS = {
   instruction: FaInfoCircle
 };
 
+function isEmptyValue(value) {
+  return (
+    value === null ||
+    value === undefined ||
+    value === '' ||
+    (Array.isArray(value) && value.length === 0)
+  );
+}
+
 function formatFieldValue(value) {
-  if (value === null || value === undefined || value === '') return '—';
+  if (isEmptyValue(value)) return '—';
   if (typeof value === 'boolean') return value ? 'Oui' : 'Non';
-  if (Array.isArray(value)) return value.join(', ') || '—';
+  if (Array.isArray(value)) return value.join(', ');
   return String(value);
 }
 
@@ -72,12 +81,31 @@ const PreviousConsultationView = ({ noteId }) => {
     }
   }
 
-  const templateItems = note.template?.items || [];
+  // Whether an item has anything worth displaying — used to hide empty cards
+  const itemHasContent = (item) => {
+    if (item.item_type === 'category') {
+      return (item.category?.field_definitions || []).some(
+        fd => !isEmptyValue(fieldValueMap[fd.definition_id || fd.id])
+      );
+    }
+    if (item.item_type === 'measure') {
+      return Boolean(measureEntryMap[item.id]);
+    }
+    if (item.item_type === 'instruction') {
+      return Boolean(item.instruction_content) || Boolean(instructionNoteMap[item.id]);
+    }
+    return false;
+  };
+
+  const templateItems = (note.template?.items || []).filter(itemHasContent);
 
   const renderReadOnlyCategory = (item) => {
     if (!item.category) return <p className="text-muted small mb-0">{t('consultationNotes.categoryNotFound', 'Category not found')}</p>;
-    const fields = item.category.field_definitions || [];
-    if (fields.length === 0) return <p className="text-muted small mb-0">{t('consultationNotes.noFieldsInCategory', 'No fields in this category')}</p>;
+    // Only show fields that actually have a value — hide empty ones (value + label)
+    const fields = (item.category.field_definitions || []).filter(
+      fd => !isEmptyValue(fieldValueMap[fd.definition_id || fd.id])
+    );
+    if (fields.length === 0) return null;
 
     const displayLayout = (item.layout_override
       ? (typeof item.layout_override === 'string' ? JSON.parse(item.layout_override) : item.layout_override)
@@ -93,7 +121,7 @@ const PreviousConsultationView = ({ noteId }) => {
           const value = fieldValueMap[defId];
           return (
             <Col key={defId} xs={12} md={colWidth} className="mb-2">
-              <div className="small text-muted mb-1">{fd.label || fd.name}</div>
+              <div className="small text-muted mb-1">{fd.field_label || fd.field_name}</div>
               <div
                 className="px-2 py-1 rounded"
                 style={{ backgroundColor: '#f8f7f4', border: '1px solid #e8e4dc', minHeight: '2rem', fontSize: '0.92rem' }}
