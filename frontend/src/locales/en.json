@@ -4166,7 +4166,21 @@
     "deleteNote": "Delete Note",
     "deleteWarning": "This action cannot be undone.",
     "deleteConfirmMessage": "Are you sure you want to delete this consultation note? The note entries will be removed, but patient data (custom fields, measures) will be preserved.",
-    "deleteError": "Failed to delete note"
+    "deleteError": "Failed to delete note",
+    "tab": "Visit notes",
+    "aiSummaryTitle": "AI Summary",
+    "aiGenerate": "Generate AI summary",
+    "aiRegenerate": "Regenerate",
+    "aiGenerating": "Generating...",
+    "aiSummaryEmpty": "Click \"Generate AI summary\" to automatically create a summary of this consultation.",
+    "aiSendEmail": "Send to patient",
+    "aiSummarySent": "Summary sent to patient by email",
+    "aiGenerateError": "Error generating AI summary",
+    "aiSendError": "Error sending summary",
+    "aiNoEmail": "The patient has no email address — unable to send the summary.",
+    "tabCurrentConsultation": "Current consultation",
+    "measureRecorded": "Recorded",
+    "measureNotRecorded": "Not recorded"
   },
   "goals": {
     "title": "Health goals",

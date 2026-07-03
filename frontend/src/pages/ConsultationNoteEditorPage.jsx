@@ -23,13 +23,15 @@ import {
   FaInfoCircle,
   FaSyncAlt,
   FaRobot,
-  FaEnvelope
+  FaEnvelope,
+  FaHistory
 } from 'react-icons/fa';
 import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import CustomFieldInput from '../components/CustomFieldInput';
 import EmbeddedMeasureField from '../components/EmbeddedMeasureField';
 import PatientGoalsTab from '../components/PatientGoalsTab';
+import PreviousConsultationView from '../components/PreviousConsultationView';
 import consultationNoteService from '../services/consultationNoteService';
 import visitCustomFieldService from '../services/visitCustomFieldService';
 import { getPatientCustomFields } from '../services/customFieldService';
@@ -69,6 +71,8 @@ const ConsultationNoteEditorPage = () => {
   const [autoSaveStatus, setAutoSaveStatus] = useState(null);
 
   const [note, setNote] = useState(null);
+  const [previousNotes, setPreviousNotes] = useState([]);
+  const [activeTab, setActiveTab] = useState('current');
   const [noteEntries, setNoteEntries] = useState([]); // live copy of note entries (updated when measures are linked)
   const [fieldValues, setFieldValues] = useState({});
   const [instructionNotes, setInstructionNotes] = useState({});
@@ -142,6 +146,21 @@ const ConsultationNoteEditorPage = () => {
         }
       }
       setInstructionNotes(insNotes);
+
+      // Load previous completed notes for this patient (excluding current)
+      const patientId = noteData.patient_id || noteData.patient?.id;
+      if (patientId) {
+        try {
+          const prevRes = await consultationNoteService.getNotes({ patient_id: patientId, status: 'completed' });
+          const allCompleted = (prevRes.data || prevRes || []);
+          const filtered = allCompleted
+            .filter(n => n.id !== id)
+            .sort((a, b) => new Date(b.completed_at || b.created_at) - new Date(a.completed_at || a.created_at));
+          setPreviousNotes(filtered);
+        } catch (_) {
+          // silently ignore — previous notes are optional
+        }
+      }
     } catch (err) {
       setError(err.response?.data?.error || t('consultationNotes.loadError', 'Failed to load note'));
     } finally {
@@ -555,6 +574,25 @@ const ConsultationNoteEditorPage = () => {
 
   const isCompleted = note.status === 'completed';
   const templateItems = note.template?.items || [];
+  const isPreviousTab = activeTab !== 'current';
+
+  const tabButtonStyle = (isActive) => ({
+    flexShrink: 0,
+    background: isActive ? 'var(--nv-gold, #c9a84c)' : 'transparent',
+    border: isActive ? '1.5px solid var(--nv-gold, #c9a84c)' : '1.5px solid #d4cfc5',
+    borderRadius: '20px',
+    padding: '4px 14px',
+    fontSize: '0.8rem',
+    color: isActive ? '#fff' : '#6b6154',
+    cursor: 'pointer',
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
+    transition: 'all 0.15s',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.35rem'
+  });
 
   return (
     <Layout>
@@ -574,31 +612,62 @@ const ConsultationNoteEditorPage = () => {
                 <Badge bg={isCompleted ? 'success' : 'warning'} text={isCompleted ? undefined : 'dark'}>
                   {isCompleted ? t('consultationNotes.statusCompleted', 'Completed') : t('consultationNotes.statusDraft', 'Draft')}
                 </Badge>
-                {autoSaveStatus === 'saving' && <Spinner animation="border" size="sm" className="text-muted" />}
-                {autoSaveStatus === 'saved' && <small className="text-success">{t('consultationNotes.autoSaved', 'Auto-saved')}</small>}
-                {autoSaveStatus === 'error' && <small className="text-danger">{t('consultationNotes.autoSaveError', 'Auto-save failed')}</small>}
+                {!isPreviousTab && autoSaveStatus === 'saving' && <Spinner animation="border" size="sm" className="text-muted" />}
+                {!isPreviousTab && autoSaveStatus === 'saved' && <small className="text-success">{t('consultationNotes.autoSaved', 'Auto-saved')}</small>}
+                {!isPreviousTab && autoSaveStatus === 'error' && <small className="text-danger">{t('consultationNotes.autoSaveError', 'Auto-save failed')}</small>}
               </div>
             </Col>
-            <Col xs="auto" className="d-flex gap-2">
-              <Button variant="outline-danger" onClick={() => setShowDeleteModal(true)} disabled={deleting}>
-                <FaTrash className="me-1" />
-                {t('common.delete', 'Delete')}
-              </Button>
-              <Button variant="outline-primary" onClick={handleManualSave} disabled={saving}>
-                {saving ? <Spinner animation="border" size="sm" className="me-1" /> : <FaSave className="me-1" />}
-                {t('common.save', 'Save')}
-              </Button>
-              {!isCompleted && (
-                <Button variant="success" onClick={() => setShowFinishModal(true)} disabled={completing}>
-                  {completing ? <Spinner animation="border" size="sm" className="me-1" /> : <FaCheck className="me-1" />}
-                  {t('visits.finishAndInvoice', 'Finish & Invoice')}
+            {!isPreviousTab && (
+              <Col xs="auto" className="d-flex gap-2">
+                <Button variant="outline-danger" onClick={() => setShowDeleteModal(true)} disabled={deleting}>
+                  <FaTrash className="me-1" />
+                  {t('common.delete', 'Delete')}
                 </Button>
-              )}
-            </Col>
+                <Button variant="outline-primary" onClick={handleManualSave} disabled={saving}>
+                  {saving ? <Spinner animation="border" size="sm" className="me-1" /> : <FaSave className="me-1" />}
+                  {t('common.save', 'Save')}
+                </Button>
+                {!isCompleted && (
+                  <Button variant="success" onClick={() => setShowFinishModal(true)} disabled={completing}>
+                    {completing ? <Spinner animation="border" size="sm" className="me-1" /> : <FaCheck className="me-1" />}
+                    {t('visits.finishAndInvoice', 'Finish & Invoice')}
+                  </Button>
+                )}
+              </Col>
+            )}
           </Row>
 
-          {/* Section navigation pills */}
-          {templateItems.length > 0 && (
+          {/* Tab bar — consultation en cours + consultations précédentes */}
+          {previousNotes.length > 0 && (
+            <div
+              className="d-flex gap-2 pb-2"
+              style={{ overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none', borderBottom: '1px solid rgba(0,0,0,0.08)', marginBottom: '0.25rem' }}
+            >
+              <button
+                style={tabButtonStyle(activeTab === 'current')}
+                onClick={() => setActiveTab('current')}
+              >
+                📝 {t('consultationNotes.tabCurrentConsultation', 'Consultation en cours')}
+              </button>
+              {previousNotes.map(prev => {
+                const date = prev.completed_at || prev.created_at;
+                const label = new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+                return (
+                  <button
+                    key={prev.id}
+                    style={tabButtonStyle(activeTab === prev.id)}
+                    onClick={() => setActiveTab(prev.id)}
+                  >
+                    <FaHistory style={{ fontSize: '0.7rem' }} />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Section navigation pills — only for current consultation */}
+          {!isPreviousTab && templateItems.length > 0 && (
             <div
               className="d-flex gap-1 pb-2"
               style={{ overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none', borderBottom: '1px solid rgba(0,0,0,0.08)' }}
@@ -710,6 +779,14 @@ const ConsultationNoteEditorPage = () => {
         {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
         {success && <Alert variant="success" dismissible onClose={() => setSuccess(null)}>{success}</Alert>}
 
+        {/* Previous consultation view */}
+        {isPreviousTab && (
+          <PreviousConsultationView noteId={activeTab} />
+        )}
+
+        {/* Current consultation content */}
+        {!isPreviousTab && (
+          <>
         {/* Meta info */}
         <Card className="mb-4 border-0 shadow-sm">
           <Card.Body className="py-2">
@@ -831,6 +908,8 @@ const ConsultationNoteEditorPage = () => {
               <PatientGoalsTab patientId={note.patient_id || note.patient?.id} />
             </Card.Body>
           </Card>
+        )}
+          </>
         )}
       </Container>
 

@@ -4372,7 +4372,10 @@
     "aiSummarySent": "Résumé envoyé au patient par email",
     "aiGenerateError": "Erreur lors de la génération du résumé IA",
     "aiSendError": "Erreur lors de l'envoi du résumé",
-    "aiNoEmail": "Le patient n'a pas d'adresse email — impossible d'envoyer le résumé."
+    "aiNoEmail": "Le patient n'a pas d'adresse email — impossible d'envoyer le résumé.",
+    "tabCurrentConsultation": "Consultation en cours",
+    "measureRecorded": "Enregistrée",
+    "measureNotRecorded": "Non enregistrée"
   },
   "goals": {
     "title": "Objectifs de santé",
