@@ -53,7 +53,10 @@ const PatientsPage = () => {
   }, [location.search]);
 
   useEffect(() => {
-    fetchPatients();
+    const timer = setTimeout(() => {
+      fetchPatients();
+    }, 300);
+    return () => clearTimeout(timer);
   }, [searchTerm, statusFilter, currentPage]);
 
   const fetchPatients = async () => {

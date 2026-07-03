@@ -69,13 +69,10 @@ function PatientList({
     }
   };
 
-  if (loading) {
-    return <LoadingSpinner message={t('common.loading')} />;
-  }
-
   return (
     <div>
-      {/* Search and Filter Controls */}
+      {/* Search and Filter Controls — always rendered so the search input
+          keeps focus while patients are (re)loading */}
       <div className="patient-list-controls mb-3">
         <div className="patient-list-filters">
           <InputGroup className="patient-search-input">
@@ -108,7 +105,9 @@ function PatientList({
         </div>
       </div>
 
-      {isMobile ? (
+      {loading ? (
+        <LoadingSpinner message={t('common.loading')} />
+      ) : isMobile ? (
         /* ── Mobile: Compact unified rows with swipe-to-delete ── */
         displayPatients.length === 0 ? (
           <div className="patient-empty-state">
