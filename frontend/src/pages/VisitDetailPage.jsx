@@ -842,7 +842,8 @@ const VisitDetailPage = () => {
                 );
               })}
 
-              {/* Health Measures Tab */}
+              {/* Health Measures Tab — hidden per request */}
+              {false && (
               <Tab eventKey="measures" title={`📏 ${t('measures.healthMeasures', 'Measures')} (${measures.length})`}>
                 <Row className="mb-3">
                   <Col>
@@ -906,9 +907,10 @@ const VisitDetailPage = () => {
                   </Table>
                 )}
               </Tab>
+              )}
 
-              {/* Goals Tab */}
-              {(visit?.patient?.id || visit?.patient_id) && (
+              {/* Goals Tab — hidden per request */}
+              {false && (visit?.patient?.id || visit?.patient_id) && (
                 <Tab eventKey="goals" title={`🎯 ${t('goals.tabTitle', 'Objectifs')}`}>
                   <Card className="border-0 mt-2">
                     <Card.Body className="p-3">

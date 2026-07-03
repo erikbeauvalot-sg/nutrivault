@@ -1199,8 +1199,8 @@ const EditVisitPage = () => {
                   );
                 })}
 
-                {/* Measures Tab */}
-                {measureDefinitions.length > 0 && (
+                {/* Measures Tab — hidden per request */}
+                {false && measureDefinitions.length > 0 && (
                   <Tab eventKey="measures" title={`📏 ${t('measures.healthMeasures', 'Measures')}`}>
                     <Alert variant="info" className="mb-3">
                       {t('measures.editVisitMeasuresInfo', 'Record or update health measurements for this visit.')}
@@ -1269,8 +1269,8 @@ const EditVisitPage = () => {
                   </Tab>
                 )}
 
-                {/* Goals Tab */}
-                {visit?.patient_id && (
+                {/* Goals Tab — hidden per request */}
+                {false && visit?.patient_id && (
                   <Tab eventKey="goals" title={`🎯 ${t('goals.tabTitle', 'Objectifs')}`}>
                     <Card className="border-0 mt-2">
                       <Card.Body className="p-3">
