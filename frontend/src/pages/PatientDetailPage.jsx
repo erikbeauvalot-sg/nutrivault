@@ -81,6 +81,15 @@ const PatientDetailPage = () => {
   const [goalsSummary, setGoalsSummary] = useState(null);
   const [consultationNotes, setConsultationNotes] = useState([]);
   const [notesLoading, setNotesLoading] = useState(false);
+
+  // Number of consultation notes attached to each visit (keyed by visit_id)
+  const notesCountByVisit = useMemo(() => {
+    const map = {};
+    for (const note of consultationNotes) {
+      if (note.visit_id) map[note.visit_id] = (map[note.visit_id] || 0) + 1;
+    }
+    return map;
+  }, [consultationNotes]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [customFieldCategories, setCustomFieldCategories] = useState([]);
@@ -1550,7 +1559,11 @@ const PatientDetailPage = () => {
                                 >
                                   <td>{formatDateTime(visit.visit_date)}</td>
                                   <td>{visit.visit_type || t('visits.generalVisit', 'General')}</td>
-                                  <td>{visit.notes || '-'}</td>
+                                  <td>
+                                    {notesCountByVisit[visit.id] ? (
+                                      <Badge bg="info">{notesCountByVisit[visit.id]}</Badge>
+                                    ) : '-'}
+                                  </td>
                                   <td>
                                     <Badge bg={visit.status === 'completed' ? 'success' : 'warning'}>
                                       {getStatusText(visit.status) || t('visits.scheduled')}
@@ -1604,10 +1617,12 @@ const PatientDetailPage = () => {
                                   <div className="visit-card-label">{t('visits.type', 'Type')}:</div>
                                   <div className="visit-card-value">{visit.visit_type || t('visits.generalVisit', 'General')}</div>
                                 </div>
-                                {visit.notes && (
+                                {notesCountByVisit[visit.id] > 0 && (
                                   <div className="visit-card-row">
                                     <div className="visit-card-label">{t('visits.notes', 'Notes')}:</div>
-                                    <div className="visit-card-value">{visit.notes}</div>
+                                    <div className="visit-card-value">
+                                      <Badge bg="info">{notesCountByVisit[visit.id]}</Badge>
+                                    </div>
                                   </div>
                                 )}
                               </div>

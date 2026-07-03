@@ -26,7 +26,7 @@ import consultationNoteService from '../services/consultationNoteService';
 import PatientGoalsTab from '../components/PatientGoalsTab';
 import consultationTemplateService from '../services/consultationTemplateService';
 import followupService from '../services/followupService';
-import { FaClipboardList, FaEdit, FaEye } from 'react-icons/fa';
+import { FaClipboardList, FaEdit, FaEye, FaUser } from 'react-icons/fa';
 
 const VisitDetailPage = () => {
   const { t, i18n } = useTranslation();
@@ -523,6 +523,16 @@ const VisitDetailPage = () => {
             </div>
           </Col>
           <Col xs={12} md="auto" className="d-flex gap-2 align-items-start flex-wrap mt-3 mt-md-0" style={{ marginTop: '0' }}>
+            {/* View Patient */}
+            {(visit.patient?.id || visit.patient_id) && (
+              <Button
+                variant="outline-secondary"
+                onClick={() => navigate(`/patients/${visit.patient?.id || visit.patient_id}`)}
+                className="d-flex align-items-center gap-1"
+              >
+                <FaUser /> {t('patients.viewPatient', 'Voir le patient')}
+              </Button>
+            )}
             {/* Start Consultation Note */}
             {canEditVisit && visit.status !== 'CANCELLED' && visit.status !== 'COMPLETED' && (
               <Button
