@@ -18,8 +18,8 @@ const validate = (req, res, next) => {
   next();
 };
 
-const CATEGORIES = ['RENT', 'EQUIPMENT', 'SOFTWARE', 'INSURANCE', 'TRAINING', 'MARKETING', 'UTILITIES', 'STAFF', 'PROFESSIONAL_FEES', 'SUPPLIES', 'TRAVEL', 'OTHER'];
-const PAYMENT_METHODS = ['CASH', 'CREDIT_CARD', 'BANK_TRANSFER', 'CHECK', 'OTHER'];
+// Categories and payment methods are now configurable
+// (see /api/expense-categories and /api/payment-methods); no fixed lists.
 const RECURRING_PERIODS = ['MONTHLY', 'QUARTERLY', 'YEARLY'];
 
 const expenseIdValidation = [
@@ -29,11 +29,11 @@ const expenseIdValidation = [
 const createExpenseValidation = [
   body('description').trim().notEmpty().withMessage('Description is required').isLength({ max: 500 }),
   body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be a positive number'),
-  body('category').isIn(CATEGORIES).withMessage('Invalid category'),
+  body('category').notEmpty().isString().isLength({ max: 50 }).withMessage('Invalid category'),
   body('expense_date').isISO8601().withMessage('Valid date is required'),
   body('vendor').optional({ nullable: true }).trim().isLength({ max: 200 }),
   body('receipt_url').optional({ nullable: true }).trim().isLength({ max: 500 }),
-  body('payment_method').optional({ nullable: true }).isIn(PAYMENT_METHODS).withMessage('Invalid payment method'),
+  body('payment_method').optional({ nullable: true }).isString().isLength({ max: 50 }).withMessage('Invalid payment method'),
   body('notes').optional({ nullable: true }).trim(),
   body('is_recurring').optional().isBoolean(),
   body('recurring_period').optional({ nullable: true }).isIn(RECURRING_PERIODS).withMessage('Invalid recurring period'),
@@ -42,7 +42,7 @@ const createExpenseValidation = [
 ];
 
 const queryValidation = [
-  query('category').optional({ checkFalsy: true }).isIn(CATEGORIES).withMessage('Invalid category'),
+  query('category').optional({ checkFalsy: true }).isString().isLength({ max: 50 }).withMessage('Invalid category'),
   query('search').optional({ checkFalsy: true }).trim().isLength({ max: 100 }),
   query('start_date').optional({ checkFalsy: true }).isISO8601().withMessage('Invalid start_date'),
   query('end_date').optional({ checkFalsy: true }).isISO8601().withMessage('Invalid end_date'),

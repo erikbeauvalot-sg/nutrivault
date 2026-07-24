@@ -109,7 +109,8 @@ const updateInvoiceValidation = [
 
   body('payment_method')
     .optional({ nullable: true })
-    .isIn(['cash', 'credit_card', 'bank_transfer', 'check', 'insurance', 'other', ''])
+    .isString()
+    .isLength({ max: 50 })
     .withMessage('Invalid payment method'),
 
   body('items')
@@ -138,7 +139,9 @@ const recordPaymentValidation = [
     .withMessage('Payment amount must be greater than 0'),
 
   body('payment_method')
-    .isIn(['CASH', 'CREDIT_CARD', 'BANK_TRANSFER', 'CHECK', 'INSURANCE', 'OTHER'])
+    .notEmpty()
+    .isString()
+    .isLength({ max: 50 })
     .withMessage('Invalid payment method'),
 
   body('payment_date')

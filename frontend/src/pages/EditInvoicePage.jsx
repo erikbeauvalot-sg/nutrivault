@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Container, Row, Col, Card, Button, Form, Alert, InputGroup, Spinner, Badge } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
+import PaymentMethodSelect from '../components/PaymentMethodSelect';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import { getInvoiceById, updateInvoice } from '../services/billingService';
@@ -336,20 +337,13 @@ const EditInvoicePage = () => {
 
                   <Form.Group className="mb-3">
                     <Form.Label>{t('billing.paymentMethod', 'Mode de paiement')} ({t('common.optional', 'Optional')})</Form.Label>
-                    <Form.Select
+                    <PaymentMethodSelect
                       name="payment_method"
                       value={formData.payment_method}
                       onChange={handleInputChange}
                       disabled={saving}
-                    >
-                      <option value="">{t('billing.selectPaymentMethod', 'Sélectionner un mode de paiement')}</option>
-                      <option value="cash">{t('billing.paymentMethods.cash', 'Espèces')}</option>
-                      <option value="credit_card">{t('billing.paymentMethods.creditCard', 'Carte de crédit')}</option>
-                      <option value="bank_transfer">{t('billing.paymentMethods.bankTransfer', 'Virement bancaire')}</option>
-                      <option value="check">{t('billing.paymentMethods.check', 'Chèque')}</option>
-                      <option value="insurance">{t('billing.paymentMethods.insurance', 'Assurance')}</option>
-                      <option value="other">{t('billing.paymentMethods.other', 'Autre')}</option>
-                    </Form.Select>
+                      includeBlank
+                    />
                   </Form.Group>
 
                   <div className="d-flex gap-2 mt-4">

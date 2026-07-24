@@ -177,6 +177,18 @@
     }
   },
   "finance": {
+    "compta": {
+      "year": "Année",
+      "download": "Exporter la comptabilité",
+      "write": "Écrire sur le serveur",
+      "writeHint": "Régénère le fichier Compta/Comptabilité_<année>_export.xlsx sur le serveur (n'écrase pas votre fichier maître)",
+      "downloadOk": "Comptabilité exportée avec succès",
+      "writeOk": "Fichier comptable régénéré sur le serveur : {{path}}",
+      "exportError": "Échec de l'export de la comptabilité",
+      "modeFaithful": "mode fidèle (votre fichier préservé)",
+      "modeClean": "export propre",
+      "warningsPrefix": "Attention"
+    },
     "tabs": {
       "overview": "Aperçu",
       "cashFlow": "Trésorerie",
@@ -2378,6 +2390,51 @@
     "clearAllFilters": "Effacer tous les filtres",
     "lowerNumbersFirst": "Les valeurs basses apparaissent en premier",
     "loading": "Chargement des champs personnalisés..."
+  },
+  "expenseCategories": {
+    "title": "Catégories de dépenses",
+    "titleManagement": "Gestion des catégories de dépenses",
+    "create": "Nouvelle catégorie de dépense",
+    "edit": "Modifier la catégorie",
+    "label": "Libellé",
+    "labelPlaceholder": "ex. Loyer, Logiciels…",
+    "labelRequired": "Le libellé est requis",
+    "code": "Code",
+    "codeHelp": "Valeur interne stockée sur les dépenses — non modifiable",
+    "tresoLine": "Ligne dans la trésorerie (compta)",
+    "tresoLineHelp": "Ligne des CHARGES de l'onglet TRÉSO où cette catégorie est totalisée dans l'export comptable.",
+    "tresoLines": {
+      "autres": "Autres dépenses",
+      "loyer": "Loyer",
+      "doctolib": "Doctolib",
+      "rcpro": "RC pro",
+      "assurance": "Assurance locale"
+    },
+    "displayOrder": "Ordre d'affichage",
+    "activeHelp": "Les catégories inactives sont masquées des menus déroulants",
+    "empty": "Aucune catégorie. Créez-en une pour commencer.",
+    "confirmDelete": "Voulez-vous vraiment supprimer cette catégorie ?",
+    "saveError": "Échec de l'enregistrement de la catégorie",
+    "deleteError": "Échec de la suppression de la catégorie"
+  },
+  "paymentMethods": {
+    "title": "Modes de paiement",
+    "titleManagement": "Gestion des modes de paiement",
+    "create": "Nouveau mode de paiement",
+    "edit": "Modifier le mode de paiement",
+    "label": "Libellé",
+    "labelPlaceholder": "ex. Espèces, Carte bancaire…",
+    "labelRequired": "Le libellé est requis",
+    "code": "Code",
+    "codeHelp": "Valeur interne stockée sur les factures — non modifiable",
+    "isCard": "Paiement par carte (commission bancaire déduite en compta)",
+    "isCardShort": "Carte",
+    "displayOrder": "Ordre d'affichage",
+    "activeHelp": "Les modes inactifs sont masqués des menus déroulants",
+    "empty": "Aucun mode de paiement. Créez-en un pour commencer.",
+    "confirmDelete": "Voulez-vous vraiment supprimer ce mode de paiement ?",
+    "saveError": "Échec de l'enregistrement du mode de paiement",
+    "deleteError": "Échec de la suppression du mode de paiement"
   },
   "visitTypes": {
     "title": "Types de Consultation",

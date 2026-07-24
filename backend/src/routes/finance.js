@@ -40,6 +40,18 @@ router.get('/forecast', authenticate, requirePermission('finance.read'), [
   query('end_date').optional().isISO8601().withMessage('Invalid end_date')
 ], validate, financeController.getForecast);
 
+// GET /api/finance/compta-export — download the accounting workbook (.xlsx)
+router.get('/compta-export', authenticate, requirePermission('finance.read'), [
+  query('year').optional().isInt({ min: 2000, max: 2100 }).withMessage('Invalid year'),
+  query('mode').optional().isIn(['auto', 'faithful', 'clean']).withMessage('Invalid mode')
+], validate, financeController.exportCompta);
+
+// POST /api/finance/compta-export/write — regenerate the file on the server disk
+router.post('/compta-export/write', authenticate, requirePermission('finance.read'), [
+  body('year').optional().isInt({ min: 2000, max: 2100 }).withMessage('Invalid year'),
+  body('mode').optional().isIn(['auto', 'faithful', 'clean']).withMessage('Invalid mode')
+], validate, financeController.writeComptaToDisk);
+
 // POST /api/finance/send-reminders
 router.post('/send-reminders', authenticate, requirePermission('billing.update'), [
   body('invoice_ids').isArray({ min: 1 }).withMessage('invoice_ids must be a non-empty array'),

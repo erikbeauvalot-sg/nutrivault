@@ -10,13 +10,14 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import ConfirmModal from '../components/ConfirmModal';
+import PaymentMethodSelect from '../components/PaymentMethodSelect';
+import ExpenseCategorySelect from '../components/ExpenseCategorySelect';
+import expenseCategoryService from '../services/expenseCategoryService';
 import * as financeService from '../services/financeService';
 import * as expenseService from '../services/expenseService';
 import * as accountingEntryService from '../services/accountingEntryService';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
-const CATEGORIES = ['RENT', 'EQUIPMENT', 'SOFTWARE', 'INSURANCE', 'TRAINING', 'MARKETING', 'UTILITIES', 'STAFF', 'PROFESSIONAL_FEES', 'SUPPLIES', 'TRAVEL', 'OTHER'];
-const PAYMENT_METHODS = ['CASH', 'CREDIT_CARD', 'BANK_TRANSFER', 'CHECK', 'OTHER'];
 const RECURRING_PERIODS = ['MONTHLY', 'QUARTERLY', 'YEARLY'];
 const ENTRY_CATEGORIES = ['ADJUSTMENT', 'REFUND', 'CORRECTION', 'BANK_FEE', 'TAX', 'OTHER'];
 
@@ -62,6 +63,19 @@ const FinancePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+
+  // Comptabilité export
+  const currentYear = new Date().getFullYear();
+  const [exportYear, setExportYear] = useState(currentYear);
+  const [exporting, setExporting] = useState(false);
+
+  // Configurable expense categories (for displaying labels of stored codes).
+  const [expenseCategoryList, setExpenseCategoryList] = useState([]);
+  const categoryLabel = useCallback((code) => {
+    if (!code) return '';
+    const found = expenseCategoryList.find(c => c.code === code);
+    return found ? found.label : t(`expenses.categories.${code}`, code);
+  }, [expenseCategoryList, t]);
 
   // Overview
   const [dashboard, setDashboard] = useState(null);
@@ -209,6 +223,12 @@ const FinancePage = () => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    expenseCategoryService.getAllExpenseCategories()
+      .then(res => setExpenseCategoryList(res?.data || []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (!loading) loadExpenses();
   }, [expenseFilters]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -219,6 +239,45 @@ const FinancePage = () => {
   useEffect(() => {
     if (!loading) loadRevenue();
   }, [revenueFilters]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // --- Comptabilité export ---
+  const comptaSuccessMessage = (baseKey, baseDefault, params, mode, warnings) => {
+    const modeLabel = mode === 'faithful'
+      ? t('finance.compta.modeFaithful', 'mode fidèle (votre fichier préservé)')
+      : t('finance.compta.modeClean', 'export propre');
+    let msg = `${t(baseKey, baseDefault, params)} — ${modeLabel}`;
+    if (warnings && warnings.length) {
+      msg += `. ${t('finance.compta.warningsPrefix', 'Attention')} : ${warnings.join(' ')}`;
+    }
+    return msg;
+  };
+
+  const handleDownloadCompta = async () => {
+    setExporting(true);
+    setError(null);
+    try {
+      const { mode, warnings } = await financeService.downloadComptaExport(exportYear);
+      setSuccess(comptaSuccessMessage('finance.compta.downloadOk', 'Comptabilité exportée avec succès', undefined, mode, warnings));
+    } catch (err) {
+      setError(t('finance.compta.exportError', "Échec de l'export de la comptabilité"));
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleWriteComptaToDisk = async () => {
+    setExporting(true);
+    setError(null);
+    try {
+      const res = await financeService.writeComptaToDisk(exportYear);
+      const data = res?.data || {};
+      setSuccess(comptaSuccessMessage('finance.compta.writeOk', 'Fichier comptable régénéré sur le serveur : {{path}}', { path: data.path || '' }, data.mode, data.warnings));
+    } catch (err) {
+      setError(t('finance.compta.exportError', "Échec de l'export de la comptabilité"));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // --- Expense CRUD ---
   const handleOpenExpenseForm = (expense = null) => {
@@ -396,10 +455,32 @@ const FinancePage = () => {
   return (
     <Layout>
       <Container fluid className="py-4">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h2 style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800 }}>
+        <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+          <h2 style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800 }} className="mb-0">
             {t('navigation.finance', 'Finance')}
           </h2>
+          <div className="d-flex align-items-center gap-2 flex-wrap">
+            <Form.Select
+              size="sm"
+              style={{ width: 'auto' }}
+              value={exportYear}
+              onChange={(e) => setExportYear(parseInt(e.target.value, 10))}
+              aria-label={t('finance.compta.year', 'Année')}
+            >
+              {Array.from({ length: 6 }, (_, i) => currentYear - i).map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </Form.Select>
+            <Button variant="success" size="sm" onClick={handleDownloadCompta} disabled={exporting}>
+              {exporting
+                ? <Spinner as="span" size="sm" animation="border" className="me-1" />
+                : <span className="me-1">📊</span>}
+              {t('finance.compta.download', 'Exporter la comptabilité')}
+            </Button>
+            <Button variant="outline-secondary" size="sm" onClick={handleWriteComptaToDisk} disabled={exporting} title={t('finance.compta.writeHint', "Régénère le fichier Compta/Comptabilité_<année>_export.xlsx sur le serveur (n'écrase pas votre fichier maître)")}>
+              {t('finance.compta.write', 'Écrire sur le serveur')}
+            </Button>
+          </div>
         </div>
 
         {error && <Alert variant="danger" dismissible onClose={() => setError(null)}>{error}</Alert>}
@@ -586,16 +667,13 @@ const FinancePage = () => {
                         onChange={e => setExpenseFilters(prev => ({ ...prev, search: e.target.value, page: 1 }))}
                       />
                     </InputGroup>
-                    <Form.Select
+                    <ExpenseCategorySelect
                       style={{ maxWidth: 180 }}
                       value={expenseFilters.category}
                       onChange={e => setExpenseFilters(prev => ({ ...prev, category: e.target.value, page: 1 }))}
-                    >
-                      <option value="">{t('common.all', 'All')}</option>
-                      {CATEGORIES.map(c => (
-                        <option key={c} value={c}>{t(`expenses.categories.${c}`, c)}</option>
-                      ))}
-                    </Form.Select>
+                      includeBlank
+                      blankLabel={t('common.all', 'All')}
+                    />
                     {hasPermission('expenses.create') && (
                       <Button variant="success" onClick={() => handleOpenExpenseForm()} style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700 }}>
                         + {t('expenses.addExpense', 'Add Expense')}
@@ -627,7 +705,7 @@ const FinancePage = () => {
                               {exp.is_recurring && <Badge bg="info" className="ms-2" pill>↻</Badge>}
                               {exp.tax_deductible && <Badge bg="success" className="ms-1" pill>TD</Badge>}
                             </td>
-                            <td><Badge bg="light" text="dark" style={{ fontWeight: 600 }}>{t(`expenses.categories.${exp.category}`, exp.category)}</Badge></td>
+                            <td><Badge bg="light" text="dark" style={{ fontWeight: 600 }}>{categoryLabel(exp.category)}</Badge></td>
                             <td className="text-muted">{exp.vendor || '—'}</td>
                             <td className="text-end" style={{ fontWeight: 700, fontFamily: 'Space Grotesk, sans-serif' }}>{formatCurrency(exp.amount)}</td>
                             <td>
@@ -667,7 +745,7 @@ const FinancePage = () => {
                         <ResponsiveContainer width="100%" height={300}>
                           <PieChart>
                             <Pie
-                              data={expenseSummary.byCategory.map(c => ({ name: t(`expenses.categories.${c.category}`, c.category), value: c.total }))}
+                              data={expenseSummary.byCategory.map(c => ({ name: categoryLabel(c.category), value: c.total }))}
                               cx="50%" cy="50%" outerRadius={100} dataKey="value"
                               label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                               labelLine={false}
@@ -1112,9 +1190,11 @@ const FinancePage = () => {
               <Col md={4}>
                 <Form.Group>
                   <Form.Label>{t('expenses.category', 'Category')} *</Form.Label>
-                  <Form.Select value={expenseFormData.category} onChange={e => setExpenseFormData(prev => ({ ...prev, category: e.target.value }))}>
-                    {CATEGORIES.map(c => <option key={c} value={c}>{t(`expenses.categories.${c}`, c)}</option>)}
-                  </Form.Select>
+                  <ExpenseCategorySelect
+                    value={expenseFormData.category}
+                    onChange={e => setExpenseFormData(prev => ({ ...prev, category: e.target.value }))}
+                    required
+                  />
                 </Form.Group>
               </Col>
               <Col md={4}>
@@ -1126,10 +1206,11 @@ const FinancePage = () => {
               <Col md={4}>
                 <Form.Group>
                   <Form.Label>{t('expenses.paymentMethod', 'Payment Method')}</Form.Label>
-                  <Form.Select value={expenseFormData.payment_method} onChange={e => setExpenseFormData(prev => ({ ...prev, payment_method: e.target.value }))}>
-                    <option value="">—</option>
-                    {PAYMENT_METHODS.map(m => <option key={m} value={m}>{t(`expenses.paymentMethods.${m}`, m.replace('_', ' '))}</option>)}
-                  </Form.Select>
+                  <PaymentMethodSelect
+                    value={expenseFormData.payment_method}
+                    onChange={e => setExpenseFormData(prev => ({ ...prev, payment_method: e.target.value }))}
+                    includeBlank
+                  />
                 </Form.Group>
               </Col>
               <Col md={6}>

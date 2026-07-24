@@ -18,7 +18,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(30),
       allowNull: false,
       validate: {
-        isIn: [['RENT', 'EQUIPMENT', 'SOFTWARE', 'INSURANCE', 'TRAINING', 'MARKETING', 'UTILITIES', 'STAFF', 'PROFESSIONAL_FEES', 'SUPPLIES', 'TRAVEL', 'OTHER']]
+        len: [1, 30] // configurable via /api/expense-categories — no fixed enum
       }
     },
     expense_date: {
@@ -36,8 +36,9 @@ module.exports = (sequelize, DataTypes) => {
     payment_method: {
       type: DataTypes.STRING(50),
       allowNull: true,
+      // Configurable via /api/payment-methods — no fixed enum.
       validate: {
-        isIn: [['CASH', 'CREDIT_CARD', 'BANK_TRANSFER', 'CHECK', 'OTHER']]
+        len: [0, 50]
       }
     },
     notes: {

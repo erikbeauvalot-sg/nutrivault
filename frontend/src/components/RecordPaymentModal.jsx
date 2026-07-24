@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { Modal, Button, Form, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
+import PaymentMethodSelect from './PaymentMethodSelect';
 
 const RecordPaymentModal = ({ show, onHide, onSubmit, invoice }) => {
   const { t } = useTranslation();
@@ -135,19 +136,12 @@ const RecordPaymentModal = ({ show, onHide, onSubmit, invoice }) => {
             <Col md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>{t('billing.paymentMethod', 'Payment Method')} *</Form.Label>
-                <Form.Select
+                <PaymentMethodSelect
                   name="payment_method"
                   value={formData.payment_method}
                   onChange={handleInputChange}
                   required
-                >
-                  <option value="CASH">{t('billing.paymentMethods.cash', 'Cash')}</option>
-                  <option value="CREDIT_CARD">{t('billing.paymentMethods.creditCard', 'Credit Card')}</option>
-                  <option value="BANK_TRANSFER">{t('billing.paymentMethods.bankTransfer', 'Bank Transfer')}</option>
-                  <option value="CHECK">{t('billing.paymentMethods.check', 'Check')}</option>
-                  <option value="INSURANCE">{t('billing.paymentMethods.insurance', 'Insurance')}</option>
-                  <option value="OTHER">{t('billing.paymentMethods.other', 'Other')}</option>
-                </Form.Select>
+                />
               </Form.Group>
             </Col>
           </Row>

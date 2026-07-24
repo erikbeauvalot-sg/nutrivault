@@ -14,9 +14,13 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import customFieldService from '../services/customFieldService';
 import visitTypeService from '../services/visitTypeService';
+import paymentMethodService from '../services/paymentMethodService';
+import expenseCategoryService from '../services/expenseCategoryService';
 import CustomFieldCategoryModal from '../components/CustomFieldCategoryModal';
 import CustomFieldDefinitionModal from '../components/CustomFieldDefinitionModal';
 import VisitTypeModal from '../components/VisitTypeModal';
+import PaymentMethodModal from '../components/PaymentMethodModal';
+import ExpenseCategoryModal from '../components/ExpenseCategoryModal';
 import ExportCustomFieldsModal from '../components/ExportCustomFieldsModal';
 import ImportCustomFieldsModal from '../components/ImportCustomFieldsModal';
 import ActionButton from '../components/ActionButton';
@@ -56,6 +60,8 @@ const CustomFieldsPage = () => {
   const [categories, setCategories] = useState([]);
   const [definitions, setDefinitions] = useState([]);
   const [visitTypes, setVisitTypes] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [expenseCategories, setExpenseCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState(() => getStoredFilters().activeTab);
@@ -75,6 +81,14 @@ const CustomFieldsPage = () => {
   const [definitionToDelete, setDefinitionToDelete] = useState(null);
   const [showDeleteVisitTypeConfirm, setShowDeleteVisitTypeConfirm] = useState(false);
   const [visitTypeToDelete, setVisitTypeToDelete] = useState(null);
+  const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
+  const [showDeletePaymentMethodConfirm, setShowDeletePaymentMethodConfirm] = useState(false);
+  const [paymentMethodToDelete, setPaymentMethodToDelete] = useState(null);
+  const [showExpenseCategoryModal, setShowExpenseCategoryModal] = useState(false);
+  const [selectedExpenseCategory, setSelectedExpenseCategory] = useState(null);
+  const [showDeleteExpenseCategoryConfirm, setShowDeleteExpenseCategoryConfirm] = useState(false);
+  const [expenseCategoryToDelete, setExpenseCategoryToDelete] = useState(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
 
@@ -101,15 +115,19 @@ const CustomFieldsPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [categoriesRes, definitionsRes, visitTypesRes] = await Promise.all([
+      const [categoriesRes, definitionsRes, visitTypesRes, paymentMethodsRes, expenseCategoriesRes] = await Promise.all([
         customFieldService.getCategories(),
         customFieldService.getDefinitions(),
-        visitTypeService.getAllVisitTypes()
+        visitTypeService.getAllVisitTypes(),
+        paymentMethodService.getAllPaymentMethods(),
+        expenseCategoryService.getAllExpenseCategories()
       ]);
 
       setCategories(categoriesRes || []);
       setDefinitions(definitionsRes || []);
       setVisitTypes(visitTypesRes?.data || []);
+      setPaymentMethods(paymentMethodsRes?.data || []);
+      setExpenseCategories(expenseCategoriesRes?.data || []);
       setError(null);
     } catch (err) {
       console.error('Error fetching custom fields data:', err);
@@ -321,6 +339,70 @@ const CustomFieldsPage = () => {
       setError(errorMessage);
     } finally {
       setVisitTypeToDelete(null);
+    }
+  };
+
+  // Payment Method handlers
+  const handleCreatePaymentMethod = () => {
+    setSelectedPaymentMethod(null);
+    setShowPaymentMethodModal(true);
+  };
+
+  const handleEditPaymentMethod = (method) => {
+    setSelectedPaymentMethod(method);
+    setShowPaymentMethodModal(true);
+  };
+
+  const handleDeletePaymentMethod = (methodId) => {
+    setPaymentMethodToDelete(methodId);
+    setShowDeletePaymentMethodConfirm(true);
+  };
+
+  const confirmDeletePaymentMethod = async () => {
+    if (!paymentMethodToDelete) return;
+    try {
+      const result = await paymentMethodService.deletePaymentMethod(paymentMethodToDelete);
+      if (result.success !== false) {
+        await fetchData();
+      } else {
+        setError(result.error || t('paymentMethods.deleteError', 'Échec de la suppression du mode de paiement'));
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || t('paymentMethods.deleteError', 'Échec de la suppression du mode de paiement'));
+    } finally {
+      setPaymentMethodToDelete(null);
+    }
+  };
+
+  // Expense Category handlers
+  const handleCreateExpenseCategory = () => {
+    setSelectedExpenseCategory(null);
+    setShowExpenseCategoryModal(true);
+  };
+
+  const handleEditExpenseCategory = (category) => {
+    setSelectedExpenseCategory(category);
+    setShowExpenseCategoryModal(true);
+  };
+
+  const handleDeleteExpenseCategory = (categoryId) => {
+    setExpenseCategoryToDelete(categoryId);
+    setShowDeleteExpenseCategoryConfirm(true);
+  };
+
+  const confirmDeleteExpenseCategory = async () => {
+    if (!expenseCategoryToDelete) return;
+    try {
+      const result = await expenseCategoryService.deleteExpenseCategory(expenseCategoryToDelete);
+      if (result.success !== false) {
+        await fetchData();
+      } else {
+        setError(result.error || t('expenseCategories.deleteError', 'Échec de la suppression de la catégorie'));
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || t('expenseCategories.deleteError', 'Échec de la suppression de la catégorie'));
+    } finally {
+      setExpenseCategoryToDelete(null);
     }
   };
 
@@ -1213,6 +1295,128 @@ const CustomFieldsPage = () => {
               </Card.Body>
             </Card>
           </Tab>
+
+          {/* Payment Methods Tab */}
+          <Tab eventKey="paymentMethods" title={`💳 ${t('paymentMethods.title', 'Modes de paiement')} (${paymentMethods.length})`}>
+            <Card>
+              <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 className="mb-0">{t('paymentMethods.titleManagement', 'Gestion des modes de paiement')}</h5>
+                {hasPermission('settings.manage') && (
+                  <Button variant="primary" size="sm" onClick={handleCreatePaymentMethod}>
+                    ➕ {t('paymentMethods.create', 'Nouveau mode de paiement')}
+                  </Button>
+                )}
+              </Card.Header>
+              <Card.Body>
+                {paymentMethods.length === 0 ? (
+                  <Alert variant="info">
+                    {t('paymentMethods.empty', 'Aucun mode de paiement. Créez-en un pour commencer.')}
+                  </Alert>
+                ) : (
+                  <Table striped bordered hover responsive>
+                    <thead>
+                      <tr>
+                        <th>{t('paymentMethods.label', 'Libellé')}</th>
+                        <th>{t('paymentMethods.code', 'Code')}</th>
+                        <th>{t('paymentMethods.isCardShort', 'Carte')}</th>
+                        <th>{t('paymentMethods.displayOrder', 'Ordre')}</th>
+                        <th>{t('common.status', 'Statut')}</th>
+                        <th>{t('common.actions', 'Actions')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paymentMethods.map((method) => (
+                        <tr key={method.id}>
+                          <td><strong>{method.label}</strong></td>
+                          <td><code>{method.code}</code></td>
+                          <td>{method.is_card ? '💳' : '—'}</td>
+                          <td>{method.display_order}</td>
+                          <td>
+                            <Badge bg={method.is_active ? 'success' : 'secondary'}>
+                              {method.is_active ? t('common.active', 'Actif') : t('common.inactive', 'Inactif')}
+                            </Badge>
+                          </td>
+                          <td>
+                            {hasPermission('settings.manage') && (
+                              <div className="d-flex gap-2">
+                                <Button variant="outline-primary" size="sm" onClick={() => handleEditPaymentMethod(method)}>
+                                  ✏️ {t('common.edit', 'Modifier')}
+                                </Button>
+                                <Button variant="outline-danger" size="sm" onClick={() => handleDeletePaymentMethod(method.id)}>
+                                  🗑️ {t('common.delete', 'Supprimer')}
+                                </Button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                )}
+              </Card.Body>
+            </Card>
+          </Tab>
+
+          {/* Expense Categories Tab */}
+          <Tab eventKey="expenseCategories" title={`🏦 ${t('expenseCategories.title', 'Catégories de dépenses')} (${expenseCategories.length})`}>
+            <Card>
+              <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 className="mb-0">{t('expenseCategories.titleManagement', 'Gestion des catégories de dépenses')}</h5>
+                {hasPermission('settings.manage') && (
+                  <Button variant="primary" size="sm" onClick={handleCreateExpenseCategory}>
+                    ➕ {t('expenseCategories.create', 'Nouvelle catégorie de dépense')}
+                  </Button>
+                )}
+              </Card.Header>
+              <Card.Body>
+                {expenseCategories.length === 0 ? (
+                  <Alert variant="info">
+                    {t('expenseCategories.empty', 'Aucune catégorie. Créez-en une pour commencer.')}
+                  </Alert>
+                ) : (
+                  <Table striped bordered hover responsive>
+                    <thead>
+                      <tr>
+                        <th>{t('expenseCategories.label', 'Libellé')}</th>
+                        <th>{t('expenseCategories.code', 'Code')}</th>
+                        <th>{t('expenseCategories.tresoLine', 'Ligne TRÉSO')}</th>
+                        <th>{t('expenseCategories.displayOrder', 'Ordre')}</th>
+                        <th>{t('common.status', 'Statut')}</th>
+                        <th>{t('common.actions', 'Actions')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {expenseCategories.map((category) => (
+                        <tr key={category.id}>
+                          <td><strong>{category.label}</strong></td>
+                          <td><code>{category.code}</code></td>
+                          <td>{t(`expenseCategories.tresoLines.${category.treso_line || 'autres'}`, category.treso_line || 'autres')}</td>
+                          <td>{category.display_order}</td>
+                          <td>
+                            <Badge bg={category.is_active ? 'success' : 'secondary'}>
+                              {category.is_active ? t('common.active', 'Actif') : t('common.inactive', 'Inactif')}
+                            </Badge>
+                          </td>
+                          <td>
+                            {hasPermission('settings.manage') && (
+                              <div className="d-flex gap-2">
+                                <Button variant="outline-primary" size="sm" onClick={() => handleEditExpenseCategory(category)}>
+                                  ✏️ {t('common.edit', 'Modifier')}
+                                </Button>
+                                <Button variant="outline-danger" size="sm" onClick={() => handleDeleteExpenseCategory(category.id)}>
+                                  🗑️ {t('common.delete', 'Supprimer')}
+                                </Button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                )}
+              </Card.Body>
+            </Card>
+          </Tab>
         </ResponsiveTabs>
 
         {/* Modals */}
@@ -1302,6 +1506,56 @@ const CustomFieldsPage = () => {
           title={t('common.confirmation', 'Confirmation')}
           message={t('visitTypes.confirmDelete', 'Are you sure you want to delete this visit type?')}
           confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
+        />
+
+        {/* Payment Method Modal */}
+        <PaymentMethodModal
+          show={showPaymentMethodModal}
+          onHide={() => {
+            setShowPaymentMethodModal(false);
+            setSelectedPaymentMethod(null);
+          }}
+          paymentMethod={selectedPaymentMethod}
+          onSuccess={fetchData}
+        />
+
+        {/* Delete Payment Method Confirm Modal */}
+        <ConfirmModal
+          show={showDeletePaymentMethodConfirm}
+          onHide={() => {
+            setShowDeletePaymentMethodConfirm(false);
+            setPaymentMethodToDelete(null);
+          }}
+          onConfirm={confirmDeletePaymentMethod}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('paymentMethods.confirmDelete', 'Voulez-vous vraiment supprimer ce mode de paiement ?')}
+          confirmLabel={t('common.delete', 'Supprimer')}
+          variant="danger"
+        />
+
+        {/* Expense Category Modal */}
+        <ExpenseCategoryModal
+          show={showExpenseCategoryModal}
+          onHide={() => {
+            setShowExpenseCategoryModal(false);
+            setSelectedExpenseCategory(null);
+          }}
+          category={selectedExpenseCategory}
+          onSuccess={fetchData}
+        />
+
+        {/* Delete Expense Category Confirm Modal */}
+        <ConfirmModal
+          show={showDeleteExpenseCategoryConfirm}
+          onHide={() => {
+            setShowDeleteExpenseCategoryConfirm(false);
+            setExpenseCategoryToDelete(null);
+          }}
+          onConfirm={confirmDeleteExpenseCategory}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('expenseCategories.confirmDelete', 'Voulez-vous vraiment supprimer cette catégorie ?')}
+          confirmLabel={t('common.delete', 'Supprimer')}
           variant="danger"
         />
 

@@ -221,6 +221,10 @@ app.use('/api/calendar', googleCalendarRoutes);
 // Visit Types routes (protected - RBAC enforced in routes file)
 const visitTypesRoutes = require('./routes/visitTypes');
 app.use('/api/visit-types', visitTypesRoutes);
+const paymentMethodsRoutes = require('./routes/paymentMethods');
+app.use('/api/payment-methods', paymentMethodsRoutes);
+const expenseCategoriesRoutes = require('./routes/expenseCategories');
+app.use('/api/expense-categories', expenseCategoriesRoutes);
 
 // Recipe routes (protected - RBAC enforced in routes file)
 const recipeRoutes = require('./routes/recipes');
@@ -377,6 +381,20 @@ console.log('Starting database sync...');
 db.sequelize.sync()
   .then(async () => {
     console.log('Database synchronized successfully');
+
+    // Ensure the default payment methods exist (idempotent).
+    try {
+      await db.PaymentMethod.ensureDefaults();
+    } catch (e) {
+      console.error('[startup] Failed to ensure default payment methods:', e.message);
+    }
+
+    // Ensure the default expense categories exist (idempotent).
+    try {
+      await db.ExpenseCategory.ensureDefaults();
+    } catch (e) {
+      console.error('[startup] Failed to ensure default expense categories:', e.message);
+    }
 
     // Initialize scheduled jobs
     console.log('Initializing scheduled jobs...');

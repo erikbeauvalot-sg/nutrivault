@@ -153,6 +153,18 @@
     }
   },
   "finance": {
+    "compta": {
+      "year": "Year",
+      "download": "Export accounting",
+      "write": "Write to server",
+      "writeHint": "Regenerates Compta/Comptabilité_<year>_export.xlsx on the server (does not overwrite your master file)",
+      "downloadOk": "Accounting exported successfully",
+      "writeOk": "Accounting file regenerated on the server: {{path}}",
+      "exportError": "Failed to export accounting",
+      "modeFaithful": "faithful mode (your file preserved)",
+      "modeClean": "clean export",
+      "warningsPrefix": "Note"
+    },
     "tabs": {
       "overview": "Overview",
       "cashFlow": "Cash Flow",
@@ -2283,6 +2295,51 @@
     "visitDate": "Visit Date",
     "visitType": "Visit Type",
     "viewsCount": "{{count}} visit(s)"
+  },
+  "expenseCategories": {
+    "title": "Expense Categories",
+    "titleManagement": "Expense Categories Management",
+    "create": "New expense category",
+    "edit": "Edit category",
+    "label": "Label",
+    "labelPlaceholder": "e.g. Rent, Software…",
+    "labelRequired": "Label is required",
+    "code": "Code",
+    "codeHelp": "Internal value stored on expenses — not editable",
+    "tresoLine": "Treasury line (accounting)",
+    "tresoLineHelp": "The CHARGES line of the TRÉSO sheet where this category is totalled in the accounting export.",
+    "tresoLines": {
+      "autres": "Other expenses",
+      "loyer": "Rent",
+      "doctolib": "Doctolib",
+      "rcpro": "RC pro",
+      "assurance": "Local insurance"
+    },
+    "displayOrder": "Display order",
+    "activeHelp": "Inactive categories are hidden from dropdowns",
+    "empty": "No categories yet. Create one to get started.",
+    "confirmDelete": "Are you sure you want to delete this category?",
+    "saveError": "Failed to save category",
+    "deleteError": "Failed to delete category"
+  },
+  "paymentMethods": {
+    "title": "Payment Methods",
+    "titleManagement": "Payment Methods Management",
+    "create": "New payment method",
+    "edit": "Edit payment method",
+    "label": "Label",
+    "labelPlaceholder": "e.g. Cash, Credit card…",
+    "labelRequired": "Label is required",
+    "code": "Code",
+    "codeHelp": "Internal value stored on invoices — not editable",
+    "isCard": "Card payment (bank commission deducted in accounting)",
+    "isCardShort": "Card",
+    "displayOrder": "Display order",
+    "activeHelp": "Inactive methods are hidden from dropdowns",
+    "empty": "No payment methods yet. Create one to get started.",
+    "confirmDelete": "Are you sure you want to delete this payment method?",
+    "saveError": "Failed to save payment method",
+    "deleteError": "Failed to delete payment method"
   },
   "visitTypes": {
     "title": "Visit Types",
