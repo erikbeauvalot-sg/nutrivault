@@ -80,3 +80,12 @@ frontend/ios/App/App/GoogleService-Info.plist
 frontend/ios/App/App/public/
 frontend/ios/App/Pods/
 frontend/ios/DerivedData/
+
+# Accounting — real patient / financial data, never commit (public repo)
+Compta/
+
+# E2E test artifacts & saved auth state (contains session tokens)
+e2e/node_modules/
+e2e/playwright-report/
+e2e/test-results/
+e2e/fixtures/auth.json
