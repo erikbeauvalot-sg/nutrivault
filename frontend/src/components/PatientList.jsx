@@ -142,7 +142,7 @@ function PatientList({
                     {initials}
                   </div>
                   <div className="patient-name">
-                    {patient.first_name} {patient.last_name}
+                    {patient.last_name} {patient.first_name}
                   </div>
                   <div className="patient-phone">
                     {patient.phone || '-'}
@@ -228,7 +228,7 @@ function PatientList({
                   >
                     <td>
                       <div>
-                        <strong>{patient.first_name} {patient.last_name}</strong>
+                        <strong>{patient.last_name} {patient.first_name}</strong>
                         {patient.is_linked === false && (
                           <Badge bg="light" text="dark" className="ms-2 border" style={{ fontSize: '0.65em' }}>
                             {t('patients.notLinked', 'Non lié')}

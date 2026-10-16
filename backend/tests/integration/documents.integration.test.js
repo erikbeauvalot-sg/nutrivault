@@ -463,4 +463,206 @@ describe('Documents API', () => {
       expect(res.status).toBe(401);
     });
   });
+
+  describe('POST /api/documents/batch/send-by-email', () => {
+    const emailService = require('../../src/services/email.service');
+    const uploadsDir = path.join(process.cwd(), 'uploads', 'test-batch');
+    let sendSpy;
+    let docA, docB;
+
+    beforeAll(() => {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+      fs.writeFileSync(path.join(uploadsDir, 'a.pdf'), 'A');
+      fs.writeFileSync(path.join(uploadsDir, 'b.pdf'), 'B');
+    });
+
+    afterAll(() => {
+      fs.rmSync(uploadsDir, { recursive: true, force: true });
+    });
+
+    beforeEach(async () => {
+      sendSpy = jest.spyOn(emailService, 'sendDocumentsAsAttachments')
+        .mockResolvedValue({ messageId: 'test-message', logId: 'test-log' });
+      docA = await createTestDocument({ file_name: 'a.pdf', file_path: 'test-batch/a.pdf' });
+      docB = await createTestDocument({ file_name: 'b.pdf', file_path: 'test-batch/b.pdf' });
+    });
+
+    afterEach(() => {
+      sendSpy.mockRestore();
+    });
+
+    it('should send all documents in a single email', async () => {
+      const res = await request(app)
+        .post('/api/documents/batch/send-by-email')
+        .set('Authorization', adminAuth.authHeader)
+        .send({ document_ids: [docA.id, docB.id], patient_id: patient.id, message: 'Hello' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.document_count).toBe(2);
+      expect(res.body.data.sent_to).toBe('patient@test.com');
+      expect(sendSpy).toHaveBeenCalledTimes(1);
+
+      const [items, , , message] = sendSpy.mock.calls[0];
+      expect(items.map(item => item.document.id)).toEqual([docA.id, docB.id]);
+      expect(message).toBe('Hello');
+
+      const shares = await testDb.getDb().DocumentShare.findAll({ where: { patient_id: patient.id } });
+      expect(shares).toHaveLength(2);
+      expect(shares.every(share => share.sent_via === 'email_attachment')).toBe(true);
+    });
+
+    it('should ignore duplicate document IDs', async () => {
+      const res = await request(app)
+        .post('/api/documents/batch/send-by-email')
+        .set('Authorization', adminAuth.authHeader)
+        .send({ document_ids: [docA.id, docA.id], patient_id: patient.id });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.document_count).toBe(1);
+    });
+
+    it('should return 400 when document_ids is empty', async () => {
+      const res = await request(app)
+        .post('/api/documents/batch/send-by-email')
+        .set('Authorization', adminAuth.authHeader)
+        .send({ document_ids: [], patient_id: patient.id });
+
+      expect(res.status).toBe(400);
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
+
+    it('should return 404 when a document does not exist', async () => {
+      const res = await request(app)
+        .post('/api/documents/batch/send-by-email')
+        .set('Authorization', adminAuth.authHeader)
+        .send({ document_ids: [docA.id, '00000000-0000-4000-8000-000000000000'], patient_id: patient.id });
+
+      expect(res.status).toBe(404);
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 when the patient has no email', async () => {
+      const noEmail = await testDb.getDb().Patient.create({
+        first_name: 'No',
+        last_name: 'Email',
+        created_by: adminAuth.user.id
+      });
+
+      const res = await request(app)
+        .post('/api/documents/batch/send-by-email')
+        .set('Authorization', adminAuth.authHeader)
+        .send({ document_ids: [docA.id], patient_id: noEmail.id });
+
+      expect(res.status).toBe(400);
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 when attachments exceed the size limit', async () => {
+      const big = await createTestDocument({ file_name: 'big.pdf', file_path: 'test-batch/a.pdf', file_size: 16 * 1024 * 1024 });
+
+      const res = await request(app)
+        .post('/api/documents/batch/send-by-email')
+        .set('Authorization', adminAuth.authHeader)
+        .send({ document_ids: [big.id], patient_id: patient.id });
+
+      expect(res.status).toBe(400);
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
+
+    it('should return 403 when dietitian is not linked to the patient', async () => {
+      const res = await request(app)
+        .post('/api/documents/batch/send-by-email')
+        .set('Authorization', dietitianAuth.authHeader)
+        .send({ document_ids: [docA.id], patient_id: patient.id });
+
+      expect(res.status).toBe(403);
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
+
+    it('should allow dietitian linked to the patient', async () => {
+      await testDb.getDb().PatientDietitian.create({
+        patient_id: patient.id,
+        dietitian_id: dietitianAuth.user.id
+      });
+
+      const res = await request(app)
+        .post('/api/documents/batch/send-by-email')
+        .set('Authorization', dietitianAuth.authHeader)
+        .send({ document_ids: [docA.id, docB.id], patient_id: patient.id });
+
+      expect(res.status).toBe(200);
+      expect(sendSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return 403 when a document belongs to another patient', async () => {
+      const db = testDb.getDb();
+      const other = await db.Patient.create({
+        first_name: 'Other',
+        last_name: 'Patient',
+        email: 'other@test.com',
+        created_by: adminAuth.user.id
+      });
+
+      // docA is attached to `patient`, so it must not go to `other`
+      const res = await request(app)
+        .post('/api/documents/batch/send-by-email')
+        .set('Authorization', adminAuth.authHeader)
+        .send({ document_ids: [docA.id], patient_id: other.id });
+
+      expect(res.status).toBe(403);
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
+
+    it('should allow library documents to be sent to any accessible patient', async () => {
+      const db = testDb.getDb();
+      const other = await db.Patient.create({
+        first_name: 'Other',
+        last_name: 'Patient',
+        email: 'other@test.com',
+        created_by: adminAuth.user.id
+      });
+      const libraryDoc = await createTestDocument({
+        file_name: 'guide.pdf',
+        file_path: 'test-batch/a.pdf',
+        resource_type: null,
+        resource_id: null
+      });
+
+      const res = await request(app)
+        .post('/api/documents/batch/send-by-email')
+        .set('Authorization', adminAuth.authHeader)
+        .send({ document_ids: [libraryDoc.id], patient_id: other.id });
+
+      expect(res.status).toBe(200);
+    });
+
+    it('should return 403 when sending another user\'s personal document', async () => {
+      const userDoc = await createTestDocument({
+        file_name: 'admin-only.pdf',
+        file_path: 'test-batch/a.pdf',
+        resource_type: 'user',
+        resource_id: adminAuth.user.id
+      });
+      await testDb.getDb().PatientDietitian.create({
+        patient_id: patient.id,
+        dietitian_id: dietitianAuth.user.id
+      });
+
+      const res = await request(app)
+        .post('/api/documents/batch/send-by-email')
+        .set('Authorization', dietitianAuth.authHeader)
+        .send({ document_ids: [userDoc.id], patient_id: patient.id });
+
+      expect(res.status).toBe(403);
+      expect(sendSpy).not.toHaveBeenCalled();
+    });
+
+    it('should reject unauthenticated request', async () => {
+      const res = await request(app)
+        .post('/api/documents/batch/send-by-email')
+        .send({ document_ids: [docA.id], patient_id: patient.id });
+
+      expect(res.status).toBe(401);
+    });
+  });
 });

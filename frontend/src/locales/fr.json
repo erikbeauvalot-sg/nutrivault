@@ -2085,7 +2085,12 @@
       "selectGuide": "Choisir un guide",
       "shareSuccess": "Guide partagé avec le patient",
       "shareError": "Échec du partage du guide"
-    }
+    },
+    "selectedCount": "{{count}} sélectionné(s)",
+    "sendSelectedByEmail": "Envoyer par email",
+    "clearSelection": "Désélectionner",
+    "selectAllPage": "Sélectionner tous les documents de la page",
+    "selectDocument": "Sélectionner {{name}}"
   },
   "documentEmail": {
     "title": "Envoyer le document par email",
@@ -2100,7 +2105,16 @@
     "send": "Envoyer l'email",
     "sending": "Envoi en cours...",
     "sent": "Document envoyé avec succès à {{email}}",
-    "sendError": "Échec de l'envoi de l'email"
+    "sendError": "Échec de l'envoi de l'email",
+    "patient": "Patient",
+    "searchPatient": "Rechercher par nom, prénom ou email...",
+    "matchingPatients": "-- {{count}} patient(s) trouvé(s) --",
+    "titleMultiple": "Envoyer {{count}} documents par email",
+    "sentMultiple": "{{count}} documents envoyés avec succès à {{email}}",
+    "totalSize": "Total : {{size}}",
+    "tooManyDocuments": "Vous pouvez envoyer au maximum {{max}} documents par email.",
+    "tooLarge": "Les pièces jointes dépassent la limite de {{max}} par email. Retirez des documents.",
+    "willSendToMultiple": "Les documents seront envoyés en pièces jointes d'un seul email à :"
   },
   "documentSharing": {
     "title": "Partager le document",

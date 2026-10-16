@@ -250,6 +250,37 @@ router.get(
 );
 
 // GET /api/documents/:id - Get single document
+const batchSendByEmailValidation = [
+  body('document_ids')
+    .isArray({ min: 1, max: 20 })
+    .withMessage('document_ids must be an array of 1 to 20 document IDs'),
+
+  body('document_ids.*')
+    .isUUID()
+    .withMessage('Each document ID must be a valid UUID'),
+
+  body('patient_id')
+    .isUUID()
+    .withMessage('patient_id must be a valid UUID'),
+
+  body('message')
+    .optional({ nullable: true })
+    .isString()
+    .isLength({ max: 1000 })
+    .withMessage('Message must be less than 1000 characters')
+];
+
+// POST /api/documents/batch/send-by-email - Send several documents in one email
+// (declared before the /:id routes so "batch" is not taken as a document ID)
+router.post(
+  '/batch/send-by-email',
+  authenticate,
+  requirePermission('documents.share'),
+  batchSendByEmailValidation,
+  validate,
+  documentController.sendBatchByEmail
+);
+
 router.get(
   '/:id',
   authenticate,

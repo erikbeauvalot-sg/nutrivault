@@ -557,6 +557,31 @@ exports.sendByEmail = async (req, res, next) => {
 };
 
 /**
+ * POST /api/documents/batch/send-by-email - Send several documents as attachments of one email
+ */
+exports.sendBatchByEmail = async (req, res, next) => {
+  try {
+    const { document_ids, patient_id, message } = req.body;
+
+    const result = await documentService.sendDocumentsByEmail(
+      req.user,
+      document_ids,
+      patient_id,
+      message || null,
+      getRequestMetadata(req)
+    );
+
+    res.status(200).json({
+      success: true,
+      data: result,
+      message: 'Documents sent by email successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Get documents shared with a patient
  * GET /api/documents/patient/:patientId/shares
  */

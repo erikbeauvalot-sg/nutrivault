@@ -70,8 +70,8 @@ describe('PatientList', () => {
     it('should render patient list', () => {
       renderWithProviders(<PatientList {...defaultProps} />);
 
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
-      expect(screen.getByText('Jane Smith')).toBeInTheDocument();
+      expect(screen.getByText('Doe John')).toBeInTheDocument();
+      expect(screen.getByText('Smith Jane')).toBeInTheDocument();
     });
 
     it('should render search input', () => {
@@ -151,7 +151,7 @@ describe('PatientList', () => {
       renderWithProviders(<PatientList {...defaultProps} />);
 
       // Find the row and click it
-      const row = screen.getByText('John Doe').closest('tr');
+      const row = screen.getByText('Doe John').closest('tr');
       await user.click(row);
 
       expect(defaultProps.onViewDetails).toHaveBeenCalledWith(mockPatients[0]);

@@ -93,8 +93,8 @@ describe('DocumentSharingModal', () => {
       render(<DocumentSharingModal {...defaultProps} />);
 
       expect(screen.getByText('-- Choose a patient --')).toBeInTheDocument();
-      expect(screen.getByText(/John Doe/)).toBeInTheDocument();
-      expect(screen.getByText(/Jane Smith/)).toBeInTheDocument();
+      expect(screen.getByText(/Doe John/)).toBeInTheDocument();
+      expect(screen.getByText(/Smith Jane/)).toBeInTheDocument();
     });
 
     it('displays create new share link section', () => {
@@ -426,7 +426,7 @@ describe('DocumentSharingModal', () => {
 
       await waitFor(() => {
         // Patient name appears in both the select option and accordion header
-        const matches = screen.getAllByText(/John Doe/);
+        const matches = screen.getAllByText(/Doe John/);
         expect(matches.length).toBeGreaterThanOrEqual(2);
         // Download count text may be split across elements, so use a function matcher
         expect(screen.getByText((content, element) => {

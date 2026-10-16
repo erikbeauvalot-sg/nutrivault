@@ -237,7 +237,7 @@ const DocumentSharingModal = ({
                 <option value="">{t('documentSharing.choosePatient', '-- Choose a patient --')}</option>
                 {patients.map(patient => (
                   <option key={patient.id} value={patient.id}>
-                    {patient.first_name} {patient.last_name}
+                    {patient.last_name} {patient.first_name}
                     {patient.email ? ` (${patient.email})` : ''}
                   </option>
                 ))}
@@ -350,7 +350,7 @@ const DocumentSharingModal = ({
                         <div className="d-flex align-items-center w-100 me-3">
                           <Badge bg={status.variant} className="me-2">{status.text}</Badge>
                           <span className="flex-grow-1">
-                            {share.patient?.first_name} {share.patient?.last_name}
+                            {share.patient?.last_name} {share.patient?.first_name}
                           </span>
                           <small className="text-muted">
                             {t('documentSharing.downloads', 'Downloads')}: {share.download_count}

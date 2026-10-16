@@ -18,10 +18,10 @@ const corsOptions = {
     // Always allow Capacitor native app
     if (origin === 'capacitor://localhost') return callback(null, true);
 
-    // In development, allow known local origins
+    // In development, allow localhost, 127.0.0.1 and private LAN IPs (e.g. Vite "Network" URL)
     if (process.env.NODE_ENV === 'development') {
-      const devOrigins = ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:3001'];
-      if (devOrigins.includes(origin)) {
+      const devOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/;
+      if (devOriginPattern.test(origin)) {
         return callback(null, true);
       }
       return callback(new Error('Not allowed by CORS'));

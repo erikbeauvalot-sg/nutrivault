@@ -571,27 +571,57 @@ async function sendEmailFromTemplate({
 }
 
 /**
- * Send document as email attachment to patient
- * @param {Object} document - Document object
+ * Escape HTML special characters for safe interpolation into email bodies
+ * @param {string} value
+ * @returns {string}
+ */
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Send one or more documents as attachments of a single email to a patient
+ * @param {Array<{document: Object, filePath: string}>} items - Documents with their full file paths
  * @param {Object} patient - Patient object
- * @param {Object} sharedBy - User who is sending the document
- * @param {string} filePath - Full path to the document file
+ * @param {Object} sharedBy - User who is sending the documents
  * @param {string} message - Optional custom message
  * @returns {Promise<Object>} Email send result
  */
-async function sendDocumentAsAttachment(document, patient, sharedBy, filePath, message = null, { sendingUserId } = {}) {
-  const subject = `Document : ${document.file_name} - NutriVault`;
+async function sendDocumentsAsAttachments(items, patient, sharedBy, message = null, { sendingUserId } = {}) {
+  const documents = items.map(item => item.document);
+  const isSingle = documents.length === 1;
 
-  const customMessage = message ? `<p style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 15px 0;"><strong>Message :</strong><br>${message.replace(/\n/g, '<br>')}</p>` : '';
+  const subject = isSingle
+    ? `Document : ${documents[0].file_name} - NutriVault`
+    : `${documents.length} documents - NutriVault`;
+
+  const intro = isSingle
+    ? 'vous envoie le document suivant en pièce jointe'
+    : `vous envoie les ${documents.length} documents suivants en pièces jointes`;
+
+  const customMessage = message ? `<p style="background-color: #e3f2fd; padding: 15px; border-radius: 5px; margin: 15px 0;"><strong>Message :</strong><br>${escapeHtml(message).replace(/\n/g, '<br>')}</p>` : '';
   const customMessageText = message ? `\nMessage :\n${message}\n` : '';
+
+  const documentsText = documents
+    .map(doc => `- ${doc.file_name}${doc.description ? ` : ${doc.description}` : ''}`)
+    .join('\n');
+
+  const documentsHtml = documents
+    .map(doc => `
+        <p><strong>📄 ${escapeHtml(doc.file_name)}</strong>${doc.description ? `<br><span style="color: #555;">${escapeHtml(doc.description)}</span>` : ''}</p>`)
+    .join('');
 
   const text = `
 Bonjour ${patient.first_name} ${patient.last_name},
 
-${sharedBy.first_name} ${sharedBy.last_name} vous envoie le document suivant en pièce jointe :
+${sharedBy.first_name} ${sharedBy.last_name} ${intro} :
 
-Document : ${document.file_name}
-${document.description ? `Description : ${document.description}` : ''}
+${documentsText}
 ${customMessageText}
 Cordialement,
 L'équipe NutriVault
@@ -614,21 +644,19 @@ L'équipe NutriVault
 <body>
   <div class="container">
     <div class="header">
-      <h1>📎 Document en pièce jointe</h1>
+      <h1>📎 ${isSingle ? 'Document en pièce jointe' : 'Documents en pièces jointes'}</h1>
     </div>
     <div class="content">
-      <p>Bonjour ${patient.first_name} ${patient.last_name},</p>
-      <p><strong>${sharedBy.first_name} ${sharedBy.last_name}</strong> vous envoie le document suivant en pièce jointe :</p>
+      <p>Bonjour ${escapeHtml(patient.first_name)} ${escapeHtml(patient.last_name)},</p>
+      <p><strong>${escapeHtml(sharedBy.first_name)} ${escapeHtml(sharedBy.last_name)}</strong> ${intro} :</p>
 
-      <div class="document-details">
-        <p><strong>📄 Document :</strong> ${document.file_name}</p>
-        ${document.description ? `<p><strong>Description :</strong> ${document.description}</p>` : ''}
+      <div class="document-details">${documentsHtml}
       </div>
 
       ${customMessage}
 
       <div class="attachment-notice">
-        <strong>📎 Pièce jointe :</strong> ${document.file_name}
+        <strong>📎 ${isSingle ? 'Pièce jointe' : `${documents.length} pièces jointes`}</strong>
       </div>
 
       <p>Cordialement,<br><strong>L'équipe NutriVault</strong></p>
@@ -641,13 +669,11 @@ L'équipe NutriVault
 </html>
   `.trim();
 
-  const attachments = [
-    {
-      filename: document.file_name,
-      path: filePath,
-      contentType: document.mime_type
-    }
-  ];
+  const attachments = items.map(({ document, filePath }) => ({
+    filename: document.file_name,
+    path: filePath,
+    contentType: document.mime_type
+  }));
 
   // Create email log entry before sending
   const emailLog = await EmailLog.create({
@@ -659,8 +685,8 @@ L'équipe NutriVault
     body_html: html,
     body_text: text,
     variables_used: {
-      document_id: document.id,
-      document_name: document.file_name,
+      document_ids: documents.map(doc => doc.id),
+      document_names: documents.map(doc => doc.file_name),
       has_attachment: true
     },
     status: 'queued',
@@ -697,6 +723,19 @@ L'équipe NutriVault
 
     throw error;
   }
+}
+
+/**
+ * Send a single document as email attachment to patient
+ * @param {Object} document - Document object
+ * @param {Object} patient - Patient object
+ * @param {Object} sharedBy - User who is sending the document
+ * @param {string} filePath - Full path to the document file
+ * @param {string} message - Optional custom message
+ * @returns {Promise<Object>} Email send result
+ */
+async function sendDocumentAsAttachment(document, patient, sharedBy, filePath, message = null, options = {}) {
+  return sendDocumentsAsAttachments([{ document, filePath }], patient, sharedBy, message, options);
 }
 
 /**
@@ -882,6 +921,7 @@ module.exports = {
   sendDocumentShareEmail,
   sendRecipeShareEmail,
   sendDocumentAsAttachment,
+  sendDocumentsAsAttachments,
   sendPaymentReminderEmail,
   verifyEmailConfig,
   sendEmailFromTemplate

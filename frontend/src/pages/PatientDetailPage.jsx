@@ -1520,9 +1520,11 @@ const PatientDetailPage = () => {
                   </div>
                 </div>
                 <DocumentListComponent
-                  documents={documents}
+                  resourceType="patient"
+                  resourceId={id}
+                  patient={patient}
+                  showUploadButton={false}
                   onDocumentDeleted={fetchPatientDocuments}
-                  showResourceColumn={false}
                 />
               </Tab>
 

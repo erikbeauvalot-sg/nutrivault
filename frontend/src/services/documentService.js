@@ -330,6 +330,29 @@ export const sendDocumentByEmail = async (documentId, patientId, message = null)
 };
 
 /**
+ * Maximum number of documents and total attachment size for one email
+ * (must match the backend limits in document.service.js)
+ */
+export const MAX_EMAIL_DOCUMENTS = 20;
+export const MAX_EMAIL_ATTACHMENTS_SIZE = 15 * 1024 * 1024;
+
+/**
+ * Send several documents as attachments of a single email to a patient
+ * @param {string[]} documentIds - Document UUIDs
+ * @param {string} patientId - Patient UUID
+ * @param {string} message - Optional message to include in email
+ * @returns {Promise<object>} Send result
+ */
+export const sendDocumentsByEmail = async (documentIds, patientId, message = null) => {
+  const response = await api.post('/documents/batch/send-by-email', {
+    document_ids: documentIds,
+    patient_id: patientId,
+    message
+  });
+  return response.data;
+};
+
+/**
  * Generate consultation guide PDFs
  * Creates PDF documents for each consultation type.
  * Idempotent - skips guides that already exist.

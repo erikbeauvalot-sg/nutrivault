@@ -18,7 +18,9 @@ const DocumentListComponent = ({
   resourceType,
   resourceId,
   showUploadButton = true,
-  onUploadClick
+  onUploadClick,
+  patient = null,
+  onDocumentDeleted
 }) => {
   const { t, i18n } = useTranslation();
   const { hasPermission } = useAuth();
@@ -47,18 +49,31 @@ const DocumentListComponent = ({
 
   // Email modal state
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [documentToEmail, setDocumentToEmail] = useState(null);
+  const [documentsToEmail, setDocumentsToEmail] = useState([]);
+
+  // Multi-selection state, keyed by document ID (kept across pages)
+  const [selectedDocuments, setSelectedDocuments] = useState({});
+
+  const canShare = hasPermission('documents.share');
+  const selectedList = Object.values(selectedDocuments);
+  const allPageSelected = documents.length > 0 && documents.every(doc => selectedDocuments[doc.id]);
+  const somePageSelected = documents.some(doc => selectedDocuments[doc.id]);
 
   useEffect(() => {
     fetchDocuments();
   }, [resourceType, resourceId, filters]);
 
+  // Reset selection when the list context or search changes
+  useEffect(() => {
+    setSelectedDocuments({});
+  }, [resourceType, resourceId, filters.search]);
+
   // Load patients for share modal
   useEffect(() => {
-    if (hasPermission('documents.share')) {
+    if (canShare) {
       fetchPatients();
     }
-  }, [hasPermission]);
+  }, [canShare]);
 
   const fetchPatients = async () => {
     try {
@@ -168,9 +183,16 @@ const DocumentListComponent = ({
       setError(null);
       await documentService.deleteDocument(documentToDelete.id);
       setShowDeleteModal(false);
+      setSelectedDocuments(prev => {
+        const { [documentToDelete.id]: _removed, ...rest } = prev;
+        return rest;
+      });
       setDocumentToDelete(null);
       // Refresh the document list
       await fetchDocuments();
+      if (onDocumentDeleted) {
+        onDocumentDeleted();
+      }
     } catch (err) {
       setError(t('documents.deleteError', 'Failed to delete document') + ': ' + (err.response?.data?.error || err.message));
       console.error('Error deleting document:', err);
@@ -196,13 +218,53 @@ const DocumentListComponent = ({
   };
 
   const handleEmailClick = (document) => {
-    setDocumentToEmail(document);
+    setDocumentsToEmail([document]);
+    setShowEmailModal(true);
+  };
+
+  const handleBulkEmailClick = () => {
+    setDocumentsToEmail(selectedList);
     setShowEmailModal(true);
   };
 
   const handleEmailModalClose = () => {
     setShowEmailModal(false);
-    setDocumentToEmail(null);
+    setDocumentsToEmail([]);
+  };
+
+  const handleEmailSent = () => {
+    // Clear the selection once a bulk send succeeded
+    if (documentsToEmail.length > 1) {
+      setSelectedDocuments({});
+    }
+  };
+
+  const toggleDocumentSelection = (document) => {
+    setSelectedDocuments(prev => {
+      if (prev[document.id]) {
+        const { [document.id]: _removed, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [document.id]: document };
+    });
+  };
+
+  const togglePageSelection = () => {
+    setSelectedDocuments(prev => {
+      const next = { ...prev };
+      documents.forEach(doc => {
+        if (allPageSelected) {
+          delete next[doc.id];
+        } else {
+          next[doc.id] = doc;
+        }
+      });
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedDocuments({});
   };
 
   const handleFilterChange = (field, value) => {
@@ -327,6 +389,25 @@ const DocumentListComponent = ({
         </InputGroup>
       </Card.Header>
 
+      {canShare && selectedList.length > 0 && (
+        <div className="document-selection-bar d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 py-2 border-bottom bg-primary-subtle">
+          <span className="fw-semibold">
+            {t('documents.selectedCount', '{{count}} selected', { count: selectedList.length })}
+            <small className="text-muted ms-2">
+              ({formatFileSize(selectedList.reduce((sum, doc) => sum + (doc.file_size || 0), 0))})
+            </small>
+          </span>
+          <div className="d-flex gap-2">
+            <Button variant="primary" size="sm" onClick={handleBulkEmailClick}>
+              ✉️ {t('documents.sendSelectedByEmail', 'Send by email')}
+            </Button>
+            <Button variant="outline-secondary" size="sm" onClick={clearSelection}>
+              {t('documents.clearSelection', 'Clear selection')}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <Card.Body className="p-0">
         {error && (
           <div className="p-3">
@@ -359,6 +440,17 @@ const DocumentListComponent = ({
               <Table responsive hover className="mb-0">
                 <thead className="table-light">
                   <tr>
+                    {canShare && (
+                      <th style={{ width: '2.5rem' }}>
+                        <Form.Check
+                          type="checkbox"
+                          checked={allPageSelected}
+                          ref={el => { if (el) el.indeterminate = somePageSelected && !allPageSelected; }}
+                          onChange={togglePageSelection}
+                          aria-label={t('documents.selectAllPage', 'Select all documents on this page')}
+                        />
+                      </th>
+                    )}
                     <th>{t('documents.file', 'File')}</th>
                     <th>{t('documents.size', 'Size')}</th>
                     <th className="d-none d-lg-table-cell">{t('documents.uploadedBy', 'Uploaded By')}</th>
@@ -368,7 +460,17 @@ const DocumentListComponent = ({
                 </thead>
                 <tbody>
                   {documents.map((document) => (
-                    <tr key={document.id}>
+                    <tr key={document.id} className={selectedDocuments[document.id] ? 'table-active' : undefined}>
+                      {canShare && (
+                        <td>
+                          <Form.Check
+                            type="checkbox"
+                            checked={!!selectedDocuments[document.id]}
+                            onChange={() => toggleDocumentSelection(document)}
+                            aria-label={t('documents.selectDocument', 'Select {{name}}', { name: document.file_name })}
+                          />
+                        </td>
+                      )}
                       <td>
                         <div className="d-flex align-items-center">
                           <div className="me-2">{getFileTypeIcon(document.mime_type)}</div>
@@ -429,11 +531,30 @@ const DocumentListComponent = ({
 
             {/* Mobile: Card view */}
             <div className="d-md-none">
+              {canShare && (
+                <div className="border-bottom px-3 py-2">
+                  <Form.Check
+                    type="checkbox"
+                    id="documents-select-page-mobile"
+                    checked={allPageSelected}
+                    onChange={togglePageSelection}
+                    label={t('documents.selectAllPage', 'Select all documents on this page')}
+                  />
+                </div>
+              )}
               {documents.map((document) => (
-                <div key={document.id} className="border-bottom p-3">
+                <div key={document.id} className={`border-bottom p-3${selectedDocuments[document.id] ? ' bg-body-secondary' : ''}`}>
                   {/* Line 1: Icon + Type badge + Size */}
                   <div className="d-flex justify-content-between align-items-center mb-2">
                     <div className="d-flex align-items-center gap-2">
+                      {canShare && (
+                        <Form.Check
+                          type="checkbox"
+                          checked={!!selectedDocuments[document.id]}
+                          onChange={() => toggleDocumentSelection(document)}
+                          aria-label={t('documents.selectDocument', 'Select {{name}}', { name: document.file_name })}
+                        />
+                      )}
                       <span>{getFileTypeIcon(document.mime_type)}</span>
                       {getResourceTypeBadge(document.resource_type)}
                     </div>
@@ -642,11 +763,10 @@ const DocumentListComponent = ({
     <DocumentEmailModal
       show={showEmailModal}
       onHide={handleEmailModalClose}
-      document={documentToEmail}
+      documents={documentsToEmail}
       patients={patients}
-      onEmailSent={() => {
-        // Optionally refresh documents or show success
-      }}
+      defaultPatient={patient}
+      onEmailSent={handleEmailSent}
     />
     </>
   );

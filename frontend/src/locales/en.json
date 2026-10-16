@@ -2017,7 +2017,12 @@
       "selectGuide": "Choose a guide",
       "shareSuccess": "Guide shared with patient",
       "shareError": "Failed to share guide"
-    }
+    },
+    "selectedCount": "{{count}} selected",
+    "sendSelectedByEmail": "Send by email",
+    "clearSelection": "Clear selection",
+    "selectAllPage": "Select all documents on this page",
+    "selectDocument": "Select {{name}}"
   },
   "documentEmail": {
     "title": "Send Document by Email",
@@ -2032,7 +2037,16 @@
     "send": "Send Email",
     "sending": "Sending...",
     "sent": "Document sent successfully to {{email}}",
-    "sendError": "Failed to send email"
+    "sendError": "Failed to send email",
+    "patient": "Patient",
+    "searchPatient": "Search by last name, first name or email...",
+    "matchingPatients": "-- {{count}} matching patient(s) --",
+    "titleMultiple": "Send {{count}} documents by email",
+    "sentMultiple": "{{count}} documents sent successfully to {{email}}",
+    "totalSize": "Total: {{size}}",
+    "tooManyDocuments": "You can send at most {{max}} documents in one email.",
+    "tooLarge": "Attachments exceed the {{max}} limit for one email. Remove some documents.",
+    "willSendToMultiple": "The documents will be sent as attachments of a single email to:"
   },
   "documentSharing": {
     "title": "Share Document",

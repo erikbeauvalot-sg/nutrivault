@@ -19,7 +19,7 @@ const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { Op } = db.Sequelize;
-const { getScopedDietitianIds } = require('../helpers/scopeHelper');
+const { getScopedDietitianIds, canAccessPatient } = require('../helpers/scopeHelper');
 
 const SALT_ROUNDS = 12;
 
@@ -46,6 +46,23 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
  * Upload directory relative to project root
  */
 const UPLOAD_DIR = 'uploads';
+
+// Limits for sending documents as email attachments
+// (attachments grow ~33% once base64-encoded; most providers cap emails at 20-25MB)
+const MAX_EMAIL_DOCUMENTS = 20;
+const MAX_EMAIL_ATTACHMENTS_SIZE = 15 * 1024 * 1024;
+
+/**
+ * Build an Error carrying an HTTP status code for the global error handler
+ * @param {number} statusCode
+ * @param {string} message
+ * @returns {Error}
+ */
+function httpError(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
 
 /**
  * Extract request metadata for audit logging
@@ -1481,6 +1498,169 @@ async function recordShareView(token, metadata = {}) {
 }
 
 /**
+ * Resolve the patient a document belongs to, if any
+ * @param {Object} document - Document record
+ * @returns {Promise<string|null>} Owning patient UUID, or null for library documents
+ */
+async function getDocumentOwnerPatientId(document) {
+  switch (document.resource_type) {
+    case 'patient':
+      return document.resource_id;
+    case 'visit': {
+      const visit = await Visit.findByPk(document.resource_id, { attributes: ['patient_id'] });
+      return visit?.patient_id || document.resource_id;
+    }
+    case 'journal_entry': {
+      const entry = await db.JournalEntry.findByPk(document.resource_id, { attributes: ['patient_id'] });
+      return entry?.patient_id || document.resource_id;
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * Send one or more documents to a patient as attachments of a single email
+ * @param {Object} user - User sending the documents
+ * @param {string[]} documentIds - Document UUIDs
+ * @param {string} patientId - Patient UUID
+ * @param {string} message - Optional custom message
+ * @param {Object} requestMetadata - Request metadata for audit
+ * @returns {Promise<Object>} Email send result
+ */
+async function sendDocumentsByEmail(user, documentIds, patientId, message = null, requestMetadata = {}) {
+  const uniqueIds = [...new Set(documentIds || [])];
+
+  try {
+    if (uniqueIds.length === 0) {
+      throw httpError(400, 'At least one document is required');
+    }
+
+    if (uniqueIds.length > MAX_EMAIL_DOCUMENTS) {
+      throw httpError(400, `Cannot send more than ${MAX_EMAIL_DOCUMENTS} documents in one email`);
+    }
+
+    const found = await Document.findAll({
+      where: { id: { [Op.in]: uniqueIds }, is_active: true }
+    });
+
+    if (found.length !== uniqueIds.length) {
+      throw httpError(404, 'Document not found');
+    }
+
+    // Keep the order chosen by the user
+    const documents = uniqueIds.map(id => found.find(doc => doc.id === id));
+
+    const patient = await Patient.findByPk(patientId);
+    if (!patient) {
+      throw httpError(404, 'Patient not found');
+    }
+
+    if (!(await canAccessPatient(user, patient))) {
+      throw httpError(403, 'Access denied to this patient');
+    }
+
+    if (!patient.email) {
+      throw httpError(400, 'Patient does not have an email address');
+    }
+
+    // Documents attached to a patient (directly, via a visit or a journal entry) may only
+    // be sent to that patient; documents attached to a user only by that user or an admin.
+    // Library documents (no resource) can be sent to anyone the user can access.
+    const isAdmin = (user.role?.name || user.role) === 'ADMIN';
+    for (const document of documents) {
+      if (document.resource_type === 'user') {
+        if (!isAdmin && document.resource_id !== user.id) {
+          throw httpError(403, `Access denied to document: ${document.file_name}`);
+        }
+        continue;
+      }
+
+      const ownerPatientId = await getDocumentOwnerPatientId(document);
+      if (ownerPatientId && ownerPatientId !== patient.id) {
+        throw httpError(403, `Document belongs to another patient: ${document.file_name}`);
+      }
+    }
+
+    const totalSize = documents.reduce((sum, doc) => sum + (doc.file_size || 0), 0);
+    if (totalSize > MAX_EMAIL_ATTACHMENTS_SIZE) {
+      throw httpError(400, 'Attachments exceed the maximum email size');
+    }
+
+    const items = [];
+    for (const document of documents) {
+      const filePath = path.join(process.cwd(), UPLOAD_DIR, document.file_path);
+      try {
+        await fs.access(filePath);
+      } catch {
+        throw httpError(404, `Document file not found on disk: ${document.file_name}`);
+      }
+      items.push({ document, filePath });
+    }
+
+    // Send a single email with all attachments
+    const emailResult = await emailService.sendDocumentsAsAttachments(
+      items,
+      patient,
+      user,
+      message,
+      { sendingUserId: user.id }
+    );
+
+    // Track the send for each document
+    const sentAt = new Date();
+    const shares = await DocumentShare.bulkCreate(documents.map(document => ({
+      document_id: document.id,
+      patient_id: patientId,
+      shared_by: user.id,
+      sent_via: 'email_attachment',
+      notes: message,
+      sent_at: sentAt
+    })));
+
+    for (const document of documents) {
+      await auditService.log({
+        user_id: user.id,
+        username: user.username,
+        action: 'document.email_sent',
+        resource_type: 'document',
+        resource_id: document.id,
+        ip_address: requestMetadata.ip,
+        user_agent: requestMetadata.userAgent,
+        changes: {
+          patient_id: patientId,
+          patient_email: patient.email,
+          file_name: document.file_name,
+          document_count: documents.length
+        }
+      });
+    }
+
+    return {
+      success: true,
+      share_ids: shares.map(share => share.id),
+      email_result: emailResult,
+      sent_to: patient.email,
+      document_count: documents.length
+    };
+  } catch (error) {
+    // Log the failed attempt
+    await auditService.log({
+      user_id: user?.id,
+      username: user?.username,
+      action: 'document.email_failed',
+      resource_type: 'document',
+      resource_id: uniqueIds.length === 1 ? uniqueIds[0] : null,
+      ip_address: requestMetadata.ip,
+      user_agent: requestMetadata.userAgent,
+      changes: { document_ids: uniqueIds, patient_id: patientId, error: error.message }
+    });
+
+    throw error;
+  }
+}
+
+/**
  * Send document as email attachment to a patient
  * @param {Object} user - User sending the document
  * @param {string} documentId - Document UUID
@@ -1490,89 +1670,13 @@ async function recordShareView(token, metadata = {}) {
  * @returns {Promise<Object>} Email send result
  */
 async function sendDocumentByEmail(user, documentId, patientId, message = null, requestMetadata = {}) {
-  try {
-    // Get document
-    const document = await Document.findOne({
-      where: { id: documentId, is_active: true }
-    });
-
-    if (!document) {
-      throw new Error('Document not found');
-    }
-
-    // Get patient
-    const patient = await Patient.findByPk(patientId);
-    if (!patient) {
-      throw new Error('Patient not found');
-    }
-
-    if (!patient.email) {
-      throw new Error('Patient does not have an email address');
-    }
-
-    // Get full file path
-    const filePath = path.join(process.cwd(), UPLOAD_DIR, document.file_path);
-
-    // Check if file exists
-    try {
-      await fs.access(filePath);
-    } catch {
-      throw new Error('Document file not found on disk');
-    }
-
-    // Send email with attachment
-    const emailResult = await emailService.sendDocumentAsAttachment(
-      document,
-      patient,
-      user,
-      filePath,
-      message,
-      { sendingUserId: user.id }
-    );
-
-    // Create a document share record to track the send
-    const share = await DocumentShare.create({
-      document_id: documentId,
-      patient_id: patientId,
-      shared_by: user.id,
-      sent_via: 'email_attachment',
-      notes: message,
-      sent_at: new Date()
-    });
-
-    // Log the action
-    await auditService.log({
-      userId: user.id,
-      action: 'document.email_sent',
-      resourceType: 'document',
-      resourceId: documentId,
-      ...requestMetadata,
-      changes: {
-        patient_id: patientId,
-        patient_email: patient.email,
-        file_name: document.file_name
-      }
-    });
-
-    return {
-      success: true,
-      share_id: share.id,
-      email_result: emailResult,
-      sent_to: patient.email
-    };
-  } catch (error) {
-    // Log the failed attempt
-    await auditService.log({
-      userId: user?.id,
-      action: 'document.email_failed',
-      resourceType: 'document',
-      resourceId: documentId,
-      ...requestMetadata,
-      changes: { error: error.message }
-    });
-
-    throw error;
-  }
+  const result = await sendDocumentsByEmail(user, [documentId], patientId, message, requestMetadata);
+  return {
+    success: result.success,
+    share_id: result.share_ids[0],
+    email_result: result.email_result,
+    sent_to: result.sent_to
+  };
 }
 
 /**
@@ -1645,6 +1749,9 @@ module.exports = {
   getDocumentSharesWithLogs,
   recordShareView,
   sendDocumentByEmail,
+  sendDocumentsByEmail,
+  MAX_EMAIL_DOCUMENTS,
+  MAX_EMAIL_ATTACHMENTS_SIZE,
   getPatientDocumentShares,
   ALLOWED_MIME_TYPES,
   MAX_FILE_SIZE,
