@@ -239,7 +239,16 @@
       "locationSaved": "Lieu mis à jour",
       "locationError": "Impossible de modifier le lieu",
       "locationMultiple": "Le lieu sera appliqué aux {{count}} recettes sélectionnées.",
-      "noLocation": "À définir"
+      "noLocation": "À définir",
+      "changeAccount": "Changer le compte",
+      "accountSaved": "Compte mis à jour",
+      "accountError": "Impossible de modifier le compte",
+      "accountMultiple": "Le compte sera appliqué aux {{count}} recettes sélectionnées.",
+      "editRevenue": "Modifier la recette",
+      "revenueSaved": "Recette mise à jour",
+      "revenueSaveError": "Impossible de modifier la recette",
+      "amountHint": "Modifie ensemble le montant de la facture et le montant encaissé.",
+      "accountFollowsLocation": "Suit le lieu, sauf si vous choisissez un autre compte."
     },
     "kpi": {
       "totalRevenue": "CA total",
@@ -289,6 +298,20 @@
       "expenses": "Dépenses",
       "adjustments": "Ajustements",
       "netProfit": "Bénéfice net"
+    },
+    "treasury": {
+      "title": "Trésorerie par compte",
+      "startDate": "Du",
+      "endDate": "Au",
+      "account": "Compte",
+      "netFlow": "Flux net",
+      "balance": "Solde à la date de fin",
+      "unassigned": "Non affecté",
+      "total": "Tous les comptes",
+      "empty": "Aucun compte bancaire : créez-les dans Paramètres › Champs Personnalisés › Comptes bancaires.",
+      "hint": "Le solde cumule tous les flux jusqu'à la date de fin. Pour partir de votre relevé bancaire, ajoutez une écriture au crédit sur le compte à la date d'ouverture.",
+      "accountFilter": "Compte bancaire",
+      "allAccounts": "Tous les comptes"
     }
   },
   "accounting": {
@@ -4604,6 +4627,34 @@
     "deleteError": "Échec de la suppression du lieu",
     "confirmDelete": "Supprimer ce lieu ? Un lieu utilisé par des factures peut seulement être désactivé.",
     "none": "— Aucun lieu —",
-    "field": "Lieu"
+    "field": "Lieu",
+    "bankAccount": "Compte bancaire des recettes",
+    "bankAccountHelp": "Compte attribué aux factures de ce lieu.",
+    "bankAccountShort": "Compte"
+  },
+  "bankAccounts": {
+    "title": "Comptes bancaires",
+    "titleManagement": "Comptes bancaires",
+    "create": "Nouveau compte",
+    "edit": "Modifier le compte",
+    "intro": "Chaque recette, dépense et écriture appartient à un compte : la page Finance affiche la trésorerie par compte et globale. Les recettes vont sur le compte de leur lieu, les dépenses et écritures sur le compte par défaut. Pour un solde d'ouverture, ajoutez une écriture au crédit sur le compte à la date d'ouverture.",
+    "empty": "Aucun compte bancaire pour l'instant. Créez-en un pour commencer.",
+    "label": "Libellé",
+    "labelPlaceholder": "ex. Compte pro, Caisse",
+    "bankName": "Banque",
+    "iban": "IBAN",
+    "code": "Code",
+    "codeHelp": "Valeur interne stockée sur les données financières — non modifiable",
+    "displayOrder": "Ordre d'affichage",
+    "isDefault": "Compte par défaut des nouvelles dépenses et écritures",
+    "defaultHelp": "Les recettes vont sur le compte du lieu de la facture (voir Lieux).",
+    "defaultShort": "Par défaut",
+    "labelRequired": "Le libellé est requis",
+    "saveError": "Échec de l'enregistrement du compte",
+    "deleteError": "Échec de la suppression du compte",
+    "confirmDelete": "Supprimer ce compte ? Un compte utilisé par des données financières peut seulement être désactivé.",
+    "none": "— Aucun compte —",
+    "field": "Compte",
+    "fromLocation": "Compte du lieu (automatique)"
   }
 }

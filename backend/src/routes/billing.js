@@ -71,6 +71,12 @@ const createInvoiceValidation = [
     .isLength({ min: 1, max: 50 })
     .withMessage('Invalid location'),
 
+  body('bank_account_code')
+    .optional({ nullable: true })
+    .isString()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Invalid bank account'),
+
   body('items')
     .optional({ nullable: true })
     .isArray()
@@ -124,6 +130,12 @@ const updateInvoiceValidation = [
     .isString()
     .isLength({ min: 1, max: 50 })
     .withMessage('Invalid location'),
+
+  body('bank_account_code')
+    .optional({ nullable: true })
+    .isString()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Invalid bank account'),
 
   body('items')
     .optional({ nullable: true })

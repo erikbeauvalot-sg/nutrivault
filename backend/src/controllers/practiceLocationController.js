@@ -5,6 +5,7 @@
 
 const db = require('../../../models');
 const { PracticeLocation } = db;
+const { assertValidBankAccount } = require('../helpers/bankAccounts');
 
 /** Build a stable uppercase code from a label (fallback when none supplied). */
 function slugifyCode(label) {
@@ -56,10 +57,11 @@ const getAllPracticeLocations = async (req, res) => {
 
 const createPracticeLocation = async (req, res) => {
   try {
-    const { code, label, is_default, display_order, is_active } = req.body;
+    const { code, label, is_default, display_order, is_active, bank_account_code } = req.body;
     if (!label || !String(label).trim()) {
       return res.status(400).json({ success: false, error: 'Label is required' });
     }
+    await assertValidBankAccount(bank_account_code || null);
     const finalCode = await uniqueCode(code ? slugifyCode(code) : slugifyCode(label));
 
     const location = await db.sequelize.transaction(async (transaction) => {
@@ -67,6 +69,7 @@ const createPracticeLocation = async (req, res) => {
         code: finalCode,
         label: String(label).trim(),
         is_default: is_default === true,
+        bank_account_code: bank_account_code || null,
         display_order: display_order || 0,
         is_active: is_active !== false
       }, { transaction });
@@ -83,16 +86,18 @@ const createPracticeLocation = async (req, res) => {
 const updatePracticeLocation = async (req, res) => {
   try {
     const { id } = req.params;
-    const { label, is_default, display_order, is_active } = req.body;
+    const { label, is_default, display_order, is_active, bank_account_code } = req.body;
 
     const location = await PracticeLocation.findByPk(id);
     if (!location) return res.status(404).json({ success: false, error: 'Location not found' });
+    if (bank_account_code !== undefined) await assertValidBankAccount(bank_account_code || null);
 
     // `code` is intentionally immutable to keep historical invoices consistent.
     await db.sequelize.transaction(async (transaction) => {
       await location.update({
         label: label !== undefined ? String(label).trim() : location.label,
         is_default: is_default !== undefined ? is_default === true : location.is_default,
+        bank_account_code: bank_account_code !== undefined ? (bank_account_code || null) : location.bank_account_code,
         display_order: display_order !== undefined ? display_order : location.display_order,
         is_active: is_active !== undefined ? is_active : location.is_active
       }, { transaction });
@@ -111,11 +116,12 @@ const deletePracticeLocation = async (req, res) => {
     const location = await PracticeLocation.findByPk(id);
     if (!location) return res.status(404).json({ success: false, error: 'Location not found' });
 
-    const used = await db.Billing.count({ where: { location_code: location.code } });
+    const where = { location_code: location.code };
+    const used = (await db.Billing.count({ where })) + (await db.Expense.count({ where }));
     if (used > 0) {
       return res.status(409).json({
         success: false,
-        error: `Location is used by ${used} invoice(s): deactivate it instead`
+        error: `Location is used by ${used} invoice(s) or expense(s): deactivate it instead`
       });
     }
     await location.destroy();

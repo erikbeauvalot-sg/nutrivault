@@ -58,6 +58,7 @@ async function reset() {
     'Payment',
     'Billing',
     'PracticeLocation',
+    'BankAccount',
     'MeasureAlert',
     'PatientMeasure',
     // Consultation models

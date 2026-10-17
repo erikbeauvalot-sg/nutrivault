@@ -135,6 +135,42 @@ describe('Practice locations', () => {
     });
   });
 
+  describe('expense location', () => {
+    const expense = { description: 'Loyer Issy', amount: 300, category: 'RENT', expense_date: '2026-03-01' };
+
+    it('has no location by default and accepts one from the list', async () => {
+      await createLocation({ label: 'Suresnes', is_default: true });
+      const issy = await createLocation({ label: 'Issy Les Moulineaux' });
+
+      const none = await request(app).post('/api/expenses').set('Authorization', adminAuth.authHeader).send(expense);
+      expect(none.status).toBe(201);
+      // The default location is for invoices only
+      expect(none.body.data.location_code).toBeFalsy();
+
+      const located = await request(app).post('/api/expenses').set('Authorization', adminAuth.authHeader)
+        .send({ ...expense, location_code: issy.code });
+      expect(located.status).toBe(201);
+      expect(located.body.data.location_code).toBe(issy.code);
+
+      const cleared = await request(app).put(`/api/expenses/${located.body.data.id}`).set('Authorization', adminAuth.authHeader)
+        .send({ ...expense, location_code: null });
+      expect(cleared.status).toBe(200);
+      expect(cleared.body.data.location_code).toBeNull();
+    });
+
+    it('rejects an unknown location and protects used locations from deletion', async () => {
+      const unknown = await request(app).post('/api/expenses').set('Authorization', adminAuth.authHeader)
+        .send({ ...expense, location_code: 'NOWHERE' });
+      expect(unknown.status).toBe(400);
+
+      const issy = await createLocation({ label: 'Issy Les Moulineaux' });
+      await request(app).post('/api/expenses').set('Authorization', adminAuth.authHeader)
+        .send({ ...expense, location_code: issy.code });
+      const del = await request(app).delete(`/api/practice-locations/${issy.id}`).set('Authorization', adminAuth.authHeader);
+      expect(del.status).toBe(409);
+    });
+  });
+
   describe('PATCH /api/finance/revenue/location', () => {
     it('sets and clears the location of several invoices', async () => {
       const issy = await createLocation({ label: 'Issy Les Moulineaux' });

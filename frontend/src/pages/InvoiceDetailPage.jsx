@@ -13,6 +13,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import * as billingService from '../services/billingService';
 import * as financeService from '../services/financeService';
 import practiceLocationService from '../services/practiceLocationService';
+import bankAccountService from '../services/bankAccountService';
 
 const InvoiceDetailPage = () => {
   const { t, i18n } = useTranslation();
@@ -22,6 +23,7 @@ const InvoiceDetailPage = () => {
 
   const [invoice, setInvoice] = useState(null);
   const [locationLabels, setLocationLabels] = useState({});
+  const [accountLabels, setAccountLabels] = useState({});
   const [payments, setPayments] = useState([]);
   const [emailHistory, setEmailHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +40,18 @@ const InvoiceDetailPage = () => {
   const [changingPaymentStatus, setChangingPaymentStatus] = useState(false);
   const [newCashDate, setNewCashDate] = useState('');
   const [showMarkPaidConfirm, setShowMarkPaidConfirm] = useState(false);
+
+  // Bank account labels (code -> label) for the invoice header and its history
+  useEffect(() => {
+    let active = true;
+    bankAccountService.getAllBankAccounts()
+      .then((res) => {
+        if (!active || !Array.isArray(res?.data)) return;
+        setAccountLabels(Object.fromEntries(res.data.map((a) => [a.code, a.label])));
+      })
+      .catch(() => { /* codes are shown as-is */ });
+    return () => { active = false; };
+  }, []);
 
   // Location labels (code -> label) for the invoice header and its history
   useEffect(() => {
@@ -445,6 +459,13 @@ const InvoiceDetailPage = () => {
                           ? (locationLabels[invoice.location_code] || invoice.location_code)
                           : t('common.none', '—')}
                       </dd>
+
+                      <dt className="col-sm-5">{t('bankAccounts.field', 'Account')}:</dt>
+                      <dd className="col-sm-7">
+                        {invoice.bank_account_code
+                          ? (accountLabels[invoice.bank_account_code] || invoice.bank_account_code)
+                          : t('common.none', '—')}
+                      </dd>
                     </dl>
                   </Col>
                   <Col md={6}>
@@ -650,11 +671,17 @@ const InvoiceDetailPage = () => {
                       };
                       const fieldLabel = {
                         cash_date: t('billing.cashDate', "Date d'encaissement"),
-                        location_code: t('locations.field', 'Location')
+                        location_code: t('locations.field', 'Location'),
+                        bank_account_code: t('bankAccounts.field', 'Account'),
+                        amount_paid: t('billing.amountPaid', 'Amount paid'),
+                        service_description: t('billing.description', 'Description')
                       }[entry.field] || t('billing.paymentMethod', 'Mode de paiement');
                       const formatValue = (val) => {
                         if (entry.field === 'cash_date') return formatDate(val);
                         if (entry.field === 'location_code') return val ? (locationLabels[val] || val) : t('common.none', '—');
+                        if (entry.field === 'bank_account_code') return val ? (accountLabels[val] || val) : t('common.none', '—');
+                        if (entry.field === 'amount_paid') return formatCurrency(val);
+                        if (entry.field === 'service_description') return val || t('common.none', '—');
                         return getPaymentMethodLabel(val);
                       };
                       return (

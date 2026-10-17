@@ -7,8 +7,9 @@ import { useState, useEffect } from 'react';
 import { Modal, Button, Form, Alert, Spinner } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import practiceLocationService from '../services/practiceLocationService';
+import BankAccountSelect from './BankAccountSelect';
 
-const emptyForm = { label: '', is_default: false, display_order: 0, is_active: true };
+const emptyForm = { label: '', is_default: false, bank_account_code: '', display_order: 0, is_active: true };
 
 const PracticeLocationModal = ({ show, onHide, location, onSuccess }) => {
   const { t } = useTranslation();
@@ -23,6 +24,7 @@ const PracticeLocationModal = ({ show, onHide, location, onSuccess }) => {
       setForm({
         label: location.label || '',
         is_default: !!location.is_default,
+        bank_account_code: location.bank_account_code || '',
         display_order: location.display_order || 0,
         is_active: location.is_active !== false
       });
@@ -49,6 +51,7 @@ const PracticeLocationModal = ({ show, onHide, location, onSuccess }) => {
       const payload = {
         label: form.label.trim(),
         is_default: form.is_default,
+        bank_account_code: form.bank_account_code || null,
         display_order: parseInt(form.display_order, 10) || 0,
         is_active: form.is_active
       };
@@ -101,6 +104,14 @@ const PracticeLocationModal = ({ show, onHide, location, onSuccess }) => {
               </Form.Text>
             </Form.Group>
           )}
+
+          <Form.Group className="mb-3" controlId="location-bank-account">
+            <Form.Label>{t('locations.bankAccount', 'Bank account of the revenue')}</Form.Label>
+            <BankAccountSelect value={form.bank_account_code} onChange={handleChange} />
+            <Form.Text className="text-muted">
+              {t('locations.bankAccountHelp', 'Account given to the invoices of this location.')}
+            </Form.Text>
+          </Form.Group>
 
           <Form.Group className="mb-3" controlId="location-order">
             <Form.Label>{t('locations.displayOrder', 'Display order')}</Form.Label>

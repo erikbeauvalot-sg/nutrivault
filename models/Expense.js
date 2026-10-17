@@ -41,6 +41,16 @@ module.exports = (sequelize, DataTypes) => {
         len: [0, 50]
       }
     },
+    // Bank account (BankAccount.code); NULL = not assigned yet
+    bank_account_code: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
+    // Optional practice location (PracticeLocation.code)
+    location_code: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
     notes: {
       type: DataTypes.TEXT,
       allowNull: true

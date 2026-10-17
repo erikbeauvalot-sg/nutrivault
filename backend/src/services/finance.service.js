@@ -11,10 +11,12 @@ const {
   toISODate,
   effectiveCashDate,
   secondOfNextMonth,
+  nextDay,
   cashDateExpr,
   cashDateRangeWhere
 } = require('../helpers/cashDate');
 const auditService = require('./audit.service');
+const { assertValidBankAccount, bankAccountAfterLocationChange } = require('../helpers/bankAccounts');
 
 /**
  * Build billing scope where clause (via patient)
@@ -44,6 +46,14 @@ async function buildEntryWhere(user, baseWhere = {}) {
   if (dietitianIds === null) return baseWhere; // ADMIN
   if (dietitianIds.length === 0) return { ...baseWhere, id: null };
   return { ...baseWhere, created_by: { [Op.in]: dietitianIds } };
+}
+
+/**
+ * Bank account filter: undefined/'' = all accounts, 'none' = not assigned, else an account code
+ */
+function bankAccountWhere(bankAccount) {
+  if (!bankAccount) return {};
+  return { bank_account_code: bankAccount === 'none' ? null : bankAccount };
 }
 
 /**
@@ -325,7 +335,8 @@ async function getRevenue(user, filters = {}) {
   const billingWhere = await buildBillingWhere(user, {
     status: 'PAID',
     is_active: true,
-    ...cashDateRangeWhere(filters.start_date, filters.end_date)
+    ...cashDateRangeWhere(filters.start_date, filters.end_date),
+    ...bankAccountWhere(filters.bank_account)
   });
 
   const page = parseInt(filters.page) || 1;
@@ -367,7 +378,9 @@ async function getRevenue(user, filters = {}) {
       amount_total: parseFloat(inv.amount_total || 0),
       amount_paid: parseFloat(inv.amount_paid || 0),
       payment_method: inv.payment_method,
-      location_code: inv.location_code || null
+      location_code: inv.location_code || null,
+      bank_account_code: inv.bank_account_code || null,
+      service_description: inv.service_description || ''
     })),
     total: count,
     page,
@@ -398,6 +411,7 @@ async function getCashFlow(user, filters = {}) {
       ],
       where: await buildBillingWhere(user, {
         ...cashDateRangeWhere(monthStart, monthEnd),
+        ...bankAccountWhere(filters.bank_account),
         is_active: true
       }),
       raw: true
@@ -410,6 +424,7 @@ async function getCashFlow(user, filters = {}) {
       ],
       where: await buildExpenseWhere(user, {
         expense_date: { [Op.gte]: startDate, [Op.lte]: endDate },
+        ...bankAccountWhere(filters.bank_account),
         is_active: true
       }),
       raw: true
@@ -422,6 +437,7 @@ async function getCashFlow(user, filters = {}) {
       ],
       where: await buildEntryWhere(user, {
         entry_date: { [Op.gte]: startDate, [Op.lte]: endDate },
+        ...bankAccountWhere(filters.bank_account),
         is_active: true
       }),
       raw: true
@@ -651,16 +667,20 @@ async function setLocation(user, billingIds, locationCode, requestMetadata = {})
     const results = [];
     for (const invoice of invoices) {
       if ((invoice.location_code || null) !== locationCode) {
-        const log = [...(invoice.update_log || []), {
-          field: 'location_code',
-          old_value: invoice.location_code || null,
-          new_value: locationCode,
-          changed_by: { id: user.id, username: user.username },
-          changed_at: now
-        }];
-        await invoice.update({ location_code: locationCode, update_log: log }, { transaction });
+        const changes = {
+          location_code: locationCode,
+          // The account follows the location unless it was chosen by hand
+          bank_account_code: await bankAccountAfterLocationChange(invoice, locationCode)
+        };
+        const log = changeLog(invoice, changes, user, now);
+        await invoice.update({ ...changes, update_log: log }, { transaction });
       }
-      results.push({ id: invoice.id, invoice_number: invoice.invoice_number, location_code: invoice.location_code || null });
+      results.push({
+        id: invoice.id,
+        invoice_number: invoice.invoice_number,
+        location_code: invoice.location_code || null,
+        bank_account_code: invoice.bank_account_code || null
+      });
     }
     return results;
   });
@@ -679,7 +699,222 @@ async function setLocation(user, billingIds, locationCode, requestMetadata = {})
   return updated;
 }
 
+/**
+ * update_log entries for the fields of `changes` that differ from the invoice
+ */
+function changeLog(invoice, changes, user, now) {
+  const log = [...(invoice.update_log || [])];
+  for (const [field, value] of Object.entries(changes)) {
+    const oldValue = field === 'cash_date' ? effectiveCashDate(invoice) : (invoice[field] ?? null);
+    const newValue = field === 'cash_date' ? (value || toISODate(invoice.invoice_date)) : (value ?? null);
+    if (String(oldValue ?? '') !== String(newValue ?? '')) {
+      log.push({
+        field,
+        old_value: oldValue,
+        new_value: newValue,
+        changed_by: { id: user.id, username: user.username },
+        changed_at: now
+      });
+    }
+  }
+  return log;
+}
+
+/**
+ * Set the bank account of several invoices (null clears it)
+ */
+async function setBankAccount(user, billingIds, bankAccountCode, requestMetadata = {}) {
+  await assertValidBankAccount(bankAccountCode);
+  const invoices = await findScopedInvoices(user, billingIds);
+  const now = new Date().toISOString();
+
+  const updated = await db.sequelize.transaction(async (transaction) => {
+    const results = [];
+    for (const invoice of invoices) {
+      if ((invoice.bank_account_code || null) !== bankAccountCode) {
+        const changes = { bank_account_code: bankAccountCode };
+        await invoice.update({ ...changes, update_log: changeLog(invoice, changes, user, now) }, { transaction });
+      }
+      results.push({ id: invoice.id, invoice_number: invoice.invoice_number, bank_account_code: invoice.bank_account_code || null });
+    }
+    return results;
+  });
+
+  await auditService.log({
+    user_id: user.id,
+    username: user.username,
+    action: 'UPDATE',
+    resource_type: 'billing',
+    resource_id: updated.length === 1 ? updated[0].id : null,
+    changes: { action: 'set_bank_account', bank_account_code: bankAccountCode, invoices: updated.map(inv => inv.id) },
+    ip_address: requestMetadata.ip,
+    user_agent: requestMetadata.userAgent
+  });
+
+  return updated;
+}
+
+/**
+ * Edit a revenue (paid invoice) from the revenue page.
+ *
+ * `amount` changes the invoice total AND the amount received together (the
+ * invoice stays fully paid); the last payment absorbs the difference.
+ * `cash_date` equal to the invoice date (or null) follows the invoice date.
+ *
+ * @param {Object} data - { amount, cash_date, payment_method, location_code, bank_account_code, service_description }
+ */
+async function updateRevenue(user, billingId, data, requestMetadata = {}) {
+  const [invoice] = await findScopedInvoices(user, [billingId]);
+  if (invoice.status !== 'PAID') {
+    const error = new Error('Only paid invoices can be edited as revenue');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (data.location_code !== undefined && !(await db.PracticeLocation.isValidCode(data.location_code))) {
+    const error = new Error('Location not found');
+    error.statusCode = 400;
+    throw error;
+  }
+  await assertValidBankAccount(data.bank_account_code);
+
+  const changes = {};
+  for (const field of ['payment_method', 'location_code', 'bank_account_code', 'service_description']) {
+    if (data[field] !== undefined) changes[field] = data[field];
+  }
+  if (data.cash_date !== undefined) {
+    const value = data.cash_date ? toISODate(data.cash_date) : null;
+    changes.cash_date = value && value !== toISODate(invoice.invoice_date) ? value : null;
+  }
+  // A new location brings its bank account, unless one is given explicitly
+  if (changes.location_code !== undefined && changes.bank_account_code === undefined
+    && (changes.location_code || null) !== (invoice.location_code || null)) {
+    changes.bank_account_code = await bankAccountAfterLocationChange(invoice, changes.location_code);
+  }
+
+  const now = new Date().toISOString();
+  await db.sequelize.transaction(async (transaction) => {
+    const amountChanges = {};
+    if (data.amount !== undefined) {
+      const amount = Math.round(parseFloat(data.amount) * 100) / 100;
+      const delta = Math.round((amount - parseFloat(invoice.amount_paid || 0)) * 100) / 100;
+      if (delta !== 0) {
+        const payments = await db.Payment.findAll({
+          where: { billing_id: invoice.id, status: 'PAID' },
+          order: [['payment_date', 'ASC'], ['created_at', 'ASC']],
+          transaction
+        });
+        const last = payments[payments.length - 1];
+        if (last) {
+          const newPayment = Math.round((parseFloat(last.amount) + delta) * 100) / 100;
+          if (newPayment <= 0) {
+            const error = new Error('The amount is lower than the other payments of this invoice');
+            error.statusCode = 400;
+            throw error;
+          }
+          await last.update({ amount: newPayment }, { transaction });
+        }
+      }
+      if (amount !== parseFloat(invoice.amount_total)) amountChanges.amount_total = amount;
+      if (amount !== parseFloat(invoice.amount_paid)) amountChanges.amount_paid = amount;
+      amountChanges.amount_due = 0;
+    }
+
+    const loggable = { ...changes };
+    if (amountChanges.amount_paid !== undefined) loggable.amount_paid = amountChanges.amount_paid;
+    const log = changeLog(invoice, loggable, user, now);
+    await invoice.update({ ...changes, ...amountChanges, update_log: log }, { transaction });
+  });
+
+  await auditService.log({
+    user_id: user.id,
+    username: user.username,
+    action: 'UPDATE',
+    resource_type: 'billing',
+    resource_id: invoice.id,
+    changes: { action: 'update_revenue', ...data },
+    ip_address: requestMetadata.ip,
+    user_agent: requestMetadata.userAgent
+  });
+
+  return {
+    id: invoice.id,
+    invoice_number: invoice.invoice_number,
+    amount_total: parseFloat(invoice.amount_total),
+    amount_paid: parseFloat(invoice.amount_paid),
+    cash_date: effectiveCashDate(invoice),
+    cash_date_overridden: !!invoice.cash_date,
+    payment_method: invoice.payment_method,
+    location_code: invoice.location_code || null,
+    bank_account_code: invoice.bank_account_code || null,
+    service_description: invoice.service_description || ''
+  };
+}
+
+/**
+ * Treasury per bank account: flows of the period and balance at its end.
+ * Balances are cumulated flows (no opening balance field: an accounting entry
+ * dated on the opening day sets it). Records without account form their own line.
+ *
+ * @param {Object} filters - { start_date, end_date } (YYYY-MM-DD, default: current year to today)
+ */
+async function getTreasury(user, filters = {}) {
+  const today = toISODate(new Date());
+  const end = filters.end_date || today;
+  const start = filters.start_date || `${end.slice(0, 4)}-01-01`;
+  const endExclusive = nextDay(end);
+
+  const sumBy = async (model, column, where) => {
+    const rows = await model.findAll({
+      attributes: ['bank_account_code', [db.sequelize.fn('SUM', db.sequelize.col(column)), 'total']],
+      where,
+      group: ['bank_account_code'],
+      raw: true
+    });
+    return Object.fromEntries(rows.map(r => [r.bank_account_code || 'none', parseFloat(r.total || 0)]));
+  };
+  const flows = async (from) => {
+    const billingDate = from ? cashDateRangeWhere(from, end) : cashDateRangeWhere(undefined, end);
+    const dateRange = (field) => ({ [field]: from ? { [Op.gte]: from, [Op.lt]: endExclusive } : { [Op.lt]: endExclusive } });
+    return {
+      revenue: await sumBy(db.Billing, 'amount_paid', await buildBillingWhere(user, { is_active: true, ...billingDate })),
+      expenses: await sumBy(db.Expense, 'amount', await buildExpenseWhere(user, { is_active: true, ...dateRange('expense_date') })),
+      adjustments: await sumBy(db.AccountingEntry, 'amount', await buildEntryWhere(user, { is_active: true, ...dateRange('entry_date') }))
+    };
+  };
+
+  const period = await flows(start);
+  const cumulated = await flows(null);
+  const round = (n) => Math.round(n * 100) / 100;
+
+  const accounts = await db.BankAccount.findAll({ order: [['display_order', 'ASC'], ['label', 'ASC']] });
+  const lines = accounts.map(a => ({ code: a.code, label: a.label, is_active: a.is_active }));
+  const usedCodes = new Set([...Object.values(period), ...Object.values(cumulated)].flatMap(m => Object.keys(m)));
+  if (usedCodes.has('none')) lines.push({ code: 'none', label: null, is_active: true });
+
+  const result = lines.map(line => {
+    const key = line.code;
+    const revenue = round(period.revenue[key] || 0);
+    const expenses = round(period.expenses[key] || 0);
+    const adjustments = round(period.adjustments[key] || 0);
+    const balance = round((cumulated.revenue[key] || 0) - (cumulated.expenses[key] || 0) + (cumulated.adjustments[key] || 0));
+    return { ...line, revenue, expenses, adjustments, net: round(revenue - expenses + adjustments), balance };
+  }).filter(line => line.is_active || line.revenue || line.expenses || line.adjustments || line.balance);
+
+  const total = result.reduce((acc, line) => ({
+    revenue: round(acc.revenue + line.revenue),
+    expenses: round(acc.expenses + line.expenses),
+    adjustments: round(acc.adjustments + line.adjustments),
+    net: round(acc.net + line.net),
+    balance: round(acc.balance + line.balance)
+  }), { revenue: 0, expenses: 0, adjustments: 0, net: 0, balance: 0 });
+
+  return { start_date: start, end_date: end, accounts: result, total };
+}
+
 module.exports = {
+  setBankAccount,
+  updateRevenue,
+  getTreasury,
   setLocation,
   setCashDate,
   shiftCashDateToNextMonth,

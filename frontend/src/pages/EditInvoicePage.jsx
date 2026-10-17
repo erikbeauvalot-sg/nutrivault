@@ -9,6 +9,7 @@ import { Container, Row, Col, Card, Button, Form, Alert, InputGroup, Spinner, Ba
 import { useTranslation } from 'react-i18next';
 import PaymentMethodSelect from '../components/PaymentMethodSelect';
 import PracticeLocationSelect from '../components/PracticeLocationSelect';
+import BankAccountSelect from '../components/BankAccountSelect';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import { getInvoiceById, updateInvoice } from '../services/billingService';
@@ -57,7 +58,8 @@ const EditInvoicePage = () => {
     amount_total: '',
     due_date: '',
     payment_method: '',
-    location_code: ''
+    location_code: '',
+    bank_account_code: ''
   });
 
   useEffect(() => {
@@ -119,7 +121,8 @@ const EditInvoicePage = () => {
       amount_total: invoice.amount_total || '',
       due_date: invoice.due_date ? new Date(invoice.due_date).toISOString().split('T')[0] : '',
       payment_method: invoice.payment_method || '',
-      location_code: invoice.location_code || ''
+      location_code: invoice.location_code || '',
+      bank_account_code: invoice.bank_account_code || ''
     });
 
     // Fetch visits for the selected patient
@@ -180,7 +183,8 @@ const EditInvoicePage = () => {
         due_date: formData.due_date || null,
         visit_id: formData.visit_id || null,
         payment_method: formData.payment_method || null,
-        location_code: formData.location_code || null
+        location_code: formData.location_code || null,
+        bank_account_code: formData.bank_account_code || null
       };
 
       await updateInvoice(id, submitData);
@@ -354,6 +358,15 @@ const EditInvoicePage = () => {
                     <Form.Label>{t('locations.field', 'Location')}</Form.Label>
                     <PracticeLocationSelect
                       value={formData.location_code}
+                      onChange={handleInputChange}
+                      disabled={saving}
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mb-3" controlId="invoice-bank-account">
+                    <Form.Label>{t('bankAccounts.field', 'Account')}</Form.Label>
+                    <BankAccountSelect
+                      value={formData.bank_account_code}
                       onChange={handleInputChange}
                       disabled={saving}
                     />

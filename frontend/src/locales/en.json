@@ -215,7 +215,16 @@
       "locationSaved": "Location updated",
       "locationError": "Could not change the location",
       "locationMultiple": "The location will be applied to the {{count}} selected receipts.",
-      "noLocation": "To set"
+      "noLocation": "To set",
+      "changeAccount": "Change bank account",
+      "accountSaved": "Bank account updated",
+      "accountError": "Could not change the bank account",
+      "accountMultiple": "The account will be applied to the {{count}} selected receipts.",
+      "editRevenue": "Edit revenue",
+      "revenueSaved": "Revenue updated",
+      "revenueSaveError": "Could not update the revenue",
+      "amountHint": "Changes the invoice total and the amount received together.",
+      "accountFollowsLocation": "Follows the location unless you choose another account."
     },
     "kpi": {
       "totalRevenue": "Total Revenue",
@@ -265,6 +274,20 @@
       "expenses": "Expenses",
       "adjustments": "Adjustments",
       "netProfit": "Net Profit"
+    },
+    "treasury": {
+      "title": "Treasury per account",
+      "startDate": "From",
+      "endDate": "To",
+      "account": "Account",
+      "netFlow": "Net flow",
+      "balance": "Balance at end date",
+      "unassigned": "Not assigned",
+      "total": "All accounts",
+      "empty": "No bank account yet: create them in Settings › Custom fields › Bank accounts.",
+      "hint": "The balance adds up every flow until the end date. To start from your bank statement, add a credit entry on the account at the opening date.",
+      "accountFilter": "Bank account",
+      "allAccounts": "All accounts"
     }
   },
   "accounting": {
@@ -4399,6 +4422,34 @@
     "deleteError": "Failed to delete the location",
     "confirmDelete": "Delete this location? A location used by invoices can only be deactivated.",
     "none": "— No location —",
-    "field": "Location"
+    "field": "Location",
+    "bankAccount": "Bank account of the revenue",
+    "bankAccountHelp": "Account given to the invoices of this location.",
+    "bankAccountShort": "Account"
+  },
+  "bankAccounts": {
+    "title": "Bank accounts",
+    "titleManagement": "Bank accounts",
+    "create": "New bank account",
+    "edit": "Edit bank account",
+    "intro": "Every revenue, expense and entry belongs to an account: Finance shows the treasury per account and overall. Revenue goes to the account of its location, expenses and entries to the default account. To set an opening balance, add a credit entry on the account at the opening date.",
+    "empty": "No bank account yet. Create one to start.",
+    "label": "Label",
+    "labelPlaceholder": "e.g. Business account, Cash",
+    "bankName": "Bank",
+    "iban": "IBAN",
+    "code": "Code",
+    "codeHelp": "Internal value stored on financial records — cannot be changed",
+    "displayOrder": "Display order",
+    "isDefault": "Default account for new expenses and entries",
+    "defaultHelp": "Revenue goes to the account of the invoice location (see Locations).",
+    "defaultShort": "Default",
+    "labelRequired": "The label is required",
+    "saveError": "Failed to save the bank account",
+    "deleteError": "Failed to delete the bank account",
+    "confirmDelete": "Delete this bank account? An account used by financial records can only be deactivated.",
+    "none": "— No account —",
+    "field": "Account",
+    "fromLocation": "Account of the location (automatic)"
   }
 }

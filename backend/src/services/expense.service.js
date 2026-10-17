@@ -8,6 +8,16 @@ const Expense = db.Expense;
 const { Op } = db.Sequelize;
 const { getScopedDietitianIds } = require('../helpers/scopeHelper');
 const auditService = require('./audit.service');
+const { assertValidBankAccount, expenseBankAccount } = require('../helpers/bankAccounts');
+
+/** Throw a 400 unless `code` is undefined, null or an existing location. */
+async function assertValidLocation(code) {
+  if (code !== undefined && !(await db.PracticeLocation.isValidCode(code))) {
+    const error = new Error('Location not found');
+    error.statusCode = 400;
+    throw error;
+  }
+}
 
 /**
  * Apply created_by scoping based on user role.
@@ -99,8 +109,11 @@ async function getExpenseById(id, user, requestMetadata = {}) {
 }
 
 async function createExpense(user, data, requestMetadata = {}) {
+  await assertValidLocation(data.location_code);
   const expense = await Expense.create({
     ...data,
+    // No account given: the default account
+    bank_account_code: await expenseBankAccount(data.bank_account_code),
     created_by: user.id
   });
 
@@ -133,6 +146,8 @@ async function updateExpense(id, user, data, requestMetadata = {}) {
     throw error;
   }
 
+  await assertValidBankAccount(data.bank_account_code);
+  await assertValidLocation(data.location_code);
   const oldValues = expense.toJSON();
   await expense.update(data);
 

@@ -16,12 +16,14 @@ import customFieldService from '../services/customFieldService';
 import visitTypeService from '../services/visitTypeService';
 import paymentMethodService from '../services/paymentMethodService';
 import practiceLocationService from '../services/practiceLocationService';
+import bankAccountService from '../services/bankAccountService';
 import expenseCategoryService from '../services/expenseCategoryService';
 import CustomFieldCategoryModal from '../components/CustomFieldCategoryModal';
 import CustomFieldDefinitionModal from '../components/CustomFieldDefinitionModal';
 import VisitTypeModal from '../components/VisitTypeModal';
 import PaymentMethodModal from '../components/PaymentMethodModal';
 import PracticeLocationModal from '../components/PracticeLocationModal';
+import BankAccountModal from '../components/BankAccountModal';
 import ExpenseCategoryModal from '../components/ExpenseCategoryModal';
 import ExportCustomFieldsModal from '../components/ExportCustomFieldsModal';
 import ImportCustomFieldsModal from '../components/ImportCustomFieldsModal';
@@ -91,6 +93,10 @@ const CustomFieldsPage = () => {
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [locationToDelete, setLocationToDelete] = useState(null);
+  const [bankAccounts, setBankAccounts] = useState([]);
+  const [showBankAccountModal, setShowBankAccountModal] = useState(false);
+  const [selectedBankAccount, setSelectedBankAccount] = useState(null);
+  const [bankAccountToDelete, setBankAccountToDelete] = useState(null);
   const [showExpenseCategoryModal, setShowExpenseCategoryModal] = useState(false);
   const [selectedExpenseCategory, setSelectedExpenseCategory] = useState(null);
   const [showDeleteExpenseCategoryConfirm, setShowDeleteExpenseCategoryConfirm] = useState(false);
@@ -121,13 +127,14 @@ const CustomFieldsPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [categoriesRes, definitionsRes, visitTypesRes, paymentMethodsRes, expenseCategoriesRes, locationsRes] = await Promise.all([
+      const [categoriesRes, definitionsRes, visitTypesRes, paymentMethodsRes, expenseCategoriesRes, locationsRes, bankAccountsRes] = await Promise.all([
         customFieldService.getCategories(),
         customFieldService.getDefinitions(),
         visitTypeService.getAllVisitTypes(),
         paymentMethodService.getAllPaymentMethods(),
         expenseCategoryService.getAllExpenseCategories(),
-        practiceLocationService.getAllPracticeLocations()
+        practiceLocationService.getAllPracticeLocations(),
+        bankAccountService.getAllBankAccounts()
       ]);
 
       setCategories(categoriesRes || []);
@@ -136,6 +143,7 @@ const CustomFieldsPage = () => {
       setPaymentMethods(paymentMethodsRes?.data || []);
       setExpenseCategories(expenseCategoriesRes?.data || []);
       setPracticeLocations(locationsRes?.data || []);
+      setBankAccounts(bankAccountsRes?.data || []);
       setError(null);
     } catch (err) {
       console.error('Error fetching custom fields data:', err);
@@ -397,6 +405,24 @@ const CustomFieldsPage = () => {
       setError(err.response?.data?.error || err.message || t('locations.deleteError', 'Failed to delete the location'));
     } finally {
       setLocationToDelete(null);
+    }
+  };
+
+  // Bank account handlers
+  const openBankAccountModal = (account = null) => {
+    setSelectedBankAccount(account);
+    setShowBankAccountModal(true);
+  };
+
+  const confirmDeleteBankAccount = async () => {
+    if (!bankAccountToDelete) return;
+    try {
+      await bankAccountService.deleteBankAccount(bankAccountToDelete);
+      await fetchData();
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || t('bankAccounts.deleteError', 'Failed to delete the bank account'));
+    } finally {
+      setBankAccountToDelete(null);
     }
   };
 
@@ -1409,6 +1435,7 @@ const CustomFieldsPage = () => {
                         <th>{t('locations.label', 'Label')}</th>
                         <th>{t('locations.code', 'Code')}</th>
                         <th>{t('locations.defaultShort', 'Default')}</th>
+                        <th>{t('locations.bankAccountShort', 'Account')}</th>
                         <th>{t('locations.displayOrder', 'Display order')}</th>
                         <th>{t('common.status', 'Status')}</th>
                         <th>{t('common.actions', 'Actions')}</th>
@@ -1420,6 +1447,7 @@ const CustomFieldsPage = () => {
                           <td><strong>{location.label}</strong></td>
                           <td><code>{location.code}</code></td>
                           <td>{location.is_default ? <Badge bg="primary">{t('locations.defaultShort', 'Default')}</Badge> : t('common.none', '—')}</td>
+                          <td>{bankAccounts.find((a) => a.code === location.bank_account_code)?.label || t('common.none', '—')}</td>
                           <td>{location.display_order}</td>
                           <td>
                             <Badge bg={location.is_active ? 'success' : 'secondary'}>
@@ -1433,6 +1461,70 @@ const CustomFieldsPage = () => {
                                   {t('common.edit', 'Edit')}
                                 </Button>
                                 <Button variant="outline-danger" size="sm" onClick={() => setLocationToDelete(location.id)}>
+                                  {t('common.delete', 'Delete')}
+                                </Button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                )}
+              </Card.Body>
+            </Card>
+          </Tab>
+
+          {/* Bank Accounts Tab */}
+          <Tab eventKey="bankAccounts" title={`🏦 ${t('bankAccounts.title', 'Bank accounts')} (${bankAccounts.length})`}>
+            <Card>
+              <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 className="mb-0">{t('bankAccounts.titleManagement', 'Bank accounts')}</h5>
+                {hasPermission('settings.manage') && (
+                  <Button variant="primary" size="sm" onClick={() => openBankAccountModal()}>
+                    <span aria-hidden="true">{'➕'}</span> {t('bankAccounts.create', 'New bank account')}
+                  </Button>
+                )}
+              </Card.Header>
+              <Card.Body>
+                <p className="text-muted small">
+                  {t('bankAccounts.intro', 'Every revenue, expense and entry belongs to an account: Finance shows the treasury per account and overall. Revenue goes to the account of its location, expenses and entries to the default account. To set an opening balance, add a credit entry on the account at the opening date.')}
+                </p>
+                {bankAccounts.length === 0 ? (
+                  <Alert variant="info">
+                    {t('bankAccounts.empty', 'No bank account yet. Create one to start.')}
+                  </Alert>
+                ) : (
+                  <Table striped bordered hover responsive>
+                    <thead>
+                      <tr>
+                        <th>{t('bankAccounts.label', 'Label')}</th>
+                        <th>{t('bankAccounts.bankName', 'Bank')}</th>
+                        <th>{t('bankAccounts.code', 'Code')}</th>
+                        <th>{t('bankAccounts.defaultShort', 'Default')}</th>
+                        <th>{t('common.status', 'Status')}</th>
+                        <th>{t('common.actions', 'Actions')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bankAccounts.map((account) => (
+                        <tr key={account.id}>
+                          <td><strong>{account.label}</strong></td>
+                          <td>{account.bank_name || t('common.none', '—')}</td>
+                          <td><code>{account.code}</code></td>
+                          <td>{account.is_default ? <Badge bg="primary">{t('bankAccounts.defaultShort', 'Default')}</Badge> : t('common.none', '—')}</td>
+                          <td>
+                            <Badge bg={account.is_active ? 'success' : 'secondary'}>
+                              {account.is_active ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
+                            </Badge>
+                          </td>
+                          <td>
+                            {hasPermission('settings.manage') && (
+                              <div className="d-flex gap-2">
+                                <Button variant="outline-primary" size="sm" onClick={() => openBankAccountModal(account)}>
+                                  {t('common.edit', 'Edit')}
+                                </Button>
+                                <Button variant="outline-danger" size="sm" onClick={() => setBankAccountToDelete(account.id)}>
                                   {t('common.delete', 'Delete')}
                                 </Button>
                               </div>
@@ -1642,6 +1734,28 @@ const CustomFieldsPage = () => {
           onConfirm={confirmDeleteLocation}
           title={t('common.confirmation', 'Confirmation')}
           message={t('locations.confirmDelete', 'Delete this location? A location used by invoices can only be deactivated.')}
+          confirmLabel={t('common.delete', 'Delete')}
+          variant="danger"
+        />
+
+        {/* Bank Account Modal */}
+        <BankAccountModal
+          show={showBankAccountModal}
+          onHide={() => {
+            setShowBankAccountModal(false);
+            setSelectedBankAccount(null);
+          }}
+          account={selectedBankAccount}
+          onSuccess={fetchData}
+        />
+
+        {/* Delete Bank Account Confirm Modal */}
+        <ConfirmModal
+          show={!!bankAccountToDelete}
+          onHide={() => setBankAccountToDelete(null)}
+          onConfirm={confirmDeleteBankAccount}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('bankAccounts.confirmDelete', 'Delete this bank account? An account used by financial records can only be deactivated.')}
           confirmLabel={t('common.delete', 'Delete')}
           variant="danger"
         />

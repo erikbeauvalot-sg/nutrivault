@@ -64,6 +64,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(50),
       allowNull: true
     },
+    // Bank account (BankAccount.code); NULL = not assigned yet
+    bank_account_code: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
     payment_date: {
       type: DataTypes.DATE,
       allowNull: true

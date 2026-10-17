@@ -16,6 +16,9 @@ import expenseCategoryService from '../services/expenseCategoryService';
 import * as financeService from '../services/financeService';
 import practiceLocationService from '../services/practiceLocationService';
 import PracticeLocationSelect from '../components/PracticeLocationSelect';
+import BankAccountSelect from '../components/BankAccountSelect';
+import ActionButton from '../components/ActionButton';
+import bankAccountService from '../services/bankAccountService';
 import * as expenseService from '../services/expenseService';
 import * as accountingEntryService from '../services/accountingEntryService';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
@@ -27,13 +30,22 @@ const PIE_COLORS = ['#2D6A4F', '#40916C', '#52B788', '#74C69D', '#95D5B2', '#B7E
 
 const emptyExpense = {
   description: '', amount: '', category: 'OTHER', expense_date: new Date().toISOString().slice(0, 10),
-  vendor: '', payment_method: '', notes: '', is_recurring: false, recurring_period: '', recurring_end_date: '', tax_deductible: false
+  vendor: '', payment_method: '', notes: '', is_recurring: false, recurring_period: '', recurring_end_date: '', tax_deductible: false,
+  // undefined = default account (applied by the backend)
+  bank_account_code: undefined,
+  // optional: '' = no location
+  location_code: ''
 };
 
 const emptyEntry = {
   description: '', amount: '', entry_type: 'CREDIT', entry_date: new Date().toISOString().slice(0, 10),
-  category: '', reference: '', notes: ''
+  category: '', reference: '', notes: '',
+  // undefined = default account (applied by the backend)
+  bank_account_code: undefined
 };
+
+/** '' (chosen "no account") → null, undefined (untouched) stays undefined */
+const accountPayload = (value) => (value === undefined ? undefined : (value || null));
 
 const formatCurrency = (amount) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount || 0);
 
@@ -127,6 +139,15 @@ const FinancePage = () => {
   const [cashDateBusy, setCashDateBusy] = useState(false);
   const [locationModal, setLocationModal] = useState(null); // { ids, code }
   const [locationLabels, setLocationLabels] = useState({});
+  const [accountModal, setAccountModal] = useState(null); // { ids, code }
+  const [accountLabels, setAccountLabels] = useState({});
+  const [revenueEdit, setRevenueEdit] = useState(null); // editable copy of one revenue
+  const [cashFlowAccount, setCashFlowAccount] = useState('');
+  const [treasury, setTreasury] = useState(null);
+  const [treasuryPeriod, setTreasuryPeriod] = useState(() => {
+    const n = new Date();
+    return { start_date: `${n.getFullYear()}-01-01`, end_date: n.toISOString().slice(0, 10) };
+  });
   const [forecast, setForecast] = useState(null);
 
   // Aging report
@@ -146,12 +167,21 @@ const FinancePage = () => {
 
   const loadCashFlow = useCallback(async () => {
     try {
-      const res = await financeService.getCashFlow();
+      const res = await financeService.getCashFlow(cashFlowAccount ? { bank_account: cashFlowAccount } : {});
       setCashFlow(res.data?.data || res.data || []);
     } catch (err) {
       console.error('Failed to load cash flow:', err);
     }
-  }, []);
+  }, [cashFlowAccount]);
+
+  const loadTreasury = useCallback(async () => {
+    try {
+      const res = await financeService.getTreasury(treasuryPeriod);
+      setTreasury(res.data || null);
+    } catch (err) {
+      console.error('Failed to load treasury:', err);
+    }
+  }, [treasuryPeriod]);
 
   const loadExpenses = useCallback(async () => {
     try {
@@ -247,6 +277,14 @@ const FinancePage = () => {
     if (!loading) loadRevenue();
   }, [revenueFilters]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (!loading) loadCashFlow();
+  }, [cashFlowAccount]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    loadTreasury();
+  }, [loadTreasury]);
+
   // --- Comptabilité export ---
   const comptaSuccessMessage = (baseKey, baseDefault, params, mode, warnings) => {
     const modeLabel = mode === 'faithful'
@@ -300,7 +338,9 @@ const FinancePage = () => {
         is_recurring: expense.is_recurring || false,
         recurring_period: expense.recurring_period || '',
         recurring_end_date: expense.recurring_end_date || '',
-        tax_deductible: expense.tax_deductible || false
+        tax_deductible: expense.tax_deductible || false,
+        bank_account_code: expense.bank_account_code || '',
+        location_code: expense.location_code || ''
       });
       setEditingExpenseId(expense.id);
     } else {
@@ -318,7 +358,9 @@ const FinancePage = () => {
         ...expenseFormData,
         amount: parseFloat(expenseFormData.amount),
         recurring_period: expenseFormData.is_recurring ? expenseFormData.recurring_period : null,
-        recurring_end_date: expenseFormData.is_recurring ? expenseFormData.recurring_end_date || null : null
+        recurring_end_date: expenseFormData.is_recurring ? expenseFormData.recurring_end_date || null : null,
+        bank_account_code: accountPayload(expenseFormData.bank_account_code),
+        location_code: expenseFormData.location_code || null
       };
       if (editingExpenseId) {
         await expenseService.updateExpense(editingExpenseId, payload);
@@ -332,6 +374,7 @@ const FinancePage = () => {
       loadExpenseSummary();
       loadDashboard();
       loadCashFlow();
+      loadTreasury();
     } catch (err) {
       setError(err.response?.data?.error || t('expenses.messages.saveError', 'Failed to save expense'));
     } finally {
@@ -350,6 +393,7 @@ const FinancePage = () => {
       loadExpenseSummary();
       loadDashboard();
       loadCashFlow();
+      loadTreasury();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to delete');
     }
@@ -365,7 +409,8 @@ const FinancePage = () => {
         entry_date: entry.entry_date || '',
         category: entry.category || '',
         reference: entry.reference || '',
-        notes: entry.notes || ''
+        notes: entry.notes || '',
+        bank_account_code: entry.bank_account_code || ''
       });
       setEditingEntryId(entry.id);
     } else {
@@ -381,7 +426,8 @@ const FinancePage = () => {
     try {
       const payload = {
         ...entryFormData,
-        amount: parseFloat(entryFormData.amount)
+        amount: parseFloat(entryFormData.amount),
+        bank_account_code: accountPayload(entryFormData.bank_account_code)
       };
       if (editingEntryId) {
         await accountingEntryService.updateEntry(editingEntryId, payload);
@@ -395,6 +441,7 @@ const FinancePage = () => {
       loadEntrySummary();
       loadDashboard();
       loadCashFlow();
+      loadTreasury();
     } catch (err) {
       setError(err.response?.data?.error || t('accounting.messages.saveError', 'Failed to save entry'));
     } finally {
@@ -413,6 +460,7 @@ const FinancePage = () => {
       loadEntrySummary();
       loadDashboard();
       loadCashFlow();
+      loadTreasury();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to delete');
     }
@@ -435,7 +483,7 @@ const FinancePage = () => {
   };
 
   // Cash dates feed revenue, cash flow and dashboard figures
-  const reloadAfterCashDateChange = () => Promise.all([loadRevenue(), loadCashFlow(), loadDashboard()]);
+  const reloadAfterCashDateChange = () => Promise.all([loadRevenue(), loadCashFlow(), loadDashboard(), loadTreasury()]);
 
   const handleShiftCashDate = async (ids) => {
     setCashDateBusy(true);
@@ -489,6 +537,88 @@ const FinancePage = () => {
       .catch(() => { /* codes are shown as-is */ });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    bankAccountService.getAllBankAccounts()
+      .then((res) => {
+        if (!active || !Array.isArray(res?.data)) return;
+        setAccountLabels(Object.fromEntries(res.data.map((a) => [a.code, a.label])));
+      })
+      .catch(() => { /* codes are shown as-is */ });
+    return () => { active = false; };
+  }, []);
+
+  const accountLabel = (code) => (code ? (accountLabels[code] || code) : null);
+
+  const openAccountModal = (ids) => {
+    const single = ids.length === 1 ? revenueInvoices.find(inv => inv.id === ids[0]) : null;
+    setAccountModal({ ids, code: single?.bank_account_code || '' });
+  };
+
+  const handleSaveAccount = async () => {
+    if (!accountModal) return;
+    setCashDateBusy(true);
+    setError(null);
+    try {
+      await financeService.setBankAccount(accountModal.ids, accountModal.code || null);
+      setSuccess(t('finance.revenue.accountSaved', 'Bank account updated'));
+      setSelectedRevenueIds(prev => prev.filter(id => !accountModal.ids.includes(id)));
+      setAccountModal(null);
+      await Promise.all([loadRevenue(), loadCashFlow(), loadTreasury()]);
+    } catch (err) {
+      setError(err.response?.data?.error || t('finance.revenue.accountError', 'Could not change the bank account'));
+    } finally {
+      setCashDateBusy(false);
+    }
+  };
+
+  const openRevenueEdit = (inv) => {
+    setRevenueEdit({
+      id: inv.id,
+      invoice_number: inv.invoice_number,
+      invoice_date: inv.invoice_date ? inv.invoice_date.slice(0, 10) : '',
+      amount: String(inv.amount_paid ?? ''),
+      cash_date: inv.cash_date || '',
+      payment_method: inv.payment_method || '',
+      location_code: inv.location_code || '',
+      bank_account_code: inv.bank_account_code || '',
+      accountTouched: false,
+      service_description: inv.service_description || ''
+    });
+  };
+
+  const setRevenueField = (field) => (e) => {
+    const { value } = e.target;
+    setRevenueEdit(prev => ({ ...prev, [field]: value, ...(field === 'bank_account_code' && { accountTouched: true }) }));
+  };
+
+  const revenueEditValid = !!revenueEdit && parseFloat(revenueEdit.amount) > 0 && !!revenueEdit.cash_date
+    && !!revenueEdit.service_description.trim();
+
+  const handleSaveRevenueEdit = async () => {
+    if (!revenueEditValid) return;
+    setCashDateBusy(true);
+    setError(null);
+    try {
+      await financeService.updateRevenue(revenueEdit.id, {
+        amount: parseFloat(revenueEdit.amount),
+        cash_date: revenueEdit.cash_date === revenueEdit.invoice_date ? null : revenueEdit.cash_date,
+        payment_method: revenueEdit.payment_method || null,
+        location_code: revenueEdit.location_code || null,
+        // Only when chosen here: otherwise a new location brings its own account
+        ...(revenueEdit.accountTouched && { bank_account_code: revenueEdit.bank_account_code || null }),
+        service_description: revenueEdit.service_description.trim()
+      });
+      setSuccess(t('finance.revenue.revenueSaved', 'Revenue updated'));
+      setRevenueEdit(null);
+      await Promise.all([reloadAfterCashDateChange(), loadTreasury()]);
+    } catch (err) {
+      setError(err.response?.data?.error || t('finance.revenue.revenueSaveError', 'Could not update the revenue'));
+    } finally {
+      setCashDateBusy(false);
+    }
+  };
 
   const openLocationModal = (ids) => {
     const single = ids.length === 1 ? revenueInvoices.find(inv => inv.id === ids[0]) : null;
@@ -650,9 +780,96 @@ const FinancePage = () => {
 
             {/* ========== CASH FLOW TAB ========== */}
             <Tab.Pane eventKey="cashFlow">
+              {/* Treasury per bank account */}
+              <Card className="border-0 shadow-sm mb-4">
+                <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2" style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, background: 'transparent' }}>
+                  <span>{t('finance.treasury.title', 'Treasury per account')}</span>
+                  <div className="d-flex gap-2 align-items-center flex-wrap">
+                    <Form.Control
+                      type="date"
+                      size="sm"
+                      style={{ maxWidth: 150 }}
+                      aria-label={t('finance.treasury.startDate', 'From')}
+                      value={treasuryPeriod.start_date}
+                      onChange={e => e.target.value && setTreasuryPeriod(prev => ({ ...prev, start_date: e.target.value }))}
+                    />
+                    <span className="text-muted">{'→'}</span>
+                    <Form.Control
+                      type="date"
+                      size="sm"
+                      style={{ maxWidth: 150 }}
+                      aria-label={t('finance.treasury.endDate', 'To')}
+                      value={treasuryPeriod.end_date}
+                      onChange={e => e.target.value && setTreasuryPeriod(prev => ({ ...prev, end_date: e.target.value }))}
+                    />
+                  </div>
+                </Card.Header>
+                <Card.Body className="p-0">
+                  {treasury && treasury.accounts.length > 0 ? (
+                    <Table hover responsive size="sm" className="mb-0">
+                      <thead>
+                        <tr>
+                          <th>{t('finance.treasury.account', 'Account')}</th>
+                          <th className="text-end">{t('finance.cashFlow.revenue', 'Revenue')}</th>
+                          <th className="text-end">{t('finance.cashFlow.expenses', 'Expenses')}</th>
+                          <th className="text-end">{t('finance.cashFlow.adjustments', 'Adjustments')}</th>
+                          <th className="text-end">{t('finance.treasury.netFlow', 'Net flow')}</th>
+                          <th className="text-end">{t('finance.treasury.balance', 'Balance at end date')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {treasury.accounts.map(account => (
+                          <tr key={account.code}>
+                            <td>
+                              {account.code === 'none'
+                                ? <span className="text-muted fst-italic">{t('finance.treasury.unassigned', 'Not assigned')}</span>
+                                : <strong>{account.label}</strong>}
+                              {!account.is_active && <Badge bg="secondary" className="ms-1">{t('common.inactive', 'Inactive')}</Badge>}
+                            </td>
+                            <td className="text-end" style={{ color: '#2D6A4F' }}>{formatCurrency(account.revenue)}</td>
+                            <td className="text-end" style={{ color: '#BC4749' }}>{formatCurrency(account.expenses)}</td>
+                            <td className="text-end text-muted">{formatCurrency(account.adjustments)}</td>
+                            <td className="text-end" style={{ fontWeight: 700 }}>{formatCurrency(account.net)}</td>
+                            <td className="text-end" style={{ fontWeight: 800, fontFamily: 'Space Grotesk, sans-serif' }}>{formatCurrency(account.balance)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="table-light">
+                          <th>{t('finance.treasury.total', 'All accounts')}</th>
+                          <th className="text-end">{formatCurrency(treasury.total.revenue)}</th>
+                          <th className="text-end">{formatCurrency(treasury.total.expenses)}</th>
+                          <th className="text-end">{formatCurrency(treasury.total.adjustments)}</th>
+                          <th className="text-end">{formatCurrency(treasury.total.net)}</th>
+                          <th className="text-end" style={{ fontWeight: 800, fontFamily: 'Space Grotesk, sans-serif' }}>{formatCurrency(treasury.total.balance)}</th>
+                        </tr>
+                      </tfoot>
+                    </Table>
+                  ) : (
+                    <p className="text-muted text-center py-4 mb-0">{t('finance.treasury.empty', 'No bank account yet: create them in Settings › Custom fields › Bank accounts.')}</p>
+                  )}
+                </Card.Body>
+                <Card.Footer className="small text-muted" style={{ background: 'transparent' }}>
+                  {t('finance.treasury.hint', 'The balance adds up every flow until the end date. To start from your bank statement, add a credit entry on the account at the opening date.')}
+                </Card.Footer>
+              </Card>
+
               <Card className="border-0 shadow-sm">
-                <Card.Header style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, background: 'transparent' }}>
-                  {t('finance.cashFlow.title', 'Cash Flow — 12 Months')}
+                <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2" style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, background: 'transparent' }}>
+                  <span>{t('finance.cashFlow.title', 'Cash Flow — 12 Months')}</span>
+                  <Form.Select
+                    size="sm"
+                    style={{ maxWidth: 240 }}
+                    aria-label={t('finance.treasury.accountFilter', 'Bank account')}
+                    value={cashFlowAccount}
+                    onChange={e => setCashFlowAccount(e.target.value)}
+                  >
+                    <option value="">{t('finance.treasury.allAccounts', 'All accounts')}</option>
+                    {Object.entries(accountLabels).map(([code, label]) => (
+                      <option key={code} value={code}>{label}</option>
+                    ))}
+                    <option value="none">{t('finance.treasury.unassigned', 'Not assigned')}</option>
+                  </Form.Select>
                 </Card.Header>
                 <Card.Body>
                   {cashFlow.length > 0 ? (
@@ -709,6 +926,19 @@ const FinancePage = () => {
                     ✕
                   </Button>
                 )}
+                <Form.Select
+                  size="sm"
+                  style={{ maxWidth: 220 }}
+                  aria-label={t('finance.treasury.accountFilter', 'Bank account')}
+                  value={revenueFilters.bank_account || ''}
+                  onChange={e => { setSelectedRevenueIds([]); setRevenueFilters(prev => ({ ...prev, bank_account: e.target.value, page: 1 })); }}
+                >
+                  <option value="">{t('finance.treasury.allAccounts', 'All accounts')}</option>
+                  {Object.entries(accountLabels).map(([code, label]) => (
+                    <option key={code} value={code}>{label}</option>
+                  ))}
+                  <option value="none">{t('finance.treasury.unassigned', 'Not assigned')}</option>
+                </Form.Select>
               </div>
 
               {/* Bulk cash date actions */}
@@ -727,6 +957,9 @@ const FinancePage = () => {
                     </Button>
                     <Button size="sm" variant="outline-primary" disabled={cashDateBusy} onClick={() => openLocationModal(selectedRevenueIds)}>
                       {t('finance.revenue.changeLocation', 'Change location')}
+                    </Button>
+                    <Button size="sm" variant="outline-primary" disabled={cashDateBusy} onClick={() => openAccountModal(selectedRevenueIds)}>
+                      {t('finance.revenue.changeAccount', 'Change bank account')}
                     </Button>
                     <Button size="sm" variant="outline-secondary" disabled={cashDateBusy} onClick={() => setSelectedRevenueIds([])}>
                       {t('finance.revenue.clearSelection', 'Désélectionner')}
@@ -757,6 +990,7 @@ const FinancePage = () => {
                       <th>{t('finance.agingReport.invoiceNumber', 'Facture')}</th>
                       <th>{t('finance.revenue.paymentMethod', 'Mode')}</th>
                       <th>{t('locations.field', 'Location')}</th>
+                      <th>{t('bankAccounts.field', 'Account')}</th>
                       <th className="text-end">{t('finance.revenue.amountTotal', 'Montant TTC')}</th>
                       <th className="text-end" style={{ color: '#2D6A4F' }}>{t('finance.revenue.amountPaid', 'Encaissé')}</th>
                       {canEditCashDate && <th className="text-end">{t('common.actions', 'Actions')}</th>}
@@ -764,7 +998,7 @@ const FinancePage = () => {
                   </thead>
                   <tbody>
                     {!revenue || revenue.invoices.length === 0 ? (
-                      <tr><td colSpan={canEditCashDate ? 11 : 9} className="text-center text-muted py-4">{t('finance.revenue.noRevenue', 'Aucune recette trouvée')}</td></tr>
+                      <tr><td colSpan={canEditCashDate ? 12 : 10} className="text-center text-muted py-4">{t('finance.revenue.noRevenue', 'Aucune recette trouvée')}</td></tr>
                     ) : revenue.invoices.map(inv => (
                       <tr key={inv.id} className={selectedRevenueIds.includes(inv.id) ? 'table-active' : undefined}>
                         {canEditCashDate && (
@@ -806,6 +1040,22 @@ const FinancePage = () => {
                             inv.location_code ? (locationLabels[inv.location_code] || inv.location_code) : '—'
                           )}
                         </td>
+                        <td>
+                          {canEditCashDate ? (
+                            <Button
+                              size="sm"
+                              variant="link"
+                              className="p-0 text-decoration-none"
+                              disabled={cashDateBusy}
+                              onClick={() => openAccountModal([inv.id])}
+                              title={t('finance.revenue.changeAccount', 'Change bank account')}
+                            >
+                              {accountLabel(inv.bank_account_code) || t('finance.revenue.noLocation', 'To set')}
+                            </Button>
+                          ) : (
+                            accountLabel(inv.bank_account_code) || '—'
+                          )}
+                        </td>
                         <td className="text-end text-muted">{formatCurrency(inv.amount_total)}</td>
                         <td className="text-end" style={{ fontWeight: 700, fontFamily: 'Space Grotesk, sans-serif', color: '#2D6A4F' }}>{formatCurrency(inv.amount_paid)}</td>
                         {canEditCashDate && (
@@ -825,9 +1075,9 @@ const FinancePage = () => {
                               size="sm"
                               variant="outline-secondary"
                               disabled={cashDateBusy}
-                              onClick={() => openCashDateModal([inv.id])}
-                              title={t('finance.revenue.editCashDate', "Modifier la date d'encaissement")}
-                              aria-label={t('finance.revenue.editCashDate', "Modifier la date d'encaissement")}
+                              onClick={() => openRevenueEdit(inv)}
+                              title={t('finance.revenue.editRevenue', 'Edit revenue')}
+                              aria-label={t('finance.revenue.editRevenue', 'Edit revenue')}
                             >
                               <span aria-hidden="true">{'✏️'}</span>
                             </Button>
@@ -887,13 +1137,15 @@ const FinancePage = () => {
                           <th>{t('expenses.description', 'Description')}</th>
                           <th>{t('expenses.category', 'Category')}</th>
                           <th>{t('expenses.vendor', 'Vendor')}</th>
+                          <th>{t('locations.field', 'Location')}</th>
+                          <th>{t('bankAccounts.field', 'Account')}</th>
                           <th className="text-end">{t('expenses.amount', 'Amount')}</th>
                           <th>{t('common.actions', 'Actions')}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {expenses.length === 0 ? (
-                          <tr><td colSpan={6} className="text-center text-muted py-4">{t('expenses.noExpenses', 'No expenses found')}</td></tr>
+                          <tr><td colSpan={8} className="text-center text-muted py-4">{t('expenses.noExpenses', 'No expenses found')}</td></tr>
                         ) : expenses.map(exp => (
                           <tr key={exp.id}>
                             <td>{new Date(exp.expense_date).toLocaleDateString('fr-FR')}</td>
@@ -904,14 +1156,28 @@ const FinancePage = () => {
                             </td>
                             <td><Badge bg="light" text="dark" style={{ fontWeight: 600 }}>{categoryLabel(exp.category)}</Badge></td>
                             <td className="text-muted">{exp.vendor || '—'}</td>
+                            <td className="text-muted">{exp.location_code ? (locationLabels[exp.location_code] || exp.location_code) : '—'}</td>
+                            <td className="text-muted">{accountLabel(exp.bank_account_code) || '—'}</td>
                             <td className="text-end" style={{ fontWeight: 700, fontFamily: 'Space Grotesk, sans-serif' }}>{formatCurrency(exp.amount)}</td>
-                            <td>
-                              {hasPermission('expenses.update') && (
-                                <Button variant="outline-primary" size="sm" className="me-1" onClick={() => handleOpenExpenseForm(exp)}>{t('common.edit', 'Edit')}</Button>
-                              )}
-                              {hasPermission('expenses.delete') && (
-                                <Button variant="outline-danger" size="sm" onClick={() => { setDeletingId(exp.id); setShowDeleteConfirm(true); }}>{t('common.delete', 'Delete')}</Button>
-                              )}
+                            <td className="text-nowrap">
+                              <div className="action-buttons">
+                                {hasPermission('expenses.update') && (
+                                  <ActionButton
+                                    action="edit"
+                                    onClick={() => handleOpenExpenseForm(exp)}
+                                    title={t('common.edit', 'Edit')}
+                                    aria-label={t('common.edit', 'Edit')}
+                                  />
+                                )}
+                                {hasPermission('expenses.delete') && (
+                                  <ActionButton
+                                    action="delete"
+                                    onClick={() => { setDeletingId(exp.id); setShowDeleteConfirm(true); }}
+                                    title={t('common.delete', 'Delete')}
+                                    aria-label={t('common.delete', 'Delete')}
+                                  />
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1021,13 +1287,14 @@ const FinancePage = () => {
                       <th>{t('accounting.entryType', 'Type')}</th>
                       <th>{t('accounting.category', 'Category')}</th>
                       <th>{t('accounting.reference', 'Reference')}</th>
+                      <th>{t('bankAccounts.field', 'Account')}</th>
                       <th className="text-end">{t('accounting.amount', 'Amount')}</th>
                       <th>{t('common.actions', 'Actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {entries.length === 0 ? (
-                      <tr><td colSpan={7} className="text-center text-muted py-4">{t('accounting.noEntries', 'No entries found')}</td></tr>
+                      <tr><td colSpan={8} className="text-center text-muted py-4">{t('accounting.noEntries', 'No entries found')}</td></tr>
                     ) : entries.map(entry => {
                       const amt = parseFloat(entry.amount);
                       return (
@@ -1041,16 +1308,29 @@ const FinancePage = () => {
                           </td>
                           <td className="text-muted">{entry.category ? t(`accounting.categories.${entry.category}`, entry.category) : '—'}</td>
                           <td className="text-muted"><code>{entry.reference || '—'}</code></td>
+                          <td className="text-muted">{accountLabel(entry.bank_account_code) || '—'}</td>
                           <td className="text-end" style={{ fontWeight: 700, fontFamily: 'Space Grotesk, sans-serif', color: amt >= 0 ? '#2D6A4F' : '#BC4749' }}>
                             {formatCurrency(amt)}
                           </td>
-                          <td>
-                            {hasPermission('accounting.update') && (
-                              <Button variant="outline-primary" size="sm" className="me-1" onClick={() => handleOpenEntryForm(entry)}>{t('common.edit', 'Edit')}</Button>
-                            )}
-                            {hasPermission('accounting.delete') && (
-                              <Button variant="outline-danger" size="sm" onClick={() => { setDeletingEntryId(entry.id); setShowEntryDeleteConfirm(true); }}>{t('common.delete', 'Delete')}</Button>
-                            )}
+                          <td className="text-nowrap">
+                            <div className="action-buttons">
+                              {hasPermission('accounting.update') && (
+                                <ActionButton
+                                  action="edit"
+                                  onClick={() => handleOpenEntryForm(entry)}
+                                  title={t('common.edit', 'Edit')}
+                                  aria-label={t('common.edit', 'Edit')}
+                                />
+                              )}
+                              {hasPermission('accounting.delete') && (
+                                <ActionButton
+                                  action="delete"
+                                  onClick={() => { setDeletingEntryId(entry.id); setShowEntryDeleteConfirm(true); }}
+                                  title={t('common.delete', 'Delete')}
+                                  aria-label={t('common.delete', 'Delete')}
+                                />
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1405,6 +1685,121 @@ const FinancePage = () => {
           </Modal.Footer>
         </Modal>
 
+        {/* Bank account (bulk) modal */}
+        <Modal show={!!accountModal} onHide={() => !cashDateBusy && setAccountModal(null)} centered>
+          <Modal.Header closeButton>
+            <Modal.Title style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700 }}>
+              {t('finance.revenue.changeAccount', 'Change bank account')}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {accountModal && accountModal.ids.length > 1 && (
+              <p className="text-muted small">
+                {t('finance.revenue.accountMultiple', 'The account will be applied to the {{count}} selected receipts.', { count: accountModal.ids.length })}
+              </p>
+            )}
+            <Form.Group controlId="revenue-bank-account">
+              <Form.Label>{t('bankAccounts.field', 'Account')}</Form.Label>
+              <BankAccountSelect
+                value={accountModal?.code ?? ''}
+                onChange={e => setAccountModal(prev => ({ ...prev, code: e.target.value }))}
+                disabled={cashDateBusy}
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" disabled={cashDateBusy} onClick={() => setAccountModal(null)}>
+              {t('common.cancel', 'Annuler')}
+            </Button>
+            <Button variant="primary" disabled={cashDateBusy} onClick={handleSaveAccount}>
+              {cashDateBusy ? <Spinner size="sm" className="me-1" /> : null}
+              {t('common.save', 'Enregistrer')}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Revenue edit modal */}
+        <Modal show={!!revenueEdit} onHide={() => !cashDateBusy && setRevenueEdit(null)} centered size="lg" fullscreen="md-down">
+          <Modal.Header closeButton>
+            <Modal.Title style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700 }}>
+              {t('finance.revenue.editRevenue', 'Edit revenue')} {revenueEdit && <code className="ms-2 fs-6">{revenueEdit.invoice_number}</code>}
+            </Modal.Title>
+          </Modal.Header>
+          {revenueEdit && (
+            <Modal.Body>
+              <Row className="g-3">
+                <Col md={6}>
+                  <Form.Group controlId="revenue-edit-amount">
+                    <Form.Label>{t('finance.revenue.amountPaid', 'Encaissé')} *</Form.Label>
+                    <InputGroup>
+                      <Form.Control type="number" step="0.01" min="0.01" value={revenueEdit.amount} onChange={setRevenueField('amount')} disabled={cashDateBusy} />
+                      <InputGroup.Text>{'€'}</InputGroup.Text>
+                    </InputGroup>
+                    <Form.Text className="text-muted">
+                      {t('finance.revenue.amountHint', 'Changes the invoice total and the amount received together.')}
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group controlId="revenue-edit-cash-date">
+                    <Form.Label>{t('finance.revenue.cashDate', 'Encaissement')} *</Form.Label>
+                    <Form.Control type="date" value={revenueEdit.cash_date} onChange={setRevenueField('cash_date')} disabled={cashDateBusy} />
+                    {revenueEdit.invoice_date && (
+                      <Form.Text className="text-muted">
+                        {t('finance.revenue.invoiceDateHint', 'Date de facture : {{date}}', { date: new Date(`${revenueEdit.invoice_date}T00:00:00`).toLocaleDateString('fr-FR') })}
+                        {revenueEdit.cash_date !== revenueEdit.invoice_date && (
+                          <Button variant="link" size="sm" className="p-0 ms-2 align-baseline" disabled={cashDateBusy}
+                            onClick={() => setRevenueEdit(prev => ({ ...prev, cash_date: prev.invoice_date }))}>
+                            {t('finance.revenue.resetCashDate', 'Revenir à la date de facture')}
+                          </Button>
+                        )}
+                      </Form.Text>
+                    )}
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group controlId="revenue-edit-payment-method">
+                    <Form.Label>{t('finance.revenue.paymentMethod', 'Mode')}</Form.Label>
+                    <PaymentMethodSelect value={revenueEdit.payment_method} onChange={setRevenueField('payment_method')} disabled={cashDateBusy} includeBlank />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group controlId="revenue-edit-location">
+                    <Form.Label>{t('locations.field', 'Location')}</Form.Label>
+                    <PracticeLocationSelect value={revenueEdit.location_code} onChange={setRevenueField('location_code')} disabled={cashDateBusy} />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group controlId="revenue-edit-account">
+                    <Form.Label>{t('bankAccounts.field', 'Account')}</Form.Label>
+                    <BankAccountSelect value={revenueEdit.bank_account_code} onChange={setRevenueField('bank_account_code')} disabled={cashDateBusy} />
+                    {!revenueEdit.accountTouched && (
+                      <Form.Text className="text-muted">
+                        {t('finance.revenue.accountFollowsLocation', 'Follows the location unless you choose another account.')}
+                      </Form.Text>
+                    )}
+                  </Form.Group>
+                </Col>
+                <Col md={12}>
+                  <Form.Group controlId="revenue-edit-description">
+                    <Form.Label>{t('billing.description', 'Description')} *</Form.Label>
+                    <Form.Control value={revenueEdit.service_description} onChange={setRevenueField('service_description')} maxLength={500} disabled={cashDateBusy} />
+                  </Form.Group>
+                </Col>
+              </Row>
+            </Modal.Body>
+          )}
+          <Modal.Footer>
+            <Button variant="secondary" disabled={cashDateBusy} onClick={() => setRevenueEdit(null)}>
+              {t('common.cancel', 'Annuler')}
+            </Button>
+            <Button variant="primary" disabled={cashDateBusy || !revenueEditValid} onClick={handleSaveRevenueEdit}>
+              {cashDateBusy ? <Spinner size="sm" className="me-1" /> : null}
+              {t('common.save', 'Enregistrer')}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
         {/* Practice location (lieu) modal */}
         <Modal show={!!locationModal} onHide={() => !cashDateBusy && setLocationModal(null)} centered>
           <Modal.Header closeButton>
@@ -1484,6 +1879,25 @@ const FinancePage = () => {
                     value={expenseFormData.payment_method}
                     onChange={e => setExpenseFormData(prev => ({ ...prev, payment_method: e.target.value }))}
                     includeBlank
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group controlId="expense-location">
+                  <Form.Label>{t('locations.field', 'Location')} ({t('common.optional', 'Optional')})</Form.Label>
+                  <PracticeLocationSelect
+                    value={expenseFormData.location_code}
+                    onChange={e => setExpenseFormData(prev => ({ ...prev, location_code: e.target.value }))}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group controlId="expense-bank-account">
+                  <Form.Label>{t('bankAccounts.field', 'Account')}</Form.Label>
+                  <BankAccountSelect
+                    showDefault
+                    value={expenseFormData.bank_account_code}
+                    onChange={e => setExpenseFormData(prev => ({ ...prev, bank_account_code: e.target.value }))}
                   />
                 </Form.Group>
               </Col>
@@ -1600,6 +2014,16 @@ const FinancePage = () => {
                     <option value="">—</option>
                     {ENTRY_CATEGORIES.map(c => <option key={c} value={c}>{t(`accounting.categories.${c}`, c)}</option>)}
                   </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={4}>
+                <Form.Group controlId="entry-bank-account">
+                  <Form.Label>{t('bankAccounts.field', 'Account')}</Form.Label>
+                  <BankAccountSelect
+                    showDefault
+                    value={entryFormData.bank_account_code}
+                    onChange={e => setEntryFormData(prev => ({ ...prev, bank_account_code: e.target.value }))}
+                  />
                 </Form.Group>
               </Col>
               <Col md={4}>

@@ -43,7 +43,8 @@ exports.getCashFlow = async (req, res, next) => {
   try {
     const filters = {
       start_date: req.query.start_date,
-      end_date: req.query.end_date
+      end_date: req.query.end_date,
+      bank_account: req.query.bank_account
     };
     const cashFlow = await financeService.getCashFlow(req.user, filters);
     res.json({ success: true, data: cashFlow });
@@ -58,7 +59,8 @@ exports.getRevenue = async (req, res, next) => {
       start_date: req.query.start_date,
       end_date: req.query.end_date,
       page: req.query.page,
-      limit: req.query.limit
+      limit: req.query.limit,
+      bank_account: req.query.bank_account
     };
     const revenue = await financeService.getRevenue(req.user, filters);
     res.json({ success: true, data: revenue });
@@ -103,6 +105,53 @@ exports.setLocation = async (req, res, next) => {
       req.body.location_code ?? null,
       getRequestMetadata(req)
     );
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PATCH /api/finance/revenue/bank-account - Set the bank account of invoices
+ */
+exports.setBankAccount = async (req, res, next) => {
+  try {
+    const data = await financeService.setBankAccount(
+      req.user,
+      req.body.billing_ids,
+      req.body.bank_account_code ?? null,
+      getRequestMetadata(req)
+    );
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PATCH /api/finance/revenue/:id - Edit a revenue (amount, cash date, location, account…)
+ */
+exports.updateRevenue = async (req, res, next) => {
+  try {
+    const fields = ['amount', 'cash_date', 'payment_method', 'location_code', 'bank_account_code', 'service_description'];
+    const data = {};
+    for (const field of fields) if (req.body[field] !== undefined) data[field] = req.body[field];
+    const revenue = await financeService.updateRevenue(req.user, req.params.id, data, getRequestMetadata(req));
+    res.json({ success: true, data: revenue });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/finance/treasury - Flows and balance per bank account
+ */
+exports.getTreasury = async (req, res, next) => {
+  try {
+    const data = await financeService.getTreasury(req.user, {
+      start_date: req.query.start_date,
+      end_date: req.query.end_date
+    });
     res.json({ success: true, data });
   } catch (error) {
     next(error);

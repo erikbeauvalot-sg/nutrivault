@@ -8,6 +8,7 @@ const AccountingEntry = db.AccountingEntry;
 const { Op } = db.Sequelize;
 const { getScopedDietitianIds } = require('../helpers/scopeHelper');
 const auditService = require('./audit.service');
+const { assertValidBankAccount, expenseBankAccount } = require('../helpers/bankAccounts');
 
 /**
  * Apply created_by scoping based on user role.
@@ -110,6 +111,8 @@ async function createEntry(user, data, requestMetadata = {}) {
   const entry = await AccountingEntry.create({
     ...data,
     amount,
+    // No account given: the default account
+    bank_account_code: await expenseBankAccount(data.bank_account_code),
     created_by: user.id
   });
 
@@ -154,6 +157,7 @@ async function updateEntry(id, user, data, requestMetadata = {}) {
     data.amount = amount;
   }
 
+  await assertValidBankAccount(data.bank_account_code);
   const oldValues = entry.toJSON();
   await entry.update(data);
 

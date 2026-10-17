@@ -31,6 +31,7 @@ const createEntryValidation = [
   body('entry_date').isISO8601().withMessage('Valid date is required'),
   body('category').optional({ nullable: true }).trim().isLength({ max: 50 }),
   body('reference').optional({ nullable: true }).trim().isLength({ max: 200 }),
+  body('bank_account_code').optional({ nullable: true }).isString().isLength({ min: 1, max: 50 }).withMessage('Invalid bank account'),
   body('notes').optional({ nullable: true }).trim()
 ];
 

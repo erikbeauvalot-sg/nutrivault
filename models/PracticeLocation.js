@@ -27,6 +27,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: false
     },
+    // Default bank account of the revenue at this location
+    bank_account_code: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
     display_order: {
       type: DataTypes.INTEGER,
       allowNull: false,

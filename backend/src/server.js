@@ -225,6 +225,8 @@ const paymentMethodsRoutes = require('./routes/paymentMethods');
 app.use('/api/payment-methods', paymentMethodsRoutes);
 const practiceLocationsRoutes = require('./routes/practiceLocations');
 app.use('/api/practice-locations', practiceLocationsRoutes);
+const bankAccountsRoutes = require('./routes/bankAccounts');
+app.use('/api/bank-accounts', bankAccountsRoutes);
 const expenseCategoriesRoutes = require('./routes/expenseCategories');
 app.use('/api/expense-categories', expenseCategoriesRoutes);
 

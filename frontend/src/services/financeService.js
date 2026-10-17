@@ -46,6 +46,31 @@ export const setLocation = async (billingIds, locationCode) => {
 };
 
 /**
+ * Set the bank account of several invoices (null clears it)
+ */
+export const setBankAccount = async (billingIds, bankAccountCode) => {
+  const response = await api.patch('/finance/revenue/bank-account', { billing_ids: billingIds, bank_account_code: bankAccountCode });
+  return response.data;
+};
+
+/**
+ * Edit a revenue: amount (invoice and amount received), cash date, payment method,
+ * location, bank account, description
+ */
+export const updateRevenue = async (billingId, data) => {
+  const response = await api.patch(`/finance/revenue/${billingId}`, data);
+  return response.data;
+};
+
+/**
+ * Treasury per bank account: flows of the period and balance at its end
+ */
+export const getTreasury = async (params = {}) => {
+  const response = await api.get('/finance/treasury', { params });
+  return response.data;
+};
+
+/**
  * Move the cash date of invoices to the 2nd of the following month
  * @param {string[]} billingIds - Invoice UUIDs
  */

@@ -7,6 +7,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom';
 import FinancePage from '../FinancePage';
 import * as financeService from '../../services/financeService';
+import * as expenseService from '../../services/expenseService';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -44,7 +45,21 @@ vi.mock('../../services/financeService', () => ({
   writeComptaToDisk: vi.fn(),
   setCashDate: vi.fn(),
   shiftCashDateToNextMonth: vi.fn(),
-  setLocation: vi.fn()
+  setLocation: vi.fn(),
+  setBankAccount: vi.fn(),
+  updateRevenue: vi.fn(),
+  getTreasury: vi.fn()
+}));
+
+vi.mock('../../services/bankAccountService', () => ({
+  default: {
+    getAllBankAccounts: vi.fn().mockResolvedValue({
+      data: [
+        { code: 'PRO', label: 'Compte pro', is_active: true, is_default: true },
+        { code: 'CAISSE', label: 'Caisse', is_active: true, is_default: false }
+      ]
+    })
+  }
 }));
 
 vi.mock('../../services/practiceLocationService', () => ({
@@ -60,7 +75,8 @@ vi.mock('../../services/practiceLocationService', () => ({
 
 vi.mock('../../services/expenseService', () => ({
   getExpenses: vi.fn().mockResolvedValue({ data: { data: [] } }),
-  getExpenseSummary: vi.fn().mockResolvedValue({ data: { data: null } })
+  getExpenseSummary: vi.fn().mockResolvedValue({ data: { data: null } }),
+  createExpense: vi.fn().mockResolvedValue({ data: {} })
 }));
 
 vi.mock('../../services/accountingEntryService', () => ({
@@ -79,12 +95,12 @@ const invoices = [
   {
     id: 'inv-1', invoice_number: 'INV-1', invoice_date: '2026-03-18T10:00:00.000Z', payment_date: null,
     cash_date: '2026-03-18', cash_date_overridden: false, amount_total: 60, amount_paid: 60,
-    payment_method: 'CHECK', location_code: 'SURESNES', patient: { id: 'p1', first_name: 'Anne', last_name: 'Martin' }
+    payment_method: 'CHECK', location_code: 'SURESNES', bank_account_code: 'PRO', service_description: 'Consultation', patient: { id: 'p1', first_name: 'Anne', last_name: 'Martin' }
   },
   {
     id: 'inv-2', invoice_number: 'INV-2', invoice_date: '2026-03-20T10:00:00.000Z', payment_date: null,
     cash_date: '2026-04-02', cash_date_overridden: true, amount_total: 50, amount_paid: 50,
-    payment_method: 'CREDIT_CARD', patient: { id: 'p2', first_name: 'Paul', last_name: 'Dubois' }
+    payment_method: 'CREDIT_CARD', bank_account_code: null, service_description: 'Suivi', patient: { id: 'p2', first_name: 'Paul', last_name: 'Dubois' }
   }
 ];
 
@@ -112,6 +128,9 @@ describe('FinancePage cash date', () => {
     financeService.shiftCashDateToNextMonth.mockResolvedValue({ success: true, data: [] });
     financeService.setCashDate.mockResolvedValue({ success: true, data: [] });
     financeService.setLocation.mockResolvedValue({ success: true, data: [] });
+    financeService.setBankAccount.mockResolvedValue({ success: true, data: [] });
+    financeService.updateRevenue.mockResolvedValue({ success: true, data: {} });
+    financeService.getTreasury.mockResolvedValue({ success: true, data: null });
   });
 
   it('shows the cash date and flags moved ones', async () => {
@@ -147,26 +166,77 @@ describe('FinancePage cash date', () => {
     await waitFor(() => expect(financeService.shiftCashDateToNextMonth).toHaveBeenCalledWith(['inv-1', 'inv-2']));
   });
 
-  it('edits the cash date in the modal', async () => {
+  it('edits the cash date of one revenue', async () => {
     await renderRevenueTab();
 
-    fireEvent.click(within(rowOf('INV-1')).getByLabelText("Modifier la date d'encaissement"));
+    fireEvent.click(within(rowOf('INV-1')).getByLabelText('Edit revenue'));
     const dialog = await screen.findByRole('dialog');
 
-    fireEvent.change(dialog.querySelector('input[type="date"]'), { target: { value: '2026-04-10' } });
+    fireEvent.change(within(dialog).getByLabelText('Encaissement *'), { target: { value: '2026-04-10' } });
     fireEvent.click(within(dialog).getByText('Enregistrer'));
 
-    await waitFor(() => expect(financeService.setCashDate).toHaveBeenCalledWith(['inv-1'], '2026-04-10'));
+    await waitFor(() => expect(financeService.updateRevenue).toHaveBeenCalledWith(
+      'inv-1', expect.objectContaining({ cash_date: '2026-04-10' })
+    ));
   });
 
   it('resets the cash date to the invoice date', async () => {
     await renderRevenueTab();
 
-    fireEvent.click(within(rowOf('INV-2')).getByLabelText("Modifier la date d'encaissement"));
+    fireEvent.click(within(rowOf('INV-2')).getByLabelText('Edit revenue'));
     const dialog = await screen.findByRole('dialog');
     fireEvent.click(within(dialog).getByText('Revenir à la date de facture'));
+    fireEvent.click(within(dialog).getByText('Enregistrer'));
 
-    await waitFor(() => expect(financeService.setCashDate).toHaveBeenCalledWith(['inv-2'], null));
+    await waitFor(() => expect(financeService.updateRevenue).toHaveBeenCalledWith(
+      'inv-2', expect.objectContaining({ cash_date: null })
+    ));
+  });
+
+  it('edits the amount, location and description of a revenue', async () => {
+    await renderRevenueTab();
+
+    fireEvent.click(within(rowOf('INV-1')).getByLabelText('Edit revenue'));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText('Encaissé *'), { target: { value: '75' } });
+    await within(dialog).findByText('Issy Les Moulineaux');
+    fireEvent.change(within(dialog).getByLabelText('Location'), { target: { value: 'ISSY' } });
+    fireEvent.change(within(dialog).getByLabelText('Description *'), { target: { value: 'Bilan' } });
+    fireEvent.click(within(dialog).getByText('Enregistrer'));
+
+    await waitFor(() => expect(financeService.updateRevenue).toHaveBeenCalled());
+    const [id, payload] = financeService.updateRevenue.mock.calls[0];
+    expect(id).toBe('inv-1');
+    expect(payload).toMatchObject({ amount: 75, location_code: 'ISSY', service_description: 'Bilan' });
+    // Account untouched: not sent, so it follows the new location
+    expect(payload).not.toHaveProperty('bank_account_code');
+  });
+
+  it('sends the account when it is chosen in the edit form', async () => {
+    await renderRevenueTab();
+
+    fireEvent.click(within(rowOf('INV-1')).getByLabelText('Edit revenue'));
+    const dialog = await screen.findByRole('dialog');
+    await within(dialog).findByText('Caisse');
+    fireEvent.change(within(dialog).getByLabelText('Account'), { target: { value: 'CAISSE' } });
+    fireEvent.click(within(dialog).getByText('Enregistrer'));
+
+    await waitFor(() => expect(financeService.updateRevenue).toHaveBeenCalledWith(
+      'inv-1', expect.objectContaining({ bank_account_code: 'CAISSE' })
+    ));
+  });
+
+  it('sets the bank account of the selected invoices in one call', async () => {
+    await renderRevenueTab();
+
+    fireEvent.click(screen.getByLabelText('Sélectionner toutes les recettes de la page'));
+    fireEvent.click(screen.getByText('Change bank account', { selector: 'button' }));
+    const dialog = await screen.findByRole('dialog');
+    await within(dialog).findByText('Caisse');
+    fireEvent.change(within(dialog).getByLabelText('Account'), { target: { value: 'CAISSE' } });
+    fireEvent.click(within(dialog).getByText('Enregistrer'));
+
+    await waitFor(() => expect(financeService.setBankAccount).toHaveBeenCalledWith(['inv-1', 'inv-2'], 'CAISSE'));
   });
 
   it('hides the actions without billing.update', async () => {
@@ -181,7 +251,9 @@ describe('FinancePage cash date', () => {
     await renderRevenueTab();
 
     expect(await within(rowOf('INV-1')).findByText('Suresnes')).toBeInTheDocument();
-    expect(within(rowOf('INV-2')).getByText('To set')).toBeInTheDocument();
+    // INV-2 has neither a location nor an account
+    expect(within(rowOf('INV-2')).getAllByText('To set')).toHaveLength(2);
+    expect(within(rowOf('INV-1')).getByText('Compte pro')).toBeInTheDocument();
   });
 
   it('sets the location of the selected invoices in one call', async () => {
@@ -196,5 +268,26 @@ describe('FinancePage cash date', () => {
     fireEvent.click(within(dialog).getByText('Enregistrer'));
 
     await waitFor(() => expect(financeService.setLocation).toHaveBeenCalledWith(['inv-1', 'inv-2'], 'ISSY'));
+  });
+
+  it('saves the optional location of a new expense', async () => {
+    mockPermissions = ['finance.read', 'expenses.read', 'expenses.create'];
+    render(
+      <MemoryRouter initialEntries={['/finance?tab=expenses']}>
+        <FinancePage />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByText(/Add Expense/, { selector: 'button' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.change(dialog.querySelector('input[maxlength="500"]'), { target: { value: 'Loyer Issy' } });
+    fireEvent.change(dialog.querySelector('input[type="number"]'), { target: { value: '300' } });
+    await within(dialog).findByText('Issy Les Moulineaux');
+    fireEvent.change(within(dialog).getByLabelText('Location (Optional)'), { target: { value: 'ISSY' } });
+    fireEvent.click(within(dialog).getByText('Save', { selector: 'button' }));
+
+    await waitFor(() => expect(expenseService.createExpense).toHaveBeenCalledWith(
+      expect.objectContaining({ description: 'Loyer Issy', location_code: 'ISSY' })
+    ));
   });
 });

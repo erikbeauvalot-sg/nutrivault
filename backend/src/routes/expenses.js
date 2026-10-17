@@ -34,6 +34,8 @@ const createExpenseValidation = [
   body('vendor').optional({ nullable: true }).trim().isLength({ max: 200 }),
   body('receipt_url').optional({ nullable: true }).trim().isLength({ max: 500 }),
   body('payment_method').optional({ nullable: true }).isString().isLength({ max: 50 }).withMessage('Invalid payment method'),
+  body('bank_account_code').optional({ nullable: true }).isString().isLength({ min: 1, max: 50 }).withMessage('Invalid bank account'),
+  body('location_code').optional({ nullable: true }).isString().isLength({ min: 1, max: 50 }).withMessage('Invalid location'),
   body('notes').optional({ nullable: true }).trim(),
   body('is_recurring').optional().isBoolean(),
   body('recurring_period').optional({ nullable: true }).isIn(RECURRING_PERIODS).withMessage('Invalid recurring period'),

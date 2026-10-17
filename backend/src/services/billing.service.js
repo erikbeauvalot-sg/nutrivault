@@ -18,6 +18,7 @@ const emailService = require('./email.service');
 const { generateInvoicePDF } = require('./invoicePDF.service');
 const { Op } = db.Sequelize;
 const { applyPatientScope, getScopedPatientIds } = require('../helpers/scopeHelper');
+const { assertValidBankAccount, locationBankAccount, bankAccountAfterLocationChange } = require('../helpers/bankAccounts');
 
 /**
  * Get all invoices with filtering and pagination
@@ -301,6 +302,12 @@ async function createInvoice(invoiceData, user, requestMetadata = {}) {
       throw error;
     }
 
+    // Bank account: explicit choice, otherwise the account of the location
+    await assertValidBankAccount(invoiceData.bank_account_code);
+    const bankAccountCode = invoiceData.bank_account_code !== undefined
+      ? invoiceData.bank_account_code
+      : await locationBankAccount(locationCode);
+
     // Calculate amounts
     const amountTotal = parseFloat(invoiceData.amount_total) || 0;
     const amountDue = amountTotal; // Initially, due amount equals total
@@ -319,7 +326,8 @@ async function createInvoice(invoiceData, user, requestMetadata = {}) {
       amount_paid: 0,
       amount_due: amountDue,
       status: 'DRAFT',
-      location_code: locationCode
+      location_code: locationCode,
+      bank_account_code: bankAccountCode
     });
 
     // Audit log
@@ -383,8 +391,10 @@ async function updateInvoice(invoiceId, updateData, user, requestMetadata = {}) 
 
     // Update fields
     const allowedFields = [
-      'service_description', 'amount_total', 'due_date', 'status', 'notes', 'payment_method', 'location_code'
+      'service_description', 'amount_total', 'due_date', 'status', 'notes', 'payment_method', 'location_code',
+      'bank_account_code'
     ];
+    await assertValidBankAccount(updateData.bank_account_code);
 
     if (updateData.location_code !== undefined && !(await PracticeLocation.isValidCode(updateData.location_code))) {
       const error = new Error('Location not found');
@@ -406,9 +416,15 @@ async function updateInvoice(invoiceId, updateData, user, requestMetadata = {}) 
       updates.amount_due = Math.max(0, newTotal - currentPaid);
     }
 
-    // Track payment_method / location changes in update_log
+    // A new location brings its bank account, unless the account was chosen by hand
+    if (updates.location_code !== undefined && updates.bank_account_code === undefined
+      && (updates.location_code || null) !== (oldData.location_code || null)) {
+      updates.bank_account_code = await bankAccountAfterLocationChange(invoice, updates.location_code);
+    }
+
+    // Track payment_method / location / bank account changes in update_log
     const currentLog = invoice.update_log || [];
-    for (const field of ['payment_method', 'location_code']) {
+    for (const field of ['payment_method', 'location_code', 'bank_account_code']) {
       if (updates[field] !== undefined && (updates[field] || null) !== (oldData[field] || null)) {
         currentLog.push({
           field,

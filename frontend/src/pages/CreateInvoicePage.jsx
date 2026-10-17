@@ -16,6 +16,7 @@ import { getPatients } from '../services/patientService';
 import visitService from '../services/visitService';
 import { formatDate } from '../utils/dateUtils';
 import PracticeLocationSelect from '../components/PracticeLocationSelect';
+import BankAccountSelect from '../components/BankAccountSelect';
 
 const CreateInvoicePage = () => {
   const { t, i18n } = useTranslation();
@@ -46,7 +47,9 @@ const CreateInvoicePage = () => {
     amount_total: '',
     due_date: '',
     // undefined = default location (applied by the backend)
-    location_code: undefined
+    location_code: undefined,
+    // '' = account of the location (applied by the backend)
+    bank_account_code: ''
   });
 
   useEffect(() => {
@@ -136,7 +139,8 @@ const CreateInvoicePage = () => {
         amount_total: parseFloat(formData.amount_total),
         due_date: formData.due_date || null,
         visit_id: formData.visit_id || null,
-        ...(formData.location_code !== undefined && { location_code: formData.location_code || null })
+        ...(formData.location_code !== undefined && { location_code: formData.location_code || null }),
+        ...(formData.bank_account_code && { bank_account_code: formData.bank_account_code })
       };
 
       const result = await createInvoice(submitData);
@@ -324,6 +328,17 @@ const CreateInvoicePage = () => {
                       <PracticeLocationSelect
                         value={formData.location_code}
                         onChange={handleInputChange}
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group className="mb-3" controlId="invoice-bank-account">
+                      <Form.Label>{t('bankAccounts.field', 'Account')}</Form.Label>
+                      <BankAccountSelect
+                        value={formData.bank_account_code}
+                        onChange={handleInputChange}
+                        emptyLabel={t('bankAccounts.fromLocation', 'Account of the location (automatic)')}
                       />
                     </Form.Group>
                   </Col>

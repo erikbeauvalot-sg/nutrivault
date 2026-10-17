@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { body, query, validationResult } = require('express-validator');
+const { body, param, query, validationResult } = require('express-validator');
 const financeController = require('../controllers/finance.controller');
 const authenticate = require('../middleware/authenticate');
 const { requirePermission } = require('../middleware/rbac');
@@ -56,6 +56,28 @@ router.patch('/revenue/location', authenticate, requirePermission('billing.updat
   body('location_code').optional({ nullable: true }).isString().isLength({ min: 1, max: 50 })
     .withMessage('Invalid location')
 ], validate, financeController.setLocation);
+
+// PATCH /api/finance/revenue/bank-account — set the bank account of invoices (null clears it)
+router.patch('/revenue/bank-account', authenticate, requirePermission('billing.update'), [
+  ...billingIdsValidation,
+  body('bank_account_code').optional({ nullable: true }).isString().isLength({ min: 1, max: 50 })
+    .withMessage('Invalid bank account')
+], validate, financeController.setBankAccount);
+
+// PATCH /api/finance/revenue/:id — edit a revenue (amount, cash date, payment method, location, account, description)
+router.patch('/revenue/:id', authenticate, requirePermission('billing.update'), [
+  param('id').isUUID().withMessage('Invalid invoice id'),
+  body('amount').optional().isFloat({ min: 0.01 }).withMessage('Amount must be greater than 0'),
+  body('cash_date').optional({ nullable: true }).isISO8601({ strict: true }).withMessage('Invalid cash date'),
+  body('payment_method').optional({ nullable: true }).isString().isLength({ max: 50 }),
+  body('location_code').optional({ nullable: true }).isString().isLength({ min: 1, max: 50 }),
+  body('bank_account_code').optional({ nullable: true }).isString().isLength({ min: 1, max: 50 }),
+  body('service_description').optional().isString().trim().notEmpty().isLength({ max: 500 })
+], validate, financeController.updateRevenue);
+
+// GET /api/finance/treasury — flows and balance per bank account
+router.get('/treasury', authenticate, requirePermission('finance.read'), dateQueryValidation, validate,
+  financeController.getTreasury);
 
 // GET /api/finance/forecast
 router.get('/forecast', authenticate, requirePermission('finance.read'), [
