@@ -35,8 +35,21 @@ export const resetToDefaults = async () => {
   return response.data.data || response.data;
 };
 
+/**
+ * Drop the cached sidebar so it reloads with the latest configuration
+ */
+export const clearSidebarCache = () => {
+  try {
+    localStorage.removeItem('sidebarMenuConfigs');
+    localStorage.removeItem('sidebarCategories');
+    localStorage.removeItem('sidebarSections');
+  } catch { /* ignore */ }
+  window.dispatchEvent(new window.Event('sidebarConfigUpdated'));
+};
+
 export default {
   getAllConfigs,
+  clearSidebarCache,
   bulkUpdate,
   reorderItems,
   resetToDefaults

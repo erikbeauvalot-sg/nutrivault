@@ -15,6 +15,7 @@ import { createInvoice } from '../services/billingService';
 import { getPatients } from '../services/patientService';
 import visitService from '../services/visitService';
 import { formatDate } from '../utils/dateUtils';
+import PracticeLocationSelect from '../components/PracticeLocationSelect';
 
 const CreateInvoicePage = () => {
   const { t, i18n } = useTranslation();
@@ -43,7 +44,9 @@ const CreateInvoicePage = () => {
     visit_id: '',
     description: '',
     amount_total: '',
-    due_date: ''
+    due_date: '',
+    // undefined = default location (applied by the backend)
+    location_code: undefined
   });
 
   useEffect(() => {
@@ -132,7 +135,8 @@ const CreateInvoicePage = () => {
         service_description: formData.description.trim(),
         amount_total: parseFloat(formData.amount_total),
         due_date: formData.due_date || null,
-        visit_id: formData.visit_id || null
+        visit_id: formData.visit_id || null,
+        ...(formData.location_code !== undefined && { location_code: formData.location_code || null })
       };
 
       const result = await createInvoice(submitData);
@@ -309,6 +313,16 @@ const CreateInvoicePage = () => {
                         type="date"
                         name="due_date"
                         value={formData.due_date}
+                        onChange={handleInputChange}
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  <Col md={6}>
+                    <Form.Group className="mb-3" controlId="invoice-location">
+                      <Form.Label>{t('locations.field', 'Location')}</Form.Label>
+                      <PracticeLocationSelect
+                        value={formData.location_code}
                         onChange={handleInputChange}
                       />
                     </Form.Group>

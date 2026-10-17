@@ -6,6 +6,7 @@ const { generateTokenPair } = require('../auth/jwt');
 const auditService = require('./audit.service');
 const { sendEmail } = require('./email.service');
 const discordService = require('./discord.service');
+const { resolveHomePage } = require('../helpers/homePage');
 
 const MAX_LOGIN_ATTEMPTS = parseInt(process.env.MAX_LOGIN_ATTEMPTS) || 5;
 const LOCKOUT_DURATION_MINUTES = parseInt(process.env.LOCKOUT_DURATION_MINUTES) || 30;
@@ -172,7 +173,8 @@ class AuthService {
           email: user.email,
           role: user.role.name,
           permissions: user.role.permissions.map(p => p.code),
-          theme_id: user.theme_id || null
+          theme_id: user.theme_id || null,
+          home_page: await resolveHomePage(user)
         },
         ...tokens
       };
@@ -300,7 +302,8 @@ class AuthService {
         email: user.email,
         role: user.role.name,
         permissions: user.role.permissions.map(p => p.code),
-        theme_id: user.theme_id || null
+        theme_id: user.theme_id || null,
+        home_page: await resolveHomePage(user)
       },
       ...newTokens
     };

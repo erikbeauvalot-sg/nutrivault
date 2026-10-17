@@ -11,6 +11,8 @@ import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import ConfirmModal from '../components/ConfirmModal';
 import * as billingService from '../services/billingService';
+import * as financeService from '../services/financeService';
+import practiceLocationService from '../services/practiceLocationService';
 
 const InvoiceDetailPage = () => {
   const { t, i18n } = useTranslation();
@@ -19,6 +21,7 @@ const InvoiceDetailPage = () => {
   const navigate = useNavigate();
 
   const [invoice, setInvoice] = useState(null);
+  const [locationLabels, setLocationLabels] = useState({});
   const [payments, setPayments] = useState([]);
   const [emailHistory, setEmailHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +36,20 @@ const InvoiceDetailPage = () => {
   const [showPaymentStatusModal, setShowPaymentStatusModal] = useState(false);
   const [newPaymentStatus, setNewPaymentStatus] = useState('');
   const [changingPaymentStatus, setChangingPaymentStatus] = useState(false);
+  const [newCashDate, setNewCashDate] = useState('');
   const [showMarkPaidConfirm, setShowMarkPaidConfirm] = useState(false);
+
+  // Location labels (code -> label) for the invoice header and its history
+  useEffect(() => {
+    let active = true;
+    practiceLocationService.getAllPracticeLocations()
+      .then((res) => {
+        if (!active || !Array.isArray(res?.data)) return;
+        setLocationLabels(Object.fromEntries(res.data.map((l) => [l.code, l.label])));
+      })
+      .catch(() => { /* codes are shown as-is */ });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (id && hasPermission('billing.read')) {
@@ -200,11 +216,19 @@ const InvoiceDetailPage = () => {
     }
   };
 
+  // Cash date (date d'encaissement) is stored on the invoice; it defaults to the invoice date
+  const invoiceDateISO = invoice?.invoice_date ? invoice.invoice_date.slice(0, 10) : '';
+  const currentCashDate = invoice?.cash_date || invoiceDateISO;
+
   const handleOpenPaymentStatusModal = (payment) => {
     setSelectedPayment(payment);
     setNewPaymentStatus(payment.status || 'PAID');
+    setNewCashDate(currentCashDate);
     setShowPaymentStatusModal(true);
   };
+
+  const paymentStatusChanged = !!selectedPayment && newPaymentStatus !== selectedPayment.status;
+  const cashDateChanged = !!newCashDate && newCashDate !== currentCashDate;
 
   const handleChangePaymentStatus = async () => {
     if (!selectedPayment || !newPaymentStatus) {
@@ -215,8 +239,14 @@ const InvoiceDetailPage = () => {
     try {
       setChangingPaymentStatus(true);
       setError(null);
-      await billingService.changePaymentStatus(selectedPayment.id, newPaymentStatus);
-      setSuccessMessage(t('billing.paymentStatusChanged', `Payment status changed to ${newPaymentStatus}`));
+      if (paymentStatusChanged) {
+        await billingService.changePaymentStatus(selectedPayment.id, newPaymentStatus);
+      }
+      if (cashDateChanged) {
+        // Back to the invoice date → store null so it keeps following the invoice date
+        await financeService.setCashDate([invoice.id], newCashDate === invoiceDateISO ? null : newCashDate);
+      }
+      setSuccessMessage(t('billing.paymentUpdated', 'Payment updated'));
       setShowPaymentStatusModal(false);
       setSelectedPayment(null);
       // Refresh invoice data
@@ -408,6 +438,13 @@ const InvoiceDetailPage = () => {
 
                       <dt className="col-sm-5">{t('billing.dueDate')}:</dt>
                       <dd className="col-sm-7">{formatDate(invoice.due_date)}</dd>
+
+                      <dt className="col-sm-5">{t('locations.field', 'Location')}:</dt>
+                      <dd className="col-sm-7">
+                        {invoice.location_code
+                          ? (locationLabels[invoice.location_code] || invoice.location_code)
+                          : t('common.none', '—')}
+                      </dd>
                     </dl>
                   </Col>
                   <Col md={6}>
@@ -567,7 +604,7 @@ const InvoiceDetailPage = () => {
                                 variant="outline-secondary"
                                 onClick={() => handleOpenPaymentStatusModal(payment)}
                               >
-                                🔄 {t('billing.changeStatus')}
+                                <span aria-hidden="true">{'✏️'}</span> {t('billing.changePayment', 'Change')}
                               </Button>
                             </td>
                           )}
@@ -611,6 +648,15 @@ const InvoiceDetailPage = () => {
                         const key = val === 'credit_card' ? 'creditCard' : val === 'bank_transfer' ? 'bankTransfer' : val;
                         return t(`billing.paymentMethods.${key}`, val);
                       };
+                      const fieldLabel = {
+                        cash_date: t('billing.cashDate', "Date d'encaissement"),
+                        location_code: t('locations.field', 'Location')
+                      }[entry.field] || t('billing.paymentMethod', 'Mode de paiement');
+                      const formatValue = (val) => {
+                        if (entry.field === 'cash_date') return formatDate(val);
+                        if (entry.field === 'location_code') return val ? (locationLabels[val] || val) : t('common.none', '—');
+                        return getPaymentMethodLabel(val);
+                      };
                       return (
                         <tr key={`update-${index}`}>
                           <td>{formatDateTime(entry.changed_at)}</td>
@@ -619,11 +665,11 @@ const InvoiceDetailPage = () => {
                           </td>
                           <td>
                             <div className="small">
-                              {t('billing.paymentMethod', 'Mode de paiement')} : <strong>{getPaymentMethodLabel(entry.new_value)}</strong>
+                              {fieldLabel} : <strong>{formatValue(entry.new_value)}</strong>
                             </div>
                             {entry.old_value !== entry.new_value && (
                               <div className="small text-muted">
-                                {t('billing.previousValue', 'Précédemment')} : {getPaymentMethodLabel(entry.old_value)}
+                                {t('billing.previousValue', 'Précédemment')} : {formatValue(entry.old_value)}
                               </div>
                             )}
                             {entry.changed_by && (
@@ -647,7 +693,7 @@ const InvoiceDetailPage = () => {
         {/* Change Payment Status Modal */}
         <Modal show={showPaymentStatusModal} onHide={() => setShowPaymentStatusModal(false)} centered scrollable>
           <Modal.Header closeButton>
-            <Modal.Title>🔄 {t('billing.changePaymentStatus', 'Change Payment Status')}</Modal.Title>
+            <Modal.Title><span aria-hidden="true">{'✏️'}</span> {t('billing.editPayment', 'Edit Payment')}</Modal.Title>
           </Modal.Header>
           <Modal.Body>
             {selectedPayment && (
@@ -697,6 +743,32 @@ const InvoiceDetailPage = () => {
                     {t('billing.selectNewPaymentStatus', 'Select the new status for this payment')}
                   </Form.Text>
                 </Form.Group>
+
+                <Form.Group className="mt-3">
+                  <Form.Label>{t('billing.cashDate', "Date d'encaissement")}</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={newCashDate}
+                    onChange={(e) => setNewCashDate(e.target.value)}
+                    disabled={changingPaymentStatus}
+                  />
+                  <Form.Text className="text-muted d-flex justify-content-between flex-wrap gap-2">
+                    <span>
+                      {t('billing.cashDateDefault', 'Par défaut : date de facture ({{date}})', { date: formatDate(invoice.invoice_date) })}
+                    </span>
+                    {newCashDate !== invoiceDateISO && (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="p-0"
+                        onClick={() => setNewCashDate(invoiceDateISO)}
+                        disabled={changingPaymentStatus}
+                      >
+                        {t('finance.revenue.resetCashDate', 'Revenir à la date de facture')}
+                      </Button>
+                    )}
+                  </Form.Text>
+                </Form.Group>
               </>
             )}
           </Modal.Body>
@@ -711,7 +783,7 @@ const InvoiceDetailPage = () => {
             <Button
               variant="primary"
               onClick={handleChangePaymentStatus}
-              disabled={changingPaymentStatus}
+              disabled={changingPaymentStatus || !newCashDate || (!paymentStatusChanged && !cashDateChanged)}
             >
               {changingPaymentStatus ? (
                 <>
@@ -719,9 +791,7 @@ const InvoiceDetailPage = () => {
                   {t('common.updating', 'Updating...')}
                 </>
               ) : (
-                <>
-                  🔄 {t('billing.changeStatus', 'Change Status')}
-                </>
+                t('common.save', 'Save')
               )}
             </Button>
           </Modal.Footer>

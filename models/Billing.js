@@ -59,8 +59,18 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: 'Cash, Credit Card, Insurance, etc.'
     },
+    // Practice location (PracticeLocation.code); exported as "Structure"
+    location_code: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
     payment_date: {
       type: DataTypes.DATE,
+      allowNull: true
+    },
+    // Date d'encaissement (bank deposit). NULL means "same as invoice_date".
+    cash_date: {
+      type: DataTypes.DATEONLY,
       allowNull: true
     },
     notes: {

@@ -84,7 +84,7 @@ const RolesManagementPage = () => {
       setShowRoleModal(true);
     } catch (err) {
       console.error('Error fetching role:', err);
-      alert(err.response?.data?.error || t('roles.failedToLoad', 'Failed to load role'));
+      setError(err.response?.data?.error || t('roles.failedToLoad', 'Failed to load role'));
     }
   };
 
@@ -113,14 +113,27 @@ const RolesManagementPage = () => {
     fetchRoles();
   };
 
-  const getRoleBadge = (roleName) => {
+  const getRoleBadge = (role) => {
     const variants = {
       ADMIN: 'danger',
       DIETITIAN: 'primary',
       ASSISTANT: 'info',
       VIEWER: 'secondary'
     };
-    return <Badge bg={variants[roleName] || 'secondary'}>{roleName}</Badge>;
+    return (
+      <>
+        <Badge bg={variants[role.name] || 'success'}>{role.name}</Badge>
+        {role.is_system ? (
+          <Badge bg="light" text="dark" className="ms-1 border">{t('roles.systemBadge', 'System')}</Badge>
+        ) : (
+          <Badge bg="light" text="dark" className="ms-1 border">
+            {role.data_scope === 'all'
+              ? t('roles.dataScopeAllShort', 'Whole practice')
+              : t('roles.dataScopeOwnShort', 'Own data')}
+          </Badge>
+        )}
+      </>
+    );
   };
 
   // Filter roles by search term
@@ -208,7 +221,7 @@ const RolesManagementPage = () => {
                       <div className="d-flex justify-content-between align-items-start mb-2">
                         <div>
                           <h6 className="mb-1">
-                            {getRoleBadge(role.name)}
+                            {getRoleBadge(role)}
                           </h6>
                           <div className="text-muted small">{role.description || t('roles.noDescription', 'No description')}</div>
                         </div>
@@ -229,11 +242,13 @@ const RolesManagementPage = () => {
                           onClick={() => handleEditClick(role.id)}
                           title={t('common.edit', 'Edit')}
                         />
-                        <ActionButton
-                          action="delete"
-                          onClick={() => handleDelete(role.id)}
-                          title={t('common.delete', 'Delete')}
-                        />
+                        {!role.is_system && (
+                          <ActionButton
+                            action="delete"
+                            onClick={() => handleDelete(role.id)}
+                            title={t('common.delete', 'Delete')}
+                          />
+                        )}
                       </div>
                     </Card.Body>
                   </Card>
@@ -260,7 +275,7 @@ const RolesManagementPage = () => {
                       style={{ cursor: 'pointer' }}
                     >
                       <td>
-                        {getRoleBadge(role.name)}
+                        {getRoleBadge(role)}
                       </td>
                       <td>
                         <span className="text-muted">{role.description || t('roles.noDescription', 'No description')}</span>
@@ -278,11 +293,13 @@ const RolesManagementPage = () => {
                             onClick={() => handleEditClick(role.id)}
                             title={t('common.edit', 'Edit')}
                           />
-                          <ActionButton
-                            action="delete"
-                            onClick={() => handleDelete(role.id)}
-                            title={t('common.delete', 'Delete')}
-                          />
+                          {!role.is_system && (
+                            <ActionButton
+                              action="delete"
+                              onClick={() => handleDelete(role.id)}
+                              title={t('common.delete', 'Delete')}
+                            />
+                          )}
                         </div>
                       </td>
                     </tr>

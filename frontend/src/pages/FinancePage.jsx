@@ -14,6 +14,8 @@ import PaymentMethodSelect from '../components/PaymentMethodSelect';
 import ExpenseCategorySelect from '../components/ExpenseCategorySelect';
 import expenseCategoryService from '../services/expenseCategoryService';
 import * as financeService from '../services/financeService';
+import practiceLocationService from '../services/practiceLocationService';
+import PracticeLocationSelect from '../components/PracticeLocationSelect';
 import * as expenseService from '../services/expenseService';
 import * as accountingEntryService from '../services/accountingEntryService';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
@@ -120,6 +122,11 @@ const FinancePage = () => {
   });
 
   // Forecast (Prévisionnel)
+  const [selectedRevenueIds, setSelectedRevenueIds] = useState([]);
+  const [cashDateModal, setCashDateModal] = useState(null); // { ids, date, invoiceDate }
+  const [cashDateBusy, setCashDateBusy] = useState(false);
+  const [locationModal, setLocationModal] = useState(null); // { ids, code }
+  const [locationLabels, setLocationLabels] = useState({});
   const [forecast, setForecast] = useState(null);
 
   // Aging report
@@ -411,6 +418,100 @@ const FinancePage = () => {
     }
   };
 
+  // --- Revenue cash date (date d'encaissement) ---
+  const canEditCashDate = hasPermission('billing.update');
+  const revenueInvoices = revenue?.invoices || [];
+  const allRevenuePageSelected = revenueInvoices.length > 0 && revenueInvoices.every(inv => selectedRevenueIds.includes(inv.id));
+
+  const toggleRevenueSelection = (id) => {
+    setSelectedRevenueIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const toggleRevenuePageSelection = () => {
+    const pageIds = revenueInvoices.map(inv => inv.id);
+    setSelectedRevenueIds(prev => allRevenuePageSelected
+      ? prev.filter(id => !pageIds.includes(id))
+      : [...new Set([...prev, ...pageIds])]);
+  };
+
+  // Cash dates feed revenue, cash flow and dashboard figures
+  const reloadAfterCashDateChange = () => Promise.all([loadRevenue(), loadCashFlow(), loadDashboard()]);
+
+  const handleShiftCashDate = async (ids) => {
+    setCashDateBusy(true);
+    setError(null);
+    try {
+      await financeService.shiftCashDateToNextMonth(ids);
+      setSuccess(t('finance.revenue.cashDateShifted', '{{count}} recette(s) décalée(s) au mois suivant', { count: ids.length }));
+      setSelectedRevenueIds(prev => prev.filter(id => !ids.includes(id)));
+      await reloadAfterCashDateChange();
+    } catch (err) {
+      setError(err.response?.data?.error || t('finance.revenue.cashDateError', "Impossible de modifier la date d'encaissement"));
+    } finally {
+      setCashDateBusy(false);
+    }
+  };
+
+  const openCashDateModal = (ids) => {
+    const single = ids.length === 1 ? revenueInvoices.find(inv => inv.id === ids[0]) : null;
+    setCashDateModal({
+      ids,
+      date: single?.cash_date || '',
+      invoiceDate: single?.invoice_date ? single.invoice_date.slice(0, 10) : null
+    });
+  };
+
+  const handleSaveCashDate = async (resetToInvoiceDate = false) => {
+    if (!cashDateModal) return;
+    setCashDateBusy(true);
+    setError(null);
+    try {
+      await financeService.setCashDate(cashDateModal.ids, resetToInvoiceDate ? null : cashDateModal.date);
+      setSuccess(t('finance.revenue.cashDateSaved', "Date d'encaissement mise à jour"));
+      setSelectedRevenueIds(prev => prev.filter(id => !cashDateModal.ids.includes(id)));
+      setCashDateModal(null);
+      await reloadAfterCashDateChange();
+    } catch (err) {
+      setError(err.response?.data?.error || t('finance.revenue.cashDateError', "Impossible de modifier la date d'encaissement"));
+    } finally {
+      setCashDateBusy(false);
+    }
+  };
+
+  // --- Practice location (lieu) ---
+  useEffect(() => {
+    let active = true;
+    practiceLocationService.getAllPracticeLocations()
+      .then((res) => {
+        if (!active || !Array.isArray(res?.data)) return;
+        setLocationLabels(Object.fromEntries(res.data.map((l) => [l.code, l.label])));
+      })
+      .catch(() => { /* codes are shown as-is */ });
+    return () => { active = false; };
+  }, []);
+
+  const openLocationModal = (ids) => {
+    const single = ids.length === 1 ? revenueInvoices.find(inv => inv.id === ids[0]) : null;
+    setLocationModal({ ids, code: single?.location_code || '' });
+  };
+
+  const handleSaveLocation = async () => {
+    if (!locationModal) return;
+    setCashDateBusy(true);
+    setError(null);
+    try {
+      await financeService.setLocation(locationModal.ids, locationModal.code || null);
+      setSuccess(t('finance.revenue.locationSaved', 'Location updated'));
+      setSelectedRevenueIds(prev => prev.filter(id => !locationModal.ids.includes(id)));
+      setLocationModal(null);
+      await loadRevenue();
+    } catch (err) {
+      setError(err.response?.data?.error || t('finance.revenue.locationError', 'Could not change the location'));
+    } finally {
+      setCashDateBusy(false);
+    }
+  };
+
   // --- Aging / Reminders ---
   const allAgingInvoices = agingReport?.brackets?.flatMap(b => b.invoices) || [];
 
@@ -594,14 +695,14 @@ const FinancePage = () => {
                   type="date"
                   style={{ maxWidth: 160 }}
                   value={revenueFilters.start_date}
-                  onChange={e => setRevenueFilters(prev => ({ ...prev, start_date: e.target.value, page: 1 }))}
+                  onChange={e => { setSelectedRevenueIds([]); setRevenueFilters(prev => ({ ...prev, start_date: e.target.value, page: 1 })); }}
                 />
                 <span className="align-self-center text-muted">→</span>
                 <Form.Control
                   type="date"
                   style={{ maxWidth: 160 }}
                   value={revenueFilters.end_date}
-                  onChange={e => setRevenueFilters(prev => ({ ...prev, end_date: e.target.value, page: 1 }))}
+                  onChange={e => { setSelectedRevenueIds([]); setRevenueFilters(prev => ({ ...prev, end_date: e.target.value, page: 1 })); }}
                 />
                 {(revenueFilters.start_date || revenueFilters.end_date) && (
                   <Button variant="outline-secondary" size="sm" onClick={() => setRevenueFilters(prev => ({ ...prev, start_date: '', end_date: '', page: 1 }))}>
@@ -610,32 +711,128 @@ const FinancePage = () => {
                 )}
               </div>
 
+              {/* Bulk cash date actions */}
+              {canEditCashDate && selectedRevenueIds.length > 0 && (
+                <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 px-3 py-2 rounded" style={{ background: 'rgba(212, 163, 115, 0.15)' }}>
+                  <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700 }}>
+                    {t('finance.revenue.selectedCount', '{{count}} recette(s) sélectionnée(s)', { count: selectedRevenueIds.length })}
+                  </span>
+                  <div className="d-flex gap-2 flex-wrap">
+                    <Button size="sm" variant="primary" disabled={cashDateBusy} onClick={() => handleShiftCashDate(selectedRevenueIds)}>
+                      {cashDateBusy ? <Spinner size="sm" className="me-1" /> : null}
+                      {t('finance.revenue.shiftNextMonth', 'Décaler au mois prochain')}
+                    </Button>
+                    <Button size="sm" variant="outline-primary" disabled={cashDateBusy} onClick={() => openCashDateModal(selectedRevenueIds)}>
+                      {t('finance.revenue.editCashDate', "Modifier la date d'encaissement")}
+                    </Button>
+                    <Button size="sm" variant="outline-primary" disabled={cashDateBusy} onClick={() => openLocationModal(selectedRevenueIds)}>
+                      {t('finance.revenue.changeLocation', 'Change location')}
+                    </Button>
+                    <Button size="sm" variant="outline-secondary" disabled={cashDateBusy} onClick={() => setSelectedRevenueIds([])}>
+                      {t('finance.revenue.clearSelection', 'Désélectionner')}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Table */}
               <Card className="border-0 shadow-sm">
                 <Table hover responsive size="sm" className="mb-0">
                   <thead>
                     <tr style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700 }}>
+                      {canEditCashDate && (
+                        <th>
+                          <Form.Check
+                            type="checkbox"
+                            checked={allRevenuePageSelected}
+                            onChange={toggleRevenuePageSelection}
+                            aria-label={t('finance.revenue.selectAllPage', 'Sélectionner toutes les recettes de la page')}
+                          />
+                        </th>
+                      )}
+                      <th>{t('finance.revenue.cashDate', 'Encaissement')}</th>
                       <th>{t('finance.revenue.paymentDate', 'Date règlement')}</th>
                       <th>{t('finance.revenue.invoiceDate', 'Date facture')}</th>
                       <th>{t('finance.agingReport.patient', 'Patient')}</th>
                       <th>{t('finance.agingReport.invoiceNumber', 'Facture')}</th>
                       <th>{t('finance.revenue.paymentMethod', 'Mode')}</th>
+                      <th>{t('locations.field', 'Location')}</th>
                       <th className="text-end">{t('finance.revenue.amountTotal', 'Montant TTC')}</th>
                       <th className="text-end" style={{ color: '#2D6A4F' }}>{t('finance.revenue.amountPaid', 'Encaissé')}</th>
+                      {canEditCashDate && <th className="text-end">{t('common.actions', 'Actions')}</th>}
                     </tr>
                   </thead>
                   <tbody>
                     {!revenue || revenue.invoices.length === 0 ? (
-                      <tr><td colSpan={7} className="text-center text-muted py-4">{t('finance.revenue.noRevenue', 'Aucune recette trouvée')}</td></tr>
+                      <tr><td colSpan={canEditCashDate ? 11 : 9} className="text-center text-muted py-4">{t('finance.revenue.noRevenue', 'Aucune recette trouvée')}</td></tr>
                     ) : revenue.invoices.map(inv => (
-                      <tr key={inv.id}>
+                      <tr key={inv.id} className={selectedRevenueIds.includes(inv.id) ? 'table-active' : undefined}>
+                        {canEditCashDate && (
+                          <td>
+                            <Form.Check
+                              type="checkbox"
+                              checked={selectedRevenueIds.includes(inv.id)}
+                              onChange={() => toggleRevenueSelection(inv.id)}
+                              aria-label={t('finance.revenue.selectInvoice', 'Sélectionner {{number}}', { number: inv.invoice_number })}
+                            />
+                          </td>
+                        )}
+                        <td style={{ fontWeight: 700, fontFamily: 'Space Grotesk, sans-serif' }}>
+                          {inv.cash_date ? new Date(`${inv.cash_date}T00:00:00`).toLocaleDateString('fr-FR') : '—'}
+                          {inv.cash_date_overridden && (
+                            <Badge bg="warning" text="dark" className="ms-1" title={t('finance.revenue.cashDateOverridden', 'Date modifiée (différente de la date de facture)')}>
+                              {t('finance.revenue.cashDateShiftedBadge', 'décalé')}
+                            </Badge>
+                          )}
+                        </td>
                         <td>{inv.payment_date ? new Date(inv.payment_date).toLocaleDateString('fr-FR') : '—'}</td>
                         <td className="text-muted">{inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString('fr-FR') : '—'}</td>
                         <td>{inv.patient ? `${inv.patient.first_name} ${inv.patient.last_name}` : '—'}</td>
                         <td><code>{inv.invoice_number}</code></td>
                         <td className="text-muted">{inv.payment_method ? t(`billing.paymentMethods.${inv.payment_method}`, inv.payment_method) : '—'}</td>
+                        <td>
+                          {canEditCashDate ? (
+                            <Button
+                              size="sm"
+                              variant="link"
+                              className="p-0 text-decoration-none"
+                              disabled={cashDateBusy}
+                              onClick={() => openLocationModal([inv.id])}
+                              title={t('finance.revenue.changeLocation', 'Change location')}
+                            >
+                              {inv.location_code ? (locationLabels[inv.location_code] || inv.location_code) : t('finance.revenue.noLocation', 'To set')}
+                            </Button>
+                          ) : (
+                            inv.location_code ? (locationLabels[inv.location_code] || inv.location_code) : '—'
+                          )}
+                        </td>
                         <td className="text-end text-muted">{formatCurrency(inv.amount_total)}</td>
                         <td className="text-end" style={{ fontWeight: 700, fontFamily: 'Space Grotesk, sans-serif', color: '#2D6A4F' }}>{formatCurrency(inv.amount_paid)}</td>
+                        {canEditCashDate && (
+                          <td className="text-end text-nowrap">
+                            <Button
+                              size="sm"
+                              variant="outline-primary"
+                              className="me-1"
+                              disabled={cashDateBusy}
+                              onClick={() => handleShiftCashDate([inv.id])}
+                              title={t('finance.revenue.shiftNextMonth', 'Décaler au mois prochain')}
+                              aria-label={t('finance.revenue.shiftNextMonth', 'Décaler au mois prochain')}
+                            >
+                              {t('finance.revenue.shiftNextMonthShort', '+1 mois')}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline-secondary"
+                              disabled={cashDateBusy}
+                              onClick={() => openCashDateModal([inv.id])}
+                              title={t('finance.revenue.editCashDate', "Modifier la date d'encaissement")}
+                              aria-label={t('finance.revenue.editCashDate', "Modifier la date d'encaissement")}
+                            >
+                              <span aria-hidden="true">{'✏️'}</span>
+                            </Button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -1164,6 +1361,83 @@ const FinancePage = () => {
         </Tab.Container>
 
         {/* ========== Expense Form Modal ========== */}
+        {/* Cash date (date d'encaissement) modal */}
+        <Modal show={!!cashDateModal} onHide={() => !cashDateBusy && setCashDateModal(null)} centered>
+          <Modal.Header closeButton>
+            <Modal.Title style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700 }}>
+              {t('finance.revenue.editCashDate', "Modifier la date d'encaissement")}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {cashDateModal && cashDateModal.ids.length > 1 && (
+              <p className="text-muted small">
+                {t('finance.revenue.cashDateMultiple', 'La date sera appliquée aux {{count}} recettes sélectionnées.', { count: cashDateModal.ids.length })}
+              </p>
+            )}
+            <Form.Group>
+              <Form.Label>{t('finance.revenue.cashDate', 'Encaissement')}</Form.Label>
+              <Form.Control
+                type="date"
+                value={cashDateModal?.date || ''}
+                onChange={e => setCashDateModal(prev => ({ ...prev, date: e.target.value }))}
+                disabled={cashDateBusy}
+              />
+              {cashDateModal?.invoiceDate && (
+                <Form.Text className="text-muted">
+                  {t('finance.revenue.invoiceDateHint', 'Date de facture : {{date}}', { date: new Date(`${cashDateModal.invoiceDate}T00:00:00`).toLocaleDateString('fr-FR') })}
+                </Form.Text>
+              )}
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer className="justify-content-between">
+            <Button variant="outline-secondary" disabled={cashDateBusy} onClick={() => handleSaveCashDate(true)}>
+              {t('finance.revenue.resetCashDate', 'Revenir à la date de facture')}
+            </Button>
+            <div className="d-flex gap-2">
+              <Button variant="secondary" disabled={cashDateBusy} onClick={() => setCashDateModal(null)}>
+                {t('common.cancel', 'Annuler')}
+              </Button>
+              <Button variant="primary" disabled={cashDateBusy || !cashDateModal?.date} onClick={() => handleSaveCashDate(false)}>
+                {cashDateBusy ? <Spinner size="sm" className="me-1" /> : null}
+                {t('common.save', 'Enregistrer')}
+              </Button>
+            </div>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Practice location (lieu) modal */}
+        <Modal show={!!locationModal} onHide={() => !cashDateBusy && setLocationModal(null)} centered>
+          <Modal.Header closeButton>
+            <Modal.Title style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700 }}>
+              {t('finance.revenue.changeLocation', 'Change location')}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {locationModal && locationModal.ids.length > 1 && (
+              <p className="text-muted small">
+                {t('finance.revenue.locationMultiple', 'The location will be applied to the {{count}} selected receipts.', { count: locationModal.ids.length })}
+              </p>
+            )}
+            <Form.Group controlId="revenue-location">
+              <Form.Label>{t('locations.field', 'Location')}</Form.Label>
+              <PracticeLocationSelect
+                value={locationModal?.code ?? ''}
+                onChange={e => setLocationModal(prev => ({ ...prev, code: e.target.value }))}
+                disabled={cashDateBusy}
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" disabled={cashDateBusy} onClick={() => setLocationModal(null)}>
+              {t('common.cancel', 'Annuler')}
+            </Button>
+            <Button variant="primary" disabled={cashDateBusy} onClick={handleSaveLocation}>
+              {cashDateBusy ? <Spinner size="sm" className="me-1" /> : null}
+              {t('common.save', 'Enregistrer')}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
         <Modal show={showExpenseForm} onHide={() => setShowExpenseForm(false)} size="lg">
           <Modal.Header closeButton>
             <Modal.Title style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700 }}>

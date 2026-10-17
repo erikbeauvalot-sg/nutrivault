@@ -10,6 +10,9 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useTranslation } from 'react-i18next';
 import userService from '../services/userService';
+import sidebarMenuConfigService from '../services/sidebarMenuConfigService';
+import SIDEBAR_ITEMS from '../config/sidebarItemRegistry';
+import { useAuth } from '../contexts/AuthContext';
 import useEmailCheck from '../hooks/useEmailCheck';
 
 // Password strength validation
@@ -48,7 +51,8 @@ const editUserSchema = (t) => yup.object().shape({
   last_name: yup.string().required(t('forms.required')).max(100, t('forms.maxLength', { count: 100 })),
   phone: yup.string().max(20),
   is_active: yup.boolean(),
-  language_preference: yup.string().oneOf(['fr', 'en'], t('users.languageInvalid'))
+  language_preference: yup.string().oneOf(['fr', 'en'], t('users.languageInvalid')),
+  home_page: yup.string()
 });
 
 const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
@@ -60,13 +64,18 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
   const isCreateMode = mode === 'create';
   const isEditMode = mode === 'edit';
   const isViewMode = mode === 'view';
+  const { user: currentUser } = useAuth();
+  const currentRole = typeof currentUser?.role === 'string' ? currentUser.role : currentUser?.role?.name;
+  const canSetHomePage = currentRole === 'ADMIN' && (isEditMode || isViewMode);
+  const [menuConfigs, setMenuConfigs] = useState([]);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
-    watch
+    watch,
+    setValue
   } = useForm({
     resolver: yupResolver(isCreateMode ? createUserSchema(t) : editUserSchema(t))
   });
@@ -92,7 +101,8 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
           last_name: user.last_name,
           phone: user.phone || '',
           is_active: user.is_active,
-          language_preference: user.language_preference || 'fr'
+          language_preference: user.language_preference || 'fr',
+          home_page: user.home_page || ''
         });
       } else {
         reset({
@@ -110,6 +120,23 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
       }
     }
   }, [show, user, reset, isEditMode, isViewMode]);
+
+  // Menu entries available as home page (admin only)
+  useEffect(() => {
+    if (!show || !canSetHomePage) return;
+    sidebarMenuConfigService.getAllConfigs()
+      .then(configs => setMenuConfigs((Array.isArray(configs) ? configs : [])
+        .filter(c => SIDEBAR_ITEMS[c.item_key])
+        .sort((a, b) => (a.section === b.section ? a.display_order - b.display_order : a.section.localeCompare(b.section)))))
+      .catch(err => console.error('Error fetching menu entries:', err));
+  }, [show, canSetHomePage]);
+
+  // Options arrive after the form reset: re-apply the saved value once they exist
+  useEffect(() => {
+    if (menuConfigs.length > 0 && user) {
+      setValue('home_page', user.home_page || '');
+    }
+  }, [menuConfigs, user, setValue]);
 
   useEffect(() => {
     if (isCreateMode && password) {
@@ -145,7 +172,9 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
         const response = await userService.createUser(userData);
         onSave(response.data);
       } else {
-        const response = await userService.updateUser(user.id, data);
+        const { home_page: homePage, ...rest } = data;
+        const payload = canSetHomePage ? { ...rest, home_page: homePage || null } : rest;
+        const response = await userService.updateUser(user.id, payload);
         onSave(response.data);
       }
 
@@ -409,6 +438,30 @@ const UserModal = ({ show, onHide, mode, user, roles, onSave }) => {
                   {!isViewMode && (
                     <Form.Text className="text-muted">
                       Inactive users cannot log in
+                    </Form.Text>
+                  )}
+                </Form.Group>
+              </Col>
+            )}
+
+            {canSetHomePage && (
+              <Col md={6}>
+                <Form.Group className="mb-3" controlId="user-home-page">
+                  <Form.Label>{t('users.homePage', 'Home page after login')}</Form.Label>
+                  <Form.Select {...register('home_page')} disabled={isViewMode}>
+                    <option value="">{t('users.homePageFromRole', 'Same as the role')}</option>
+                    {menuConfigs.map(config => {
+                      const reg = SIDEBAR_ITEMS[config.item_key];
+                      return (
+                        <option key={config.item_key} value={config.item_key}>
+                          {`${reg.icon} ${t(reg.labelKey, config.item_key)}`}
+                        </option>
+                      );
+                    })}
+                  </Form.Select>
+                  {!isViewMode && (
+                    <Form.Text className="text-muted">
+                      {t('users.homePageHint', 'Ignored if the page is not in the menu of this user\'s role.')}
                     </Form.Text>
                   )}
                 </Form.Group>

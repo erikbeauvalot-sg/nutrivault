@@ -67,6 +67,48 @@ exports.getRevenue = async (req, res, next) => {
   }
 };
 
+/**
+ * PATCH /api/finance/revenue/cash-date - Set (or reset with null) the cash date of invoices
+ */
+exports.setCashDate = async (req, res, next) => {
+  try {
+    const { billing_ids, cash_date } = req.body;
+    const data = await financeService.setCashDate(req.user, billing_ids, cash_date || null, getRequestMetadata(req));
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/finance/revenue/cash-date/next-month - Move cash dates to the 2nd of the next month
+ */
+exports.shiftCashDateToNextMonth = async (req, res, next) => {
+  try {
+    const data = await financeService.shiftCashDateToNextMonth(req.user, req.body.billing_ids, getRequestMetadata(req));
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PATCH /api/finance/revenue/location - Set the practice location of invoices
+ */
+exports.setLocation = async (req, res, next) => {
+  try {
+    const data = await financeService.setLocation(
+      req.user,
+      req.body.billing_ids,
+      req.body.location_code ?? null,
+      getRequestMetadata(req)
+    );
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.getForecast = async (req, res, next) => {
   try {
     const filters = {

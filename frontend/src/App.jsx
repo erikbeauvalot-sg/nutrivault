@@ -16,6 +16,7 @@ import usePageTracking from './hooks/usePageTracking';
 import useBiometricAuth from './hooks/useBiometricAuth';
 import BiometricLockScreen from './components/BiometricLockScreen';
 import { isNative } from './utils/platform';
+import { getHomePath } from './config/sidebarItemRegistry';
 import * as biometricService from './services/biometricService';
 import AppSplashScreen from './components/AppSplashScreen';
 
@@ -176,7 +177,7 @@ function App() {
           path="/login"
           element={
             isAuthenticated
-              ? <Navigate to={user?.role === 'PATIENT' ? '/portal' : '/dashboard'} replace />
+              ? <Navigate to={getHomePath(user)} replace />
               : <LoginPage />
           }
         />
@@ -734,7 +735,7 @@ function App() {
       {/* Default Route */}
       <Route
         path="/"
-        element={<Navigate to={isAuthenticated ? (user?.role === 'PATIENT' ? '/portal' : '/dashboard') : '/login'} replace />}
+        element={<Navigate to={isAuthenticated ? getHomePath(user) : '/login'} replace />}
       />
 
       {/* Catch-all Route */}

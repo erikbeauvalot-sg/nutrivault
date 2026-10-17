@@ -10,6 +10,24 @@ const { body, param, validationResult } = require('express-validator');
 const roleController = require('../controllers/roleController');
 const authenticate = require('../middleware/authenticate');
 const { requireRole } = require('../middleware/rbac');
+const db = require('../../../models');
+
+// Free-form role name, normalized (uppercase, no accents, underscores) before validation
+const roleNameValidation = (field) => field
+  .customSanitizer(value => db.Role.normalizeName(value))
+  .matches(/^[A-Z][A-Z0-9_]{1,49}$/)
+  .withMessage('Role name must be 2-50 characters: letters, digits and underscores, starting with a letter');
+
+const homePageValidation = () => body('home_page')
+  .optional({ nullable: true })
+  .isString()
+  .isLength({ min: 1, max: 100 })
+  .withMessage('home_page must be a menu entry key');
+
+const dataScopeValidation = () => body('data_scope')
+  .optional()
+  .isIn(db.Role.DATA_SCOPES)
+  .withMessage(`data_scope must be one of: ${db.Role.DATA_SCOPES.join(', ')}`);
 
 /**
  * Validation middleware - check for validation errors
@@ -63,12 +81,15 @@ router.post(
   authenticate,
   requireRole('ADMIN'),
   [
-    body('name')
-      .trim()
-      .notEmpty()
-      .withMessage('Role name is required')
-      .isIn(['ADMIN', 'DIETITIAN', 'ASSISTANT', 'VIEWER'])
-      .withMessage('Role name must be one of: ADMIN, DIETITIAN, ASSISTANT, VIEWER'),
+    roleNameValidation(
+      body('name')
+        .trim()
+        .notEmpty()
+        .withMessage('Role name is required')
+        .bail()
+    ),
+    dataScopeValidation(),
+    homePageValidation(),
     body('description')
       .optional()
       .trim()
@@ -86,11 +107,13 @@ router.put(
   requireRole('ADMIN'),
   [
     param('id').isUUID().withMessage('ID must be a valid UUID'),
-    body('name')
-      .optional()
-      .trim()
-      .isIn(['ADMIN', 'DIETITIAN', 'ASSISTANT', 'VIEWER'])
-      .withMessage('Role name must be one of: ADMIN, DIETITIAN, ASSISTANT, VIEWER'),
+    roleNameValidation(
+      body('name')
+        .optional()
+        .trim()
+    ),
+    dataScopeValidation(),
+    homePageValidation(),
     body('description')
       .optional()
       .trim()
@@ -121,6 +144,35 @@ router.put(
   ],
   validate,
   roleController.updateRolePermissions
+);
+
+// GET /api/roles/:id/menu-items - Sidebar entries visible to the role (Admin only)
+router.get(
+  '/:id/menu-items',
+  authenticate,
+  requireRole('ADMIN'),
+  param('id').isUUID().withMessage('ID must be a valid UUID'),
+  validate,
+  roleController.getRoleMenuItems
+);
+
+// PUT /api/roles/:id/menu-items - Set the sidebar entries visible to the role (Admin only)
+router.put(
+  '/:id/menu-items',
+  authenticate,
+  requireRole('ADMIN'),
+  [
+    param('id').isUUID().withMessage('ID must be a valid UUID'),
+    body('item_keys')
+      .isArray({ max: 200 })
+      .withMessage('item_keys must be an array'),
+    body('item_keys.*')
+      .isString()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Invalid menu entry')
+  ],
+  validate,
+  roleController.updateRoleMenuItems
 );
 
 // DELETE /api/roles/:id - Delete role (Admin only)

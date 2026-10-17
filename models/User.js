@@ -120,6 +120,12 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: null,
       comment: 'Internal app path for the dietitian landing page (e.g. /mariondiet)'
     },
+    // Sidebar item_key opened after login (overrides the role setting)
+    home_page: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      defaultValue: null
+    },
     // Websites for dietitians
     websites: {
       type: DataTypes.JSON,

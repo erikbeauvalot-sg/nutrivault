@@ -18,6 +18,7 @@ import BiometricSetupPrompt from '../components/BiometricSetupPrompt';
 import * as biometricService from '../services/biometricService';
 import * as tokenStorage from '../utils/tokenStorage';
 import { isNative } from '../utils/platform';
+import { getHomePath } from '../config/sidebarItemRegistry';
 import './LoginPage.css';
 
 const LAST_USERNAME_KEY = 'nutrivault_last_username';
@@ -106,12 +107,7 @@ const LoginPage = () => {
   });
 
   const navigateAfterLogin = (userData) => {
-    const roleName = typeof userData?.role === 'string' ? userData.role : userData?.role?.name;
-    if (roleName === 'PATIENT') {
-      navigate('/portal');
-    } else {
-      navigate('/dashboard');
-    }
+    navigate(getHomePath(userData));
   };
 
   const onSubmit = async (data) => {

@@ -95,6 +95,27 @@ export const groupPermissionsByResource = (permissions) => {
 };
 
 /**
+ * Get the sidebar entries visible to a role (Admin only)
+ * @param {string} id - Role UUID
+ * @returns {Promise<string[]>} sidebar item keys
+ */
+export const getRoleMenuItems = async (id) => {
+  const response = await api.get(`/roles/${id}/menu-items`);
+  return response.data.data || [];
+};
+
+/**
+ * Set the sidebar entries visible to a role (Admin only)
+ * @param {string} id - Role UUID
+ * @param {string[]} itemKeys - sidebar item keys
+ * @returns {Promise<string[]>} sidebar item keys now visible
+ */
+export const updateRoleMenuItems = async (id, itemKeys) => {
+  const response = await api.put(`/roles/${id}/menu-items`, { item_keys: itemKeys });
+  return response.data.data || [];
+};
+
+/**
  * Format permission code for display
  * Converts "patients.create" to "Create Patients"
  * @param {string} code - Permission code (e.g., "patients.create")
@@ -115,6 +136,8 @@ export default {
   updateRolePermissions,
   deleteRole,
   getAllPermissions,
+  getRoleMenuItems,
+  updateRoleMenuItems,
   groupPermissionsByResource,
   formatPermissionCode
 };

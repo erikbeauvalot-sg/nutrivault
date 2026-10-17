@@ -10,6 +10,7 @@ const User = db.User;
 const Role = db.Role;
 const Permission = db.Permission;
 const auditService = require('./audit.service');
+const { isValidHomePage } = require('../helpers/homePage');
 const bcrypt = require('bcryptjs');
 const { Op } = db.Sequelize;
 
@@ -303,7 +304,7 @@ async function updateUser(user, userId, updateData, requestMetadata = {}) {
 
     if (isAdmin) {
       // Admin can update all fields except password (use separate endpoint)
-      allowedFields = ['username', 'email', 'role_id', 'first_name', 'last_name', 'phone', 'is_active', 'language_preference', 'websites', 'landing_page_slug'];
+      allowedFields = ['username', 'email', 'role_id', 'first_name', 'last_name', 'phone', 'is_active', 'language_preference', 'websites', 'landing_page_slug', 'home_page'];
     } else {
       // Regular users can only update their own basic info
       allowedFields = ['first_name', 'last_name', 'phone', 'email', 'language_preference', 'websites'];
@@ -344,6 +345,12 @@ async function updateUser(user, userId, updateData, requestMetadata = {}) {
       }
     }
     
+    if (isAdmin && updateData.home_page !== undefined && !(await isValidHomePage(updateData.home_page))) {
+      const error = new Error('home_page must be an existing menu entry');
+      error.statusCode = 400;
+      throw error;
+    }
+
     allowedFields.forEach(field => {
       if (updateData[field] !== undefined && updateData[field] !== targetUser[field]) {
         changes[field] = { old: targetUser[field], new: updateData[field] };

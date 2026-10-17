@@ -4,6 +4,7 @@
  * Centralized data scoping logic based on user role.
  * ADMIN sees all data. DIETITIAN sees only patients linked via patient_dietitians.
  * ASSISTANT sees data of their linked dietitians.
+ * Custom roles follow their data_scope: 'all' (like ADMIN) or 'own' (like DIETITIAN).
  */
 
 const db = require('../../../models');
@@ -34,6 +35,12 @@ async function getScopedDietitianIds(user) {
       attributes: ['dietitian_id']
     });
     return links.map(l => l.dietitian_id);
+  }
+
+  // Custom (non-system) roles: visibility is configured on the role itself
+  if (typeof user.role === 'object' && !db.Role.SYSTEM_ROLES.includes(roleName)) {
+    if (user.role.data_scope === 'all') return null;
+    if (user.role.data_scope === 'own') return [user.id];
   }
 
   // PATIENT role has no dietitian access

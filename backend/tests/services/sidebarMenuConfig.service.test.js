@@ -48,8 +48,8 @@ describe('DEFAULT_ITEMS', () => {
     expect(Array.isArray(sidebarMenuConfigService.DEFAULT_ITEMS)).toBe(true);
   });
 
-  it('has 28 items', () => {
-    expect(sidebarMenuConfigService.DEFAULT_ITEMS).toHaveLength(28);
+  it('has 29 items', () => {
+    expect(sidebarMenuConfigService.DEFAULT_ITEMS).toHaveLength(29);
   });
 
   it('each item has required fields', () => {
@@ -312,10 +312,10 @@ describe('reorderItems', () => {
 // resetToDefaults
 // ─────────────────────────────────────────
 describe('resetToDefaults', () => {
-  it('creates all 28 default items', async () => {
+  it('creates all 29 default items', async () => {
     await sidebarMenuConfigService.resetToDefaults();
     const count = await db.SidebarMenuConfig.count();
-    expect(count).toBe(28);
+    expect(count).toBe(29);
   });
 
   it('removes custom items before resetting', async () => {
@@ -330,7 +330,7 @@ describe('resetToDefaults', () => {
   it('returns all configs after reset', async () => {
     const result = await sidebarMenuConfigService.resetToDefaults();
     expect(Array.isArray(result)).toBe(true);
-    expect(result).toHaveLength(28);
+    expect(result).toHaveLength(29);
   });
 
   it('recreates defaults even if called multiple times', async () => {
@@ -338,7 +338,7 @@ describe('resetToDefaults', () => {
     await sidebarMenuConfigService.resetToDefaults();
 
     const count = await db.SidebarMenuConfig.count();
-    expect(count).toBe(28);
+    expect(count).toBe(29);
   });
 
   it('sets is_visible to true for all defaults', async () => {

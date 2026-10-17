@@ -11,6 +11,7 @@ const Payment = db.Payment;
 const InvoiceEmail = db.InvoiceEmail;
 const Patient = db.Patient;
 const Visit = db.Visit;
+const PracticeLocation = db.PracticeLocation;
 const User = db.User;
 const auditService = require('./audit.service');
 const emailService = require('./email.service');
@@ -290,6 +291,16 @@ async function createInvoice(invoiceData, user, requestMetadata = {}) {
 
     const invoiceNumber = `INV-${currentYear}-${nextNumber.toString().padStart(4, '0')}`;
 
+    // Practice location: explicit choice, otherwise the default location
+    let locationCode = invoiceData.location_code;
+    if (locationCode === undefined) {
+      locationCode = await PracticeLocation.defaultCode();
+    } else if (!(await PracticeLocation.isValidCode(locationCode))) {
+      const error = new Error('Location not found');
+      error.statusCode = 400;
+      throw error;
+    }
+
     // Calculate amounts
     const amountTotal = parseFloat(invoiceData.amount_total) || 0;
     const amountDue = amountTotal; // Initially, due amount equals total
@@ -307,7 +318,8 @@ async function createInvoice(invoiceData, user, requestMetadata = {}) {
       amount_total: amountTotal,
       amount_paid: 0,
       amount_due: amountDue,
-      status: 'DRAFT'
+      status: 'DRAFT',
+      location_code: locationCode
     });
 
     // Audit log
@@ -371,8 +383,14 @@ async function updateInvoice(invoiceId, updateData, user, requestMetadata = {}) 
 
     // Update fields
     const allowedFields = [
-      'service_description', 'amount_total', 'due_date', 'status', 'notes', 'payment_method'
+      'service_description', 'amount_total', 'due_date', 'status', 'notes', 'payment_method', 'location_code'
     ];
+
+    if (updateData.location_code !== undefined && !(await PracticeLocation.isValidCode(updateData.location_code))) {
+      const error = new Error('Location not found');
+      error.statusCode = 400;
+      throw error;
+    }
 
     const updates = {};
     allowedFields.forEach(field => {
@@ -388,17 +406,19 @@ async function updateInvoice(invoiceId, updateData, user, requestMetadata = {}) 
       updates.amount_due = Math.max(0, newTotal - currentPaid);
     }
 
-    // Track payment_method change in update_log
-    if (updates.payment_method !== undefined && updates.payment_method !== oldData.payment_method) {
-      const currentLog = invoice.update_log || [];
-      currentLog.push({
-        field: 'payment_method',
-        old_value: oldData.payment_method || null,
-        new_value: updates.payment_method || null,
-        changed_by: { id: user.id, username: user.username },
-        changed_at: new Date().toISOString()
-      });
-      updates.update_log = currentLog;
+    // Track payment_method / location changes in update_log
+    const currentLog = invoice.update_log || [];
+    for (const field of ['payment_method', 'location_code']) {
+      if (updates[field] !== undefined && (updates[field] || null) !== (oldData[field] || null)) {
+        currentLog.push({
+          field,
+          old_value: oldData[field] || null,
+          new_value: updates[field] || null,
+          changed_by: { id: user.id, username: user.username },
+          changed_at: new Date().toISOString()
+        });
+        updates.update_log = [...currentLog];
+      }
     }
 
     await invoice.update(updates);

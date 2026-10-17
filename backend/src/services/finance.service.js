@@ -7,6 +7,14 @@
 const db = require('../../../models');
 const { Op } = db.Sequelize;
 const { getScopedPatientIds, getScopedDietitianIds } = require('../helpers/scopeHelper');
+const {
+  toISODate,
+  effectiveCashDate,
+  secondOfNextMonth,
+  cashDateExpr,
+  cashDateRangeWhere
+} = require('../helpers/cashDate');
+const auditService = require('./audit.service');
 
 /**
  * Build billing scope where clause (via patient)
@@ -56,12 +64,15 @@ async function getDashboard(user, filters = {}) {
     ? { entry_date: dateFilter }
     : {};
 
-  // Total revenue (amount_paid from billing)
+  // Total revenue (amount_paid from billing), bucketed by cash date (date d'encaissement)
   const revenueResult = await db.Billing.findOne({
     attributes: [
       [db.sequelize.fn('SUM', db.sequelize.col('amount_paid')), 'total']
     ],
-    where: await buildBillingWhere(user, { ...billingDateWhere, is_active: true }),
+    where: await buildBillingWhere(user, {
+      ...cashDateRangeWhere(filters.start_date, filters.end_date),
+      is_active: true
+    }),
     raw: true
   });
   const totalRevenue = parseFloat(revenueResult?.total || 0);
@@ -310,19 +321,11 @@ async function getAgingReport(user) {
  * Get revenue — paid invoices list with optional date range filter
  */
 async function getRevenue(user, filters = {}) {
-  const dateFilter = {};
-  if (filters.start_date) dateFilter[Op.gte] = filters.start_date;
-  if (filters.end_date) dateFilter[Op.lte] = filters.end_date;
-
+  // Revenue is listed by cash date (date d'encaissement, defaults to invoice date)
   const billingWhere = await buildBillingWhere(user, {
     status: 'PAID',
     is_active: true,
-    ...(filters.start_date || filters.end_date
-      ? { [Op.or]: [
-          { payment_date: dateFilter },
-          { invoice_date: dateFilter }
-        ] }
-      : {})
+    ...cashDateRangeWhere(filters.start_date, filters.end_date)
   });
 
   const page = parseInt(filters.page) || 1;
@@ -334,12 +337,19 @@ async function getRevenue(user, filters = {}) {
     include: [
       { model: db.Patient, as: 'patient', attributes: ['id', 'first_name', 'last_name'] }
     ],
-    order: [['payment_date', 'DESC'], ['invoice_date', 'DESC']],
+    order: [[cashDateExpr(), 'DESC'], ['invoice_date', 'DESC']],
     limit,
-    offset
+    offset,
+    distinct: true
   });
 
-  const totalPaid = rows.reduce((sum, inv) => sum + parseFloat(inv.amount_paid || 0), 0);
+  // Total over the whole filtered period, not only the current page
+  const totalResult = await db.Billing.findOne({
+    attributes: [[db.sequelize.fn('SUM', db.sequelize.col('amount_paid')), 'total']],
+    where: billingWhere,
+    raw: true
+  });
+  const totalPaid = parseFloat(totalResult?.total || 0);
 
   return {
     invoices: rows.map(inv => ({
@@ -352,9 +362,12 @@ async function getRevenue(user, filters = {}) {
       } : null,
       invoice_date: inv.invoice_date,
       payment_date: inv.payment_date,
+      cash_date: effectiveCashDate(inv),
+      cash_date_overridden: !!inv.cash_date,
       amount_total: parseFloat(inv.amount_total || 0),
       amount_paid: parseFloat(inv.amount_paid || 0),
-      payment_method: inv.payment_method
+      payment_method: inv.payment_method,
+      location_code: inv.location_code || null
     })),
     total: count,
     page,
@@ -374,14 +387,17 @@ async function getCashFlow(user, filters = {}) {
   for (let i = 11; i >= 0; i--) {
     const startDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const endDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59, 999);
+    const pad = (n) => String(n).padStart(2, '0');
+    const monthStart = `${startDate.getFullYear()}-${pad(startDate.getMonth() + 1)}-01`;
+    const monthEnd = `${endDate.getFullYear()}-${pad(endDate.getMonth() + 1)}-${pad(endDate.getDate())}`;
 
-    // Revenue for this month
+    // Revenue for this month, by cash date (date d'encaissement)
     const revenueResult = await db.Billing.findOne({
       attributes: [
         [db.sequelize.fn('SUM', db.sequelize.col('amount_paid')), 'total']
       ],
       where: await buildBillingWhere(user, {
-        invoice_date: { [Op.gte]: startDate, [Op.lte]: endDate },
+        ...cashDateRangeWhere(monthStart, monthEnd),
         is_active: true
       }),
       raw: true
@@ -528,7 +544,145 @@ async function getForecast(user, filters = {}) {
   };
 }
 
+/**
+ * Load invoices the user may change the cash date of
+ * @returns {Promise<Array>} Billing records (throws 404 if any is missing or out of scope)
+ */
+async function findScopedInvoices(user, billingIds) {
+  const uniqueIds = [...new Set(billingIds)];
+  const invoices = await db.Billing.findAll({
+    where: await buildBillingWhere(user, { id: { [Op.in]: uniqueIds }, is_active: true })
+  });
+  if (invoices.length !== uniqueIds.length) {
+    const error = new Error('Invoice not found');
+    error.statusCode = 404;
+    throw error;
+  }
+  return invoices;
+}
+
+/**
+ * Apply a new cash date to each invoice, tracking the change in update_log and audit
+ * @param {Function} computeDate - (invoice) => YYYY-MM-DD or null (reset to invoice date)
+ */
+async function applyCashDates(user, billingIds, computeDate, action, requestMetadata = {}) {
+  const invoices = await findScopedInvoices(user, billingIds);
+  const now = new Date().toISOString();
+
+  const updated = await db.sequelize.transaction(async (transaction) => {
+    const results = [];
+    for (const invoice of invoices) {
+      const oldEffective = effectiveCashDate(invoice);
+      const newValue = computeDate(invoice);
+      // Store NULL when the date matches the invoice date, so it keeps following it
+      const stored = newValue && newValue !== toISODate(invoice.invoice_date) ? newValue : null;
+
+      if (stored !== (invoice.cash_date || null)) {
+        const log = invoice.update_log || [];
+        log.push({
+          field: 'cash_date',
+          old_value: oldEffective,
+          new_value: stored || toISODate(invoice.invoice_date),
+          changed_by: { id: user.id, username: user.username },
+          changed_at: now
+        });
+        await invoice.update({ cash_date: stored, update_log: log }, { transaction });
+      }
+
+      results.push({
+        id: invoice.id,
+        invoice_number: invoice.invoice_number,
+        cash_date: effectiveCashDate(invoice),
+        cash_date_overridden: !!invoice.cash_date
+      });
+    }
+    return results;
+  });
+
+  await auditService.log({
+    user_id: user.id,
+    username: user.username,
+    action: 'UPDATE',
+    resource_type: 'billing',
+    resource_id: updated.length === 1 ? updated[0].id : null,
+    changes: { action, invoices: updated.map(inv => ({ id: inv.id, cash_date: inv.cash_date })) },
+    ip_address: requestMetadata.ip,
+    user_agent: requestMetadata.userAgent
+  });
+
+  return updated;
+}
+
+/**
+ * Set the cash date (date d'encaissement) of invoices
+ * @param {string|null} cashDate - YYYY-MM-DD, or null to reset to the invoice date
+ */
+async function setCashDate(user, billingIds, cashDate, requestMetadata = {}) {
+  const value = cashDate ? toISODate(cashDate) : null;
+  return applyCashDates(user, billingIds, () => value, 'set_cash_date', requestMetadata);
+}
+
+/**
+ * Move the cash date of invoices to the 2nd of the month after their current cash date
+ */
+async function shiftCashDateToNextMonth(user, billingIds, requestMetadata = {}) {
+  return applyCashDates(
+    user,
+    billingIds,
+    (invoice) => secondOfNextMonth(effectiveCashDate(invoice)),
+    'shift_cash_date_next_month',
+    requestMetadata
+  );
+}
+
+/**
+ * Set the practice location of several invoices (null clears it)
+ */
+async function setLocation(user, billingIds, locationCode, requestMetadata = {}) {
+  if (!(await db.PracticeLocation.isValidCode(locationCode))) {
+    const error = new Error('Location not found');
+    error.statusCode = 400;
+    throw error;
+  }
+  const invoices = await findScopedInvoices(user, billingIds);
+  const now = new Date().toISOString();
+
+  const updated = await db.sequelize.transaction(async (transaction) => {
+    const results = [];
+    for (const invoice of invoices) {
+      if ((invoice.location_code || null) !== locationCode) {
+        const log = [...(invoice.update_log || []), {
+          field: 'location_code',
+          old_value: invoice.location_code || null,
+          new_value: locationCode,
+          changed_by: { id: user.id, username: user.username },
+          changed_at: now
+        }];
+        await invoice.update({ location_code: locationCode, update_log: log }, { transaction });
+      }
+      results.push({ id: invoice.id, invoice_number: invoice.invoice_number, location_code: invoice.location_code || null });
+    }
+    return results;
+  });
+
+  await auditService.log({
+    user_id: user.id,
+    username: user.username,
+    action: 'UPDATE',
+    resource_type: 'billing',
+    resource_id: updated.length === 1 ? updated[0].id : null,
+    changes: { action: 'set_location', location_code: locationCode, invoices: updated.map(inv => inv.id) },
+    ip_address: requestMetadata.ip,
+    user_agent: requestMetadata.userAgent
+  });
+
+  return updated;
+}
+
 module.exports = {
+  setLocation,
+  setCashDate,
+  shiftCashDateToNextMonth,
   getDashboard,
   getAgingReport,
   getRevenue,

@@ -11,6 +11,7 @@
  */
 
 const authService = require('../services/auth.service');
+const { resolveHomePage } = require('../helpers/homePage');
 const { validationResult } = require('express-validator');
 
 class AuthController {
@@ -368,7 +369,8 @@ class AuthController {
         email: user.email,
         role: user.role.name,
         permissions: user.role.permissions.map(p => p.code),
-        theme_id: user.theme_id || null
+        theme_id: user.theme_id || null,
+        home_page: await resolveHomePage(user)
       }
     });
   }

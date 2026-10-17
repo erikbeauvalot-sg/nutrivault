@@ -65,6 +65,12 @@ const createInvoiceValidation = [
     .isISO8601()
     .withMessage('Due date must be a valid ISO 8601 date'),
 
+  body('location_code')
+    .optional({ nullable: true })
+    .isString()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Invalid location'),
+
   body('items')
     .optional({ nullable: true })
     .isArray()
@@ -112,6 +118,12 @@ const updateInvoiceValidation = [
     .isString()
     .isLength({ max: 50 })
     .withMessage('Invalid payment method'),
+
+  body('location_code')
+    .optional({ nullable: true })
+    .isString()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Invalid location'),
 
   body('items')
     .optional({ nullable: true })

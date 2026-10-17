@@ -153,3 +153,32 @@ exports.getAllPermissions = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * GET /api/roles/:id/menu-items - Sidebar entries visible to a role (Admin only)
+ */
+exports.getRoleMenuItems = async (req, res, next) => {
+  try {
+    const itemKeys = await roleService.getRoleMenuItems(req.params.id);
+    res.json({ success: true, data: itemKeys });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/roles/:id/menu-items - Set the sidebar entries visible to a role (Admin only)
+ */
+exports.updateRoleMenuItems = async (req, res, next) => {
+  try {
+    const itemKeys = await roleService.updateRoleMenuItems(
+      req.user,
+      req.params.id,
+      req.body.item_keys,
+      getRequestMetadata(req)
+    );
+    res.json({ success: true, data: itemKeys, message: 'Role menu updated successfully' });
+  } catch (error) {
+    next(error);
+  }
+};

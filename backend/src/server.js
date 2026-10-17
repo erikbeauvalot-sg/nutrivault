@@ -223,6 +223,8 @@ const visitTypesRoutes = require('./routes/visitTypes');
 app.use('/api/visit-types', visitTypesRoutes);
 const paymentMethodsRoutes = require('./routes/paymentMethods');
 app.use('/api/payment-methods', paymentMethodsRoutes);
+const practiceLocationsRoutes = require('./routes/practiceLocations');
+app.use('/api/practice-locations', practiceLocationsRoutes);
 const expenseCategoriesRoutes = require('./routes/expenseCategories');
 app.use('/api/expense-categories', expenseCategoriesRoutes);
 

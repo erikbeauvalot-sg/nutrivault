@@ -65,6 +65,7 @@ db.MeasureAnnotation = require('./MeasureAnnotation')(sequelize, DataTypes);
 db.VisitType = require('./VisitType')(sequelize, DataTypes);
 db.PaymentMethod = require('./PaymentMethod')(sequelize, DataTypes);
 db.ExpenseCategory = require('./ExpenseCategory')(sequelize, DataTypes);
+db.PracticeLocation = require('./PracticeLocation')(sequelize, DataTypes);
 db.DocumentAccessLog = require('./DocumentAccessLog')(sequelize, DataTypes);
 db.RecipeCategory = require('./RecipeCategory')(sequelize, DataTypes);
 db.Recipe = require('./Recipe')(sequelize, DataTypes);

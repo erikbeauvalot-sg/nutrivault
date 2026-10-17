@@ -71,6 +71,16 @@ export function getItemPath(itemKey, user) {
 }
 
 /**
+ * Path opened after login: the portal for patients, otherwise the home page
+ * resolved by the backend (user setting -> role setting -> dashboard -> first menu entry)
+ */
+export function getHomePath(user) {
+  const roleName = typeof user?.role === 'string' ? user.role : user?.role?.name;
+  if (roleName === 'PATIENT') return '/portal';
+  return (user?.home_page && getItemPath(user.home_page, user)) || '/dashboard';
+}
+
+/**
  * Get default DB config for items not found in the database
  */
 export function getDefaultConfig(itemKey) {

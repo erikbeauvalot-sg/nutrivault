@@ -155,6 +155,12 @@ const updateUserValidation = [
     .isIn(['fr', 'en'])
     .withMessage('Language preference must be either "fr" or "en"'),
 
+  body('home_page')
+    .optional({ nullable: true })
+    .isString()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('home_page must be a menu entry key'),
+
   body('websites')
     .optional()
     .isArray()

@@ -17,9 +17,11 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import sidebarMenuConfigService from '../services/sidebarMenuConfigService';
 import sidebarCategoryService from '../services/sidebarCategoryService';
 import sidebarSectionService from '../services/sidebarSectionService';
+import roleService from '../services/roleService';
 import SIDEBAR_ITEMS from '../config/sidebarItemRegistry';
 
-const AVAILABLE_ROLES = ['ADMIN', 'DIETITIAN', 'ASSISTANT', 'VIEWER'];
+// Fallback when roles cannot be loaded; custom roles are added from the API
+const DEFAULT_ROLES = ['ADMIN', 'DIETITIAN', 'ASSISTANT', 'VIEWER'];
 
 const EMOJI_SUGGESTIONS = [
   '🏥','🏢','🏠','🏛','🌿','🌱','🍀','🥗','🍎','🥕',
@@ -343,7 +345,7 @@ const CategoriesTab = ({ sections, categories, onRefresh, t }) => {
 };
 
 // ─── Items Tab ─────────────────────────────────────────────────────────────────
-const ItemsTab = ({ configs, setConfigs, sections, categories, t }) => {
+const ItemsTab = ({ configs, setConfigs, sections, categories, roles, t }) => {
   // Build section items maps
   const itemsBySection = useMemo(() => {
     const map = {};
@@ -454,7 +456,7 @@ const ItemsTab = ({ configs, setConfigs, sections, categories, t }) => {
         )}
         {/* Role badges */}
         <div className="role-badges">
-          {AVAILABLE_ROLES.map(role => (
+          {roles.map(role => (
             <Badge
               key={role}
               bg={item.allowed_roles?.includes(role) ? 'success' : 'secondary'}
@@ -481,9 +483,9 @@ const ItemsTab = ({ configs, setConfigs, sections, categories, t }) => {
   return (
     <div className="items-tab">
       {/* Role legend */}
-      <div className="mb-3 d-flex gap-3 align-items-center" style={{ fontSize: '0.8rem' }}>
+      <div className="mb-3 d-flex flex-wrap gap-3 align-items-center" style={{ fontSize: '0.8rem' }}>
         <span className="text-muted">{t('sidebarConfig.roleLegend', 'Rôles')} :</span>
-        {AVAILABLE_ROLES.map(role => (
+        {roles.map(role => (
           <span key={role}>
             <Badge bg="success" className="me-1" style={{ fontSize: '0.7rem' }}>{role.charAt(0)}</Badge>
             <span className="text-muted">{role}</span>
@@ -553,12 +555,7 @@ const ItemsTab = ({ configs, setConfigs, sections, categories, t }) => {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function clearSidebarCache() {
-  localStorage.removeItem('sidebarMenuConfigs');
-  localStorage.removeItem('sidebarCategories');
-  localStorage.removeItem('sidebarSections');
-  window.dispatchEvent(new Event('sidebarConfigUpdated'));
-}
+const { clearSidebarCache } = sidebarMenuConfigService;
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 const SidebarMenuConfigPage = () => {
@@ -577,6 +574,7 @@ const SidebarMenuConfigPage = () => {
   const [hasChanges, setHasChanges] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [originalConfigs, setOriginalConfigs] = useState([]);
+  const [availableRoles, setAvailableRoles] = useState(DEFAULT_ROLES);
 
   const userRole = typeof user?.role === 'string' ? user.role : user?.role?.name;
   useEffect(() => {
@@ -611,6 +609,25 @@ const SidebarMenuConfigPage = () => {
   }, [t]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  // Staff roles (system + custom) that can be granted menu entries
+  useEffect(() => {
+    if (userRole !== 'ADMIN') return;
+    roleService.getRoles()
+      .then(response => {
+        const data = response.data?.data || response.data;
+        const names = (Array.isArray(data) ? data : [])
+          .map(r => r.name)
+          .filter(name => name && name !== 'PATIENT');
+        if (names.length === 0) return;
+        const ordered = [
+          ...DEFAULT_ROLES.filter(name => names.includes(name)),
+          ...names.filter(name => !DEFAULT_ROLES.includes(name)).sort()
+        ];
+        setAvailableRoles(ordered);
+      })
+      .catch(err => console.error('Error fetching roles:', err));
+  }, [userRole]);
 
   useEffect(() => {
     setHasChanges(JSON.stringify(configs) !== JSON.stringify(originalConfigs));
@@ -732,7 +749,7 @@ const SidebarMenuConfigPage = () => {
         {activeTab === 'categories' ? (
           <CategoriesTab sections={sections} categories={categories} onRefresh={fetchAll} t={t} />
         ) : (
-          <ItemsTab configs={configs} setConfigs={setConfigs} sections={sections} categories={categories} t={t} />
+          <ItemsTab configs={configs} setConfigs={setConfigs} sections={sections} categories={categories} roles={availableRoles} t={t} />
         )}
 
         <ConfirmModal

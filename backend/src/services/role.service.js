@@ -10,7 +10,9 @@ const Role = db.Role;
 const Permission = db.Permission;
 const RolePermission = db.RolePermission;
 const User = db.User;
+const SidebarMenuConfig = db.SidebarMenuConfig;
 const auditService = require('./audit.service');
+const { isValidHomePage } = require('../helpers/homePage');
 
 /**
  * Get all roles with their permissions
@@ -69,43 +71,71 @@ async function getRoleById(roleId) {
   }
 }
 
+function httpError(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+function isSystemRole(name) {
+  return Role.SYSTEM_ROLES.includes(name);
+}
+
+async function assertValidHomePage(homePage) {
+  if (homePage !== undefined && !(await isValidHomePage(homePage))) {
+    throw httpError(400, 'home_page must be an existing menu entry');
+  }
+}
+
 /**
  * Create new role
  *
+ * The name is free-form: it is normalized (uppercase, no accents, underscores)
+ * and must not already exist. A previously deleted (inactive) role with the same
+ * name is reactivated with a clean permission set.
+ *
  * @param {Object} user - Authenticated user
- * @param {Object} roleData - Role data (name, description)
+ * @param {Object} roleData - Role data (name, description, data_scope)
  * @param {Object} requestMetadata - Request metadata for audit log
  * @returns {Promise<Object>} Created role
  */
 async function createRole(user, roleData, requestMetadata) {
   try {
-    // Check for duplicate role name
-    const existingRole = await Role.findOne({
-      where: { name: roleData.name }
-    });
+    const name = Role.normalizeName(roleData.name);
+    const fields = {
+      description: roleData.description || null,
+      data_scope: roleData.data_scope || 'own',
+      home_page: roleData.home_page || null,
+      is_active: true
+    };
+    await assertValidHomePage(fields.home_page);
 
-    if (existingRole) {
-      const error = new Error(`Role with name "${roleData.name}" already exists`);
-      error.statusCode = 409;
-      throw error;
+    const existingRole = await Role.findOne({ where: { name } });
+
+    if (existingRole && existingRole.is_active) {
+      throw httpError(409, `Role with name "${name}" already exists`);
     }
 
-    // Create role
-    const role = await Role.create({
-      name: roleData.name,
-      description: roleData.description || null,
-      is_active: true
-    });
+    let role;
+    if (existingRole) {
+      // Soft-deleted role: bring it back without its old permissions
+      await RolePermission.destroy({ where: { role_id: existingRole.id } });
+      role = await existingRole.update(fields);
+    } else {
+      role = await Role.create({ name, ...fields });
+    }
 
-    // Audit log
     await auditService.log({
       action: 'ROLE_CREATE',
       user_id: user.id,
+      username: user.username,
       resource_type: 'Role',
       resource_id: role.id,
-      details: {
+      changes: {
         role_name: role.name,
-        description: role.description
+        description: role.description,
+        data_scope: role.data_scope,
+        reactivated: !!existingRole
       },
       ip_address: requestMetadata.ip,
       user_agent: requestMetadata.userAgent
@@ -122,6 +152,10 @@ async function createRole(user, roleData, requestMetadata) {
 /**
  * Update role
  *
+ * System roles keep their name, data scope and active state (their behaviour is
+ * hard-wired by name); only their description and home page can change. Custom roles can be
+ * renamed, re-scoped and deactivated.
+ *
  * @param {Object} user - Authenticated user
  * @param {string} roleId - Role UUID
  * @param {Object} updateData - Update data
@@ -133,36 +167,56 @@ async function updateRole(user, roleId, updateData, requestMetadata) {
     const role = await Role.findByPk(roleId);
 
     if (!role) {
-      const error = new Error('Role not found');
-      error.statusCode = 404;
-      throw error;
+      throw httpError(404, 'Role not found');
     }
 
-    // Check for duplicate name if changing name
-    if (updateData.name && updateData.name !== role.name) {
-      const existingRole = await Role.findOne({
-        where: { name: updateData.name }
-      });
+    const changes = {};
+    if (updateData.description !== undefined) changes.description = updateData.description || null;
 
+    const name = updateData.name !== undefined ? Role.normalizeName(updateData.name) : undefined;
+    const nameChanged = name !== undefined && name !== role.name;
+    const scopeChanged = updateData.data_scope !== undefined && updateData.data_scope !== role.data_scope;
+    const deactivating = updateData.is_active === false && role.is_active;
+
+    if (isSystemRole(role.name) && (nameChanged || scopeChanged || deactivating)) {
+      throw httpError(403, `System role "${role.name}" can only have its description, home page and permissions changed`);
+    }
+
+    if (nameChanged) {
+      const existingRole = await Role.findOne({ where: { name } });
       if (existingRole) {
-        const error = new Error(`Role with name "${updateData.name}" already exists`);
-        error.statusCode = 409;
-        throw error;
+        throw httpError(409, `Role with name "${name}" already exists`);
       }
+      changes.name = name;
+    }
+    if (scopeChanged) changes.data_scope = updateData.data_scope;
+    if (updateData.home_page !== undefined) {
+      await assertValidHomePage(updateData.home_page);
+      changes.home_page = updateData.home_page;
+    }
+    if (updateData.is_active !== undefined) {
+      if (deactivating) {
+        await assertRoleUnused(roleId);
+      }
+      changes.is_active = updateData.is_active;
     }
 
-    // Update role
-    await role.update(updateData);
+    const previousName = role.name;
+    await role.update(changes);
 
-    // Audit log
+    if (nameChanged) {
+      await renameRoleInMenu(previousName, name);
+    }
+
     await auditService.log({
       action: 'ROLE_UPDATE',
       user_id: user.id,
+      username: user.username,
       resource_type: 'Role',
       resource_id: role.id,
-      details: {
+      changes: {
         role_name: role.name,
-        changes: updateData
+        changes
       },
       ip_address: requestMetadata.ip,
       user_agent: requestMetadata.userAgent
@@ -175,6 +229,16 @@ async function updateRole(user, roleId, updateData, requestMetadata) {
   } catch (error) {
     console.error('🔥 Error in updateRole:', error.message);
     throw error;
+  }
+}
+
+async function assertRoleUnused(roleId) {
+  const usersWithRole = await User.count({
+    where: { role_id: roleId, is_active: true }
+  });
+
+  if (usersWithRole > 0) {
+    throw httpError(409, `Cannot delete role: ${usersWithRole} active user(s) are assigned to this role`);
   }
 }
 
@@ -229,9 +293,10 @@ async function updateRolePermissions(user, roleId, permissionIds, requestMetadat
     await auditService.log({
       action: 'ROLE_PERMISSIONS_UPDATE',
       user_id: user.id,
+      username: user.username,
       resource_type: 'Role',
       resource_id: role.id,
-      details: {
+      changes: {
         role_name: role.name,
         permission_count: permissionIds.length,
         permission_ids: permissionIds
@@ -267,27 +332,24 @@ async function deleteRole(user, roleId, requestMetadata) {
       throw error;
     }
 
-    // Check if role is in use by any users
-    const usersWithRole = await User.count({
-      where: { role_id: roleId, is_active: true }
-    });
-
-    if (usersWithRole > 0) {
-      const error = new Error(`Cannot delete role: ${usersWithRole} active user(s) are assigned to this role`);
-      error.statusCode = 409;
-      throw error;
+    if (isSystemRole(role.name)) {
+      throw httpError(403, `System role "${role.name}" cannot be deleted`);
     }
+
+    await assertRoleUnused(roleId);
 
     // Soft delete by setting is_active to false
     await role.update({ is_active: false });
+    await setMenuItemsForRoleName(role.name, []);
 
     // Audit log
     await auditService.log({
       action: 'ROLE_DELETE',
       user_id: user.id,
+      username: user.username,
       resource_type: 'Role',
       resource_id: role.id,
-      details: {
+      changes: {
         role_name: role.name,
         description: role.description
       },
@@ -324,6 +386,100 @@ async function getAllPermissions() {
   }
 }
 
+/**
+ * Replace a role name in every sidebar entry's allowed_roles
+ */
+async function renameRoleInMenu(oldName, newName) {
+  const configs = await SidebarMenuConfig.findAll();
+  for (const config of configs) {
+    const roles = config.allowed_roles || [];
+    if (roles.includes(oldName)) {
+      config.allowed_roles = [...new Set(roles.map(r => (r === oldName ? newName : r)))];
+      await config.save();
+    }
+  }
+}
+
+/**
+ * Make exactly the given sidebar entries visible to a role name
+ */
+async function setMenuItemsForRoleName(roleName, itemKeys, transaction) {
+  const wanted = new Set(itemKeys);
+  const configs = await SidebarMenuConfig.findAll({ transaction });
+  for (const config of configs) {
+    const roles = config.allowed_roles || [];
+    const has = roles.includes(roleName);
+    const should = wanted.has(config.item_key);
+    if (has !== should) {
+      config.allowed_roles = should ? [...roles, roleName] : roles.filter(r => r !== roleName);
+      await config.save({ transaction });
+    }
+  }
+}
+
+/**
+ * Get the sidebar entries a role can see
+ *
+ * @param {string} roleId - Role UUID
+ * @returns {Promise<string[]>} item keys
+ */
+async function getRoleMenuItems(roleId) {
+  const role = await Role.findByPk(roleId);
+  if (!role) {
+    throw httpError(404, 'Role not found');
+  }
+
+  const configs = await SidebarMenuConfig.findAll({ order: [['section', 'ASC'], ['display_order', 'ASC']] });
+  return configs
+    .filter(config => (config.allowed_roles || []).includes(role.name))
+    .map(config => config.item_key);
+}
+
+/**
+ * Set the sidebar entries a role can see (replaces the previous selection)
+ *
+ * ADMIN always sees every entry, so it cannot be configured here.
+ *
+ * @param {Object} user - Authenticated user
+ * @param {string} roleId - Role UUID
+ * @param {string[]} itemKeys - Sidebar item keys
+ * @param {Object} requestMetadata - Request metadata for audit log
+ * @returns {Promise<string[]>} item keys now visible to the role
+ */
+async function updateRoleMenuItems(user, roleId, itemKeys, requestMetadata) {
+  const role = await Role.findByPk(roleId);
+  if (!role) {
+    throw httpError(404, 'Role not found');
+  }
+  if (role.name === 'ADMIN') {
+    throw httpError(400, 'ADMIN always sees every menu entry');
+  }
+
+  const uniqueKeys = [...new Set(itemKeys)];
+  const known = await SidebarMenuConfig.count({ where: { item_key: uniqueKeys } });
+  if (known !== uniqueKeys.length) {
+    throw httpError(400, 'One or more menu entries are invalid');
+  }
+
+  await db.sequelize.transaction(transaction => setMenuItemsForRoleName(role.name, uniqueKeys, transaction));
+
+  await auditService.log({
+    action: 'ROLE_MENU_UPDATE',
+    user_id: user.id,
+    username: user.username,
+    resource_type: 'Role',
+    resource_id: role.id,
+    changes: {
+      role_name: role.name,
+      menu_items: uniqueKeys
+    },
+    ip_address: requestMetadata.ip,
+    user_agent: requestMetadata.userAgent
+  });
+
+  return getRoleMenuItems(roleId);
+}
+
 module.exports = {
   getRoles,
   getRoleById,
@@ -331,5 +487,7 @@ module.exports = {
   updateRole,
   updateRolePermissions,
   deleteRole,
-  getAllPermissions
+  getAllPermissions,
+  getRoleMenuItems,
+  updateRoleMenuItems
 };

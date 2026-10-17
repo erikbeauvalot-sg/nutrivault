@@ -25,6 +25,35 @@ export const getRevenue = async (params = {}) => {
   return response;
 };
 
+/**
+ * Set the cash date (date d'encaissement) of invoices
+ * @param {string[]} billingIds - Invoice UUIDs
+ * @param {string|null} cashDate - YYYY-MM-DD, or null to reset to the invoice date
+ */
+export const setCashDate = async (billingIds, cashDate) => {
+  const response = await api.patch('/finance/revenue/cash-date', { billing_ids: billingIds, cash_date: cashDate });
+  return response.data;
+};
+
+/**
+ * Set the practice location of several invoices (null clears it)
+ * @param {string[]} billingIds
+ * @param {string|null} locationCode
+ */
+export const setLocation = async (billingIds, locationCode) => {
+  const response = await api.patch('/finance/revenue/location', { billing_ids: billingIds, location_code: locationCode });
+  return response.data;
+};
+
+/**
+ * Move the cash date of invoices to the 2nd of the following month
+ * @param {string[]} billingIds - Invoice UUIDs
+ */
+export const shiftCashDateToNextMonth = async (billingIds) => {
+  const response = await api.post('/finance/revenue/cash-date/next-month', { billing_ids: billingIds });
+  return response.data;
+};
+
 export const getForecast = async (params = {}) => {
   const response = await api.get('/finance/forecast', { params });
   return response;

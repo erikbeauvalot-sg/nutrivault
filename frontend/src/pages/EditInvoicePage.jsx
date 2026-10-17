@@ -8,6 +8,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Container, Row, Col, Card, Button, Form, Alert, InputGroup, Spinner, Badge } from 'react-bootstrap';
 import { useTranslation } from 'react-i18next';
 import PaymentMethodSelect from '../components/PaymentMethodSelect';
+import PracticeLocationSelect from '../components/PracticeLocationSelect';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/layout/Layout';
 import { getInvoiceById, updateInvoice } from '../services/billingService';
@@ -55,7 +56,8 @@ const EditInvoicePage = () => {
     service_description: '',
     amount_total: '',
     due_date: '',
-    payment_method: ''
+    payment_method: '',
+    location_code: ''
   });
 
   useEffect(() => {
@@ -116,7 +118,8 @@ const EditInvoicePage = () => {
       service_description: invoice.service_description || '',
       amount_total: invoice.amount_total || '',
       due_date: invoice.due_date ? new Date(invoice.due_date).toISOString().split('T')[0] : '',
-      payment_method: invoice.payment_method || ''
+      payment_method: invoice.payment_method || '',
+      location_code: invoice.location_code || ''
     });
 
     // Fetch visits for the selected patient
@@ -176,7 +179,8 @@ const EditInvoicePage = () => {
         amount_total: parseFloat(formData.amount_total),
         due_date: formData.due_date || null,
         visit_id: formData.visit_id || null,
-        payment_method: formData.payment_method || null
+        payment_method: formData.payment_method || null,
+        location_code: formData.location_code || null
       };
 
       await updateInvoice(id, submitData);
@@ -343,6 +347,15 @@ const EditInvoicePage = () => {
                       onChange={handleInputChange}
                       disabled={saving}
                       includeBlank
+                    />
+                  </Form.Group>
+
+                  <Form.Group className="mb-3" controlId="invoice-location">
+                    <Form.Label>{t('locations.field', 'Location')}</Form.Label>
+                    <PracticeLocationSelect
+                      value={formData.location_code}
+                      onChange={handleInputChange}
+                      disabled={saving}
                     />
                   </Form.Group>
 

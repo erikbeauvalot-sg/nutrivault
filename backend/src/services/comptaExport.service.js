@@ -14,6 +14,7 @@ const ExcelJS = require('exceljs');
 const db = require('../../../models');
 const { Op } = db.Sequelize;
 const { getScopedPatientIds, getScopedDietitianIds } = require('../helpers/scopeHelper');
+const { effectiveCashDate, cashDateExpr, cashDateRangeWhere } = require('../helpers/cashDate');
 const { yearExpenseWhere, expandRecurringExpenses } = require('../helpers/comptaExpenses');
 
 // Card commission deducted from the amount actually received (SumUp/Weero ~1.75%).
@@ -85,14 +86,13 @@ function receivedAmount(amountHT, method, commissionRate) {
  * Fetch all invoices + expenses for a year, scoped to the user, grouped by month.
  */
 async function fetchYearData(user, year) {
-  const start = new Date(Date.UTC(year, 0, 1));
-  const end = new Date(Date.UTC(year + 1, 0, 1));
 
   // --- Invoices (billing) scoped by patient ---
   const patientIds = await getScopedPatientIds(user);
+  // Invoices belong to the year (and month) of their cash date (date d'encaissement)
   const billingWhere = {
     is_active: true,
-    invoice_date: { [Op.gte]: start, [Op.lt]: end }
+    ...cashDateRangeWhere(`${year}-01-01`, `${year}-12-31`)
   };
   if (patientIds !== null) {
     if (patientIds.length === 0) billingWhere.id = null; // no access → no rows
@@ -102,7 +102,7 @@ async function fetchYearData(user, year) {
   const invoices = await db.Billing.findAll({
     where: billingWhere,
     include: [{ model: db.Patient, as: 'patient', attributes: ['id', 'first_name', 'last_name'] }],
-    order: [['invoice_date', 'ASC'], ['invoice_number', 'ASC']]
+    order: [[cashDateExpr(), 'ASC'], ['invoice_date', 'ASC'], ['invoice_number', 'ASC']]
   });
 
   // --- Expenses scoped by created_by (recurring ones materialised) ---
@@ -122,7 +122,7 @@ async function fetchYearData(user, year) {
   // Group into 12 buckets.
   const byMonth = Array.from({ length: 12 }, () => ({ invoices: [], expenses: [] }));
   for (const inv of invoices) {
-    const m = new Date(inv.invoice_date).getUTCMonth();
+    const m = Number(effectiveCashDate(inv).slice(5, 7)) - 1;
     byMonth[m].invoices.push(inv);
   }
   for (const exp of expenses) {

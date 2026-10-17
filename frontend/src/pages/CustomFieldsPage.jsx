@@ -15,11 +15,13 @@ import Layout from '../components/layout/Layout';
 import customFieldService from '../services/customFieldService';
 import visitTypeService from '../services/visitTypeService';
 import paymentMethodService from '../services/paymentMethodService';
+import practiceLocationService from '../services/practiceLocationService';
 import expenseCategoryService from '../services/expenseCategoryService';
 import CustomFieldCategoryModal from '../components/CustomFieldCategoryModal';
 import CustomFieldDefinitionModal from '../components/CustomFieldDefinitionModal';
 import VisitTypeModal from '../components/VisitTypeModal';
 import PaymentMethodModal from '../components/PaymentMethodModal';
+import PracticeLocationModal from '../components/PracticeLocationModal';
 import ExpenseCategoryModal from '../components/ExpenseCategoryModal';
 import ExportCustomFieldsModal from '../components/ExportCustomFieldsModal';
 import ImportCustomFieldsModal from '../components/ImportCustomFieldsModal';
@@ -85,6 +87,10 @@ const CustomFieldsPage = () => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [showDeletePaymentMethodConfirm, setShowDeletePaymentMethodConfirm] = useState(false);
   const [paymentMethodToDelete, setPaymentMethodToDelete] = useState(null);
+  const [practiceLocations, setPracticeLocations] = useState([]);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [locationToDelete, setLocationToDelete] = useState(null);
   const [showExpenseCategoryModal, setShowExpenseCategoryModal] = useState(false);
   const [selectedExpenseCategory, setSelectedExpenseCategory] = useState(null);
   const [showDeleteExpenseCategoryConfirm, setShowDeleteExpenseCategoryConfirm] = useState(false);
@@ -115,12 +121,13 @@ const CustomFieldsPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [categoriesRes, definitionsRes, visitTypesRes, paymentMethodsRes, expenseCategoriesRes] = await Promise.all([
+      const [categoriesRes, definitionsRes, visitTypesRes, paymentMethodsRes, expenseCategoriesRes, locationsRes] = await Promise.all([
         customFieldService.getCategories(),
         customFieldService.getDefinitions(),
         visitTypeService.getAllVisitTypes(),
         paymentMethodService.getAllPaymentMethods(),
-        expenseCategoryService.getAllExpenseCategories()
+        expenseCategoryService.getAllExpenseCategories(),
+        practiceLocationService.getAllPracticeLocations()
       ]);
 
       setCategories(categoriesRes || []);
@@ -128,6 +135,7 @@ const CustomFieldsPage = () => {
       setVisitTypes(visitTypesRes?.data || []);
       setPaymentMethods(paymentMethodsRes?.data || []);
       setExpenseCategories(expenseCategoriesRes?.data || []);
+      setPracticeLocations(locationsRes?.data || []);
       setError(null);
     } catch (err) {
       console.error('Error fetching custom fields data:', err);
@@ -371,6 +379,24 @@ const CustomFieldsPage = () => {
       setError(err.response?.data?.error || err.message || t('paymentMethods.deleteError', 'Échec de la suppression du mode de paiement'));
     } finally {
       setPaymentMethodToDelete(null);
+    }
+  };
+
+  // Practice location handlers
+  const openLocationModal = (location = null) => {
+    setSelectedLocation(location);
+    setShowLocationModal(true);
+  };
+
+  const confirmDeleteLocation = async () => {
+    if (!locationToDelete) return;
+    try {
+      await practiceLocationService.deletePracticeLocation(locationToDelete);
+      await fetchData();
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || t('locations.deleteError', 'Failed to delete the location'));
+    } finally {
+      setLocationToDelete(null);
     }
   };
 
@@ -1357,6 +1383,70 @@ const CustomFieldsPage = () => {
             </Card>
           </Tab>
 
+          {/* Practice Locations Tab */}
+          <Tab eventKey="practiceLocations" title={`📍 ${t('locations.title', 'Locations')} (${practiceLocations.length})`}>
+            <Card>
+              <Card.Header className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 className="mb-0">{t('locations.titleManagement', 'Consultation locations')}</h5>
+                {hasPermission('settings.manage') && (
+                  <Button variant="primary" size="sm" onClick={() => openLocationModal()}>
+                    <span aria-hidden="true">{'➕'}</span> {t('locations.create', 'New location')}
+                  </Button>
+                )}
+              </Card.Header>
+              <Card.Body>
+                <p className="text-muted small">
+                  {t('locations.intro', 'Location of each invoice (e.g. your different offices). It fills the "Structure" column of the accounting export.')}
+                </p>
+                {practiceLocations.length === 0 ? (
+                  <Alert variant="info">
+                    {t('locations.empty', 'No location yet. Create one to start.')}
+                  </Alert>
+                ) : (
+                  <Table striped bordered hover responsive>
+                    <thead>
+                      <tr>
+                        <th>{t('locations.label', 'Label')}</th>
+                        <th>{t('locations.code', 'Code')}</th>
+                        <th>{t('locations.defaultShort', 'Default')}</th>
+                        <th>{t('locations.displayOrder', 'Display order')}</th>
+                        <th>{t('common.status', 'Status')}</th>
+                        <th>{t('common.actions', 'Actions')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {practiceLocations.map((location) => (
+                        <tr key={location.id}>
+                          <td><strong>{location.label}</strong></td>
+                          <td><code>{location.code}</code></td>
+                          <td>{location.is_default ? <Badge bg="primary">{t('locations.defaultShort', 'Default')}</Badge> : t('common.none', '—')}</td>
+                          <td>{location.display_order}</td>
+                          <td>
+                            <Badge bg={location.is_active ? 'success' : 'secondary'}>
+                              {location.is_active ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
+                            </Badge>
+                          </td>
+                          <td>
+                            {hasPermission('settings.manage') && (
+                              <div className="d-flex gap-2">
+                                <Button variant="outline-primary" size="sm" onClick={() => openLocationModal(location)}>
+                                  {t('common.edit', 'Edit')}
+                                </Button>
+                                <Button variant="outline-danger" size="sm" onClick={() => setLocationToDelete(location.id)}>
+                                  {t('common.delete', 'Delete')}
+                                </Button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                )}
+              </Card.Body>
+            </Card>
+          </Tab>
+
           {/* Expense Categories Tab */}
           <Tab eventKey="expenseCategories" title={`🏦 ${t('expenseCategories.title', 'Catégories de dépenses')} (${expenseCategories.length})`}>
             <Card>
@@ -1531,6 +1621,28 @@ const CustomFieldsPage = () => {
           title={t('common.confirmation', 'Confirmation')}
           message={t('paymentMethods.confirmDelete', 'Voulez-vous vraiment supprimer ce mode de paiement ?')}
           confirmLabel={t('common.delete', 'Supprimer')}
+          variant="danger"
+        />
+
+        {/* Practice Location Modal */}
+        <PracticeLocationModal
+          show={showLocationModal}
+          onHide={() => {
+            setShowLocationModal(false);
+            setSelectedLocation(null);
+          }}
+          location={selectedLocation}
+          onSuccess={fetchData}
+        />
+
+        {/* Delete Practice Location Confirm Modal */}
+        <ConfirmModal
+          show={!!locationToDelete}
+          onHide={() => setLocationToDelete(null)}
+          onConfirm={confirmDeleteLocation}
+          title={t('common.confirmation', 'Confirmation')}
+          message={t('locations.confirmDelete', 'Delete this location? A location used by invoices can only be deactivated.')}
+          confirmLabel={t('common.delete', 'Delete')}
           variant="danger"
         />
 

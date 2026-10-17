@@ -35,6 +35,28 @@ router.get('/cash-flow', authenticate, requirePermission('finance.read'), dateQu
 // GET /api/finance/revenue
 router.get('/revenue', authenticate, requirePermission('finance.read'), dateQueryValidation, validate, financeController.getRevenue);
 
+const billingIdsValidation = [
+  body('billing_ids').isArray({ min: 1, max: 500 }).withMessage('billing_ids must be a non-empty array'),
+  body('billing_ids.*').isUUID().withMessage('Each billing_id must be a valid UUID')
+];
+
+// PATCH /api/finance/revenue/cash-date — set the cash date (null resets it to the invoice date)
+router.patch('/revenue/cash-date', authenticate, requirePermission('billing.update'), [
+  ...billingIdsValidation,
+  body('cash_date').optional({ nullable: true }).isISO8601({ strict: true }).withMessage('Invalid cash_date')
+], validate, financeController.setCashDate);
+
+// POST /api/finance/revenue/cash-date/next-month — move cash dates to the 2nd of the next month
+router.post('/revenue/cash-date/next-month', authenticate, requirePermission('billing.update'),
+  billingIdsValidation, validate, financeController.shiftCashDateToNextMonth);
+
+// PATCH /api/finance/revenue/location — set the practice location of invoices (null clears it)
+router.patch('/revenue/location', authenticate, requirePermission('billing.update'), [
+  ...billingIdsValidation,
+  body('location_code').optional({ nullable: true }).isString().isLength({ min: 1, max: 50 })
+    .withMessage('Invalid location')
+], validate, financeController.setLocation);
+
 // GET /api/finance/forecast
 router.get('/forecast', authenticate, requirePermission('finance.read'), [
   query('end_date').optional().isISO8601().withMessage('Invalid end_date')

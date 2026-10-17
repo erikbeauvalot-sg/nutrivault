@@ -164,9 +164,19 @@ describe('Expenses API', () => {
       expect(res.body.data.length).toBeLessThanOrEqual(5);
     });
 
-    it('should reject invalid category filter with 400', async () => {
+    // Categories are an admin-editable list: an unknown code simply matches nothing
+    it('should return no expense for an unknown category filter', async () => {
       const res = await request(app)
-        .get('/api/expenses?category=INVALID_CATEGORY')
+        .get('/api/expenses?category=UNKNOWN_CATEGORY')
+        .set('Authorization', adminAuth.authHeader);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(0);
+    });
+
+    it('should reject a malformed category filter with 400', async () => {
+      const res = await request(app)
+        .get(`/api/expenses?category=${'X'.repeat(51)}`)
         .set('Authorization', adminAuth.authHeader);
 
       expect(res.status).toBe(400);
@@ -266,11 +276,11 @@ describe('Expenses API', () => {
       expect(res.status).toBe(400);
     });
 
-    it('should reject expense with invalid category', async () => {
+    it('should reject expense with a malformed category', async () => {
       const res = await request(app)
         .post('/api/expenses')
         .set('Authorization', adminAuth.authHeader)
-        .send({ description: 'Test', amount: 100, category: 'INVALID', expense_date: '2026-02-01' });
+        .send({ description: 'Test', amount: 100, category: 'X'.repeat(51), expense_date: '2026-02-01' });
 
       expect(res.status).toBe(400);
     });
@@ -284,11 +294,11 @@ describe('Expenses API', () => {
       expect(res.status).toBe(400);
     });
 
-    it('should reject expense with invalid payment_method', async () => {
+    it('should reject expense with a malformed payment_method', async () => {
       const res = await request(app)
         .post('/api/expenses')
         .set('Authorization', adminAuth.authHeader)
-        .send({ ...validExpense, payment_method: 'BITCOIN' });
+        .send({ ...validExpense, payment_method: 'X'.repeat(51) });
 
       expect(res.status).toBe(400);
     });

@@ -1,6 +1,6 @@
 /**
  * RoleModal Component
- * Create and edit role with permission assignment
+ * Create and edit role with permission and menu assignment
  */
 
 import { useState, useEffect } from 'react';
@@ -10,15 +10,29 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useTranslation } from 'react-i18next';
 import roleService from '../services/roleService';
+import sidebarMenuConfigService from '../services/sidebarMenuConfigService';
 import PermissionTree from './PermissionTree';
+import RoleMenuAccess from './RoleMenuAccess';
+
+/**
+ * Normalize a role name the same way as the backend:
+ * uppercase, no accents, spaces/hyphens -> underscore.
+ */
+export const normalizeRoleName = (value) => String(value ?? '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toUpperCase()
+  .replace(/[\s-]+/g, '_');
 
 // Validation schema
 const roleSchema = (t) => yup.object().shape({
   name: yup.string()
+    .transform(value => normalizeRoleName(value).replace(/^_+|_+$/g, ''))
     .required(t('forms.required', 'Required'))
-    .oneOf(['ADMIN', 'DIETITIAN', 'ASSISTANT', 'VIEWER'], t('roles.nameInvalid', 'Role name must be one of: ADMIN, DIETITIAN, ASSISTANT, VIEWER')),
+    .matches(/^[A-Z][A-Z0-9_]{1,49}$/, t('roles.nameInvalid', 'Use 2 to 50 letters, digits or underscores, starting with a letter')),
   description: yup.string()
-    .max(500, t('forms.maxLength', 'Maximum {count} characters', { count: 500 }))
+    .max(500, t('forms.maxLength', 'Maximum {count} characters', { count: 500 })),
+  data_scope: yup.string().oneOf(['all', 'own'])
 });
 
 const RoleModal = ({ show, onHide, mode, role, onSave }) => {
@@ -29,9 +43,16 @@ const RoleModal = ({ show, onHide, mode, role, onSave }) => {
   const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [loadingPermissions, setLoadingPermissions] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
+  const [menuConfigs, setMenuConfigs] = useState([]);
+  const [selectedMenuItems, setSelectedMenuItems] = useState([]);
+  const [loadingMenu, setLoadingMenu] = useState(false);
+  const [homePage, setHomePage] = useState('');
 
   const isCreateMode = mode === 'create';
   const isEditMode = mode === 'edit';
+  const isSystemRole = isEditMode && !!role?.is_system;
+  // ADMIN always sees every menu entry
+  const canConfigureMenu = !(isEditMode && role?.name === 'ADMIN');
 
   const {
     register,
@@ -49,23 +70,52 @@ const RoleModal = ({ show, onHide, mode, role, onSave }) => {
     }
   }, [show]);
 
+  // Load sidebar entries and the ones already visible to the role
+  useEffect(() => {
+    if (!show) return;
+    let cancelled = false;
+    const roleId = isEditMode ? role?.id : null;
+    setLoadingMenu(true);
+    setSelectedMenuItems([]);
+    Promise.all([
+      sidebarMenuConfigService.getAllConfigs(),
+      roleId && role?.name !== 'ADMIN' ? roleService.getRoleMenuItems(roleId) : Promise.resolve([])
+    ])
+      .then(([configs, itemKeys]) => {
+        if (cancelled) return;
+        setMenuConfigs(Array.isArray(configs) ? configs : []);
+        setSelectedMenuItems(itemKeys);
+      })
+      .catch(err => {
+        console.error('Error fetching role menu:', err);
+        if (!cancelled) setError(t('roles.failedToLoadMenu', 'Failed to load menu entries'));
+      })
+      .finally(() => { if (!cancelled) setLoadingMenu(false); });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- t is only used for the error message
+  }, [show, isEditMode, role?.id, role?.name]);
+
   // Reset form and selected permissions when modal shows
   useEffect(() => {
     if (show) {
       if (role && isEditMode) {
         reset({
           name: role.name,
-          description: role.description || ''
+          description: role.description || '',
+          data_scope: role.data_scope || 'own'
         });
         // Set selected permissions from role
         const rolePermissionIds = role.permissions?.map(p => p.id) || [];
         setSelectedPermissions(rolePermissionIds);
+        setHomePage(role.home_page || '');
       } else {
         reset({
           name: '',
-          description: ''
+          description: '',
+          data_scope: 'all'
         });
         setSelectedPermissions([]);
+        setHomePage('');
       }
       setError(null);
       setActiveTab('general');
@@ -96,9 +146,15 @@ const RoleModal = ({ show, onHide, mode, role, onSave }) => {
       setLoading(true);
       setError(null);
 
+      // System roles keep their name and data scope (hard-wired behaviour)
+      const homePageField = canConfigureMenu ? { home_page: homePage || null } : {};
+      const payload = isSystemRole
+        ? { description: data.description, ...homePageField }
+        : { ...data, ...homePageField };
+
       if (isCreateMode) {
         // Create role
-        const createResponse = await roleService.createRole(data);
+        const createResponse = await roleService.createRole(payload);
         const newRole = createResponse.data.data || createResponse.data;
 
         // Assign permissions to new role
@@ -106,13 +162,23 @@ const RoleModal = ({ show, onHide, mode, role, onSave }) => {
           await roleService.updateRolePermissions(newRole.id, selectedPermissions);
         }
 
+        if (selectedMenuItems.length > 0) {
+          await roleService.updateRoleMenuItems(newRole.id, selectedMenuItems);
+          sidebarMenuConfigService.clearSidebarCache();
+        }
+
         onSave(newRole);
       } else {
         // Update role
-        const updateResponse = await roleService.updateRole(role.id, data);
+        const updateResponse = await roleService.updateRole(role.id, payload);
 
         // Update permissions
         await roleService.updateRolePermissions(role.id, selectedPermissions);
+
+        if (canConfigureMenu) {
+          await roleService.updateRoleMenuItems(role.id, selectedMenuItems);
+        }
+        sidebarMenuConfigService.clearSidebarCache();
 
         onSave(updateResponse.data);
       }
@@ -153,25 +219,25 @@ const RoleModal = ({ show, onHide, mode, role, onSave }) => {
             <Tab eventKey="general" title={t('roles.general', 'General')}>
               <Form.Group className="mb-3">
                 <Form.Label>{t('roles.roleName', 'Role Name')} *</Form.Label>
-                <Form.Select
-                  {...register('name')}
+<Form.Control
+                  type="text"
+                  {...register('name', {
+                    onChange: (e) => { e.target.value = normalizeRoleName(e.target.value); }
+                  })}
                   isInvalid={!!errors.name}
-                  disabled={isEditMode} // Cannot change role name after creation
-                >
-                  <option value="">{t('roles.selectRole', 'Select role...')}</option>
-                  <option value="ADMIN">ADMIN</option>
-                  <option value="DIETITIAN">DIETITIAN</option>
-                  <option value="ASSISTANT">ASSISTANT</option>
-                  <option value="VIEWER">VIEWER</option>
-                </Form.Select>
+                  readOnly={isSystemRole}
+                  maxLength={50}
+                  placeholder={t('roles.namePlaceholder', 'e.g. ACCOUNTANT')}
+                  autoFocus={isCreateMode}
+                />
                 <Form.Control.Feedback type="invalid">
                   {errors.name?.message}
                 </Form.Control.Feedback>
-                {isEditMode && (
-                  <Form.Text className="text-muted">
-                    {t('roles.cannotChangeName', 'Role name cannot be changed after creation')}
-                  </Form.Text>
-                )}
+                <Form.Text className="text-muted">
+                  {isSystemRole
+                    ? t('roles.systemRoleLocked', 'System role: its name cannot be changed')
+                    : t('roles.nameHint', 'Automatically converted to uppercase; must not already exist')}
+                </Form.Text>
               </Form.Group>
 
               <Form.Group className="mb-3">
@@ -190,6 +256,19 @@ const RoleModal = ({ show, onHide, mode, role, onSave }) => {
                   {t('roles.maxChars', 'Maximum 500 characters')}
                 </Form.Text>
               </Form.Group>
+
+              {!isSystemRole && (
+                <Form.Group className="mb-3">
+                  <Form.Label>{t('roles.dataScope', 'Data visibility')}</Form.Label>
+                  <Form.Select {...register('data_scope')} aria-label={t('roles.dataScope', 'Data visibility')}>
+                    <option value="all">{t('roles.dataScopeAll', 'Whole practice (all patients, invoices, expenses)')}</option>
+                    <option value="own">{t('roles.dataScopeOwn', 'Own data only (linked patients, own expenses)')}</option>
+                  </Form.Select>
+                  <Form.Text className="text-muted">
+                    {t('roles.dataScopeHint', 'Permissions decide which features are available; visibility decides whose data appears in them.')}
+                  </Form.Text>
+                </Form.Group>
+              )}
             </Tab>
 
             {/* Permissions Tab */}
@@ -217,6 +296,35 @@ const RoleModal = ({ show, onHide, mode, role, onSave }) => {
                 />
               )}
             </Tab>
+
+            {/* Menu Tab */}
+            {canConfigureMenu && (
+              <Tab
+                eventKey="menu"
+                title={
+                  <>
+                    {t('roles.menu', 'Menu')}
+                    {selectedMenuItems.length > 0 && (
+                      <span className="ms-2 badge bg-primary">{selectedMenuItems.length}</span>
+                    )}
+                  </>
+                }
+              >
+                {loadingMenu ? (
+                  <div className="text-center py-5">
+                    <Spinner animation="border" variant="primary" size="sm" />
+                  </div>
+                ) : (
+                  <RoleMenuAccess
+                    configs={menuConfigs}
+                    selected={selectedMenuItems}
+                    onChange={setSelectedMenuItems}
+                    homePage={homePage}
+                    onHomePageChange={setHomePage}
+                  />
+                )}
+              </Tab>
+            )}
           </Tabs>
         </Modal.Body>
 

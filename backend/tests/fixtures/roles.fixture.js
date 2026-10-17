@@ -34,8 +34,8 @@ const systemRoles = {
  * Valid custom role
  */
 const validRole = {
-  name: 'VIEWER',
-  description: 'Viewer role with read-only access',
+  name: 'COMPTABLE',
+  description: 'Accounting role with finance-only access',
   is_active: true
 };
 
