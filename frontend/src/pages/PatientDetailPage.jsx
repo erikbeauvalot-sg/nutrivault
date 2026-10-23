@@ -143,31 +143,42 @@ const PatientDetailPage = () => {
   const birthFieldDefIdRef = useRef(null);
   const addressFieldDefIdRef = useRef(null);
   const genderFieldDefIdRef = useRef(null);
+  const customProfileRefs = {
+    date_of_birth: birthFieldDefIdRef,
+    address: addressFieldDefIdRef,
+    gender: genderFieldDefIdRef,
+  };
 
   // Gender value mapping between patient model (Male/Female/Other) and custom field (Masculin/Féminin/Autre)
   const GENDER_TO_CUSTOM = { Male: 'Masculin', Female: 'Féminin', Other: 'Autre' };
   const CUSTOM_TO_GENDER = { Masculin: 'Male', Féminin: 'Female', Autre: 'Other' };
 
+  // Load the patient first: the server handles requests one at a time, so the
+  // secondary data (other tabs, custom fields) must not delay the main info
+  const [detailsReady, setDetailsReady] = useState(false);
   useEffect(() => {
     if (id) {
-      fetchPatientDetails();
-      fetchPatientDocuments();
-      fetchPatientInvoices();
-      fetchPatientMeasures();
-      fetchPatientRecipes();
-      fetchPatientMealPlans();
-      fetchAvailableGuides();
-      fetchGoalsSummary();
-      fetchConsultationNotes();
+      setDetailsReady(false);
+      fetchPatientDetails().finally(() => {
+        setDetailsReady(true);
+        fetchPatientDocuments();
+        fetchPatientInvoices();
+        fetchPatientMeasures();
+        fetchPatientRecipes();
+        fetchPatientMealPlans();
+        fetchAvailableGuides();
+        fetchGoalsSummary();
+        fetchConsultationNotes();
+      });
     }
   }, [id]);
 
   // Separate effect for custom fields that depends on language
   useEffect(() => {
-    if (id) {
+    if (id && detailsReady) {
       fetchCustomFields();
     }
-  }, [id, i18n.resolvedLanguage, i18n.language]);
+  }, [id, detailsReady, i18n.resolvedLanguage, i18n.language]);
 
   const [accessDenied, setAccessDenied] = useState(false);
 
@@ -216,31 +227,27 @@ const PatientDetailPage = () => {
   const savePatientField = useCallback(async (field, value) => {
     setFieldSaving(prev => ({ ...prev, [field]: true }));
     try {
-      const updated = await patientService.updatePatient(id, { [field]: value });
-      // Merge: the PUT response lacks the relations loaded by /details (visits, dietitians…)
-      setPatient(prev => ({ ...prev, ...updated }));
-      // Show the value as stored by the server (it may be normalized, e.g. email)
-      setLocalPatient(prev => ({ ...prev, [field]: updated?.[field] ?? value }));
+      const customDefId = customProfileRefs[field]?.current;
+      let stored = value;
+      if (customDefId) {
+        // Birth date, address and gender are stored in custom fields only
+        // (the patients table has no such columns)
+        const customValue = field === 'gender'
+          ? (GENDER_TO_CUSTOM[value] || value)
+          : (field === 'address' ? (value || '') : (value || null));
+        await customFieldService.updatePatientCustomFields(id, [{ definition_id: customDefId, value: customValue }]);
+        setFieldValues(prev => ({ ...prev, [customDefId]: customValue }));
+        setPatient(prev => ({ ...prev, [field]: value }));
+      } else {
+        const updated = await patientService.updatePatient(id, { [field]: value });
+        // Show the value as stored by the server (it may be normalized, e.g. email)
+        stored = updated?.[field] ?? value;
+        // Merge: the PUT response lacks the relations loaded by /details (visits, dietitians…)
+        setPatient(prev => ({ ...prev, ...updated, [field]: stored }));
+      }
+      setLocalPatient(prev => ({ ...prev, [field]: stored }));
       setFieldSaved(prev => ({ ...prev, [field]: true }));
       setTimeout(() => setFieldSaved(prev => ({ ...prev, [field]: false })), 2000);
-      // Sync standard fields → custom field counterparts
-      const customSyncs = [];
-      if (field === 'date_of_birth' && value && birthFieldDefIdRef.current)
-        customSyncs.push({ definition_id: birthFieldDefIdRef.current, value });
-      if (field === 'address' && addressFieldDefIdRef.current)
-        customSyncs.push({ definition_id: addressFieldDefIdRef.current, value: value || '' });
-      if (field === 'gender' && genderFieldDefIdRef.current) {
-        const customVal = GENDER_TO_CUSTOM[value] || value;
-        customSyncs.push({ definition_id: genderFieldDefIdRef.current, value: customVal });
-      }
-      if (customSyncs.length > 0) {
-        await customFieldService.updatePatientCustomFields(id, customSyncs);
-        setFieldValues(prev => {
-          const next = { ...prev };
-          customSyncs.forEach(s => { next[s.definition_id] = s.value; });
-          return next;
-        });
-      }
     } catch (err) {
       const data = err.response?.data;
       toast.error(data?.details?.[0]?.msg || data?.error || t('patients.failedToUpdate', 'Erreur lors de la sauvegarde'));
@@ -296,21 +303,20 @@ const PatientDetailPage = () => {
         const key = `cf_${definitionId}`;
         setFieldSaved(prev => ({ ...prev, [key]: true }));
         setTimeout(() => setFieldSaved(prev => ({ ...prev, [key]: false })), 2000);
-        // Sync custom field → standard patient fields
+        // Reflect custom field → standard patient fields shown in the info card
+        // (stored only in the custom field, nothing else to save)
         const defId = String(definitionId);
+        let synced = null;
         if (defId === String(birthFieldDefIdRef.current) && value) {
-          await patientService.updatePatient(id, { date_of_birth: value });
-          setPatient(prev => ({ ...prev, date_of_birth: value }));
-          setLocalPatient(prev => ({ ...prev, date_of_birth: value }));
+          synced = { date_of_birth: value };
         } else if (defId === String(addressFieldDefIdRef.current)) {
-          await patientService.updatePatient(id, { address: value || '' });
-          setPatient(prev => ({ ...prev, address: value || '' }));
-          setLocalPatient(prev => ({ ...prev, address: value || '' }));
+          synced = { address: value || '' };
         } else if (defId === String(genderFieldDefIdRef.current) && value) {
-          const patientVal = CUSTOM_TO_GENDER[value] || value;
-          await patientService.updatePatient(id, { gender: patientVal });
-          setPatient(prev => ({ ...prev, gender: patientVal }));
-          setLocalPatient(prev => ({ ...prev, gender: patientVal }));
+          synced = { gender: CUSTOM_TO_GENDER[value] || value };
+        }
+        if (synced) {
+          setPatient(prev => ({ ...prev, ...synced }));
+          setLocalPatient(prev => ({ ...prev, ...synced }));
         }
       } catch (err) {
         toast.error(err.response?.data?.error || t('patients.failedToUpdate', 'Erreur lors de la sauvegarde'));
@@ -389,7 +395,18 @@ const PatientDetailPage = () => {
       setLoading(true);
       setAccessDenied(false);
       const patientData = await patientService.getPatientDetails(id);
-      setPatient(patientData);
+      // Birth date, address and gender come from their custom fields (custom_profile)
+      const profile = patientData?.custom_profile || {};
+      if (profile.date_of_birth) birthFieldDefIdRef.current = profile.date_of_birth.definition_id;
+      if (profile.address) addressFieldDefIdRef.current = profile.address.definition_id;
+      if (profile.gender) genderFieldDefIdRef.current = profile.gender.definition_id;
+      const customGender = profile.gender?.value;
+      setPatient(patientData && {
+        ...patientData,
+        date_of_birth: profile.date_of_birth?.value || patientData.date_of_birth || '',
+        address: profile.address?.value || patientData.address || '',
+        gender: CUSTOM_TO_GENDER[customGender] || customGender || patientData.gender || '',
+      });
       setVisits(patientData?.visits || []);
       setError(null);
     } catch (err) {
@@ -542,13 +559,13 @@ const PatientDetailPage = () => {
         for (const field of category.fields) {
           const name = field.field_name || '';
           if (name.includes('naissance') || name.includes('birth')) {
-            birthFieldDefIdRef.current = field.definition_id;
+            if (!birthFieldDefIdRef.current) birthFieldDefIdRef.current = field.definition_id;
             if (field.value && !patient?.date_of_birth) syncUpdates.date_of_birth = field.value;
           } else if (name === 'adresse' || name.includes('address')) {
-            addressFieldDefIdRef.current = field.definition_id;
+            if (!addressFieldDefIdRef.current) addressFieldDefIdRef.current = field.definition_id;
             if (field.value && !patient?.address) syncUpdates.address = field.value;
           } else if (name === 'sexe' || name.includes('gender') || name.includes('genre')) {
-            genderFieldDefIdRef.current = field.definition_id;
+            if (!genderFieldDefIdRef.current) genderFieldDefIdRef.current = field.definition_id;
             if (field.value && !patient?.gender) {
               const mapped = CUSTOM_TO_GENDER[field.value] || field.value;
               syncUpdates.gender = mapped;

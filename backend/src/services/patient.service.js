@@ -277,6 +277,48 @@ async function getPatientById(patientId, user, requestMetadata = {}) {
  * @param {Object} requestMetadata - Request metadata for audit logging
  * @returns {Promise<Object>} Patient data with visits and measurements
  */
+// Custom field names backing the standard profile fields (same rules as the patient page)
+const CUSTOM_PROFILE_MATCHERS = {
+  date_of_birth: name => name.includes('naissance') || name.includes('birth'),
+  address: name => name === 'adresse' || name.includes('address'),
+  gender: name => name === 'sexe' || name.includes('gender') || name.includes('genre')
+};
+
+/**
+ * Get the custom fields backing birth date, address and gender for a patient.
+ * Prefers definitions whose category is active, like the patient page does.
+ * @returns {Promise<Object>} e.g. { date_of_birth: { definition_id, value }, ... }
+ */
+async function getCustomProfileFields(patientId) {
+  const definitions = await db.CustomFieldDefinition.findAll({
+    where: { is_active: true },
+    attributes: ['id', 'field_name', 'field_type', 'allow_multiple'],
+    include: [{ model: db.CustomFieldCategory, as: 'category', attributes: ['is_active'] }]
+  });
+
+  const chosen = {};
+  for (const [key, matches] of Object.entries(CUSTOM_PROFILE_MATCHERS)) {
+    const candidates = definitions.filter(d => matches(d.field_name || ''));
+    const def = candidates.find(d => d.category?.is_active) || candidates[0];
+    if (def) chosen[key] = def;
+  }
+
+  const ids = Object.values(chosen).map(d => d.id);
+  const values = ids.length > 0
+    ? await db.PatientCustomFieldValue.findAll({ where: { patient_id: patientId, field_definition_id: ids } })
+    : [];
+
+  const profile = {};
+  for (const [key, def] of Object.entries(chosen)) {
+    const row = values.find(v => v.field_definition_id === def.id);
+    profile[key] = {
+      definition_id: def.id,
+      value: row ? row.getValue(def.field_type, def.allow_multiple) : null
+    };
+  }
+  return profile;
+}
+
 async function getPatientDetails(patientId, user, requestMetadata = {}) {
   try {
     // Note: We don't filter by is_active here to allow viewing/deleting inactive patients
@@ -340,7 +382,10 @@ async function getPatientDetails(patientId, user, requestMetadata = {}) {
 
     // Add visits to patient object
     patient.dataValues.visits = visits;
-    console.log(`Patient ${patientId} has ${visits.length} visits:`, visits.map(v => ({ id: v.id, date: v.visit_date, status: v.status })));
+
+    // Birth date, address and gender live in custom fields: return them here so
+    // the patient page can show them without waiting for the custom fields call
+    patient.dataValues.custom_profile = await getCustomProfileFields(patientId);
 
     // Audit log
     await auditService.log({

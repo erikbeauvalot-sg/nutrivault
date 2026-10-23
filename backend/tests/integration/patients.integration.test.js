@@ -194,6 +194,47 @@ describe('Patients API', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data).toHaveProperty('id');
     });
+
+    it('should include birth date, address and gender from their custom fields', async () => {
+      const db = testDb.getDb();
+      const active = await db.CustomFieldCategory.create({ name: 'Pre visit', entity_type: 'patient', is_active: true, created_by: adminAuth.user.id });
+      const inactive = await db.CustomFieldCategory.create({ name: 'Old', entity_type: 'patient', is_active: false, created_by: adminAuth.user.id });
+      const def = (category, field_name, field_type, extra = {}) => db.CustomFieldDefinition.create({
+        category_id: category.id, field_name, field_label: field_name, field_type, is_active: true, created_by: adminAuth.user.id, ...extra
+      });
+      const birth = await def(active, 'date_naissance', 'date');
+      const address = await def(active, 'adresse', 'text');
+      const sexe = await def(active, 'sexe', 'select', { select_options: ['Masculin', 'Féminin', 'Autre'] });
+      // Same names in an inactive category or inactive definition must not win
+      await def(inactive, 'gender', 'select', { select_options: ['Male', 'Female'] });
+      await def(active, 'date_of_birth', 'date', { is_active: false });
+
+      const value = (definition, value_text) => db.PatientCustomFieldValue.create({
+        patient_id: testPatient.id, field_definition_id: definition.id, value_text, updated_by: adminAuth.user.id
+      });
+      await value(birth, '1990-01-15');
+      await value(address, '25 rue Chateaubriand');
+      await value(sexe, 'Masculin');
+
+      const res = await request(app)
+        .get(`/api/patients/${testPatient.id}/details`)
+        .set('Authorization', adminAuth.authHeader);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.custom_profile).toEqual({
+        date_of_birth: { definition_id: birth.id, value: '1990-01-15' },
+        address: { definition_id: address.id, value: '25 rue Chateaubriand' },
+        gender: { definition_id: sexe.id, value: 'Masculin' }
+      });
+    });
+
+    it('should return an empty custom profile when no matching custom field exists', async () => {
+      const res = await request(app)
+        .get(`/api/patients/${testPatient.id}/details`)
+        .set('Authorization', adminAuth.authHeader);
+
+      expect(res.body.data.custom_profile).toEqual({});
+    });
   });
 
   // ========================================
