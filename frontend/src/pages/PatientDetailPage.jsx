@@ -48,6 +48,23 @@ import PatientGoalsTab from '../components/PatientGoalsTab';
 import { FiSend } from 'react-icons/fi';
 import './PatientDetailPage.css';
 
+// Defined at module level: declaring it inside the render would give it a new
+// identity on every keystroke, remounting the input and losing focus.
+const InlineRow = ({ label, saving, saved, children }) => (
+  <Row className="mb-2 align-items-center">
+    <Col sm={4}>
+      <small className="text-muted fw-semibold">{label}</small>
+    </Col>
+    <Col sm={8}>
+      <div className="d-flex align-items-center gap-1">
+        {children}
+        {saving && <Spinner animation="border" size="sm" style={{ width: '12px', height: '12px', borderWidth: '2px' }} />}
+        {saved && <span className="inline-saved-indicator">✓</span>}
+      </div>
+    </Col>
+  </Row>
+);
+
 const PatientDetailPage = () => {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
@@ -121,6 +138,7 @@ const PatientDetailPage = () => {
   const [fieldSaving, setFieldSaving] = useState({});
   const [fieldSaved, setFieldSaved] = useState({});
   const saveTimers = useRef({});
+  const cancelledFieldRef = useRef(null);
   const birthFieldDefIdRef = useRef(null);
   const addressFieldDefIdRef = useRef(null);
   const genderFieldDefIdRef = useRef(null);
@@ -152,10 +170,12 @@ const PatientDetailPage = () => {
 
   const [accessDenied, setAccessDenied] = useState(false);
 
-  // Sync localPatient whenever patient data loads
+  // Sync localPatient whenever patient data loads, without overwriting a field
+  // the user is still typing in (changed locally since the last sync)
+  const lastSyncedRef = useRef(null);
   useEffect(() => {
     if (patient) {
-      setLocalPatient({
+      const next = {
         first_name: patient.first_name || '',
         last_name: patient.last_name || '',
         email: patient.email || '',
@@ -168,7 +188,18 @@ const PatientDetailPage = () => {
         dietary_preferences: patient.dietary_preferences || '',
         is_active: !!patient.is_active,
         appointment_reminders_enabled: !!patient.appointment_reminders_enabled,
+      };
+      const synced = lastSyncedRef.current;
+      const samePatient = synced && synced.id === patient.id;
+      setLocalPatient(prev => {
+        if (!samePatient) return next;
+        const merged = { ...next };
+        Object.keys(next).forEach(key => {
+          if (prev[key] !== synced.values[key]) merged[key] = prev[key];
+        });
+        return merged;
       });
+      lastSyncedRef.current = { id: patient.id, values: next };
     }
   }, [patient]);
 
@@ -177,7 +208,10 @@ const PatientDetailPage = () => {
     setFieldSaving(prev => ({ ...prev, [field]: true }));
     try {
       const updated = await patientService.updatePatient(id, { [field]: value });
-      setPatient(updated);
+      // Merge: the PUT response lacks the relations loaded by /details (visits, dietitians…)
+      setPatient(prev => ({ ...prev, ...updated }));
+      // Show the value as stored by the server (it may be normalized, e.g. email)
+      setLocalPatient(prev => ({ ...prev, [field]: updated?.[field] ?? value }));
       setFieldSaved(prev => ({ ...prev, [field]: true }));
       setTimeout(() => setFieldSaved(prev => ({ ...prev, [field]: false })), 2000);
       // Sync standard fields → custom field counterparts
@@ -199,7 +233,8 @@ const PatientDetailPage = () => {
         });
       }
     } catch (err) {
-      toast.error(err.response?.data?.error || t('patients.failedToUpdate', 'Erreur lors de la sauvegarde'));
+      const data = err.response?.data;
+      toast.error(data?.details?.[0]?.msg || data?.error || t('patients.failedToUpdate', 'Erreur lors de la sauvegarde'));
       // Reset to server value
       setLocalPatient(prev => ({ ...prev, [field]: patient?.[field] ?? '' }));
     } finally {
@@ -212,10 +247,26 @@ const PatientDetailPage = () => {
   };
 
   const handlePatientFieldBlur = (field) => {
+    if (cancelledFieldRef.current === field) {
+      cancelledFieldRef.current = null;
+      return;
+    }
     const current = localPatient[field];
     const original = patient?.[field] ?? '';
     if (current !== original) {
       savePatientField(field, current);
+    }
+  };
+
+  // Enter commits the field (newline in textareas), Escape restores the saved value
+  const handlePatientFieldKeyDown = (field) => (e) => {
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      e.target.blur();
+    } else if (e.key === 'Escape') {
+      cancelledFieldRef.current = field;
+      setLocalPatient(prev => ({ ...prev, [field]: patient?.[field] ?? '' }));
+      e.target.blur();
     }
   };
 
@@ -955,73 +1006,62 @@ const PatientDetailPage = () => {
                     </small>
                   </Card.Header>
                   <Card.Body>
-                    {/* Helper to render one inline editable row */}
                     {(() => {
-                      const InlineRow = ({ label, field, type = 'text', children }) => (
-                        <Row className="mb-2 align-items-center">
-                          <Col sm={4}>
-                            <small className="text-muted fw-semibold">{label}</small>
-                          </Col>
-                          <Col sm={8}>
-                            <div className="d-flex align-items-center gap-1">
-                              {children}
-                              {fieldSaving[field] && <Spinner animation="border" size="sm" style={{ width: '12px', height: '12px', borderWidth: '2px' }} />}
-                              {fieldSaved[field] && <span className="inline-saved-indicator">✓</span>}
-                            </div>
-                          </Col>
-                        </Row>
-                      );
-
                       return canEditPatient ? (
                         <>
                           <Row>
                             <Col xs={12} md={6}>
-                              <InlineRow label={t('patients.firstName', 'Prénom')} field="first_name">
+                              <InlineRow label={t('patients.firstName', 'Prénom')} saving={fieldSaving.first_name} saved={fieldSaved.first_name}>
                                 <input
                                   className="inline-field"
                                   type="text"
                                   value={localPatient.first_name ?? ''}
                                   onChange={e => handlePatientFieldChange('first_name', e.target.value)}
                                   onBlur={() => handlePatientFieldBlur('first_name')}
+                                  onKeyDown={handlePatientFieldKeyDown('first_name')}
                                 />
                               </InlineRow>
-                              <InlineRow label={t('patients.lastName', 'Nom')} field="last_name">
+                              <InlineRow label={t('patients.lastName', 'Nom')} saving={fieldSaving.last_name} saved={fieldSaved.last_name}>
                                 <input
                                   className="inline-field"
                                   type="text"
                                   value={localPatient.last_name ?? ''}
                                   onChange={e => handlePatientFieldChange('last_name', e.target.value)}
                                   onBlur={() => handlePatientFieldBlur('last_name')}
+                                  onKeyDown={handlePatientFieldKeyDown('last_name')}
                                 />
                               </InlineRow>
-                              <InlineRow label={t('patients.email', 'Email')} field="email">
+                              <InlineRow label={t('patients.email', 'Email')} saving={fieldSaving.email} saved={fieldSaved.email}>
                                 <input
                                   className="inline-field"
                                   type="email"
                                   value={localPatient.email ?? ''}
                                   onChange={e => handlePatientFieldChange('email', e.target.value)}
                                   onBlur={() => handlePatientFieldBlur('email')}
+                                  onKeyDown={handlePatientFieldKeyDown('email')}
                                 />
                               </InlineRow>
-                              <InlineRow label={t('patients.phone', 'Téléphone')} field="phone">
+                              <InlineRow label={t('patients.phone', 'Téléphone')} saving={fieldSaving.phone} saved={fieldSaved.phone}>
                                 <input
                                   className="inline-field"
                                   type="tel"
                                   value={localPatient.phone ?? ''}
                                   onChange={e => handlePatientFieldChange('phone', e.target.value)}
                                   onBlur={() => handlePatientFieldBlur('phone')}
+                                  onKeyDown={handlePatientFieldKeyDown('phone')}
                                 />
                               </InlineRow>
-                              <InlineRow label={t('patients.dateOfBirth', 'Date de naissance')} field="date_of_birth">
+                              <InlineRow label={t('patients.dateOfBirth', 'Date de naissance')} saving={fieldSaving.date_of_birth} saved={fieldSaved.date_of_birth}>
                                 <input
                                   className="inline-field"
                                   type="date"
                                   value={localPatient.date_of_birth ?? ''}
                                   onChange={e => handlePatientFieldChange('date_of_birth', e.target.value)}
                                   onBlur={() => handlePatientFieldBlur('date_of_birth')}
+                                  onKeyDown={handlePatientFieldKeyDown('date_of_birth')}
                                 />
                               </InlineRow>
-                              <InlineRow label={t('patients.gender', 'Genre')} field="gender">
+                              <InlineRow label={t('patients.gender', 'Genre')} saving={fieldSaving.gender} saved={fieldSaved.gender}>
                                 <select
                                   className="inline-field inline-field-select"
                                   value={localPatient.gender ?? ''}
@@ -1036,40 +1076,44 @@ const PatientDetailPage = () => {
                               </InlineRow>
                             </Col>
                             <Col xs={12} md={6}>
-                              <InlineRow label={t('patients.address', 'Adresse')} field="address">
+                              <InlineRow label={t('patients.address', 'Adresse')} saving={fieldSaving.address} saved={fieldSaved.address}>
                                 <textarea
                                   className="inline-field inline-field-textarea"
                                   rows={2}
                                   value={localPatient.address ?? ''}
                                   onChange={e => handlePatientFieldChange('address', e.target.value)}
                                   onBlur={() => handlePatientFieldBlur('address')}
+                                  onKeyDown={handlePatientFieldKeyDown('address')}
                                 />
                               </InlineRow>
-                              <InlineRow label={t('patients.medicalNotes', 'Notes médicales')} field="medical_notes">
+                              <InlineRow label={t('patients.medicalNotes', 'Notes médicales')} saving={fieldSaving.medical_notes} saved={fieldSaved.medical_notes}>
                                 <textarea
                                   className="inline-field inline-field-textarea"
                                   rows={2}
                                   value={localPatient.medical_notes ?? ''}
                                   onChange={e => handlePatientFieldChange('medical_notes', e.target.value)}
                                   onBlur={() => handlePatientFieldBlur('medical_notes')}
+                                  onKeyDown={handlePatientFieldKeyDown('medical_notes')}
                                 />
                               </InlineRow>
-                              <InlineRow label={t('patients.allergies', 'Allergies')} field="allergies">
+                              <InlineRow label={t('patients.allergies', 'Allergies')} saving={fieldSaving.allergies} saved={fieldSaved.allergies}>
                                 <textarea
                                   className="inline-field inline-field-textarea"
                                   rows={2}
                                   value={localPatient.allergies ?? ''}
                                   onChange={e => handlePatientFieldChange('allergies', e.target.value)}
                                   onBlur={() => handlePatientFieldBlur('allergies')}
+                                  onKeyDown={handlePatientFieldKeyDown('allergies')}
                                 />
                               </InlineRow>
-                              <InlineRow label={t('patients.dietaryPreferences', 'Préférences alimentaires')} field="dietary_preferences">
+                              <InlineRow label={t('patients.dietaryPreferences', 'Préférences alimentaires')} saving={fieldSaving.dietary_preferences} saved={fieldSaved.dietary_preferences}>
                                 <textarea
                                   className="inline-field inline-field-textarea"
                                   rows={2}
                                   value={localPatient.dietary_preferences ?? ''}
                                   onChange={e => handlePatientFieldChange('dietary_preferences', e.target.value)}
                                   onBlur={() => handlePatientFieldBlur('dietary_preferences')}
+                                  onKeyDown={handlePatientFieldKeyDown('dietary_preferences')}
                                 />
                               </InlineRow>
                             </Col>
