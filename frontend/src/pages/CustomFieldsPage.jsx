@@ -18,6 +18,8 @@ import paymentMethodService from '../services/paymentMethodService';
 import practiceLocationService from '../services/practiceLocationService';
 import bankAccountService from '../services/bankAccountService';
 import expenseCategoryService from '../services/expenseCategoryService';
+import { getAppSettings, updateAppSettings } from '../services/appSettingsService';
+import { toast } from 'react-toastify';
 import CustomFieldCategoryModal from '../components/CustomFieldCategoryModal';
 import CustomFieldDefinitionModal from '../components/CustomFieldDefinitionModal';
 import VisitTypeModal from '../components/VisitTypeModal';
@@ -103,12 +105,32 @@ const CustomFieldsPage = () => {
   const [expenseCategoryToDelete, setExpenseCategoryToDelete] = useState(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [appSettings, setAppSettings] = useState({});
+  const [savingAppSetting, setSavingAppSetting] = useState(null);
 
   useEffect(() => {
     if (user && hasPermission('custom_fields.read')) {
       fetchData();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user?.role === 'ADMIN') {
+      getAppSettings({ force: true }).then(setAppSettings).catch(() => setAppSettings({}));
+    }
+  }, [user]);
+
+  const handleAppSettingToggle = async (key) => {
+    setSavingAppSetting(key);
+    try {
+      setAppSettings(await updateAppSettings({ [key]: !appSettings[key] }));
+      toast.success(t('appSettings.saved', 'Option enregistrée'));
+    } catch (err) {
+      toast.error(err.response?.data?.error || t('appSettings.saveError', "Erreur lors de l'enregistrement de l'option"));
+    } finally {
+      setSavingAppSetting(null);
+    }
+  };
 
   // Persist filter state to localStorage whenever it changes
   useEffect(() => {
@@ -1599,6 +1621,32 @@ const CustomFieldsPage = () => {
               </Card.Body>
             </Card>
           </Tab>
+
+          {user?.role === 'ADMIN' && (
+            <Tab eventKey="appOptions" title={`⚙️ ${t('appSettings.tabTitle', 'Options')}`}>
+              <Card>
+                <Card.Header>
+                  <h5 className="mb-0">{t('appSettings.title', "Options de l'application")}</h5>
+                </Card.Header>
+                <Card.Body>
+                  <div className="d-flex align-items-start gap-2">
+                    <Form.Check
+                      type="switch"
+                      id="app-setting-health-score"
+                      checked={!!appSettings.patient_health_score_enabled}
+                      disabled={savingAppSetting === 'patient_health_score_enabled'}
+                      onChange={() => handleAppSettingToggle('patient_health_score_enabled')}
+                      label={t('appSettings.healthScore', 'Afficher le Health Score sur les fiches patients')}
+                    />
+                    {savingAppSetting === 'patient_health_score_enabled' && <Spinner animation="border" size="sm" />}
+                  </div>
+                  <Form.Text className="text-muted">
+                    {t('appSettings.healthScoreHelp', "Désactivé : le score n'est ni calculé ni affiché, ce qui accélère l'ouverture des fiches patients.")}
+                  </Form.Text>
+                </Card.Body>
+              </Card>
+            </Tab>
+          )}
         </ResponsiveTabs>
 
         {/* Modals */}

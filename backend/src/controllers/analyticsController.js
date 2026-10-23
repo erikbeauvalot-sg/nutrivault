@@ -10,6 +10,7 @@
  */
 
 const analyticsService = require('../services/analytics.service');
+const { getFeatureSetting } = require('./appSettingsController');
 
 /**
  * GET /api/analytics/health-trends
@@ -107,6 +108,11 @@ exports.getQuoteMetrics = async (req, res, next) => {
 exports.getPatientHealthScore = async (req, res, next) => {
   try {
     const { patientId } = req.params;
+
+    // Optional feature: skip the computation entirely when disabled
+    if (!(await getFeatureSetting('patient_health_score_enabled'))) {
+      return res.json({ success: true, data: null, disabled: true });
+    }
 
     const data = await analyticsService.calculatePatientHealthScore(patientId);
 

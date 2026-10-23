@@ -27,6 +27,7 @@ import ActionButton from '../components/ActionButton';
 import ConfirmModal from '../components/ConfirmModal';
 import CreateVisitModal from '../components/CreateVisitModal';
 import customFieldService from '../services/customFieldService';
+import { getAppSettings } from '../services/appSettingsService';
 import { formatDate as utilFormatDate } from '../utils/dateUtils';
 import { getBMICategory, calculateBMI } from '../utils/bmiUtils';
 import { applyTranslationsToMeasures, fetchMeasureTranslations } from '../utils/measureTranslations';
@@ -169,6 +170,14 @@ const PatientDetailPage = () => {
   }, [id, i18n.resolvedLanguage, i18n.language]);
 
   const [accessDenied, setAccessDenied] = useState(false);
+
+  // Health score is optional (app setting): not fetched nor shown when disabled
+  const [healthScoreEnabled, setHealthScoreEnabled] = useState(false);
+  useEffect(() => {
+    getAppSettings()
+      .then(settings => setHealthScoreEnabled(!!settings.patient_health_score_enabled))
+      .catch(() => setHealthScoreEnabled(false));
+  }, []);
 
   // Sync localPatient whenever patient data loads, without overwriting a field
   // the user is still typing in (changed locally since the last sync)
@@ -948,12 +957,14 @@ const PatientDetailPage = () => {
           </div>
         </div>
 
-        {/* Health Score */}
-        <Row className="mb-3">
-          <Col xs={12} md={6} lg={4}>
-            <PatientHealthScore patientId={id} />
-          </Col>
-        </Row>
+        {/* Health Score (optional, enabled in settings) */}
+        {healthScoreEnabled && (
+          <Row className="mb-3">
+            <Col xs={12} md={6} lg={4}>
+              <PatientHealthScore patientId={id} />
+            </Col>
+          </Row>
+        )}
 
         {/* Patient Details Tabs */}
         <Card>

@@ -4451,5 +4451,13 @@
     "none": "— No account —",
     "field": "Account",
     "fromLocation": "Account of the location (automatic)"
+  },
+  "appSettings": {
+    "tabTitle": "Options",
+    "title": "Application options",
+    "healthScore": "Show the Health Score on patient pages",
+    "healthScoreHelp": "When disabled, the score is neither computed nor displayed, which makes patient pages load faster.",
+    "saved": "Option saved",
+    "saveError": "Failed to save the option"
   }
 }

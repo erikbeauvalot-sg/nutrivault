@@ -138,6 +138,11 @@ describe('Analytics API', () => {
         email: 'patient@test.com',
         created_by: adminAuth.user.id
       });
+      await db.SystemSetting.create({
+        setting_key: 'patient_health_score_enabled',
+        setting_value: 'true',
+        data_type: 'boolean'
+      });
     });
 
     it('should return health score for specific patient as admin', async () => {
@@ -147,6 +152,26 @@ describe('Analytics API', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
+      expect(res.body.data).not.toBeNull();
+    });
+
+    it('should not compute the score when the feature is disabled', async () => {
+      const db = testDb.getDb();
+      await db.SystemSetting.update(
+        { setting_value: 'false' },
+        { where: { setting_key: 'patient_health_score_enabled' } }
+      );
+      const analyticsService = require('../../src/services/analytics.service');
+      const spy = jest.spyOn(analyticsService, 'calculatePatientHealthScore');
+
+      const res = await request(app)
+        .get(`/api/analytics/patient-health-score/${patient.id}`)
+        .set('Authorization', adminAuth.authHeader);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ success: true, data: null, disabled: true });
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
     });
 
     it('should return health score for dietitian with patients.read', async () => {

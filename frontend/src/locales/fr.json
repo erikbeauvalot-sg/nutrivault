@@ -4656,5 +4656,13 @@
     "none": "— Aucun compte —",
     "field": "Compte",
     "fromLocation": "Compte du lieu (automatique)"
+  },
+  "appSettings": {
+    "tabTitle": "Options",
+    "title": "Options de l'application",
+    "healthScore": "Afficher le Health Score sur les fiches patients",
+    "healthScoreHelp": "Désactivé : le score n'est ni calculé ni affiché, ce qui accélère l'ouverture des fiches patients.",
+    "saved": "Option enregistrée",
+    "saveError": "Erreur lors de l'enregistrement de l'option"
   }
 }

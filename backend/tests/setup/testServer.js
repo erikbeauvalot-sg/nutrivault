@@ -62,6 +62,7 @@ function createTestApp() {
   const expenseRoutes = require('../../src/routes/expenses');
   const financeRoutes = require('../../src/routes/finance');
   const practiceLocationRoutes = require('../../src/routes/practiceLocations');
+  const appSettingsRoutes = require('../../src/routes/appSettings');
   const bankAccountRoutes = require('../../src/routes/bankAccounts');
   const accountingEntryRoutes = require('../../src/routes/accountingEntries');
   const alertsRoutes = require('../../src/routes/alerts');
@@ -117,6 +118,7 @@ function createTestApp() {
   app.use('/api/expenses', expenseRoutes);
   app.use('/api/finance', financeRoutes);
   app.use('/api/practice-locations', practiceLocationRoutes);
+  app.use('/api/app-settings', appSettingsRoutes);
   app.use('/api/bank-accounts', bankAccountRoutes);
   app.use('/api/accounting-entries', accountingEntryRoutes);
   app.use('/api/alerts', alertsRoutes);
