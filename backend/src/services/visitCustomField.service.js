@@ -87,10 +87,16 @@ async function getVisitCustomFields(user, visitId, language = 'fr', requestMetad
       ]
     });
 
-    // Filter categories to only those that apply to visits
+    // Filter categories to only those that apply to visits.
+    // Patient-only categories are also included, restricted to their fields flagged
+    // show_in_visit_list, so a field shown in the visit list can be viewed/edited on the visit
     const visitCategories = categories.filter(category => {
       const entityTypes = category.entity_types || ['patient'];
-      return entityTypes.includes('visit');
+      if (entityTypes.includes('visit')) return true;
+      const listFields = (category.field_definitions || []).filter(d => d.show_in_visit_list);
+      if (listFields.length === 0) return false;
+      category.field_definitions = listFields;
+      return true;
     });
 
     // Separate categories into patient-level (shared) and visit-level (specific)

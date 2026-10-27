@@ -192,6 +192,72 @@ describe('Visit Custom Field Service', () => {
       const field = shared.fields.find(f => f.definition_id === sharedDef.id);
       expect(field.value).toBe('Peanuts');
     });
+
+    it('should include only show_in_visit_list fields from patient-only categories', async () => {
+      const patientCategory = await db.CustomFieldCategory.create({
+        name: 'Pre-visit Info',
+        entity_types: ['patient'],
+        display_order: 3,
+        is_active: true
+      });
+
+      const listedDef = await db.CustomFieldDefinition.create({
+        category_id: patientCategory.id,
+        field_name: 'visit_reason',
+        field_label: 'Reason',
+        field_type: 'text',
+        is_active: true,
+        show_in_visit_list: true,
+        display_order: 1
+      });
+
+      const hiddenDef = await db.CustomFieldDefinition.create({
+        category_id: patientCategory.id,
+        field_name: 'patient_only_note',
+        field_label: 'Note',
+        field_type: 'text',
+        is_active: true,
+        display_order: 2
+      });
+
+      const patientCustomFieldService = require('../../src/services/patientCustomField.service');
+      await patientCustomFieldService.setPatientCustomField(
+        adminAuth.user, testPatient.id, listedDef.id, 'Weight loss'
+      );
+
+      const result = await visitCustomFieldService.getVisitCustomFields(
+        adminAuth.user, testVisit.id
+      );
+
+      const category = result.find(c => c.id === patientCategory.id);
+      expect(category).toBeDefined();
+      expect(category.fields.map(f => f.definition_id)).toEqual([listedDef.id]);
+      expect(category.fields[0].value).toBe('Weight loss');
+      expect(category.fields.find(f => f.definition_id === hiddenDef.id)).toBeUndefined();
+    });
+
+    it('should exclude patient-only categories without show_in_visit_list fields', async () => {
+      const patientCategory = await db.CustomFieldCategory.create({
+        name: 'Patient Only',
+        entity_types: ['patient'],
+        display_order: 4,
+        is_active: true
+      });
+      await db.CustomFieldDefinition.create({
+        category_id: patientCategory.id,
+        field_name: 'patient_only_field',
+        field_label: 'Patient Only',
+        field_type: 'text',
+        is_active: true,
+        display_order: 1
+      });
+
+      const result = await visitCustomFieldService.getVisitCustomFields(
+        adminAuth.user, testVisit.id
+      );
+
+      expect(result.find(c => c.id === patientCategory.id)).toBeUndefined();
+    });
   });
 
   // ========================================
