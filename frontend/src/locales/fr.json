@@ -1801,7 +1801,10 @@
     "patientRequired": "La sélection du patient est obligatoire",
     "descriptionRequired": "La description et le montant sont obligatoires",
     "visitOptional": "L'association de consultation est optionnelle",
-    "updateInvoice": "Mettre à jour la facture"
+    "updateInvoice": "Mettre à jour la facture",
+    "previousMonth": "Mois précédent",
+    "nextMonth": "Mois suivant",
+    "allMonths": "Tous les mois"
   },
   "users": {
     "title": "Gestion des utilisateurs",

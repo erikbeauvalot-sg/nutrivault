@@ -16,6 +16,15 @@ export const getInvoices = async (filters = {}) => {
 };
 
 /**
+ * Get months containing invoices
+ * @returns {Promise<object>} Array of { month: 'YYYY-MM', count }, most recent first
+ */
+export const getInvoiceMonths = async () => {
+  const response = await api.get('/billing/months');
+  return response;
+};
+
+/**
  * Get invoices for a specific visit
  * @param {string} visitId - Visit UUID
  * @returns {Promise<object>} Invoices array

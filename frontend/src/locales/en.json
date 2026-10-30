@@ -1743,7 +1743,10 @@
     "failedToChangePaymentStatus": "Failed to change payment status",
     "invalidPaymentStatus": "Invalid payment status",
     "selectNewPaymentStatus": "Select the new status for this payment",
-    "notCounted": "not counted"
+    "notCounted": "not counted",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "allMonths": "All months"
   },
   "users": {
     "title": "User Management",

@@ -14,6 +14,60 @@
   flex-wrap: wrap;
 }
 
+.invoice-month-filter {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.invoice-month-filter .btn {
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0 0.75rem;
+}
+
+.invoice-month-filter .btn:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.invoice-month-filter .btn:last-child {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.invoice-month-label {
+  min-width: 160px;
+  padding: 0 1rem;
+  border: 1px solid var(--bs-secondary);
+  border-left: 0;
+  border-right: 0;
+  background: var(--nv-warm-ghost, transparent);
+  font-weight: 600;
+  text-transform: capitalize;
+  cursor: pointer;
+}
+
+.invoice-month-filter .dropdown {
+  display: flex;
+}
+
+.invoice-month-label::after {
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+.invoice-month-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  text-transform: capitalize;
+}
+
+.invoice-month-label:hover {
+  background: var(--nv-warm-100, #f5f0e8);
+}
+
 .invoice-search-input {
   width: 300px;
 }
@@ -74,4 +128,14 @@
   .invoice-status-filter {
     width: 130px;
   }
+}
+
+/* Compact rows to fit more invoices on screen */
+.invoice-table > tbody > tr > td {
+  vertical-align: middle;
+}
+
+.invoice-table .action-button {
+  min-width: 28px;
+  padding: 0.1rem 0.4rem;
 }

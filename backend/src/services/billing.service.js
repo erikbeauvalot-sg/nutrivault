@@ -21,13 +21,61 @@ const { applyPatientScope, getScopedPatientIds } = require('../helpers/scopeHelp
 const { assertValidBankAccount, locationBankAccount, bankAccountAfterLocationChange } = require('../helpers/bankAccounts');
 
 /**
+ * Get the months that contain invoices, with the number of invoices per month
+ * Months are computed in server local time, matching the start_date/end_date filters
+ *
+ * @param {Object} user - Authenticated user object
+ * @returns {Promise<Array<{month: string, count: number}>>} Months (YYYY-MM), most recent first
+ */
+async function getInvoiceMonths(user) {
+  try {
+    const whereClause = { is_active: true };
+
+    const hasAccess = await applyPatientScope(whereClause, user);
+    if (!hasAccess) {
+      return [];
+    }
+
+    const invoices = await Billing.findAll({
+      where: whereClause,
+      attributes: ['invoice_date'],
+      include: [
+        {
+          model: Patient,
+          as: 'patient',
+          attributes: [],
+          where: { is_active: true },
+          required: true
+        }
+      ],
+      raw: true
+    });
+
+    const counts = new Map();
+    for (const { invoice_date } of invoices) {
+      const d = new Date(invoice_date);
+      if (isNaN(d.getTime())) continue;
+      const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      counts.set(month, (counts.get(month) || 0) + 1);
+    }
+
+    return [...counts.entries()]
+      .map(([month, count]) => ({ month, count }))
+      .sort((a, b) => b.month.localeCompare(a.month));
+  } catch (error) {
+    console.error('Error in getInvoiceMonths:', error);
+    throw error;
+  }
+}
+
+/**
  * Get all invoices with filtering and pagination
  *
  * @param {Object} user - Authenticated user object
  * @param {Object} filters - Filter criteria
  * @param {string} filters.patient_id - Filter by patient ID
  * @param {string} filters.status - Filter by status (DRAFT, SENT, PAID, OVERDUE, CANCELLED)
- * @param {string} filters.search - Search by invoice number or service description
+ * @param {string} filters.search - Search by invoice number, service description or patient name
  * @param {Date} filters.start_date - Filter invoices from this date
  * @param {Date} filters.end_date - Filter invoices to this date
  * @param {number} filters.page - Page number (default 1)
@@ -65,10 +113,20 @@ async function getInvoices(user, filters = {}, requestMetadata = {}) {
     }
 
     if (filters.search) {
-      whereClause[Op.or] = [
-        { invoice_number: { [Op.like]: `%${filters.search}%` } },
-        { service_description: { [Op.like]: `%${filters.search}%` } }
-      ];
+      // Every word must match the invoice number, description or patient name,
+      // so "Erik Beauvalot" matches first + last name
+      const terms = filters.search.trim().split(/\s+/).filter(Boolean);
+      whereClause[Op.and] = terms.map((term) => {
+        const pattern = `%${term.replace(/[%_]/g, '\\$&')}%`;
+        return {
+          [Op.or]: [
+            { invoice_number: { [Op.like]: pattern } },
+            { service_description: { [Op.like]: pattern } },
+            { '$patient.first_name$': { [Op.like]: pattern } },
+            { '$patient.last_name$': { [Op.like]: pattern } }
+          ]
+        };
+      });
     }
 
     if (filters.start_date || filters.end_date) {
@@ -1367,6 +1425,7 @@ async function changePaymentStatus(paymentId, newStatus, user, requestMetadata =
 
 module.exports = {
   getInvoices,
+  getInvoiceMonths,
   getInvoiceById,
   createInvoice,
   updateInvoice,

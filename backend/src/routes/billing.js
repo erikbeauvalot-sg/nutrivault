@@ -236,6 +236,18 @@ router.get(
 );
 
 /**
+ * GET /api/billing/months - Get months containing invoices (for the month picker)
+ * Requires: billing.read permission
+ * Must be declared before /:id
+ */
+router.get(
+  '/months',
+  authenticate,
+  requirePermission('billing.read'),
+  billingController.getInvoiceMonths
+);
+
+/**
  * GET /api/billing/:id - Get invoice by ID
  * Requires: billing.read permission
  * All authenticated users can read invoices (filtered by RBAC in service)

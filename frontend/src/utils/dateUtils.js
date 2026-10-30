@@ -209,3 +209,49 @@ export const toLocalDateInput = (date) => {
     timeZone: getTimezone()
   });
 };
+
+/**
+ * Current month as a month key
+ * @returns {string} String in format YYYY-MM
+ */
+export const getCurrentMonthKey = () => toLocalDateInput(new Date()).slice(0, 7);
+
+/**
+ * Shift a month key by a number of months
+ * @param {string} monthKey - Month in format YYYY-MM
+ * @param {number} offset - Number of months to add (negative to go back)
+ * @returns {string} String in format YYYY-MM
+ */
+export const shiftMonthKey = (monthKey, offset) => {
+  const [year, month] = monthKey.split('-').map(Number);
+  const d = new Date(year, month - 1 + offset, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
+/**
+ * Date range covering a whole month, for API date filters
+ * @param {string} monthKey - Month in format YYYY-MM
+ * @returns {{start_date: string, end_date: string}}
+ */
+export const getMonthDateRange = (monthKey) => {
+  const [year, month] = monthKey.split('-').map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  return {
+    start_date: `${monthKey}-01T00:00:00`,
+    end_date: `${monthKey}-${String(lastDay).padStart(2, '0')}T23:59:59.999`
+  };
+};
+
+/**
+ * Format a month key as a readable label (e.g. "octobre 2026")
+ * @param {string} monthKey - Month in format YYYY-MM
+ * @param {string} language - Language code
+ * @returns {string}
+ */
+export const formatMonthLabel = (monthKey, language = 'fr') => {
+  const [year, month] = monthKey.split('-').map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString(getLocale(language), {
+    month: 'long',
+    year: 'numeric'
+  });
+};

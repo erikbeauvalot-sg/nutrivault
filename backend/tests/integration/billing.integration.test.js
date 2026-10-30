@@ -115,6 +115,33 @@ describe('Billing API', () => {
       expect(res.body.success).toBe(true);
     });
 
+    it('should search by patient name, case-insensitively', async () => {
+      const res = await request(app)
+        .get('/api/billing?search=jane')
+        .set('Authorization', adminAuth.authHeader);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBe(billingFixtures.invoicesList.length);
+    });
+
+    it('should search by full patient name', async () => {
+      const res = await request(app)
+        .get('/api/billing?search=Jane%20Smith')
+        .set('Authorization', adminAuth.authHeader);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBe(billingFixtures.invoicesList.length);
+    });
+
+    it('should return no invoices when search matches nothing', async () => {
+      const res = await request(app)
+        .get('/api/billing?search=Nobody')
+        .set('Authorization', adminAuth.authHeader);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([]);
+    });
+
     it('should filter by patient_id', async () => {
       const res = await request(app)
         .get(`/api/billing?patient_id=${testPatient.id}`)
@@ -172,6 +199,51 @@ describe('Billing API', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data.length).toBeLessThanOrEqual(2);
+    });
+  });
+
+  // ========================================
+  // GET /api/billing/months
+  // ========================================
+  describe('GET /api/billing/months', () => {
+    beforeEach(async () => {
+      const db = testDb.getDb();
+      const dates = ['2026-03-05T10:00:00', '2026-03-20T10:00:00', '2026-01-15T10:00:00'];
+      for (const [i, invoice_date] of dates.entries()) {
+        await db.Billing.create({
+          ...billingFixtures.invoicesList[0],
+          invoice_number: `MONTH-${i}`,
+          invoice_date,
+          patient_id: testPatient.id
+        });
+      }
+    });
+
+    it('should return months with invoice counts, most recent first', async () => {
+      const res = await request(app)
+        .get('/api/billing/months')
+        .set('Authorization', adminAuth.authHeader);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([
+        { month: '2026-03', count: 2 },
+        { month: '2026-01', count: 1 }
+      ]);
+    });
+
+    it('should return no months for a dietitian without linked patients', async () => {
+      const otherDietitian = await testAuth.createDietitian();
+      const res = await request(app)
+        .get('/api/billing/months')
+        .set('Authorization', otherDietitian.authHeader);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([]);
+    });
+
+    it('should reject request without authentication', async () => {
+      const res = await request(app).get('/api/billing/months');
+      expect(res.status).toBe(401);
     });
   });
 

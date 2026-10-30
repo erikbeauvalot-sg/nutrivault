@@ -3,7 +3,7 @@ import { Table, Button, Badge, Form, InputGroup, Pagination, Dropdown, Card, Ale
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import * as billingService from '../services/billingService';
-import { formatDate as utilFormatDate } from '../utils/dateUtils';
+import { formatDate as utilFormatDate, getCurrentMonthKey, shiftMonthKey, formatMonthLabel } from '../utils/dateUtils';
 import ActionButton from './ActionButton';
 import ConfirmModal from './ConfirmModal';
 import './InvoiceList.css';
@@ -67,6 +67,43 @@ function InvoiceList({
 
   const handleStatusFilterChange = (status) => {
     onFilterChange({ status: status === 'all' ? '' : status });
+  };
+
+  // Month filter is only shown when the parent manages filters.month
+  const hasMonthFilter = filters.month !== undefined;
+
+  const [availableMonths, setAvailableMonths] = useState([]);
+
+  const handleMonthChange = (month) => {
+    onFilterChange({ month });
+  };
+
+  // Refresh on open so newly created invoices show up in the list
+  const handleMonthMenuToggle = async (isOpen) => {
+    if (!isOpen) return;
+    try {
+      const response = await billingService.getInvoiceMonths();
+      setAvailableMonths(response.data.data || []);
+    } catch (err) {
+      console.error('Error fetching invoice months:', err);
+    }
+  };
+
+  // At most MAX_MONTH_OPTIONS months (plus "All months"), centred on the selected month
+  const MAX_MONTH_OPTIONS = 9;
+  const getMonthOptions = () => {
+    const months = availableMonths.map(m => m.month);
+    if (filters.month && !months.includes(filters.month)) {
+      months.push(filters.month);
+      months.sort((a, b) => b.localeCompare(a));
+    }
+    const selectedIndex = Math.max(months.indexOf(filters.month), 0);
+    const start = Math.max(
+      0,
+      Math.min(selectedIndex - Math.floor(MAX_MONTH_OPTIONS / 2), months.length - MAX_MONTH_OPTIONS)
+    );
+    const counts = Object.fromEntries(availableMonths.map(m => [m.month, m.count]));
+    return months.slice(start, start + MAX_MONTH_OPTIONS).map(month => ({ month, count: counts[month] || 0 }));
   };
 
   const handleSearchChange = (search) => {
@@ -199,17 +236,6 @@ function InvoiceList({
     );
   };
 
-  if (loading) {
-    return (
-      <div className="text-center py-4">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">{t('common.loading', 'Loading...')}</span>
-        </div>
-        <div className="mt-2">{t('common.loading', 'Loading invoices...')}</div>
-      </div>
-    );
-  }
-
   return (
     <div>
       {/* Batch Actions Bar */}
@@ -270,9 +296,55 @@ function InvoiceList({
         </Alert>
       )}
 
-      {/* Search and Filter Controls */}
+      {/* Search and Filter Controls — always rendered so the search input
+          keeps focus while invoices are (re)loading */}
       <div className="invoice-list-controls mb-3">
         <div className="invoice-list-filters">
+          {hasMonthFilter && (
+            <div className="invoice-month-filter">
+              <Button
+                variant="outline-secondary"
+                onClick={() => handleMonthChange(shiftMonthKey(filters.month || getCurrentMonthKey(), -1))}
+                title={t('billing.previousMonth', 'Previous month')}
+                aria-label={t('billing.previousMonth', 'Previous month')}
+              >
+                ‹
+              </Button>
+              <Dropdown onToggle={handleMonthMenuToggle}>
+                <Dropdown.Toggle as="button" type="button" className="invoice-month-label">
+                  {filters.month
+                    ? formatMonthLabel(filters.month, i18n.language)
+                    : t('billing.allMonths', 'All months')}
+                </Dropdown.Toggle>
+                <Dropdown.Menu className="invoice-month-menu">
+                  <Dropdown.Item active={!filters.month} onClick={() => handleMonthChange('')}>
+                    {t('billing.allMonths', 'All months')}
+                  </Dropdown.Item>
+                  <Dropdown.Divider />
+                  {getMonthOptions().map(({ month, count }) => (
+                    <Dropdown.Item
+                      key={month}
+                      active={filters.month === month}
+                      onClick={() => handleMonthChange(month)}
+                      className="invoice-month-option"
+                    >
+                      <span>{formatMonthLabel(month, i18n.language)}</span>
+                      <Badge bg="light" text="dark" pill>{count}</Badge>
+                    </Dropdown.Item>
+                  ))}
+                </Dropdown.Menu>
+              </Dropdown>
+              <Button
+                variant="outline-secondary"
+                onClick={() => handleMonthChange(shiftMonthKey(filters.month || getCurrentMonthKey(), 1))}
+                title={t('billing.nextMonth', 'Next month')}
+                aria-label={t('billing.nextMonth', 'Next month')}
+              >
+                ›
+              </Button>
+            </div>
+          )}
+
           <InputGroup className="invoice-search-input">
             <InputGroup.Text>🔍</InputGroup.Text>
             <Form.Control
@@ -314,7 +386,14 @@ function InvoiceList({
       </div>
 
       {/* Mobile Card View / Desktop Table View */}
-      {isMobile ? (
+      {loading ? (
+        <div className="text-center py-4">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">{t('common.loading', 'Loading...')}</span>
+          </div>
+          <div className="mt-2">{t('common.loading', 'Loading invoices...')}</div>
+        </div>
+      ) : isMobile ? (
         // Mobile Card View
         <div className="invoice-cards-container">
           {invoices.length === 0 ? (
@@ -405,7 +484,7 @@ function InvoiceList({
       ) : (
         // Desktop Table View
         <div className="table-responsive">
-          <Table striped bordered hover>
+          <Table striped bordered hover size="sm" className="invoice-table">
             <thead className="table-dark">
               <tr>
                 {canUpdate && (
@@ -462,10 +541,7 @@ function InvoiceList({
                     </td>
                     <td>
                       {invoice.patient ? (
-                        <div>
-                          <div>{invoice.patient.first_name} {invoice.patient.last_name}</div>
-                          <small className="text-muted">{invoice.patient.email}</small>
-                        </div>
+                        <span>{invoice.patient.first_name} {invoice.patient.last_name}</span>
                       ) : (
                         <span className="text-muted">-</span>
                       )}

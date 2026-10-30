@@ -13,7 +13,7 @@ import InvoiceList from '../components/InvoiceList';
 import ExportModal from '../components/ExportModal';
 import ConfirmModal from '../components/ConfirmModal';
 import * as billingService from '../services/billingService';
-import { formatDate } from '../utils/dateUtils';
+import { formatDate, getCurrentMonthKey, getMonthDateRange } from '../utils/dateUtils';
 
 const BillingPage = () => {
   const { t, i18n } = useTranslation();
@@ -31,6 +31,7 @@ const BillingPage = () => {
   const [filters, setFilters] = useState({
     status: '',
     search: '',
+    month: getCurrentMonthKey(), // '' = all months
     page: 1,
     limit: 20
   });
@@ -46,9 +47,12 @@ const BillingPage = () => {
   const [invoiceLoading, setInvoiceLoading] = useState(false);
 
   useEffect(() => {
-    if (hasPermission('billing.read')) {
+    if (!hasPermission('billing.read')) return;
+    // Debounce so typing in the search box doesn't fire a request per keystroke
+    const timer = setTimeout(() => {
       fetchInvoices();
-    }
+    }, 300);
+    return () => clearTimeout(timer);
   }, [filters, hasPermission]);
 
   // Check if we navigated here from visit creation and refresh
@@ -87,7 +91,10 @@ const BillingPage = () => {
   const fetchInvoices = async () => {
     try {
       setLoading(true);
-      const response = await billingService.getInvoices(filters);
+      const { month, ...params } = filters;
+      const response = await billingService.getInvoices(
+        month ? { ...params, ...getMonthDateRange(month) } : params
+      );
       const invoicesData = response.data.data || [];
       setInvoices(Array.isArray(invoicesData) ? invoicesData : []);
       setPagination(response.data.pagination || null);

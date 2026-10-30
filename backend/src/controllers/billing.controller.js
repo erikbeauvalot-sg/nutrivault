@@ -23,6 +23,18 @@ function getRequestMetadata(req) {
 }
 
 /**
+ * GET /api/billing/months - Get months containing invoices
+ */
+exports.getInvoiceMonths = async (req, res, next) => {
+  try {
+    const months = await billingService.getInvoiceMonths(req.user);
+    res.json({ success: true, data: months });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * GET /api/billing - Get all invoices
  */
 exports.getAllInvoices = async (req, res, next) => {

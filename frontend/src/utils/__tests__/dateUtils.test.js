@@ -21,6 +21,10 @@ import {
   parseLocalDateTime,
   toLocalDateTimeInput,
   toLocalDateInput,
+  getCurrentMonthKey,
+  shiftMonthKey,
+  getMonthDateRange,
+  formatMonthLabel,
 } from '../dateUtils';
 
 // ---------------------------------------------------------------------------
@@ -532,5 +536,30 @@ describe('toLocalDateInput', () => {
       const result = toLocalDateInput(new Date(MIDDAY_UTC));
       expect(result).toHaveLength(10);
     });
+  });
+});
+
+describe('month helpers', () => {
+  it('getCurrentMonthKey returns YYYY-MM', () => {
+    expect(getCurrentMonthKey()).toMatch(/^\d{4}-\d{2}$/);
+  });
+
+  it('shiftMonthKey moves across year boundaries', () => {
+    expect(shiftMonthKey('2026-01', -1)).toBe('2025-12');
+    expect(shiftMonthKey('2026-12', 1)).toBe('2027-01');
+    expect(shiftMonthKey('2026-05', 0)).toBe('2026-05');
+  });
+
+  it('getMonthDateRange covers the whole month, including leap days', () => {
+    expect(getMonthDateRange('2024-02')).toEqual({
+      start_date: '2024-02-01T00:00:00',
+      end_date: '2024-02-29T23:59:59.999'
+    });
+    expect(getMonthDateRange('2026-04').end_date).toBe('2026-04-30T23:59:59.999');
+  });
+
+  it('formatMonthLabel includes the month name and year', () => {
+    expect(formatMonthLabel('2026-10', 'fr')).toMatch(/octobre.*2026/);
+    expect(formatMonthLabel('2026-10', 'en')).toMatch(/October.*2026/);
   });
 });
